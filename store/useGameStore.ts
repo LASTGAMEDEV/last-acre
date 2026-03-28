@@ -436,6 +436,32 @@ function makeInitialState() {
   };
 }
 
+function getWorkerBonuses(workers: OwnedWorker[]) {
+  const fieldWorkerCount = workers.filter(w => w.typeId === 'field_worker').length;
+  const agronomistCount  = workers.filter(w => w.typeId === 'agronomist').length;
+  const keeperCount      = workers.filter(w => w.typeId === 'animal_keeper').length;
+  const zootechCount     = workers.filter(w => w.typeId === 'zootechnician').length;
+  const mechanicCount    = workers.filter(w => w.typeId === 'mechanic').length;
+  const engineerCount    = workers.filter(w => w.typeId === 'engineer').length;
+  const processorCount   = workers.filter(w => w.typeId === 'processor').length;
+  const supervisorCount  = workers.filter(w => w.typeId === 'supervisor').length;
+
+  return {
+    // Fields
+    cropYieldMultiplier:    1 + (fieldWorkerCount * 0.05) + (agronomistCount * 0.15),
+    cropGrowthReduction:    agronomistCount > 0 ? 1 : 0,
+    // Animals
+    animalProductionMult:   1 + (keeperCount * 0.08) + (zootechCount * 0.25),
+    sicknessBonusReduction: zootechCount > 0 ? 0.3 : 0,
+    // Machinery
+    maintenanceMult:        engineerCount > 0 ? 0.6 : Math.max(0.6, 1 - mechanicCount * 0.2),
+    machineYieldBonus:      engineerCount > 0 ? 0.1 : 0,
+    // Processing
+    processingOutputMult:   1 + (processorCount * 0.10) + (supervisorCount * 0.25),
+    autoProcessEnabled:     supervisorCount > 0,
+  };
+}
+
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
