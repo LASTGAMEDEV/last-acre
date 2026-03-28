@@ -16,7 +16,7 @@ import { MILESTONES, checkNewMilestones } from '../data/milestones';
 import { applyDailyFluctuation, sellRevenue, SellPressure, computeSellPressureModifier, sellPressureDuration } from '../engine/market';
 import { getSeason, generateForecast } from '../engine/climate';
 import { ENCLOSURE_BUILDINGS } from '../constants/enclosures';
-import { WorkerRole } from '../data/workerTypes';
+import { WorkerRole, WorkerType as WorkerTypeDef } from '../data/workerTypes';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
 function getMachineYieldBonus(machines: OwnedMachine[]): number {
@@ -2070,7 +2070,7 @@ export const useGameStore = create<GameState>()(
       hireWorker: (typeId) => {
         const state = get();
         const { WORKER_TYPES: WT } = require('../data/workerTypes');
-        const workerType = WT.find((t: any) => t.id === typeId);
+        const workerType = WT.find((t: WorkerTypeDef) => t.id === typeId);
         if (!workerType) return;
 
         // Specialist unlock check
