@@ -11,9 +11,7 @@ const DEPARTMENTS: { id: string; label: string; icon: string; basicId: WorkerRol
   { id: 'processing',  label: 'Processing',  icon: '🏭', basicId: 'processor',     specialistId: 'supervisor'     },
 ];
 
-const DEPT_ICONS: Record<string, string> = {
-  fields: '🌾', animals: '🐄', machinery: '⚙️', processing: '🏭',
-};
+const DEPT_ICONS: Record<string, string> = Object.fromEntries(DEPARTMENTS.map(d => [d.id, d.icon]));
 
 export default function TrabajadoresScreen() {
   const { money, workers, day, hireWorker, fireWorker } = useGameStore();
