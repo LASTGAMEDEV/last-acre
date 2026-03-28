@@ -470,6 +470,7 @@ export const useGameStore = create<GameState>()(
       advanceDay: () => {
         const state = get();
         const newDay = state.day + 1;
+        const workerBonuses = getWorkerBonuses(state.workers ?? []);
         const season = getSeason(newDay);
         const prevSeason = getSeason(state.day);
         const summary: DaySummaryEvent[] = [];
@@ -607,7 +608,7 @@ export const useGameStore = create<GameState>()(
         }
 
         // Machine + building maintenance
-        const maintenanceCost = getDailyMaintenance(state.machines, state.buildings);
+        const maintenanceCost = Math.round(getDailyMaintenance(state.machines, state.buildings) * workerBonuses.maintenanceMult);
         // Insurance premiums
         const activePolicies = state.insurances.filter(p => p.active);
         const insurancePremium = activePolicies.reduce((s, p) => {
@@ -948,7 +949,8 @@ export const useGameStore = create<GameState>()(
           })
           .map((a: OwnedAnimal) => {
             if (a.sick) return a;
-            const sickChance = (a.traits ?? []).includes('hardy') ? 0.006 : 0.015;
+            const baseSickChance = (a.traits ?? []).includes('hardy') ? 0.006 : 0.015;
+            const sickChance = baseSickChance * (1 - workerBonuses.sicknessBonusReduction);
             if (Math.random() < sickChance) {
               newSickIds.push(a.id);
               return { ...a, sick: true, sicknessDay: newDay };
@@ -1192,7 +1194,7 @@ export const useGameStore = create<GameState>()(
               const { units, nextDay } = collectProd(a, animalType, newDay);
               if (units <= 0) return a;
               const key = animalType.productionType;
-              return { ...a, lastProductionDay: nextDay, _autoCollect: { key, units: Math.round(units * graneroBonus) } };
+              return { ...a, lastProductionDay: nextDay, _autoCollect: { key, units: Math.round(units * graneroBonus * workerBonuses.animalProductionMult) } };
             });
             // Flush auto-collected animal products
             const newAnimalInventory = { ...state.animalInventory };
@@ -1218,7 +1220,7 @@ export const useGameStore = create<GameState>()(
               if (!p.plantedCrop || !p.owned || siloTotal >= siloCapacity) return p;
               const cropType = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
               if (!cropType) return p;
-              if (newDay < p.plantedCrop.plantedDay + Math.round(cropType.growthDays * speedBonusW)) return p;
+              if (newDay < p.plantedCrop.plantedDay + Math.max(1, Math.round(cropType.growthDays * speedBonusW) - workerBonuses.cropGrowthReduction)) return p;
               const baseClimate = state.todayWeather?.climateModifier ?? 1.0;
               const waterScale = (cropType.waterNeed ?? 3) / 5;
               const climateModifier = 1.0 + (baseClimate - 1.0) * waterScale;
@@ -1228,8 +1230,9 @@ export const useGameStore = create<GameState>()(
               const irrigationBonus = p.irrigated ? 1.20 : 1.0;
               const rotationMod = p.lastCropId && p.lastCropId !== p.plantedCrop.cropId ? 1.15 : 1.0;
               const soilMod = getSoilModifier(p.soilType, p.plantedCrop.cropId);
-              const rawUnits = harvestAmt(p.plantedCrop, cropType, p.fertility, climateModifier, p.hasWeeds, yieldBonusW);
-              const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * irrigationBonus * rotationMod * soilMod), siloCapacity - siloTotal);
+              const machineYieldWithEngineer = yieldBonusW + workerBonuses.machineYieldBonus;
+              const rawUnits = harvestAmt(p.plantedCrop, cropType, p.fertility, climateModifier, p.hasWeeds, machineYieldWithEngineer);
+              const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * irrigationBonus * rotationMod * soilMod * workerBonuses.cropYieldMultiplier), siloCapacity - siloTotal);
               siloTotal += units;
               workerNewInventory[p.plantedCrop.cropId] = (workerNewInventory[p.plantedCrop.cropId] ?? 0) + units;
               if (!newHarvestedIds.includes(p.plantedCrop.cropId)) newHarvestedIds.push(p.plantedCrop.cropId);
@@ -1238,6 +1241,54 @@ export const useGameStore = create<GameState>()(
             });
             (autoSellFinalInventory as any).__workerInventory = workerNewInventory;
             (autoSellFinalInventory as any).__harvestedIds = newHarvestedIds;
+          }
+
+          // Supervisor auto-process: 1 batch of highest-stock recipe per day
+          if (workerBonuses.autoProcessEnabled) {
+            const { PROCESSING_RECIPES: AUTO_RECIPES } = require('../data/processingTypes');
+            const currentInventory = (autoSellFinalInventory as any).__workerInventory ?? autoSellFinalInventory;
+            const currentAnimalInv = (animals as any).__newAnimalInventory ?? state.animalInventory;
+
+            // Find eligible recipes (building owned, at least 1 batch available)
+            const eligible = AUTO_RECIPES.filter((r: any) => {
+              if (!state.buildings.includes(r.requiredBuilding)) return false;
+              const stock = r.input.source === 'crop'
+                ? (currentInventory[r.input.itemId] ?? 0)
+                : (currentAnimalInv[r.input.itemId] ?? 0);
+              return stock >= r.input.amount;
+            });
+
+            if (eligible.length > 0) {
+              // Pick the recipe with the most input stock
+              const best = eligible.reduce((prev: any, cur: any) => {
+                const prevStock = prev.input.source === 'crop'
+                  ? (currentInventory[prev.input.itemId] ?? 0)
+                  : (currentAnimalInv[prev.input.itemId] ?? 0);
+                const curStock = cur.input.source === 'crop'
+                  ? (currentInventory[cur.input.itemId] ?? 0)
+                  : (currentAnimalInv[cur.input.itemId] ?? 0);
+                return curStock > prevStock ? cur : prev;
+              });
+
+              const outputAmount = Math.round(best.outputAmount * workerBonuses.processingOutputMult);
+
+              if (best.input.source === 'crop') {
+                (autoSellFinalInventory as any).__workerInventory = {
+                  ...currentInventory,
+                  [best.input.itemId]: (currentInventory[best.input.itemId] ?? 0) - best.input.amount,
+                };
+              } else {
+                (animals as any).__newAnimalInventory = {
+                  ...currentAnimalInv,
+                  [best.input.itemId]: (currentAnimalInv[best.input.itemId] ?? 0) - best.input.amount,
+                };
+              }
+
+              (autoSellFinalInventory as any).__supervisorProcess = {
+                productId: best.outputProductId,
+                amount: outputAmount,
+              };
+            }
           }
         }
         // Extract worker inventory overrides
@@ -1310,6 +1361,15 @@ export const useGameStore = create<GameState>()(
         const hasDefaultedLoan = loans.some(l => l.defaulted);
         const isBankrupt = !state.bankrupt && finalMoney <= 0 && hasDefaultedLoan && recentSales.length === 0 && autoSellIncome === 0;
 
+        const supervisorProcess: { productId: string; amount: number } | undefined =
+          (autoSellFinalInventory as any).__supervisorProcess;
+        const processedInventoryForSet = supervisorProcess
+          ? {
+              ...state.processedInventory,
+              [supervisorProcess.productId]: (state.processedInventory[supervisorProcess.productId] ?? 0) + supervisorProcess.amount,
+            }
+          : state.processedInventory;
+
         const autoSellSalesEntries = autoSellLog.map(s => ({ day: newDay, amount: Math.round(s.revenue), category: 'crops' as const }));
         set({
           day: newDay,
@@ -1342,6 +1402,7 @@ export const useGameStore = create<GameState>()(
           reputation,
           bankrupt: isBankrupt || state.bankrupt,
           sellPressures,
+          processedInventory: processedInventoryForSet,
         });
       },
 
