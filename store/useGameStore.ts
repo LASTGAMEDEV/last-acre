@@ -1891,6 +1891,7 @@ export const useGameStore = create<GameState>()(
       processProduct: (recipeId, batches) => {
         if (batches <= 0) return;
         const state = get();
+        const wBonuses = getWorkerBonuses(state.workers ?? []);
         const recipe = PROCESSING_RECIPES.find(r => r.id === recipeId);
         if (!recipe) return;
         if (!state.buildings.includes(recipe.requiredBuilding)) return;
@@ -1902,7 +1903,7 @@ export const useGameStore = create<GameState>()(
             inventory: { ...state.inventory, [recipe.input.itemId]: inStock - needed },
             processedInventory: {
               ...state.processedInventory,
-              [recipe.outputProductId]: (state.processedInventory[recipe.outputProductId] ?? 0) + recipe.outputAmount * batches,
+              [recipe.outputProductId]: (state.processedInventory[recipe.outputProductId] ?? 0) + Math.round(recipe.outputAmount * batches * wBonuses.processingOutputMult),
             },
           });
         } else {
@@ -1912,7 +1913,7 @@ export const useGameStore = create<GameState>()(
             animalInventory: { ...state.animalInventory, [recipe.input.itemId]: inStock - needed },
             processedInventory: {
               ...state.processedInventory,
-              [recipe.outputProductId]: (state.processedInventory[recipe.outputProductId] ?? 0) + recipe.outputAmount * batches,
+              [recipe.outputProductId]: (state.processedInventory[recipe.outputProductId] ?? 0) + Math.round(recipe.outputAmount * batches * wBonuses.processingOutputMult),
             },
           });
         }
