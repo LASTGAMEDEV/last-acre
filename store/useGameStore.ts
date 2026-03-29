@@ -253,6 +253,7 @@ export interface GameState {
   workers: OwnedWorker[];
   bankrupt: boolean;
   sellPressures: { cropId: string; modifier: number; expiresDay: number }[];
+  breedingPairs: Record<string, string>; // femaleId → preferred maleId
 
   // Actions
   advanceDay: () => void;
@@ -305,6 +306,8 @@ export interface GameState {
   renegotiateLoan: (loanId: string, extraDays: 30 | 60 | 90) => void;
   takeBankruptcyLoan: () => void;
   clearBankruptcy: () => void;
+  setBreedingPair: (femaleId: string, maleId: string) => void;
+  clearBreedingPair: (femaleId: string) => void;
 }
 
 const FIELD_NAMES: string[] = [
@@ -433,6 +436,7 @@ function makeInitialState() {
     workers: [] as OwnedWorker[],
     bankrupt: false,
     sellPressures: [] as { cropId: string; modifier: number; expiresDay: number }[],
+    breedingPairs: {} as Record<string, string>,
   };
 }
 
@@ -1570,34 +1574,38 @@ export const useGameStore = create<GameState>()(
 
       breedAnimal: (animalId) => {
         const state = get();
-        const animal = state.animals.find(a => a.id === animalId);
-        if (!animal) return;
-        // Only females can be the breeding subject
-        if (animal.sex !== 'female') return;
+        const animal = state.animals.find((a: OwnedAnimal) => a.id === animalId);
+        if (!animal || animal.sex !== 'female') return;
         const { ANIMAL_TYPES } = require('../data/animalTypes');
         const animalType = ANIMAL_TYPES.find((a: any) => a.id === animal.typeId);
-        if (!animalType) return;
-        const { canBreed, isMature } = require('../engine/animals');
+        const { canBreed, isMature, inheritTrait } = require('../engine/animals');
         if (!canBreed(animal, animalType, state.day)) return;
-        // Require at least one mature male of the same type
-        const hasMate = state.animals.some((a: OwnedAnimal) =>
-          a.id !== animalId && a.typeId === animal.typeId && a.sex === 'male' &&
-          isMature(a, animalType, state.day)
+
+        const matureMales = state.animals.filter(
+          (a: OwnedAnimal) => a.id !== animalId && a.typeId === animal.typeId && a.sex === 'male' && isMature(a, animalType, state.day)
         );
-        if (!hasMate) return;
-        // Check enclosure capacity (same species only)
+        if (matureMales.length === 0) return;
+
         const capacity = getEnclosureCapacity(state.buildings, animalType.enclosureType);
         const currentCount = state.animals.filter((a: OwnedAnimal) => a.typeId === animal.typeId).length;
         if (currentCount >= capacity) return;
-        const father = state.animals.find(
-          (a: OwnedAnimal) => a.id !== animalId && a.typeId === animal.typeId && a.sex === 'male' &&
-          isMature(a, animalType, state.day)
-        );
-        // Offspring can inherit one trait from mother and one from father (no duplicates)
+
+        const preferredId = state.breedingPairs[animalId];
+        const father: OwnedAnimal = (preferredId ? matureMales.find((a: OwnedAnimal) => a.id === preferredId) : undefined)
+          ?? matureMales[0];
+
         const maternalTrait = inheritTrait(animal);
         const paternalTrait = father ? inheritTrait(father) : null;
         const offspringTraits = Array.from(new Set([maternalTrait, paternalTrait].filter(Boolean))) as import('../engine/animals').AnimalTrait[];
         const offspringSex: 'male' | 'female' = Math.random() < 0.5 ? 'male' : 'female';
+
+        const motherParents = animal.parentIds;
+        const fatherParents = father?.parentIds;
+        const grandparentIds: [string, string, string, string] | undefined =
+          (motherParents && fatherParents)
+            ? [motherParents[0], motherParents[1], fatherParents[0], fatherParents[1]]
+            : undefined;
+
         const offspring: OwnedAnimal = {
           id: `animal_${Date.now()}`,
           typeId: animal.typeId,
@@ -1608,12 +1616,33 @@ export const useGameStore = create<GameState>()(
           sick: false,
           traits: offspringTraits.length > 0 ? offspringTraits : undefined,
           genes: breedGenes(animal.genes, father?.genes),
+          parentIds: [animalId, father.id],
+          grandparentIds,
         };
+
+        const nextPairs = { ...state.breedingPairs };
+        delete nextPairs[animalId];
+
         set({
+          breedingPairs: nextPairs,
           animals: [
-            ...state.animals.map(a => a.id === animalId ? { ...a, lastBreedDay: state.day } : a),
+            ...state.animals.map((a: OwnedAnimal) => a.id === animalId ? { ...a, lastBreedDay: state.day } : a),
             offspring,
           ],
+        });
+      },
+
+      setBreedingPair: (femaleId, maleId) => {
+        set(state => ({
+          breedingPairs: { ...state.breedingPairs, [femaleId]: maleId },
+        }));
+      },
+
+      clearBreedingPair: (femaleId) => {
+        set(state => {
+          const next = { ...state.breedingPairs };
+          delete next[femaleId];
+          return { breedingPairs: next };
         });
       },
 
@@ -2275,6 +2304,7 @@ export const useGameStore = create<GameState>()(
           harvestAllReady, collectAllProduction, setAutoSell, startNewSeason,
           hireWorker, fireWorker, installIrrigation,
           renegotiateLoan, takeBankruptcyLoan, clearBankruptcy,
+          setBreedingPair, clearBreedingPair,
           ...dataState
         } = state;
         return dataState;
