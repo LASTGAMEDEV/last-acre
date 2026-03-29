@@ -302,11 +302,165 @@ export default function EconomiaScreen() {
       )}
 
       {/* FUTURES TAB */}
-      {ecoTab === 'futures' && (
-        <ScrollView style={styles.futuresScroll} showsVerticalScrollIndicator={false}>
-          {/* content in Task 2 */}
-        </ScrollView>
-      )}
+      {ecoTab === 'futures' && (() => {
+        const futuresPrice = prices.find(p => p.cropId === futuresCrop);
+        const futuresCurrentPrice = futuresPrice?.price ?? CROP_TYPES.find(c => c.id === futuresCrop)!.basePrice;
+        const futuresCropDef = CROP_TYPES.find(c => c.id === futuresCrop)!;
+        const futuresInStock = inventory[futuresCrop] ?? 0;
+        const parsedQty = parseInt(futuresQty, 10);
+        const validQty = !isNaN(parsedQty) && parsedQty > 0;
+        const estRevenue = validQty ? Math.round(parsedQty * futuresCurrentPrice * 0.85) : 0;
+        const deliveryDay = day + futuresTerm;
+
+        const openPositions = (futures ?? []).filter(f => !f.settled);
+        const settledPositions = (futures ?? [])
+          .filter(f => f.settled)
+          .sort((a, b) => b.deliveryDay - a.deliveryDay)
+          .slice(0, 10);
+
+        return (
+          <ScrollView style={styles.futuresScroll} showsVerticalScrollIndicator={false}>
+            {/* ── Crop picker ── */}
+            <Text style={styles.futuresSectionLabel}>Select Crop</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.futuresCropScroll}>
+              {CROP_TYPES.map(crop => (
+                <TouchableOpacity
+                  key={crop.id}
+                  style={[styles.futuresCropChip, futuresCrop === crop.id && styles.futuresCropChipActive]}
+                  onPress={() => {
+                    setFuturesCrop(crop.id);
+                    setFuturesQty(String(Math.round(inventory[crop.id] ?? 0)));
+                  }}
+                >
+                  <Text style={[styles.futuresCropChipText, futuresCrop === crop.id && styles.futuresCropChipTextActive]}>
+                    {crop.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Text style={styles.futuresCropMeta}>
+              ${futuresCurrentPrice.toFixed(2)}/{futuresCropDef.unit} · {Math.round(futuresInStock).toLocaleString()} {futuresCropDef.unit} in stock
+            </Text>
+
+            {/* ── Contract form ── */}
+            <View style={styles.futuresForm}>
+              <View style={styles.futuresFormRow}>
+                <Text style={styles.futuresFormLabel}>Quantity ({futuresCropDef.unit})</Text>
+                <TextInput
+                  style={styles.futuresQtyInput}
+                  value={futuresQty}
+                  onChangeText={setFuturesQty}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor="#444"
+                />
+              </View>
+
+              <Text style={styles.futuresFormLabel}>Delivery term</Text>
+              <View style={styles.futuresTermRow}>
+                {([30, 60, 90] as (30 | 60 | 90)[]).map(t => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.futuresTermBtn, futuresTerm === t && styles.futuresTermBtnActive]}
+                    onPress={() => setFuturesTerm(t)}
+                  >
+                    <Text style={[styles.futuresTermBtnText, futuresTerm === t && styles.futuresTermBtnTextActive]}>
+                      {t}d
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {validQty && (
+                <View style={styles.futuresPreview}>
+                  <Text style={styles.futuresPreviewText}>
+                    Lock @ ${futuresCurrentPrice.toFixed(2)}/{futuresCropDef.unit} · Deliver by day {deliveryDay} · Est. revenue ${estRevenue.toLocaleString()}
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.futuresOpenBtn, (!validQty || futuresInStock <= 0) && styles.futuresOpenBtnDisabled]}
+                disabled={!validQty || futuresInStock <= 0}
+                onPress={() => {
+                  openFuture(futuresCrop, parsedQty, futuresTerm);
+                  setFuturesQty(String(Math.round(inventory[futuresCrop] ?? 0)));
+                  setFuturesFlash(true);
+                  setTimeout(() => setFuturesFlash(false), 2000);
+                }}
+              >
+                <Text style={styles.futuresOpenBtnText}>
+                  {futuresInStock <= 0 ? 'No stock' : `Open Contract — lock $${futuresCurrentPrice.toFixed(2)}/${futuresCropDef.unit}`}
+                </Text>
+              </TouchableOpacity>
+
+              {futuresFlash && (
+                <Text style={styles.futuresFlash}>✅ Contract opened!</Text>
+              )}
+            </View>
+
+            {/* ── Open positions ── */}
+            <Text style={styles.futuresSectionLabel}>Open Positions ({openPositions.length})</Text>
+            <View style={styles.futuresCard}>
+              {openPositions.length === 0 ? (
+                <Text style={styles.futuresEmpty}>No open contracts.</Text>
+              ) : (
+                openPositions.map(pos => {
+                  const cropDef = CROP_TYPES.find(c => c.id === pos.cropId);
+                  const inStockForPos = inventory[pos.cropId] ?? 0;
+                  const isFulfillable = inStockForPos >= pos.quantity;
+                  const daysLeft = pos.deliveryDay - day;
+                  return (
+                    <View key={pos.id} style={styles.futuresPosRow}>
+                      <View style={styles.futuresPosLeft}>
+                        <Text style={styles.futuresPosName}>{cropDef?.name ?? pos.cropId}</Text>
+                        <Text style={styles.futuresPosDetail}>
+                          {pos.quantity.toLocaleString()} {cropDef?.unit} @ ${pos.lockPrice.toFixed(2)}
+                        </Text>
+                        <Text style={[styles.futuresPosStock, isFulfillable ? styles.futuresPosStockOk : styles.futuresPosStockShort]}>
+                          {isFulfillable
+                            ? `🟢 ${Math.round(inStockForPos).toLocaleString()} in stock`
+                            : `⚠️ Short ${(pos.quantity - Math.round(inStockForPos)).toLocaleString()} ${cropDef?.unit}`}
+                        </Text>
+                      </View>
+                      <View style={styles.futuresPosRight}>
+                        <Text style={styles.futuresPosDelivery}>📅 {daysLeft}d left</Text>
+                        <Text style={styles.futuresPosDay}>Day {pos.deliveryDay}</Text>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+
+            {/* ── Settled history ── */}
+            <Text style={styles.futuresSectionLabel}>Settled (last 10)</Text>
+            <View style={[styles.futuresCard, { marginBottom: 32 }]}>
+              {settledPositions.length === 0 ? (
+                <Text style={styles.futuresEmpty}>No settled contracts yet.</Text>
+              ) : (
+                settledPositions.map(pos => {
+                  const cropDef = CROP_TYPES.find(c => c.id === pos.cropId);
+                  return (
+                    <View key={pos.id} style={styles.futuresPosRow}>
+                      <View style={styles.futuresPosLeft}>
+                        <Text style={styles.futuresPosName}>{cropDef?.name ?? pos.cropId}</Text>
+                        <Text style={styles.futuresPosDetail}>
+                          {pos.quantity.toLocaleString()} {cropDef?.unit} @ ${pos.lockPrice.toFixed(2)}
+                        </Text>
+                      </View>
+                      <View style={styles.futuresPosRight}>
+                        <Text style={styles.futuresSettledBadge}>✅ Settled</Text>
+                        <Text style={styles.futuresPosDay}>Day {pos.deliveryDay}</Text>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          </ScrollView>
+        );
+      })()}
 
       {/* MARKET TAB */}
       {ecoTab === 'market' && <>
@@ -588,4 +742,43 @@ const styles = StyleSheet.create({
   sellPressureWarn: { color: '#ffb74d', fontSize: 11, marginBottom: 6, textAlign: 'center' },
   sellPressureActive: { color: '#ef9a9a', fontSize: 11, marginBottom: 6, textAlign: 'center' },
   futuresScroll: { flex: 1, paddingHorizontal: 12 },
+
+  // Futures tab
+  futuresSectionLabel: { color: '#888', fontSize: 12, fontWeight: 'bold', marginTop: 16, marginBottom: 6 },
+  futuresCropScroll:   { marginBottom: 4 },
+  futuresCropChip:     { backgroundColor: '#16213e', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, marginRight: 6 },
+  futuresCropChipActive: { backgroundColor: '#0f3460', borderWidth: 1, borderColor: '#4fc3f7' },
+  futuresCropChipText: { color: '#888', fontSize: 11 },
+  futuresCropChipTextActive: { color: '#e8d5a3', fontWeight: 'bold' },
+  futuresCropMeta:     { color: '#888', fontSize: 11, marginBottom: 10 },
+
+  futuresForm:         { backgroundColor: '#16213e', borderRadius: 12, padding: 12, marginBottom: 4 },
+  futuresFormRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  futuresFormLabel:    { color: '#888', fontSize: 12, marginBottom: 6 },
+  futuresQtyInput:     { backgroundColor: '#0a1628', color: '#fff', fontSize: 13, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, width: 100, textAlign: 'right' },
+  futuresTermRow:      { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  futuresTermBtn:      { flex: 1, backgroundColor: '#0a1628', borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
+  futuresTermBtnActive: { backgroundColor: '#1565c0' },
+  futuresTermBtnText:  { color: '#666', fontWeight: 'bold', fontSize: 13 },
+  futuresTermBtnTextActive: { color: '#fff' },
+  futuresPreview:      { backgroundColor: '#0a1628', borderRadius: 8, padding: 8, marginBottom: 10 },
+  futuresPreviewText:  { color: '#81c784', fontSize: 11 },
+  futuresOpenBtn:      { backgroundColor: '#1b5e20', borderRadius: 8, padding: 10, alignItems: 'center' },
+  futuresOpenBtnDisabled: { backgroundColor: '#333' },
+  futuresOpenBtnText:  { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  futuresFlash:        { color: '#81c784', fontSize: 12, textAlign: 'center', marginTop: 8 },
+
+  futuresCard:         { backgroundColor: '#16213e', borderRadius: 12, padding: 12, marginBottom: 4 },
+  futuresEmpty:        { color: '#555', fontSize: 12 },
+  futuresPosRow:       { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
+  futuresPosLeft:      { flex: 1 },
+  futuresPosRight:     { alignItems: 'flex-end', justifyContent: 'center' },
+  futuresPosName:      { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
+  futuresPosDetail:    { color: '#888', fontSize: 11, marginTop: 2 },
+  futuresPosStock:     { fontSize: 11, marginTop: 3 },
+  futuresPosStockOk:   { color: '#66bb6a' },
+  futuresPosStockShort:{ color: '#ffa726' },
+  futuresPosDelivery:  { color: '#aaa', fontSize: 12, fontWeight: 'bold' },
+  futuresPosDay:       { color: '#555', fontSize: 10, marginTop: 2 },
+  futuresSettledBadge: { color: '#66bb6a', fontSize: 12, fontWeight: 'bold' },
 });
