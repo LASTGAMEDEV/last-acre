@@ -1,35 +1,105 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { useGameStore } from '../../store/useGameStore';
+import { getSeason } from '../../engine/climate';
+import { SEASON_THEME, C } from '../../constants/theme';
+import DaySummaryModal from '../../components/DaySummaryModal';
+import TutorialModal from '../../components/TutorialModal';
+import YearEndModal from '../../components/YearEndModal';
+import BankruptModal from '../../components/BankruptModal';
+import GameHUD from '../../components/GameHUD';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { day, advanceDay } = useGameStore();
+  const season = getSeason(day);
+  const theme = SEASON_THEME[season];
+
+  // Subtle pulse on the Advance button
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.06, duration: 900,  useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1.00, duration: 900,  useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* Persistent status bar */}
+      <GameHUD />
+
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: { backgroundColor: theme.tabBar, borderTopColor: theme.accent + '33' },
+          tabBarActiveTintColor: theme.accent,
+          tabBarInactiveTintColor: C.faint,
+          tabBarLabelStyle: { fontSize: 10 },
         }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+      >
+        {/* ── 5 visible combined tabs ── */}
+        <Tabs.Screen name="granja"   options={{ title: 'Farm',       tabBarLabel: '🌾 Farm' }} />
+        <Tabs.Screen name="mercado"  options={{ title: 'Market',     tabBarLabel: '💰 Market' }} />
+        <Tabs.Screen name="fabrica"  options={{ title: 'Processing', tabBarLabel: '🏭 Processing' }} />
+        <Tabs.Screen name="gestion"  options={{ title: 'Office',     tabBarLabel: '📋 Office' }} />
+        <Tabs.Screen name="clima"    options={{ title: 'Weather',    tabBarLabel: '☀️ Weather' }} />
+
+        {/* ── Hidden legacy screens (content accessed via combined tabs) ── */}
+        <Tabs.Screen name="tierras"      options={{ href: null }} />
+        <Tabs.Screen name="animales"     options={{ href: null }} />
+        <Tabs.Screen name="maquinaria"   options={{ href: null }} />
+        <Tabs.Screen name="trabajadores" options={{ href: null }} />
+        <Tabs.Screen name="economia"     options={{ href: null }} />
+        <Tabs.Screen name="subasta"      options={{ href: null }} />
+        <Tabs.Screen name="tienda"       options={{ href: null }} />
+        <Tabs.Screen name="procesado"    options={{ href: null }} />
+        <Tabs.Screen name="seguros"      options={{ href: null }} />
+        <Tabs.Screen name="oficina"      options={{ href: null }} />
+        <Tabs.Screen name="calendario"   options={{ href: null }} />
+        <Tabs.Screen name="logros"       options={{ href: null }} />
+      </Tabs>
+
+      {/* Floating Advance Day button */}
+      <Animated.View style={[styles.advanceBtnWrap, { transform: [{ scale: pulse }] }]}>
+        <TouchableOpacity
+          style={[styles.advanceBtn, { backgroundColor: theme.accent, shadowColor: theme.accent }]}
+          onPress={advanceDay}
+        >
+          <Text style={styles.advanceDay}>Day {day}</Text>
+          <Text style={styles.advanceLabel}>▶ Advance</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
+      <DaySummaryModal />
+      <TutorialModal />
+      <YearEndModal />
+      <BankruptModal />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  advanceBtnWrap: {
+    position: 'absolute',
+    top: 90,
+    right: 14,
+  },
+  advanceBtn: {
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  advanceDay:   { color: '#fff', fontSize: 11, opacity: 0.85 },
+  advanceLabel: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+});
