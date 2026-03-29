@@ -1564,11 +1564,17 @@ export const useGameStore = create<GameState>()(
         const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
         const value = sellValue(animal, animalType, state.day) * coopBonus * prestigeBonus;
+        const nextPairs = { ...state.breedingPairs };
+        delete nextPairs[animalId]; // in case she was a female with a preferred pair
+        for (const [femId, maleId] of Object.entries(nextPairs)) {
+          if (maleId === animalId) delete nextPairs[femId];
+        }
         set({
           money: state.money + value,
           animals: state.animals.filter(a => a.id !== animalId),
           salesLog: [...state.salesLog, { day: state.day, amount: value, category: 'animals' }],
           totalRevenue: state.totalRevenue + value,
+          breedingPairs: nextPairs,
         });
       },
 
@@ -1578,6 +1584,7 @@ export const useGameStore = create<GameState>()(
         if (!animal || animal.sex !== 'female') return;
         const { ANIMAL_TYPES } = require('../data/animalTypes');
         const animalType = ANIMAL_TYPES.find((a: any) => a.id === animal.typeId);
+        if (!animalType) return;
         const { canBreed, isMature, inheritTrait } = require('../engine/animals');
         if (!canBreed(animal, animalType, state.day)) return;
 
@@ -1591,8 +1598,9 @@ export const useGameStore = create<GameState>()(
         if (currentCount >= capacity) return;
 
         const preferredId = state.breedingPairs[animalId];
-        const father: OwnedAnimal = (preferredId ? matureMales.find((a: OwnedAnimal) => a.id === preferredId) : undefined)
-          ?? matureMales[0];
+        const father =
+          (preferredId ? matureMales.find((a: OwnedAnimal) => a.id === preferredId) : undefined)
+          ?? matureMales[0]!;
 
         const maternalTrait = inheritTrait(animal);
         const paternalTrait = father ? inheritTrait(father) : null;
@@ -1601,6 +1609,8 @@ export const useGameStore = create<GameState>()(
 
         const motherParents = animal.parentIds;
         const fatherParents = father?.parentIds;
+        // Grandparents recorded only when both parents have known lineage.
+        // Partial lineage (one side unknown) is intentionally omitted — simplifies UI display.
         const grandparentIds: [string, string, string, string] | undefined =
           (motherParents && fatherParents)
             ? [motherParents[0], motherParents[1], fatherParents[0], fatherParents[1]]
