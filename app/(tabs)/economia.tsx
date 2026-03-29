@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput } from 'react-native';
 import Svg, { Polyline, Line, Text as SvgText, Rect, G } from 'react-native-svg';
 import { useGameStore } from '../../store/useGameStore';
@@ -138,6 +138,13 @@ export default function EconomiaScreen() {
   const [futuresQty, setFuturesQty] = useState<string>('');
   const [futuresTerm, setFuturesTerm] = useState<30 | 60 | 90>(30);
   const [futuresFlash, setFuturesFlash] = useState(false);
+  const futuresFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (futuresFlashTimerRef.current) clearTimeout(futuresFlashTimerRef.current);
+    };
+  }, []);
 
   const selected = CROP_TYPES.find(c => c.id === selectedCrop)!;
   const selectedPrice = prices.find(p => p.cropId === selectedCrop);
@@ -386,7 +393,8 @@ export default function EconomiaScreen() {
                   openFuture(futuresCrop, parsedQty, futuresTerm);
                   setFuturesQty(String(Math.round(inventory[futuresCrop] ?? 0)));
                   setFuturesFlash(true);
-                  setTimeout(() => setFuturesFlash(false), 2000);
+                  if (futuresFlashTimerRef.current) clearTimeout(futuresFlashTimerRef.current);
+                  futuresFlashTimerRef.current = setTimeout(() => setFuturesFlash(false), 2000);
                 }}
               >
                 <Text style={styles.futuresOpenBtnText}>
@@ -424,7 +432,9 @@ export default function EconomiaScreen() {
                         </Text>
                       </View>
                       <View style={styles.futuresPosRight}>
-                        <Text style={styles.futuresPosDelivery}>📅 {daysLeft}d left</Text>
+                        <Text style={styles.futuresPosDelivery}>
+                          {daysLeft <= 0 ? '⚠️ Due today' : `📅 ${daysLeft}d left`}
+                        </Text>
                         <Text style={styles.futuresPosDay}>Day {pos.deliveryDay}</Text>
                       </View>
                     </View>
@@ -435,7 +445,7 @@ export default function EconomiaScreen() {
 
             {/* ── Settled history ── */}
             <Text style={styles.futuresSectionLabel}>Settled (last 10)</Text>
-            <View style={[styles.futuresCard, { marginBottom: 32 }]}>
+            <View style={styles.futuresCardLast}>
               {settledPositions.length === 0 ? (
                 <Text style={styles.futuresEmpty}>No settled contracts yet.</Text>
               ) : (
@@ -769,6 +779,7 @@ const styles = StyleSheet.create({
   futuresFlash:        { color: '#81c784', fontSize: 12, textAlign: 'center', marginTop: 8 },
 
   futuresCard:         { backgroundColor: '#16213e', borderRadius: 12, padding: 12, marginBottom: 4 },
+  futuresCardLast:    { backgroundColor: '#16213e', borderRadius: 12, padding: 12, marginBottom: 32 },
   futuresEmpty:        { color: '#555', fontSize: 12 },
   futuresPosRow:       { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
   futuresPosLeft:      { flex: 1 },
