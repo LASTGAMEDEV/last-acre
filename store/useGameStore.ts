@@ -24,25 +24,6 @@ import { ATTACHMENT_TYPES, AttachmentType } from '../data/attachmentTypes';
 import { ContractorOperation, calcJobDays, canAssignJob, getTransportCapacityKg } from '../engine/machinery';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
-function getMachineYieldBonus(machines: OwnedMachine[], repairingIds?: Set<string>): number {
-  return machines.reduce((bonus, m) => {
-    const t = MACHINE_TYPES.find(mt => mt.id === m.typeId);
-    if (!t) return bonus;
-    // Broken or under repair: halve the bonus above baseline (1.0)
-    const yb = repairingIds?.has(m.id)
-      ? 1 + (t.yieldBonus - 1) * 0.5
-      : t.yieldBonus;
-    return bonus * yb;
-  }, 1.0);
-}
-
-function getMachineSpeedBonus(machines: OwnedMachine[]): number {
-  return machines.reduce((best, m) => {
-    const t = MACHINE_TYPES.find(mt => mt.id === m.typeId);
-    return t && t.speedBonus < 1 ? Math.min(best, t.speedBonus) : best;
-  }, 1.0);
-}
-
 function getDailyMaintenance(machines: OwnedMachine[], buildings: string[]): number {
   const hasTaller = buildings.includes('bld_taller');
   const machineDiscount = hasTaller ? 0.75 : 1.0;
@@ -1593,13 +1574,7 @@ export const useGameStore = create<GameState>()(
 
           if (hasFieldWorker) {
             const { harvestAmount: harvestAmt } = require('../engine/crops');
-            const speedBonusW = getMachineSpeedBonus(state.machines);
-            const repairingIds = new Set(
-              (state.machineRepairs ?? [])
-                .filter(r => r.readyDay === null || r.readyDay > newDay)
-                .map(r => r.machineId)
-            );
-            const yieldBonusW = getMachineYieldBonus(state.machines, repairingIds);
+            const yieldBonusW = 1.0;
             const siloCapacity = getSiloCapacity(state.buildings);
             let siloTotal = Object.values(autoSellFinalInventory).reduce((a: number, b) => a + (b as number), 0);
             const workerNewInventory = { ...autoSellFinalInventory };
@@ -1608,7 +1583,7 @@ export const useGameStore = create<GameState>()(
               if (!p.plantedCrop || !p.owned || siloTotal >= siloCapacity) return p;
               const cropType = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
               if (!cropType) return p;
-              if (newDay < p.plantedCrop.plantedDay + Math.max(1, Math.round(cropType.growthDays * speedBonusW) - workerBonuses.cropGrowthReduction)) return p;
+              if (newDay < p.plantedCrop.plantedDay + Math.max(1, Math.round(cropType.growthDays) - workerBonuses.cropGrowthReduction)) return p;
               const baseClimate = state.todayWeather?.climateModifier ?? 1.0;
               const waterScale = (cropType.waterNeed ?? 3) / 5;
               const climateModifier = 1.0 + (baseClimate - 1.0) * waterScale;
@@ -1618,7 +1593,7 @@ export const useGameStore = create<GameState>()(
               const irrigationBonus = p.irrigated ? 1.20 : 1.0;
               const rotationMod = p.lastCropId && p.lastCropId !== p.plantedCrop.cropId ? 1.15 : 1.0;
               const soilMod = getSoilModifier(p.soilType, p.plantedCrop.cropId);
-              const machineYieldWithEngineer = yieldBonusW + workerBonuses.machineYieldBonus;
+              const machineYieldWithEngineer = yieldBonusW + workerBonuses.machineYieldBonus; // yieldBonusW = 1.0
               const rawUnits = harvestAmt(p.plantedCrop, cropType, p.fertility, climateModifier, p.hasWeeds, machineYieldWithEngineer);
               const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * irrigationBonus * rotationMod * soilMod * workerBonuses.cropYieldMultiplier), siloCapacity - siloTotal);
               siloTotal += units;
@@ -1815,6 +1790,7 @@ export const useGameStore = create<GameState>()(
         const state = get();
         const parcel = state.parcels.find(p => p.id === parcelId);
         if (!parcel || !parcel.owned || parcel.plantedCrop) return;
+        if (!parcel.tilled) return; // must till first
         const cropType = CROP_TYPES.find(c => c.id === cropId);
         if (!cropType) return;
         // Seasonal planting gate — greenhouses bypass season restrictions
@@ -1845,9 +1821,7 @@ export const useGameStore = create<GameState>()(
           ? state.seedVault.find(s => s.id === parcel.seedEntryId)
           : undefined;
         const seedGenes = seedEntry?.genes ?? { yield: 1, drought: 1, growth: 1, quality: 1 };
-        // Speed bonus: faster machines reduce effective growth days
-        const speedBonus = getMachineSpeedBonus(state.machines);
-        const effectiveGrowthDays = Math.round(cropType.growthDays * speedBonus / seedGenes.growth);
+        const effectiveGrowthDays = Math.round(cropType.growthDays / seedGenes.growth);
         if (state.day < crop.plantedDay + effectiveGrowthDays) return;
         // Silo cap
         const siloCapacity = getSiloCapacity(state.buildings);
@@ -1860,14 +1834,8 @@ export const useGameStore = create<GameState>()(
         // Drought gene reduces penalty when weather is bad (delta < 0); no effect on bonuses
         const droughtScale = rawClimateDelta < 0 ? 1.0 / seedGenes.drought : 1.0;
         const climateModifier = 1.0 + rawClimateDelta * droughtScale;
-        const repairingIds = new Set(
-          (state.machineRepairs ?? [])
-            .filter(r => r.readyDay === null || r.readyDay > state.day)
-            .map(r => r.machineId)
-        );
-        const yieldBonus = getMachineYieldBonus(state.machines, repairingIds);
         const { harvestAmount } = require('../engine/crops');
-        const rawUnits = harvestAmount(crop, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, yieldBonus);
+        const rawUnits = harvestAmount(crop, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, 1.0);
         // Field event penalty: −25% yield per unresolved disease/pest event
         const unresolvedEvents = state.fieldEvents.filter(e => e.parcelId === parcelId && !e.resolved).length;
         const fieldEventMod = Math.pow(0.75, unresolvedEvents);
@@ -2806,13 +2774,7 @@ export const useGameStore = create<GameState>()(
 
       harvestAllReady: () => {
         const state = get();
-        const speedBonus = getMachineSpeedBonus(state.machines);
-        const repairingIds = new Set(
-          (state.machineRepairs ?? [])
-            .filter(r => r.readyDay === null || r.readyDay > state.day)
-            .map(r => r.machineId)
-        );
-        const yieldBonus = getMachineYieldBonus(state.machines, repairingIds);
+        const yieldBonus = 1.0;
         const siloCapacity = getSiloCapacity(state.buildings);
         const { harvestAmount } = require('../engine/crops');
         let totalInventory = Object.values(state.inventory).reduce((a: number, b) => a + (b as number), 0);
@@ -2822,7 +2784,7 @@ export const useGameStore = create<GameState>()(
           if (!p.plantedCrop || !p.owned || totalInventory >= siloCapacity) return p;
           const cropType = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
           if (!cropType) return p;
-          if (state.day < p.plantedCrop.plantedDay + Math.round(cropType.growthDays * speedBonus)) return p;
+          if (state.day < p.plantedCrop.plantedDay + Math.round(cropType.growthDays)) return p;
           const baseClimate = state.todayWeather?.climateModifier ?? 1.0;
           const waterScale = (cropType.waterNeed ?? 3) / 5;
           const climateModifier = 1.0 + (baseClimate - 1.0) * waterScale;
