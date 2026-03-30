@@ -20,6 +20,8 @@ import { WorkerRole, WorkerType as WorkerTypeDef } from '../data/workerTypes';
 import { GameEventType } from '../data/randomEvents';
 import { rollEvent, calcRepairCost, calcRepairDays, getHarvestModifier } from '../engine/events';
 import { NPCFarmRuntime, initNpcFarms, npcSellVolume, npcAuctionBid } from '../engine/competitors';
+import { ATTACHMENT_TYPES, AttachmentType } from '../data/attachmentTypes';
+import { ContractorOperation, calcJobDays, canAssignJob, getTransportCapacityKg } from '../engine/machinery';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
 function getMachineYieldBonus(machines: OwnedMachine[], repairingIds?: Set<string>): number {
@@ -127,6 +129,7 @@ export interface LandParcel {
   lastCropId?: string;
   greenhouse: boolean;
   irrigated: boolean;
+  tilled: boolean;
   seedEntryId?: string; // SeedEntry id used when this parcel was planted
   soilType?: SoilType; // undefined on old saves → treated as 'loamy'
 }
@@ -205,6 +208,41 @@ export interface OwnedMachine {
   id: string;
   typeId: string;
   purchasedDay: number;
+}
+
+export interface OwnedAttachment {
+  id: string;
+  typeId: string;
+}
+
+export interface OwnedTrailer {
+  id: string;
+  typeId: string;
+  hitchedTo: string | null; // truckId | null
+}
+
+export interface TractorJob {
+  id: string;
+  tractorId: string;
+  attachmentId: string;
+  operation: 'till' | 'plant' | 'spray';
+  parcelIds: string[];
+  cropId?: string;       // required when operation === 'plant'
+  totalHa: number;
+  haPerDay: number;
+  startDay: number;
+  completesDay: number;
+}
+
+export interface HarvestJob {
+  id: string;
+  combineId: string;
+  parcelIds: string[];
+  totalHa: number;
+  haPerDay: number;
+  startDay: number;
+  completesDay: number;
+  processedHa: number;
 }
 
 export interface FieldEvent {
@@ -313,6 +351,10 @@ export interface GameState {
   breedingPairs: Record<string, string>; // femaleId → preferred maleId
   activeEvents: GameEvent[];
   machineRepairs: MachineRepair[];
+  attachments: OwnedAttachment[];
+  trailers: OwnedTrailer[];
+  tractorJobs: TractorJob[];
+  harvestJobs: HarvestJob[];
   npcFarms: NPCFarm[];
 
   seedVault: SeedEntry[];
@@ -375,6 +417,12 @@ export interface GameState {
   startHybridization: (cropId: string, parentAId: string, parentBId: string) => void;
   selectSeedForParcel: (parcelId: string, seedEntryId: string | null) => void;
   startRepair: (machineId: string) => void;
+  buyAttachment: (typeId: string) => void;
+  buyTrailer: (typeId: string) => void;
+  hitchTrailer: (trailerId: string, truckId: string | null) => void;
+  assignJob: (tractorId: string, attachmentId: string, operation: 'till' | 'plant' | 'spray', parcelIds: string[], cropId?: string) => void;
+  assignHarvestJob: (combineId: string, parcelIds: string[]) => void;
+  hireContractor: (operation: ContractorOperation, parcelIds: string[], cropId?: string) => void;
 }
 
 const FIELD_NAMES: string[] = [
@@ -426,6 +474,7 @@ function generateParcels(): LandParcel[] {
       plantedCrop: null,
       greenhouse: false,
       irrigated: false,
+      tilled: false,
       soilType: randomSoilType(),
     });
   }
@@ -438,9 +487,9 @@ function generateInitialPrices(): MarketPrice[] {
 
 function generateInitialAuctions(): AuctionLot[] {
   const premiumParcels: LandParcel[] = [
-    { id: 'auction_p0', name: 'Gold Acre',     fertility: 22, hectares: 5,  pricePerHa: 55000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false },
-    { id: 'auction_p1', name: 'Prime Ridge',   fertility: 25, hectares: 2,  pricePerHa: 60000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false },
-    { id: 'auction_p2', name: 'Blessed Bottom',fertility: 20, hectares: 10, pricePerHa: 50000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false },
+    { id: 'auction_p0', name: 'Gold Acre',     fertility: 22, hectares: 5,  pricePerHa: 55000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
+    { id: 'auction_p1', name: 'Prime Ridge',   fertility: 25, hectares: 2,  pricePerHa: 60000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
+    { id: 'auction_p2', name: 'Blessed Bottom',fertility: 20, hectares: 10, pricePerHa: 50000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
   ];
   return premiumParcels.map((parcel, i) => {
     const startingBid = Math.round(parcel.pricePerHa * parcel.hectares * 0.75);
@@ -468,6 +517,10 @@ function makeInitialState() {
     animals: [] as OwnedAnimal[],
     animalInventory: {} as Record<string, number>,
     machines: [] as OwnedMachine[],
+    attachments: [] as OwnedAttachment[],
+    trailers: [] as OwnedTrailer[],
+    tractorJobs: [] as TractorJob[],
+    harvestJobs: [] as HarvestJob[],
     prices: generateInitialPrices(),
     newsEvents: [] as NewsEvent[],
     loans: [] as Loan[],
@@ -1335,6 +1388,7 @@ export const useGameStore = create<GameState>()(
             plantedCrop: null,
             greenhouse: false,
             irrigated: false,
+            tilled: false,
           };
           auctionLots.push({
             id: `lot_${newDay}`,
@@ -2731,7 +2785,7 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'granja-tycoon-save-v6',
+      name: 'granja-tycoon-save-v7',
       storage: createJSONStorage(() => {
         try {
           return localStorage;
