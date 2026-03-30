@@ -55,11 +55,11 @@ export function getHarvestModifier(
       mod *= e.modifier ?? 0.5;
     }
     if (e.type === 'pest_outbreak' && e.affectedIds?.[0] === cropId) {
-      mod *= 0.5;
+      mod *= e.modifier ?? 0.5;
     }
     if (
       (e.type === 'windfall_soil' || e.type === 'windfall_harvest') &&
-      e.modifier && e.modifier > 1
+      e.modifier != null && e.modifier > 1
     ) {
       mod *= e.modifier;
     }
