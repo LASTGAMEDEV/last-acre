@@ -1,0 +1,863 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, useWindowDimensions } from 'react-native';
+import { useGameStore, LandParcel, FieldEvent } from '../../store/useGameStore';
+import ScreenHeader from '../../components/ScreenHeader';
+import { CROP_TYPES, PlantingSeason } from '../../data/cropTypes';
+import { MACHINE_TYPES } from '../../data/machineTypes';
+import { BUILDING_TYPES } from '../../data/buildingTypes';
+import { getSeason } from '../../engine/climate';
+import { getSoilModifier } from '../../engine/crops';
+import { PRODUCT_TYPES } from '../../data/productTypes';
+
+const MAP_COLS = 8;
+
+function geneGrade(v: number): string {
+  if (v >= 1.4) return 'S';
+  if (v >= 1.2) return 'A';
+  if (v >= 1.0) return 'B';
+  if (v >= 0.8) return 'C';
+  return 'D';
+}
+
+const SOIL_ICONS: Record<string, string> = {
+  loamy: '🟫', sandy: '🟡', clay: '🔵', chalky: '⬜',
+};
+
+const CROP_ICONS: Record<string, string> = {
+  grass: '🌿', alfalfa: '🌱', barley: '🌾', oats: '🌾',
+  wheat: '🌾', corn: '🌽', sorghum: '🌾', rice: '🍚',
+  potatoes: '🥔', sugarbeet: '🌰', soy: '🫘', sugarcane: '🎋',
+  sunflower: '🌻', rapeseed: '🌼', canola: '🌼', cotton: '🩷',
+  saffron: '🌸', vanilla: '🌺', lavender: '💜', ginseng: '🫚',
+  grapes: '🍇', tomatoes: '🍅', strawberries: '🍓', olives: '🫒', almonds: '🥜',
+};
+
+export default function TierrasScreen() {
+  const { width: screenWidth } = useWindowDimensions();
+  const CELL_SIZE = Math.min(60, Math.floor((Math.min(screenWidth, 480) - 20) / MAP_COLS));
+
+  const {
+    parcels, money, day, inventory, machines, buildings, cooperative,
+    buyParcel, plantCrop, harvestCrop, harvestAllReady,
+    fieldEvents, resolveFieldEvent, productInventory,
+    clearWeeds, fertilizeCrop, installGreenhouse, removeGreenhouse, installIrrigation,
+    seedVault, selectSeedForParcel,
+  } = useGameStore();
+
+  const [plantingParcel, setPlantingParcel] = useState<LandParcel | null>(null);
+  const [fertilized, setFertilized] = useState(false);
+  const [selectedCropId, setSelectedCropId] = useState<string | null>(null);
+  const [selectedSeedId, setSelectedSeedId] = useState<string | null>(null);
+  const currentSeason: PlantingSeason = getSeason(day);
+  const [mapView, setMapView] = useState(false);
+  const [mapSelected, setMapSelected] = useState<LandParcel | null>(null);
+  type FieldFilter = 'all' | 'empty' | 'growing' | 'ready' | 'events';
+  const [fieldFilter, setFieldFilter] = useState<FieldFilter>('all');
+
+  const owned = parcels.filter(p => p.owned);
+  const available = parcels.filter(p => !p.owned).slice(0, 20);
+  const activeFieldEvents = fieldEvents.filter(e => !e.resolved);
+
+  // Machine effects
+  const speedBonus = machines.reduce((best, m) => {
+    const t = MACHINE_TYPES.find(mt => mt.id === m.typeId);
+    return t && t.speedBonus < 1 ? Math.min(best, t.speedBonus) : best;
+  }, 1.0);
+
+  // Storage info
+  const BASE_SILO = 10_000;
+  const siloCapacity = buildings.reduce((s, bId) => {
+    if (!bId.startsWith('bld_silo')) return s;
+    const caps: Record<string, number> = { bld_silo_s: 50000, bld_silo_m: 200000, bld_silo_l: 600000, bld_silo_xl: 2000000 };
+    return s + (caps[bId] ?? 0);
+  }, BASE_SILO);
+  const totalInventory = Object.values(inventory).reduce((a, b) => a + b, 0);
+
+  // Greenhouse slots
+  const totalGHSlots = buildings.reduce((s: number, bId: string) => {
+    if (!bId.startsWith('bld_greenhouse')) return s;
+    const t = BUILDING_TYPES.find(bt => bt.id === bId);
+    return s + (t?.capacity ?? 0);
+  }, 0);
+  const usedGHSlots = parcels.filter(p => p.greenhouse).length;
+
+  function isReady(parcel: LandParcel): boolean {
+    if (!parcel.plantedCrop) return false;
+    const cropType = CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId);
+    if (!cropType) return false;
+    const effectiveDays = Math.round(cropType.growthDays * speedBonus);
+    return day >= parcel.plantedCrop.plantedDay + effectiveDays;
+  }
+
+  function daysLeft(parcel: LandParcel): number {
+    if (!parcel.plantedCrop) return 0;
+    const cropType = CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId);
+    if (!cropType) return 0;
+    const effectiveDays = Math.round(cropType.growthDays * speedBonus);
+    return Math.max(0, parcel.plantedCrop.plantedDay + effectiveDays - day);
+  }
+
+  function getEventForParcel(parcelId: string): FieldEvent | undefined {
+    return activeFieldEvents.find(e => e.parcelId === parcelId);
+  }
+
+  function renderMapCell(parcel: LandParcel) {
+    const event = getEventForParcel(parcel.id);
+    const ready = isReady(parcel);
+    const selected = mapSelected?.id === parcel.id;
+
+    let bg = '#0d0d14';        // not owned
+    let borderColor = '#222230';
+    let mainIcon = '';
+    let statusIcon = '';
+
+    if (parcel.owned) {
+      if (event) {
+        bg = '#5c1a1a'; borderColor = '#c62828'; statusIcon = '⚠️';
+      } else if (parcel.hasWeeds) {
+        bg = '#3d2800'; borderColor = '#e65100';
+      } else if (parcel.plantedCrop && ready) {
+        bg = '#1b5e20'; borderColor = '#43a047';
+      } else if (parcel.plantedCrop) {
+        bg = '#1a3a1a'; borderColor = '#2e7d32';
+      } else {
+        bg = '#1a2744'; borderColor = '#3a5080';
+      }
+      mainIcon = parcel.plantedCrop ? (CROP_ICONS[parcel.plantedCrop.cropId] ?? '🌱') : '';
+      if (parcel.hasWeeds) statusIcon = '🌿';
+    }
+
+    if (selected) borderColor = '#c8860a';
+
+    return (
+      <TouchableOpacity
+        key={parcel.id}
+        onPress={() => setMapSelected(parcel)}
+        activeOpacity={0.7}
+        style={{
+          width: CELL_SIZE,
+          height: CELL_SIZE,
+          margin: 2,
+          borderRadius: 6,
+          backgroundColor: bg,
+          borderWidth: selected ? 2 : 1,
+          borderColor,
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        {parcel.owned ? (
+          <>
+            {mainIcon ? <Text style={{ fontSize: CELL_SIZE * 0.38 }}>{mainIcon}</Text> : null}
+            {statusIcon ? (
+              <Text style={{ fontSize: CELL_SIZE * 0.28, position: 'absolute', top: 1, right: 2 }}>{statusIcon}</Text>
+            ) : null}
+            {ready && !statusIcon ? (
+              <Text style={{ fontSize: CELL_SIZE * 0.22, color: '#a5d6a7', fontWeight: 'bold' }}>✓</Text>
+            ) : null}
+            <Text style={{ fontSize: CELL_SIZE * 0.2, color: '#88aacc', marginTop: 1 }}>{parcel.hectares}ha</Text>
+          </>
+        ) : (
+          <Text style={{ fontSize: CELL_SIZE * 0.3, opacity: 0.35 }}>🔒</Text>
+        )}
+      </TouchableOpacity>
+    );
+  }
+
+  const fungicideIds = PRODUCT_TYPES.filter(p => p.category === 'fungicide' && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
+  const insecticideIds = PRODUCT_TYPES.filter(p => p.category === 'insecticide' && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
+  const herbicideIds = PRODUCT_TYPES.filter(p => p.category === 'herbicide' && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
+  const fertilizerIds = PRODUCT_TYPES.filter(p => (p.category === 'fertilizer_solid' || p.category === 'fertilizer_liquid') && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
+
+  function renderOwnedParcel(parcel: LandParcel) {
+    const ready = isReady(parcel);
+    const days = daysLeft(parcel);
+    const fieldEvent = getEventForParcel(parcel.id);
+    const cropType = parcel.plantedCrop ? CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId) : null;
+    const storageFull = totalInventory >= siloCapacity;
+
+    return (
+      <View key={parcel.id} style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cardTitle}>{parcel.name}</Text>
+            <Text style={styles.cardSub}>{parcel.hectares} ha</Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={styles.fertility}>♦ {parcel.fertility}/25</Text>
+            {parcel.soilType && (
+              <Text style={styles.soilBadge}>{SOIL_ICONS[parcel.soilType]} {parcel.soilType}</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Greenhouse badge / toggle */}
+        {parcel.greenhouse ? (
+          <View style={styles.ghRow}>
+            <Text style={styles.ghBadge}>🏠 Greenhouse</Text>
+            <TouchableOpacity onPress={() => removeGreenhouse(parcel.id)}>
+              <Text style={styles.ghRemove}>Remove</Text>
+            </TouchableOpacity>
+          </View>
+        ) : totalGHSlots > usedGHSlots && !parcel.plantedCrop ? (
+          <TouchableOpacity style={styles.ghInstallBtn} onPress={() => installGreenhouse(parcel.id)}>
+            <Text style={styles.smallBtnText}>🏠 Install GH ($2k)</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {/* Irrigation badge / install */}
+        {parcel.irrigated ? (
+          <Text style={styles.irrigatedBadge}>💧 Irrigated +20% yield</Text>
+        ) : money >= 3000 ? (
+          <TouchableOpacity style={styles.irrigateBtn} onPress={() => installIrrigation(parcel.id)}>
+            <Text style={styles.smallBtnText}>💧 Irrigate ($3k)</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {parcel.plantedCrop ? (
+          <>
+            <Text style={styles.cropTag}>
+              🌱 {cropType?.name ?? parcel.plantedCrop.cropId}
+              {parcel.plantedCrop.fertilized ? ' ✨' : ''}
+            </Text>
+            {ready ? (
+              <TouchableOpacity
+                style={[styles.harvestBtn, storageFull && styles.btnDisabled]}
+                onPress={() => harvestCrop(parcel.id)}
+                disabled={storageFull}
+              >
+                <Text style={styles.btnText}>{storageFull ? '📦 Silo full' : '🌾 Harvest'}</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.daysLeft}>⏳ {days}d left</Text>
+            )}
+            {!parcel.plantedCrop.fertilized && fertilizerIds.length > 0 && (
+              <TouchableOpacity style={styles.fertilizeBtn} onPress={() => fertilizeCrop(parcel.id, fertilizerIds[0])}>
+                <Text style={styles.smallBtnText}>✨ Fertilize (1 dose)</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        ) : (
+          <>
+            <Text style={styles.emptyTag}>Empty</Text>
+            <TouchableOpacity style={styles.plantBtn} onPress={() => setPlantingParcel(parcel)}>
+              <Text style={styles.btnText}>🌱 Plant</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {parcel.hasWeeds && (
+          <View style={styles.weedRow}>
+            <Text style={styles.weedTag}>⚠️ Weeds</Text>
+            {herbicideIds.length > 0 ? (
+              <TouchableOpacity style={styles.resolveBtn} onPress={() => clearWeeds(parcel.id)}>
+                <Text style={styles.resolveBtnText}>Clear (1 dose)</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.noProductText}>No herbicide</Text>
+            )}
+          </View>
+        )}
+
+        {fieldEvent && (
+          <View style={styles.eventAlert}>
+            <Text style={styles.eventText}>
+              {fieldEvent.type === 'disease' ? '🍄 Disease' : '🐛 Pest'}
+            </Text>
+            {(fieldEvent.type === 'disease' ? fungicideIds : insecticideIds).slice(0, 1).map(pid => (
+              <TouchableOpacity key={pid} style={styles.resolveBtn} onPress={() => resolveFieldEvent(fieldEvent.id, pid)}>
+                <Text style={styles.resolveBtnText}>Treat (1 unit)</Text>
+              </TouchableOpacity>
+            ))}
+            {(fieldEvent.type === 'disease' ? fungicideIds : insecticideIds).length === 0 && (
+              <Text style={styles.noProductText}>
+                No {fieldEvent.type === 'disease' ? 'fungicide' : 'insecticide'}
+              </Text>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  function renderMarketParcel(parcel: LandParcel) {
+    const cost = parcel.pricePerHa * parcel.hectares;
+    return (
+      <View key={parcel.id} style={[styles.card, styles.marketCard]}>
+        <View style={styles.cardHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cardTitle}>{parcel.name}</Text>
+            <Text style={styles.cardSub}>{parcel.hectares} ha</Text>
+          </View>
+          <Text style={styles.fertility}>♦ {parcel.fertility}/25</Text>
+        </View>
+        <Text style={styles.priceTag}>${cost.toLocaleString()}</Text>
+        <TouchableOpacity
+          style={[styles.buyBtn, money < cost && styles.btnDisabled]}
+          onPress={() => buyParcel(parcel.id)}
+          disabled={money < cost}
+        >
+          <Text style={styles.btnText}>Comprar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Map selected parcel detail helpers
+  const mapSelectedEvent = mapSelected ? getEventForParcel(mapSelected.id) : null;
+  const mapSelectedCropType = mapSelected?.plantedCrop
+    ? CROP_TYPES.find(c => c.id === mapSelected.plantedCrop!.cropId)
+    : null;
+  const mapSelectedReady = mapSelected ? isReady(mapSelected) : false;
+  const mapSelectedDays = mapSelected ? daysLeft(mapSelected) : 0;
+  const mapSelectedHerbicide = herbicideIds.length > 0;
+  const mapSelectedFertilizer = fertilizerIds.length > 0;
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <ScreenHeader title="My Fields" />
+        <TouchableOpacity style={styles.viewToggle} onPress={() => { setMapView(v => !v); setMapSelected(null); }}>
+          <Text style={styles.viewToggleText}>{mapView ? '📋 List' : '🗺️ Map'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Field events banner */}
+      {activeFieldEvents.length > 0 && (
+        <View style={styles.eventsBanner}>
+          <Text style={styles.eventsBannerText}>
+            ⚠️ {activeFieldEvents.length} active event{activeFieldEvents.length > 1 ? 's' : ''} — check your plots
+          </Text>
+        </View>
+      )}
+
+      {mapView ? (
+        /* ── MAP VIEW ── */
+        <View style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={{ paddingBottom: mapSelected ? 196 : 8 }}>
+            <Text style={styles.sectionLabel}>
+              {owned.length} plots · tap to inspect
+            </Text>
+            {/* Map legend */}
+            <View style={styles.mapLegend}>
+              {[
+                { bg: '#0f3a0f', label: 'Planted' },
+                { bg: '#1a5c1a', label: 'Ready' },
+                { bg: '#3a1010', label: 'Event' },
+                { bg: '#2a1f00', label: 'Weeds' },
+                { bg: '#16213e', label: 'Empty' },
+              ].map(item => (
+                <View key={item.label} style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: item.bg }]} />
+                  <Text style={styles.legendLabel}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8, marginBottom: 8 }}>
+              {parcels.map(p => renderMapCell(p))}
+            </View>
+
+            {/* Market below map */}
+            <Text style={styles.sectionLabel}>Available on market ({available.length})</Text>
+            <View style={styles.grid}>
+              {available.map(p => renderMarketParcel(p))}
+            </View>
+          </ScrollView>
+
+          {/* ── SELECTED PARCEL PANEL ── */}
+          {mapSelected && (() => {
+            const p = mapSelected;
+            const event = getEventForParcel(p.id);
+            const ready = isReady(p);
+            const days = daysLeft(p);
+            const cropType = p.plantedCrop ? CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId) : null;
+            const storageFull = totalInventory >= siloCapacity;
+            const canAfford = money >= p.pricePerHa * p.hectares;
+            const cost = Math.round(p.pricePerHa * p.hectares);
+            return (
+              <View style={styles.mapPanel}>
+                {/* Header */}
+                <View style={styles.mapPanelHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.mapPanelTitle}>{p.name}</Text>
+                    <Text style={styles.mapPanelSub}>
+                      {p.hectares} ha
+                      {p.soilType ? ` · ${SOIL_ICONS[p.soilType]} ${p.soilType}` : ''}
+                      {p.owned ? ` · ♦ ${p.fertility}/25` : ''}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setMapSelected(null)} style={styles.mapPanelClose}>
+                    <Text style={styles.mapPanelCloseText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Status / actions */}
+                <View style={styles.mapPanelActions}>
+                  {!p.owned ? (
+                    <TouchableOpacity
+                      style={[styles.mapActionBtn, styles.mapActionBuy, !canAfford && styles.mapActionDisabled]}
+                      onPress={() => { buyParcel(p.id); setMapSelected(null); }}
+                      disabled={!canAfford}
+                    >
+                      <Text style={styles.mapActionText}>
+                        {canAfford ? `Buy · $${cost.toLocaleString()}` : `$${cost.toLocaleString()} needed`}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : event ? (
+                    <View style={styles.mapActionAlert}>
+                      <Text style={styles.mapActionAlertText}>⚠️ {event.type === 'disease' ? 'Disease' : 'Pest'} — treat with fungicide/insecticide</Text>
+                    </View>
+                  ) : p.hasWeeds ? (
+                    <View style={styles.mapActionRow}>
+                      <View style={styles.mapActionAlert}>
+                        <Text style={styles.mapActionAlertText}>🌿 Weeds affecting yield</Text>
+                      </View>
+                      {herbicideIds.length > 0 && (
+                        <TouchableOpacity
+                          style={[styles.mapActionBtn, styles.mapActionHarvest]}
+                          onPress={() => { clearWeeds(p.id); setMapSelected(null); }}
+                        >
+                          <Text style={styles.mapActionText}>Clear Weeds</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ) : ready ? (
+                    <TouchableOpacity
+                      style={[styles.mapActionBtn, styles.mapActionHarvest, storageFull && styles.mapActionDisabled]}
+                      onPress={() => { harvestCrop(p.id); setMapSelected(null); }}
+                      disabled={storageFull}
+                    >
+                      <Text style={styles.mapActionText}>
+                        {storageFull ? 'Storage full' : `🌾 Harvest ${cropType?.name ?? ''}`}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : p.plantedCrop ? (
+                    <View style={styles.mapActionInfo}>
+                      <Text style={styles.mapActionInfoText}>
+                        🌱 {cropType?.name ?? ''} · {days}d to harvest
+                      </Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.mapActionBtn, styles.mapActionPlant]}
+                      onPress={() => { setMapView(false); setPlantingParcel(p); setMapSelected(null); }}
+                    >
+                      <Text style={styles.mapActionText}>🌱 Plant Crop</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            );
+          })()}
+        </View>
+      ) : (
+        /* ── LIST VIEW ── */
+        <ScrollView>
+          {/* Filter bar */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar}>
+            {([
+              { id: 'all',    label: `All (${owned.length})` },
+              { id: 'empty',  label: '🟦 Empty' },
+              { id: 'growing',label: '🌱 Growing' },
+              { id: 'ready',  label: '🌾 Ready' },
+              { id: 'events', label: '⚠️ Events' },
+            ] as { id: FieldFilter; label: string }[]).map(f => (
+              <TouchableOpacity
+                key={f.id}
+                style={[styles.filterChip, fieldFilter === f.id && styles.filterChipActive]}
+                onPress={() => setFieldFilter(f.id)}
+              >
+                <Text style={[styles.filterChipText, fieldFilter === f.id && styles.filterChipTextActive]}>
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Batch harvest */}
+          {(() => {
+            const readyCount = owned.filter(p => isReady(p)).length;
+            return readyCount > 0 ? (
+              <TouchableOpacity style={styles.batchHarvestBtn} onPress={harvestAllReady}>
+                <Text style={styles.batchHarvestText}>🌾 Harvest All Ready ({readyCount})</Text>
+              </TouchableOpacity>
+            ) : null;
+          })()}
+
+          <Text style={styles.sectionLabel}>Owned plots ({owned.length})</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hScroll}>
+            {owned
+              .filter(p => {
+                if (fieldFilter === 'empty')   return !p.plantedCrop;
+                if (fieldFilter === 'growing') return !!p.plantedCrop && !isReady(p);
+                if (fieldFilter === 'ready')   return isReady(p);
+                if (fieldFilter === 'events')  return !!getEventForParcel(p.id);
+                return true;
+              })
+              .map(p => renderOwnedParcel(p))}
+            {owned.length === 0 && <Text style={styles.empty}>No plots.</Text>}
+          </ScrollView>
+
+          <Text style={styles.sectionLabel}>Available on market ({available.length})</Text>
+          <View style={styles.grid}>
+            {available.map(p => renderMarketParcel(p))}
+          </View>
+        </ScrollView>
+      )}
+
+      {/* Plant crop modal */}
+      <Modal visible={!!plantingParcel} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>
+              Plant on {plantingParcel?.name} ({plantingParcel?.hectares} ha)
+            </Text>
+            <Text style={styles.seasonLabel}>
+              Season: {currentSeason.charAt(0).toUpperCase() + currentSeason.slice(1)}
+              {plantingParcel?.soilType ? ` · ${SOIL_ICONS[plantingParcel.soilType]} ${plantingParcel.soilType} soil` : ''}
+            </Text>
+
+            <View style={styles.fertRow}>
+              <Text style={styles.fertLabel}>With fertilizer (+30% cost, +yield)</Text>
+              <TouchableOpacity
+                style={[styles.fertToggle, fertilized && styles.fertToggleOn]}
+                onPress={() => setFertilized(f => !f)}
+              >
+                <Text style={styles.fertToggleText}>{fertilized ? 'YES' : 'NO'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.cropList} showsVerticalScrollIndicator={false}>
+              {CROP_TYPES.map(crop => {
+                const isGreenhouse = !!plantingParcel?.greenhouse;
+                const inSeason = isGreenhouse || crop.seasons.includes(currentSeason);
+                const coopDiscount = cooperative?.member ? 0.90 : 1.0;
+                const seedCost = crop.seedCost * (plantingParcel?.hectares ?? 1) * (fertilized ? 1.3 : 1.0) * coopDiscount;
+                const canAfford = money >= seedCost;
+                const rotation = plantingParcel?.lastCropId !== undefined && plantingParcel.lastCropId !== crop.id;
+                const soilMod = getSoilModifier(plantingParcel?.soilType, crop.id);
+                const disabled = !inSeason || !canAfford;
+                return (
+                  <TouchableOpacity
+                    key={crop.id}
+                    style={[
+                      styles.cropOption,
+                      !inSeason && styles.cropOptionOutOfSeason,
+                      inSeason && !canAfford && styles.cropOptionDisabled,
+                      selectedCropId === crop.id && { borderColor: '#4fc3f7', borderWidth: 1, backgroundColor: '#0f3460' },
+                    ]}
+                    disabled={disabled}
+                    onPress={() => {
+                      setSelectedCropId(crop.id);
+                      setSelectedSeedId(null);
+                    }}
+                  >
+                    <View style={styles.cropOptionLeft}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <Text style={[styles.cropOptionName, !inSeason && { color: '#555' }]}>{crop.name}</Text>
+                        {inSeason && rotation && (
+                          <View style={styles.rotationBadge}>
+                            <Text style={styles.rotationBadgeText}>🔄 +15% yield</Text>
+                          </View>
+                        )}
+                        {inSeason && soilMod !== 1.0 && (
+                          <View style={[styles.rotationBadge, { borderColor: soilMod > 1 ? '#ff9800' : '#f44336', backgroundColor: soilMod > 1 ? '#2a1f00' : '#2a0000' }]}>
+                            <Text style={[styles.rotationBadgeText, { color: soilMod > 1 ? '#ffb74d' : '#ef9a9a' }]}>
+                              {soilMod > 1 ? `🌱 +${Math.round((soilMod - 1) * 100)}% soil` : `⚠️ ${Math.round((soilMod - 1) * 100)}% soil`}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.cropOptionDetail}>
+                        {inSeason
+                          ? `${crop.growthDays}d · ${crop.baseYield} ${crop.unit}/ha`
+                          : `🚫 ${crop.seasons.join(', ')} only`}
+                      </Text>
+                    </View>
+                    {inSeason && (
+                      <Text style={[styles.cropOptionCost, !canAfford && { color: '#f44336' }]}>
+                        ${Math.round(seedCost).toLocaleString()}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Seed selection */}
+            {(() => {
+              const cropId = selectedCropId;
+              if (!cropId) return null;
+              const availableSeeds = seedVault.filter(s => s.cropId === cropId);
+              return (
+                <View style={{ marginTop: 10 }}>
+                  {availableSeeds.length > 0 && (
+                    <>
+                      <Text style={{ color: '#888', fontSize: 11, marginBottom: 6 }}>🌱 Seed (optional)</Text>
+                      <TouchableOpacity
+                        style={{ backgroundColor: !selectedSeedId ? '#0f3460' : '#16213e', borderRadius: 6, padding: 7, marginBottom: 4, borderWidth: !selectedSeedId ? 1 : 0, borderColor: '#4fc3f7' }}
+                        onPress={() => setSelectedSeedId(null)}
+                      >
+                        <Text style={{ color: !selectedSeedId ? '#e8d5a3' : '#888', fontSize: 11 }}>Base seeds (no bonus)</Text>
+                      </TouchableOpacity>
+                      {availableSeeds.map(s => (
+                        <TouchableOpacity
+                          key={s.id}
+                          style={{ backgroundColor: selectedSeedId === s.id ? '#0f3460' : '#16213e', borderRadius: 6, padding: 7, marginBottom: 4, borderWidth: selectedSeedId === s.id ? 1 : 0, borderColor: '#4fc3f7' }}
+                          onPress={() => setSelectedSeedId(s.id)}
+                        >
+                          <Text style={{ color: '#e8d5a3', fontSize: 11 }}>Gen {s.generation} · Yld {geneGrade(s.genes.yield)} / Drt {geneGrade(s.genes.drought)} / Grw {geneGrade(s.genes.growth)} / Qlt {geneGrade(s.genes.quality)}</Text>
+                          <Text style={{ color: '#888', fontSize: 10 }}>{s.quantity} batch{s.quantity !== 1 ? 'es' : ''} available</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </>
+                  )}
+                  <TouchableOpacity
+                    style={[styles.plantBtn, { marginTop: 6 }]}
+                    onPress={() => {
+                      if (plantingParcel && cropId) {
+                        plantCrop(plantingParcel.id, cropId, plantingParcel.hectares, fertilized);
+                        if (selectedSeedId && plantingParcel) {
+                          selectSeedForParcel(plantingParcel.id, selectedSeedId);
+                        }
+                        setSelectedSeedId(null);
+                        setSelectedCropId(null);
+                        setPlantingParcel(null);
+                        setFertilized(false);
+                      }
+                    }}
+                  >
+                    <Text style={styles.btnText}>🌱 Plant</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })()}
+
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => { setPlantingParcel(null); setFertilized(false); setSelectedCropId(null); setSelectedSeedId(null); }}>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Map parcel action modal */}
+      <Modal visible={!!mapSelected} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setMapSelected(null)} />
+          <View style={styles.modalBox}>
+            {mapSelected && (
+              <>
+                <View style={styles.mapModalHeader}>
+                  <View>
+                    <Text style={styles.modalTitle}>{mapSelected.name}</Text>
+                    <Text style={styles.cardSub}>{mapSelected.hectares} ha · ♦ Fertility {mapSelected.fertility}/25</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setMapSelected(null)}>
+                    <Text style={{ color: '#888', fontSize: 18 }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {!mapSelected.owned ? (
+                  <>
+                    <Text style={styles.mapModalPrice}>${(mapSelected.pricePerHa * mapSelected.hectares).toLocaleString()}</Text>
+                    <TouchableOpacity
+                      style={[styles.harvestBtn, money < mapSelected.pricePerHa * mapSelected.hectares && styles.btnDisabled]}
+                      onPress={() => { buyParcel(mapSelected.id); setMapSelected(null); }}
+                      disabled={money < mapSelected.pricePerHa * mapSelected.hectares}
+                    >
+                      <Text style={styles.btnText}>Buy</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : mapSelected.plantedCrop ? (
+                  <>
+                    <Text style={styles.cropTag}>
+                      {CROP_ICONS[mapSelected.plantedCrop.cropId] ?? '🌱'} {mapSelectedCropType?.name ?? mapSelected.plantedCrop.cropId}
+                      {mapSelected.plantedCrop.fertilized ? ' ✨' : ''}
+                    </Text>
+                    {mapSelectedReady ? (
+                      <TouchableOpacity
+                        style={[styles.harvestBtn, totalInventory >= siloCapacity && styles.btnDisabled]}
+                        onPress={() => { harvestCrop(mapSelected.id); setMapSelected(null); }}
+                        disabled={totalInventory >= siloCapacity}
+                      >
+                        <Text style={styles.btnText}>{totalInventory >= siloCapacity ? '📦 Silo full' : '🌾 Harvest'}</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.daysLeft}>⏳ {mapSelectedDays}d left</Text>
+                    )}
+                    {!mapSelected.plantedCrop.fertilized && mapSelectedFertilizer && (
+                      <TouchableOpacity style={styles.fertilizeBtn} onPress={() => { fertilizeCrop(mapSelected.id, fertilizerIds[0]); setMapSelected(p => p ? { ...p, plantedCrop: { ...p.plantedCrop!, fertilized: true } } : p); }}>
+                        <Text style={styles.smallBtnText}>✨ Fertilize (1 dose)</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                ) : (
+                  <TouchableOpacity style={styles.plantBtn} onPress={() => { setMapSelected(null); setPlantingParcel(mapSelected); }}>
+                    <Text style={styles.btnText}>🌱 Plant</Text>
+                  </TouchableOpacity>
+                )}
+
+                {mapSelected.owned && mapSelected.hasWeeds && (
+                  <View style={styles.weedRow}>
+                    <Text style={styles.weedTag}>⚠️ Weeds</Text>
+                    {mapSelectedHerbicide ? (
+                      <TouchableOpacity style={styles.resolveBtn} onPress={() => { clearWeeds(mapSelected.id); setMapSelected(p => p ? { ...p, hasWeeds: false } : p); }}>
+                        <Text style={styles.resolveBtnText}>Clear</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.noProductText}>No herbicide</Text>
+                    )}
+                  </View>
+                )}
+
+                {mapSelectedEvent && (
+                  <View style={styles.eventAlert}>
+                    <Text style={styles.eventText}>
+                      {mapSelectedEvent.type === 'disease' ? '🍄 Disease' : '🐛 Pest'}
+                    </Text>
+                    {(mapSelectedEvent.type === 'disease' ? fungicideIds : insecticideIds).slice(0, 1).map(pid => (
+                      <TouchableOpacity key={pid} style={styles.resolveBtn} onPress={() => { resolveFieldEvent(mapSelectedEvent.id, pid); setMapSelected(null); }}>
+                        <Text style={styles.resolveBtnText}>Treat (1 unit)</Text>
+                      </TouchableOpacity>
+                    ))}
+                    {(mapSelectedEvent.type === 'disease' ? fungicideIds : insecticideIds).length === 0 && (
+                      <Text style={styles.noProductText}>No {mapSelectedEvent.type === 'disease' ? 'fungicide' : 'insecticide'}</Text>
+                    )}
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#1a1a2e' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 16 },
+  viewToggle: { backgroundColor: '#16213e', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  viewToggleText: { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' },
+
+  // Map view
+  mapLegend: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: 8, gap: 8 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot: { width: 10, height: 10, borderRadius: 3 },
+  legendLabel: { color: '#888', fontSize: 10 },
+
+  mapModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+  mapModalPrice: { color: '#64b5f6', fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  sectionLabel: { color: '#888', fontSize: 13, paddingHorizontal: 16, marginTop: 8, marginBottom: 4 },
+  hScroll: { paddingHorizontal: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8 },
+  empty: { color: '#555', padding: 16 },
+
+  eventsBanner: { backgroundColor: '#7f2020', paddingVertical: 8, paddingHorizontal: 16, marginHorizontal: 12, borderRadius: 8, marginBottom: 4 },
+  eventsBannerText: { color: '#ffcdd2', fontWeight: 'bold', fontSize: 13 },
+
+  card: { backgroundColor: '#16213e', borderRadius: 10, padding: 12, margin: 6, width: 160 },
+  marketCard: { width: '45%' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  cardTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 15 },
+  fertility: { color: '#aaa', fontSize: 12 },
+  soilBadge: { color: '#888', fontSize: 10, marginTop: 2 },
+  cropTag: { color: '#81c784', fontSize: 12, marginTop: 2 },
+  emptyTag: { color: '#555', fontSize: 12, marginTop: 2 },
+  weedTag: { color: '#ffb74d', fontSize: 11, marginTop: 3 },
+  daysLeft: { color: '#aaa', fontSize: 11, marginTop: 4 },
+  priceTag: { color: '#64b5f6', fontSize: 13, fontWeight: 'bold', marginTop: 2, marginBottom: 4 },
+
+  harvestBtn: { backgroundColor: '#2e7d32', borderRadius: 6, padding: 6, marginTop: 6, alignItems: 'center' },
+  plantBtn: { backgroundColor: '#1565c0', borderRadius: 6, padding: 6, marginTop: 6, alignItems: 'center' },
+  buyBtn: { backgroundColor: '#2e7d32', borderRadius: 6, padding: 6, alignItems: 'center' },
+  btnDisabled: { backgroundColor: '#333' },
+  btnText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+
+  eventAlert: { backgroundColor: '#4a1515', borderRadius: 6, padding: 8, marginTop: 6 },
+  eventText: { color: '#ffcdd2', fontSize: 12, fontWeight: 'bold', marginBottom: 4 },
+  resolveBtn: { backgroundColor: '#b71c1c', borderRadius: 5, padding: 5, alignItems: 'center' },
+  resolveBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  noProductText: { color: '#ef9a9a', fontSize: 11 },
+  fertilizeBtn: { backgroundColor: '#1565c0', borderRadius: 6, padding: 5, marginTop: 4, alignItems: 'center' },
+  weedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  smallBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalBox: { backgroundColor: '#16213e', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '80%' },
+  modalTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 17, marginBottom: 12 },
+  fertRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  fertLabel: { color: '#aaa', fontSize: 12, flex: 1, marginRight: 8 },
+  fertToggle: { backgroundColor: '#333', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
+  fertToggleOn: { backgroundColor: '#1565c0' },
+  fertToggleText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  cropList: { maxHeight: 320 },
+  cropOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
+  cropOptionDisabled: { opacity: 0.4 },
+  cropOptionOutOfSeason: { opacity: 0.35, borderColor: '#333' },
+  seasonLabel: { color: '#888', fontSize: 12, marginBottom: 6, fontStyle: 'italic' },
+  cropOptionLeft: { flex: 1 },
+  cropOptionName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14 },
+  cropOptionDetail: { color: '#888', fontSize: 11, marginTop: 2 },
+  cropOptionCost: { color: '#4caf50', fontWeight: 'bold', fontSize: 14 },
+  rotationBadge: { backgroundColor: '#1b3a1b', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#4caf50' },
+  rotationBadgeText: { color: '#81c784', fontSize: 10, fontWeight: 'bold' },
+  cancelBtn: { backgroundColor: '#333', borderRadius: 10, padding: 12, alignItems: 'center', marginTop: 12 },
+  cancelBtnText: { color: '#aaa', fontWeight: 'bold', fontSize: 14 },
+
+  // Filters
+  filterBar: { paddingHorizontal: 8, marginBottom: 4 },
+  filterChip: { backgroundColor: '#16213e', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 5, marginRight: 6, marginVertical: 4 },
+  filterChipActive: { backgroundColor: '#1565c0' },
+  filterChipText: { color: '#666', fontSize: 12, fontWeight: 'bold' },
+  filterChipTextActive: { color: '#fff' },
+
+  // Batch harvest
+  batchHarvestBtn: { backgroundColor: '#2e7d32', borderRadius: 8, marginHorizontal: 12, marginBottom: 6, padding: 10, alignItems: 'center' },
+  batchHarvestText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+
+  // Greenhouse
+  ghRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  ghBadge: { color: '#81c784', fontSize: 11, fontWeight: 'bold' },
+  ghRemove: { color: '#ef9a9a', fontSize: 11 },
+  ghInstallBtn: { backgroundColor: '#1b3a20', borderRadius: 6, padding: 5, marginTop: 4, alignItems: 'center' },
+  cardSub: { color: '#888', fontSize: 11, marginTop: 1 },
+  // Irrigation
+  irrigatedBadge: { color: '#4fc3f7', fontSize: 11, fontWeight: 'bold', marginTop: 4 },
+  irrigateBtn: { backgroundColor: '#0d2840', borderRadius: 6, padding: 5, marginTop: 4, alignItems: 'center' },
+
+  // Map selection panel
+  mapPanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#16213e',
+    borderTopWidth: 1,
+    borderTopColor: '#c8860a66',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 14,
+    paddingBottom: 20,
+  },
+  mapPanelHeader:    { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
+  mapPanelTitle:     { color: '#e8d5a3', fontWeight: 'bold', fontSize: 15 },
+  mapPanelSub:       { color: '#888', fontSize: 11, marginTop: 2 },
+  mapPanelClose:     { padding: 4 },
+  mapPanelCloseText: { color: '#666', fontSize: 16, fontWeight: 'bold' },
+
+  mapPanelActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  mapActionRow:    { flexDirection: 'row', gap: 8, flex: 1, flexWrap: 'wrap' },
+  mapActionBtn:    { flex: 1, borderRadius: 10, padding: 11, alignItems: 'center', minWidth: 100 },
+  mapActionDisabled: { opacity: 0.45 },
+  mapActionBuy:    { backgroundColor: '#1565c0' },
+  mapActionPlant:  { backgroundColor: '#1b5e20' },
+  mapActionHarvest:{ backgroundColor: '#2e7d32' },
+  mapActionText:   { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  mapActionAlert:  { flex: 1, backgroundColor: '#3a1200', borderRadius: 10, padding: 11, alignItems: 'center' },
+  mapActionAlertText: { color: '#ffb74d', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
+  mapActionInfo:   { flex: 1, backgroundColor: '#1a2744', borderRadius: 10, padding: 11, alignItems: 'center' },
+  mapActionInfoText: { color: '#81c784', fontSize: 13, fontWeight: 'bold' },
+});
