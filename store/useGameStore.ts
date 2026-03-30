@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { PlantedCrop, SoilType, getSoilModifier } from '../engine/crops';
+import { PlantedCrop, SoilType, getSoilModifier, harvestAmount } from '../engine/crops';
 import { OwnedAnimal, inheritTrait, randomGenes, breedGenes } from '../engine/animals';
 import { MarketPrice, NewsEvent } from '../engine/market';
 import { WeatherDay } from '../engine/climate';
@@ -1721,14 +1721,13 @@ export const useGameStore = create<GameState>()(
           const hj = updatedHarvestJobs[hi];
           const haAvailable = Math.min(hj.haPerDay, hj.totalHa - hj.processedHa);
           let processedHa = 0;
-          const { harvestAmount: ha } = require('../engine/crops');
-          const { CROP_TYPES: CT } = require('../data/cropTypes');
 
           for (const pid of hj.parcelIds) {
             if (processedHa >= haAvailable) break;
+            if (processedHa + (finalParcels.find((p: LandParcel) => p.id === pid)?.hectares ?? 0) > haAvailable) break;
             const parcel = finalParcels.find((p: LandParcel) => p.id === pid);
             if (!parcel || !parcel.plantedCrop) continue;
-            const cropType = CT.find((c: { id: string }) => c.id === parcel.plantedCrop!.cropId);
+            const cropType = CROP_TYPES.find((c: { id: string }) => c.id === parcel.plantedCrop!.cropId);
             if (!cropType) continue;
             const currentTotal = Object.values(harvestInventory).reduce((a: number, b) => a + (b as number), 0);
             if (currentTotal >= siloCapForHarvest) break;
@@ -1736,7 +1735,7 @@ export const useGameStore = create<GameState>()(
             const waterScale = (cropType.waterNeed ?? 3) / 5;
             const climateModifier = 1.0 + (baseClimate - 1.0) * waterScale;
             const units = Math.min(
-              Math.round(ha(parcel.plantedCrop!, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, 1.0)),
+              Math.round(harvestAmount(parcel.plantedCrop!, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, 1.0)),
               siloCapForHarvest - currentTotal,
             );
             const newFertility = Math.max(1, parcel.fertility - (cropType.fertilityDrain ?? 0));
