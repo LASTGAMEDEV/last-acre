@@ -21,10 +21,15 @@ import { GameEventType } from '../data/randomEvents';
 import { NPCFarmRuntime, initNpcFarms } from '../engine/competitors';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
-function getMachineYieldBonus(machines: OwnedMachine[]): number {
+function getMachineYieldBonus(machines: OwnedMachine[], repairingIds?: Set<string>): number {
   return machines.reduce((bonus, m) => {
     const t = MACHINE_TYPES.find(mt => mt.id === m.typeId);
-    return t ? bonus * t.yieldBonus : bonus;
+    if (!t) return bonus;
+    // Broken or under repair: halve the bonus above baseline (1.0)
+    const yb = repairingIds?.has(m.id)
+      ? 1 + (t.yieldBonus - 1) * 0.5
+      : t.yieldBonus;
+    return bonus * yb;
   }, 1.0);
 }
 
@@ -1319,7 +1324,12 @@ export const useGameStore = create<GameState>()(
           if (hasFieldWorker) {
             const { harvestAmount: harvestAmt } = require('../engine/crops');
             const speedBonusW = getMachineSpeedBonus(state.machines);
-            const yieldBonusW = getMachineYieldBonus(state.machines);
+            const repairingIds = new Set(
+              (state.machineRepairs ?? [])
+                .filter(r => r.readyDay === null || r.readyDay > newDay)
+                .map(r => r.machineId)
+            );
+            const yieldBonusW = getMachineYieldBonus(state.machines, repairingIds);
             const siloCapacity = getSiloCapacity(state.buildings);
             let siloTotal = Object.values(autoSellFinalInventory).reduce((a: number, b) => a + (b as number), 0);
             const workerNewInventory = { ...autoSellFinalInventory };
@@ -1577,7 +1587,12 @@ export const useGameStore = create<GameState>()(
         // Drought gene reduces penalty when weather is bad (delta < 0); no effect on bonuses
         const droughtScale = rawClimateDelta < 0 ? 1.0 / seedGenes.drought : 1.0;
         const climateModifier = 1.0 + rawClimateDelta * droughtScale;
-        const yieldBonus = getMachineYieldBonus(state.machines);
+        const repairingIds = new Set(
+          (state.machineRepairs ?? [])
+            .filter(r => r.readyDay === null || r.readyDay > state.day)
+            .map(r => r.machineId)
+        );
+        const yieldBonus = getMachineYieldBonus(state.machines, repairingIds);
         const { harvestAmount } = require('../engine/crops');
         const rawUnits = harvestAmount(crop, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, yieldBonus);
         // Field event penalty: −25% yield per unresolved disease/pest event
@@ -2298,7 +2313,12 @@ export const useGameStore = create<GameState>()(
       harvestAllReady: () => {
         const state = get();
         const speedBonus = getMachineSpeedBonus(state.machines);
-        const yieldBonus = getMachineYieldBonus(state.machines);
+        const repairingIds = new Set(
+          (state.machineRepairs ?? [])
+            .filter(r => r.readyDay === null || r.readyDay > state.day)
+            .map(r => r.machineId)
+        );
+        const yieldBonus = getMachineYieldBonus(state.machines, repairingIds);
         const siloCapacity = getSiloCapacity(state.buildings);
         const { harvestAmount } = require('../engine/crops');
         let totalInventory = Object.values(state.inventory).reduce((a: number, b) => a + (b as number), 0);
