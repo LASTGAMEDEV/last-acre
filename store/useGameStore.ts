@@ -2211,6 +2211,35 @@ export const useGameStore = create<GameState>()(
         set({ money: state.money - cost, machines: [...state.machines, newMachine] });
       },
 
+      buyAttachment: (typeId) => {
+        const state = get();
+        const attachType = ATTACHMENT_TYPES.find(a => a.id === typeId);
+        if (!attachType) return;
+        if (state.money < attachType.cost) return;
+        const newAttachment: OwnedAttachment = { id: `attachment_${Date.now()}`, typeId };
+        set({ money: state.money - attachType.cost, attachments: [...(state.attachments ?? []), newAttachment] });
+      },
+
+      buyTrailer: (typeId) => {
+        const state = get();
+        const trailerType = MACHINE_TYPES.find(m => m.id === typeId && m.category === 'trailer');
+        if (!trailerType) return;
+        if (state.money < trailerType.cost) return;
+        const newTrailer: OwnedTrailer = { id: `trailer_${Date.now()}`, typeId, hitchedTo: null };
+        set({ money: state.money - trailerType.cost, trailers: [...(state.trailers ?? []), newTrailer] });
+      },
+
+      hitchTrailer: (trailerId, truckId) => {
+        const state = get();
+        const updatedTrailers = (state.trailers ?? []).map((tr: OwnedTrailer) => {
+          if (tr.id === trailerId) return { ...tr, hitchedTo: truckId };
+          // Unhitch any other trailer currently hitched to this truck (enforce 1 trailer per truck)
+          if (truckId && tr.hitchedTo === truckId) return { ...tr, hitchedTo: null };
+          return tr;
+        });
+        set({ trailers: updatedTrailers });
+      },
+
       requestLoan: (principal, termDays, label) => {
         const state = get();
         const { rollingIncome, checkEligibility } = require('../engine/banking');
