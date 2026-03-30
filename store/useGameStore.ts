@@ -456,7 +456,7 @@ function generateParcelsFromMap(): LandParcel[] {
       result.push({
         id: field.parcelId,
         name: field.name,
-        fertility: field.fertility ?? 70,
+        fertility: Math.max(1, Math.round((field.fertility ?? 70) / 4)),
         hectares: field.approximateHa,
         pricePerHa: 0,
         owned: true,
@@ -470,7 +470,7 @@ function generateParcelsFromMap(): LandParcel[] {
       result.push({
         id: `p-${field.id}`,
         name: field.name,
-        fertility: field.fertility ?? 65,
+        fertility: Math.max(1, Math.round((field.fertility ?? 65) / 4)),
         hectares: field.approximateHa,
         pricePerHa: Math.round((field.askingPrice ?? 20000) / field.approximateHa),
         owned: false,
@@ -3108,7 +3108,7 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'granja-tycoon-save-v7',
+      name: 'granja-tycoon-save-v8',
       storage: createJSONStorage(() => {
         try {
           return localStorage;
