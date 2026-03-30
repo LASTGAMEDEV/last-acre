@@ -3072,6 +3072,7 @@ export const useGameStore = create<GameState>()(
           renegotiateLoan, takeBankruptcyLoan, clearBankruptcy,
           setBreedingPair, clearBreedingPair,
           startHybridization, selectSeedForParcel, startRepair,
+          buyAttachment, buyTrailer, hitchTrailer, assignJob, assignHarvestJob, hireContractor,
           ...dataState
         } = state;
         return dataState;
