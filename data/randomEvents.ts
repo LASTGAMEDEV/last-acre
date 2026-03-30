@@ -18,7 +18,7 @@ export interface GameEventTemplate {
   description: string;
   durationDays: number; // 0 = one-shot (equipment_failure creates a MachineRepair instead)
   weight: number;       // relative probability
-  modifier?: number;    // yield/price multiplier where applicable
+  modifier?: number;    // multiplier for yield/price events; flat cash delta for windfall_subsidy
 }
 
 export const RANDOM_EVENT_TEMPLATES: GameEventTemplate[] = [
