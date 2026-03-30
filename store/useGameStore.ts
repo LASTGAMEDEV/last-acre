@@ -119,6 +119,7 @@ export interface LandParcel {
   lastCropId?: string;
   greenhouse: boolean;
   irrigated: boolean;
+  seedEntryId?: string; // SeedEntry id used when this parcel was planted
   soilType?: SoilType; // undefined on old saves → treated as 'loamy'
 }
 
@@ -136,6 +137,32 @@ export interface FuturesPosition {
   deliveryDay: number;
   createdDay: number;
   settled: boolean;
+}
+
+export interface SeedGenes {
+  yield:    number; // multiplies harvest output (0.5–1.5)
+  drought:  number; // divides weather penalty severity (0.5–1.5)
+  growth:   number; // divides effective growthDays (0.5–1.5)
+  quality:  number; // multiplies processed output (0.5–1.5)
+}
+
+export interface SeedEntry {
+  id: string;
+  cropId: string;
+  generation: number;
+  genes: SeedGenes;
+  createdDay: number;
+  quantity: number; // each unit plants one parcel
+}
+
+export interface HybridJob {
+  id: string;
+  cropId: string;
+  parentAId: string;
+  parentBId: string;
+  startDay: number;
+  readyDay: number;
+  cost: number;
 }
 
 export interface FairEvent {
