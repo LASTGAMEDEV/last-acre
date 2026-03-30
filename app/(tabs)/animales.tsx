@@ -260,7 +260,7 @@ export default function AnimalesScreen() {
                         const father = item.parentIds ? findAnimal(item.parentIds[1]) : undefined;
                         const gp = item.grandparentIds;
 
-                        if (!mother && !father) {
+                        if (!item.parentIds) {
                           return <Text style={{ color: '#555', fontSize: 11, marginTop: 4 }}>Unknown lineage.</Text>;
                         }
 
