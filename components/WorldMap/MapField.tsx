@@ -34,9 +34,9 @@ function getStroke(field: MapFieldType, parcel?: LandParcel): string {
   return '#286020';
 }
 
-function getStrokeDash(field: MapFieldType, parcel?: LandParcel): string {
+function getStrokeDash(field: MapFieldType, parcel?: LandParcel): string | undefined {
   if (field.owner === 'player' && !parcel?.plantedCrop) return '12,6';
-  return '0';
+  return undefined;
 }
 
 export default function MapFieldComponent({ field, parcel, isSelected, zoom, onPress }: Props) {
@@ -54,7 +54,7 @@ export default function MapFieldComponent({ field, parcel, isSelected, zoom, onP
         fill={fill}
         stroke={stroke}
         strokeWidth={strokeW / zoom}   // keep visual stroke width constant as zoom changes
-        strokeDasharray={dash || undefined}
+        strokeDasharray={dash}
       />
       {showLabel && (
         <Text
