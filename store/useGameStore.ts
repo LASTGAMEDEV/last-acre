@@ -1838,6 +1838,10 @@ export const useGameStore = create<GameState>()(
         }));
       },
 
+      startRepair: (_machineId) => {
+        // Full implementation added in Task 10
+      },
+
       collectAnimalProduction: (animalId) => {
         const state = get();
         const animal = state.animals.find(a => a.id === animalId);
