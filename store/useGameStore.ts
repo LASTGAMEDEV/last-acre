@@ -282,6 +282,10 @@ export interface GameState {
   sellPressures: { cropId: string; modifier: number; expiresDay: number }[];
   breedingPairs: Record<string, string>; // femaleId → preferred maleId
 
+  seedVault: SeedEntry[];
+  hybridJobs: HybridJob[];
+  cropQualityMap: Record<string, number>; // cropId → quality gene from last harvested seed
+
   // Actions
   advanceDay: () => void;
   buyParcel: (parcelId: string) => void;
@@ -335,6 +339,8 @@ export interface GameState {
   clearBankruptcy: () => void;
   setBreedingPair: (femaleId: string, maleId: string) => void;
   clearBreedingPair: (femaleId: string) => void;
+  startHybridization: (cropId: string, parentAId: string, parentBId: string) => void;
+  selectSeedForParcel: (parcelId: string, seedEntryId: string | null) => void;
 }
 
 const FIELD_NAMES: string[] = [
@@ -464,6 +470,9 @@ function makeInitialState() {
     bankrupt: false,
     sellPressures: [] as { cropId: string; modifier: number; expiresDay: number }[],
     breedingPairs: {} as Record<string, string>,
+    seedVault: [] as SeedEntry[],
+    hybridJobs: [] as HybridJob[],
+    cropQualityMap: {} as Record<string, number>,
   };
 }
 
@@ -1682,6 +1691,63 @@ export const useGameStore = create<GameState>()(
           delete next[femaleId];
           return { breedingPairs: next };
         });
+      },
+
+      startHybridization: (cropId, parentAId, parentBId) => {
+        const state = get();
+
+        // Check lab exists
+        const labLevel = state.buildings.includes('bld_seed_lab_3') ? 3
+          : state.buildings.includes('bld_seed_lab_2') ? 2
+          : state.buildings.includes('bld_seed_lab_1') ? 1
+          : 0;
+        if (labLevel === 0) return;
+
+        // Check slot availability
+        const maxSlots = labLevel;
+        const activeJobs = state.hybridJobs.length;
+        if (activeJobs >= maxSlots) return;
+
+        const parentA = state.seedVault.find(s => s.id === parentAId);
+        const parentB = state.seedVault.find(s => s.id === parentBId);
+        if (!parentA || !parentB) return;
+        if (parentA.cropId !== cropId || parentB.cropId !== cropId) return;
+        if (parentA.quantity < 1 || parentB.quantity < 1) return;
+
+        const generation = Math.max(parentA.generation, parentB.generation) + 1;
+        const cost = Math.min(200 * generation, 2000);
+        if (state.money < cost) return;
+
+        const durationDays = labLevel === 3 ? 7 : labLevel === 2 ? 10 : 14;
+
+        const job: HybridJob = {
+          id: `hybrid_${Date.now()}`,
+          cropId,
+          parentAId,
+          parentBId,
+          startDay: state.day,
+          readyDay: state.day + durationDays,
+          cost,
+        };
+
+        // Consume one batch from each parent
+        const nextVault = state.seedVault
+          .map(s => s.id === parentAId || s.id === parentBId ? { ...s, quantity: s.quantity - 1 } : s)
+          .filter(s => s.quantity > 0);
+
+        set({
+          money: state.money - cost,
+          hybridJobs: [...state.hybridJobs, job],
+          seedVault: nextVault,
+        });
+      },
+
+      selectSeedForParcel: (parcelId, seedEntryId) => {
+        set(state => ({
+          parcels: state.parcels.map(p =>
+            p.id === parcelId ? { ...p, seedEntryId: seedEntryId ?? undefined } : p
+          ),
+        }));
       },
 
       collectAnimalProduction: (animalId) => {
