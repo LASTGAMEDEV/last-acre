@@ -251,6 +251,65 @@ export default function AnimalesScreen() {
                         </View>
                       );
                     })()}
+                    {/* Lineage tree */}
+                    <View style={{ marginTop: 10 }}>
+                      <Text style={genStyles.panelTitle}>🌳 Lineage</Text>
+                      {(() => {
+                        const findAnimal = (id: string) => animals.find((a: OwnedAnimal) => a.id === id);
+                        const mother = item.parentIds ? findAnimal(item.parentIds[0]) : undefined;
+                        const father = item.parentIds ? findAnimal(item.parentIds[1]) : undefined;
+                        const gp = item.grandparentIds;
+
+                        if (!mother && !father) {
+                          return <Text style={{ color: '#555', fontSize: 11, marginTop: 4 }}>Unknown lineage.</Text>;
+                        }
+
+                        const AncestorChip = ({ label, animalId }: { label: string; animalId?: string }) => {
+                          const a = animalId ? findAnimal(animalId) : undefined;
+                          if (!a) return (
+                            <View style={ltStyles.chip}>
+                              <Text style={ltStyles.chipLabel}>{label}</Text>
+                              <Text style={ltStyles.chipUnknown}>?</Text>
+                            </View>
+                          );
+                          const ag = a.genes ?? { production: 1, hardiness: 1, growth: 1, value: 1 };
+                          const avg = (ag.production + ag.hardiness + ag.growth + ag.value) / 4;
+                          const grade = geneGrade(avg);
+                          return (
+                            <View style={ltStyles.chip}>
+                              <Text style={ltStyles.chipLabel}>{label} {a.sex === 'female' ? '♀' : '♂'}</Text>
+                              <Text style={[ltStyles.chipGrade, { color: gradeColor(grade) }]}>{grade}</Text>
+                            </View>
+                          );
+                        };
+
+                        return (
+                          <View style={ltStyles.tree}>
+                            {/* Grandparents column */}
+                            {gp && (
+                              <View style={ltStyles.col}>
+                                <AncestorChip label="GM" animalId={gp[0]} />
+                                <AncestorChip label="GF" animalId={gp[1]} />
+                                <AncestorChip label="GM" animalId={gp[2]} />
+                                <AncestorChip label="GF" animalId={gp[3]} />
+                              </View>
+                            )}
+                            {/* Parents column */}
+                            <View style={ltStyles.col}>
+                              <AncestorChip label="Mom" animalId={item.parentIds?.[0]} />
+                              <AncestorChip label="Dad" animalId={item.parentIds?.[1]} />
+                            </View>
+                            {/* Self */}
+                            <View style={[ltStyles.chip, ltStyles.chipSelf]}>
+                              <Text style={ltStyles.chipLabel}>{item.sex === 'female' ? '♀' : '♂'} Self</Text>
+                              <Text style={[ltStyles.chipGrade, { color: gradeColor(geneGrade((g.production + g.hardiness + g.growth + g.value) / 4)) }]}>
+                                {geneGrade((g.production + g.hardiness + g.growth + g.value) / 4)}
+                              </Text>
+                            </View>
+                          </View>
+                        );
+                      })()}
+                    </View>
                   </View>
                 );
               })()}
@@ -443,4 +502,14 @@ const bpStyles = StyleSheet.create({
   prediction:       { backgroundColor: '#0a1628', borderRadius: 6, padding: 8, marginTop: 8, borderLeftWidth: 3, borderLeftColor: '#ffd700' },
   predLabel:        { color: '#ffd700', fontSize: 10, fontWeight: 'bold' },
   predChip:         { fontSize: 11, fontWeight: 'bold' },
+});
+
+const ltStyles = StyleSheet.create({
+  tree:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  col:         { gap: 4 },
+  chip:        { backgroundColor: '#16213e', borderRadius: 6, padding: 6, alignItems: 'center', minWidth: 52 },
+  chipSelf:    { backgroundColor: '#0f3460', borderWidth: 1, borderColor: '#4fc3f7' },
+  chipLabel:   { color: '#888', fontSize: 9 },
+  chipGrade:   { fontSize: 12, fontWeight: 'bold', marginTop: 1 },
+  chipUnknown: { color: '#444', fontSize: 9 },
 });
