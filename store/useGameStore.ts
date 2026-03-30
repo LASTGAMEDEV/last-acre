@@ -2330,6 +2330,92 @@ export const useGameStore = create<GameState>()(
         set({ harvestJobs: [...(state.harvestJobs ?? []), job] });
       },
 
+      hireContractor: (operation, parcelIds, cropId) => {
+        const state = get();
+        const parcels = parcelIds
+          .map((id: string) => state.parcels.find((p: LandParcel) => p.id === id))
+          .filter((p): p is LandParcel => p !== undefined);
+        if (parcels.length === 0) return;
+        const { getContractorCost } = require('../engine/machinery');
+        let cost = 0;
+
+        if (operation === 'till') {
+          const totalHa = parcels.reduce((s: number, p: LandParcel) => s + p.hectares, 0);
+          cost = getContractorCost('till', totalHa);
+          if (state.money < cost) return;
+          set({
+            money: state.money - cost,
+            parcels: state.parcels.map((p: LandParcel) =>
+              parcelIds.includes(p.id) ? { ...p, tilled: true } : p
+            ),
+          });
+
+        } else if (operation === 'plant') {
+          if (!cropId) return;
+          const { CROP_TYPES: CT } = require('../data/cropTypes');
+          const { getSeason } = require('../engine/climate');
+          const cropType = CT.find((c: { id: string }) => c.id === cropId);
+          if (!cropType) return;
+          const currentSeason = getSeason(state.day);
+          const validParcels = parcels.filter((p: LandParcel) =>
+            p.tilled && !p.plantedCrop && (cropType.seasons.includes(currentSeason) || p.greenhouse)
+          );
+          if (validParcels.length === 0) return;
+          const totalHa = validParcels.reduce((s: number, p: LandParcel) => s + p.hectares, 0);
+          const coopSeedDiscount = state.cooperative?.member ? 0.90 : 1.0;
+          const seedCost = cropType.seedCost * totalHa * coopSeedDiscount;
+          const contractorFee = getContractorCost('plant', totalHa);
+          cost = seedCost + contractorFee;
+          if (state.money < cost) return;
+          const validIds = validParcels.map((p: LandParcel) => p.id);
+          set({
+            money: state.money - cost,
+            parcels: state.parcels.map((p: LandParcel) => {
+              if (!validIds.includes(p.id)) return p;
+              const plantedCrop: PlantedCrop = {
+                cropId, parcelId: p.id, plantedDay: state.day, hectares: p.hectares, fertilized: false,
+              };
+              return { ...p, plantedCrop };
+            }),
+          });
+
+        } else if (operation === 'spray') {
+          const totalHa = parcels.reduce((s: number, p: LandParcel) => s + p.hectares, 0);
+          cost = getContractorCost('spray', totalHa);
+          if (state.money < cost) return;
+          set({
+            money: state.money - cost,
+            parcels: state.parcels.map((p: LandParcel) => {
+              if (!parcelIds.includes(p.id) || !p.plantedCrop) return p;
+              return {
+                ...p,
+                plantedCrop: {
+                  ...p.plantedCrop,
+                  appliedFertilizerBonus: Math.max(p.plantedCrop.appliedFertilizerBonus ?? 1.0, 1.10),
+                },
+              };
+            }),
+          });
+
+        } else if (operation === 'harvest') {
+          const totalHa = parcels.reduce((s: number, p: LandParcel) => s + p.hectares, 0);
+          cost = getContractorCost('harvest', totalHa);
+          if (state.money < cost) return;
+          set({ money: state.money - cost });
+          parcelIds.forEach((pid: string) => get().harvestCrop(pid));
+
+        } else if (operation === 'irrigate') {
+          cost = getContractorCost('irrigate', parcels.length);
+          if (state.money < cost) return;
+          set({
+            money: state.money - cost,
+            parcels: state.parcels.map((p: LandParcel) =>
+              parcelIds.includes(p.id) ? { ...p, irrigated: true } : p
+            ),
+          });
+        }
+      },
+
       requestLoan: (principal, termDays, label) => {
         const state = get();
         const { rollingIncome, checkEligibility } = require('../engine/banking');
