@@ -69,12 +69,6 @@ export default function TierrasScreen() {
   const available = parcels.filter(p => !p.owned).slice(0, 20);
   const activeFieldEvents = fieldEvents.filter(e => !e.resolved);
 
-  // Machine effects
-  const speedBonus = machines.reduce((best, m) => {
-    const t = MACHINE_TYPES.find(mt => mt.id === m.typeId);
-    return t && t.speedBonus < 1 ? Math.min(best, t.speedBonus) : best;
-  }, 1.0);
-
   // Storage info
   const BASE_SILO = 10_000;
   const siloCapacity = buildings.reduce((s, bId) => {
@@ -96,7 +90,7 @@ export default function TierrasScreen() {
     if (!parcel.plantedCrop) return false;
     const cropType = CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId);
     if (!cropType) return false;
-    const effectiveDays = Math.round(cropType.growthDays * speedBonus);
+    const effectiveDays = Math.round(cropType.growthDays * 1);
     return day >= parcel.plantedCrop.plantedDay + effectiveDays;
   }
 
@@ -104,7 +98,7 @@ export default function TierrasScreen() {
     if (!parcel.plantedCrop) return 0;
     const cropType = CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId);
     if (!cropType) return 0;
-    const effectiveDays = Math.round(cropType.growthDays * speedBonus);
+    const effectiveDays = Math.round(cropType.growthDays * 1);
     return Math.max(0, parcel.plantedCrop.plantedDay + effectiveDays - day);
   }
 
