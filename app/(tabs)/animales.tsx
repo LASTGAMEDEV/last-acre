@@ -192,7 +192,7 @@ export default function AnimalesScreen() {
                     <GeneBar label="💰 Value"      value={g.value} />
                     {item.sex === 'female' && (() => {
                       const matureMales = animals.filter(
-                        (a: OwnedAnimal) => a.id !== item.id && a.typeId === item.typeId && a.sex === 'male'
+                        (a: OwnedAnimal) => a.id !== item.id && a.typeId === item.typeId && a.sex === 'male' && isMature(a, type, day)
                       );
                       const preferredId = breedingPairs[item.id];
                       return (
