@@ -9,6 +9,7 @@ import TutorialModal from '../../components/TutorialModal';
 import YearEndModal from '../../components/YearEndModal';
 import BankruptModal from '../../components/BankruptModal';
 import GameHUD from '../../components/GameHUD';
+import EventBanner from '../../components/EventBanner';
 
 export default function TabLayout() {
   const { day, advanceDay } = useGameStore();
@@ -33,6 +34,7 @@ export default function TabLayout() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       {/* Persistent status bar */}
       <GameHUD />
+      <EventBanner />
 
       <Tabs
         screenOptions={{
