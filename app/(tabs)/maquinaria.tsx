@@ -64,6 +64,7 @@ export default function MaquinariaScreen() {
                     </Text>
                     <TouchableOpacity
                       onPress={() => startRepair(item.id)}
+                      disabled={money < netCost}
                       style={{ backgroundColor: money >= netCost ? '#1565c0' : '#333', borderRadius: 5, padding: 6, alignItems: 'center' }}
                     >
                       <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>Start Repair</Text>
