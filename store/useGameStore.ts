@@ -449,30 +449,40 @@ function randomSoilType(): SoilType {
   return SOIL_DISTRIBUTION[Math.floor(Math.random() * SOIL_DISTRIBUTION.length)];
 }
 
-function generateParcels(): LandParcel[] {
-  // Shuffle names so each game feels different
-  const shuffled = [...FIELD_NAMES].sort(() => Math.random() - 0.5);
-  const parcels: LandParcel[] = [];
-  for (let i = 0; i < 80; i++) {
-    const fertility = Math.floor(Math.random() * 25) + 1;
-    const hectares = Math.random() < 0.5 ? 1 : Math.random() < 0.5 ? 2 : 5;
-    const pricePerHa = 16000 + (fertility / 25) * 44000;
-    parcels.push({
-      id: `parcel_${i}`,
-      name: shuffled[i] ?? `Plot ${i + 1}`,
-      fertility,
-      hectares,
-      pricePerHa: Math.round(pricePerHa / 1000) * 1000,
-      owned: i < 2,
-      hasWeeds: false,
-      plantedCrop: null,
-      greenhouse: false,
-      irrigated: false,
-      tilled: false,
-      soilType: randomSoilType(),
-    });
+function generateParcelsFromMap(): LandParcel[] {
+  const result: LandParcel[] = [];
+  for (const field of INITIAL_MAP_FIELDS) {
+    if (field.owner === 'player' && field.parcelId) {
+      result.push({
+        id: field.parcelId,
+        name: field.name,
+        fertility: field.fertility ?? 70,
+        hectares: field.approximateHa,
+        pricePerHa: 0,
+        owned: true,
+        hasWeeds: false,
+        plantedCrop: null,
+        greenhouse: false,
+        irrigated: false,
+        tilled: false,
+      });
+    } else if (field.owner === 'forsale') {
+      result.push({
+        id: `p-${field.id}`,
+        name: field.name,
+        fertility: field.fertility ?? 65,
+        hectares: field.approximateHa,
+        pricePerHa: Math.round((field.askingPrice ?? 20000) / field.approximateHa),
+        owned: false,
+        hasWeeds: false,
+        plantedCrop: null,
+        greenhouse: false,
+        irrigated: false,
+        tilled: false,
+      });
+    }
   }
-  return parcels;
+  return result;
 }
 
 function generateInitialPrices(): MarketPrice[] {
@@ -507,7 +517,7 @@ function makeInitialState() {
     day: 1,
     money: 3500,
     farmName: 'My Farm',
-    parcels: generateParcels(),
+    parcels: generateParcelsFromMap(),
     animals: [] as OwnedAnimal[],
     animalInventory: {} as Record<string, number>,
     machines: [] as OwnedMachine[],
@@ -3073,22 +3083,11 @@ export const useGameStore = create<GameState>()(
         if (!field || field.owner !== 'forsale' || !field.askingPrice) return;
         if (state.money < field.askingPrice) return;
         const parcelId = `p-${id}`;
-        const newParcel: LandParcel = {
-          id: parcelId,
-          name: field.name,
-          fertility: field.fertility ?? 70,
-          hectares: field.approximateHa,
-          pricePerHa: Math.round(field.askingPrice / field.approximateHa),
-          owned: true,
-          hasWeeds: false,
-          plantedCrop: null,
-          greenhouse: false,
-          irrigated: false,
-          tilled: false,
-        };
         set({
           money: state.money - field.askingPrice,
-          parcels: [...state.parcels, newParcel],
+          parcels: state.parcels.map(p =>
+            p.id === parcelId ? { ...p, owned: true } : p
+          ),
           mapFields: state.mapFields.map(f =>
             f.id === id ? { ...f, owner: 'player' as MapOwner, parcelId } : f
           ),
