@@ -90,7 +90,7 @@ export default function TierrasScreen() {
     if (!parcel.plantedCrop) return false;
     const cropType = CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId);
     if (!cropType) return false;
-    const effectiveDays = Math.round(cropType.growthDays * 1);
+    const effectiveDays = Math.round(cropType.growthDays);
     return day >= parcel.plantedCrop.plantedDay + effectiveDays;
   }
 
@@ -98,7 +98,7 @@ export default function TierrasScreen() {
     if (!parcel.plantedCrop) return 0;
     const cropType = CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId);
     if (!cropType) return 0;
-    const effectiveDays = Math.round(cropType.growthDays * 1);
+    const effectiveDays = Math.round(cropType.growthDays);
     return Math.max(0, parcel.plantedCrop.plantedDay + effectiveDays - day);
   }
 
@@ -186,7 +186,6 @@ export default function TierrasScreen() {
 
   function renderOwnedParcel(parcel: LandParcel) {
     const ready = isReady(parcel);
-    const days = daysLeft(parcel);
     const fieldEvent = getEventForParcel(parcel.id);
     const cropType = parcel.plantedCrop ? CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId) : null;
     const storageFull = totalInventory >= siloCapacity;
@@ -262,6 +261,7 @@ export default function TierrasScreen() {
           }
 
           if (!parcel.tilled && !parcel.plantedCrop) {
+            // Till assignment is done from Machinery → Jobs; this button offers the contractor fallback
             return (
               <TouchableOpacity
                 style={localStyles.opBtn}
