@@ -122,7 +122,8 @@ export function collectProduction(
     ? 1.0
     : Math.max(0.2, 1.0 - ((age - animalType.maxPriceAge) / animalType.maxPriceAge) * 0.8);
   const productiveMod = (animal.traits ?? []).includes('productive') ? 1.20 : 1.0;
-  return { units: daysPassed * animalType.productionRate * ageMod * productiveMod, nextDay: currentDay };
+  const geneProdMod = animal.genes?.production ?? 1.0;
+  return { units: daysPassed * animalType.productionRate * ageMod * productiveMod * geneProdMod, nextDay: currentDay };
 }
 
 export function canBreed(animal: OwnedAnimal, animalType: AnimalType, currentDay: number): boolean {

@@ -954,7 +954,8 @@ export const useGameStore = create<GameState>()(
           .map((a: OwnedAnimal) => {
             if (a.sick) return a;
             const baseSickChance = (a.traits ?? []).includes('hardy') ? 0.006 : 0.015;
-            const sickChance = baseSickChance * (1 - workerBonuses.sicknessBonusReduction);
+            const hardinessDiv = a.genes?.hardiness ?? 1.0;
+            const sickChance = baseSickChance * (1 - workerBonuses.sicknessBonusReduction) / hardinessDiv;
             if (Math.random() < sickChance) {
               newSickIds.push(a.id);
               return { ...a, sick: true, sicknessDay: newDay };
