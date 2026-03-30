@@ -1,32 +1,35 @@
-export interface MachineRequirements {
-  minHa?: number;       // minimum owned hectares
-  minTier?: 'C' | 'B'; // must have harvested at least this crop tier
-}
-
 export interface MachineType {
   id: string;
   name: string;
   cost: number;
-  yieldBonus: number;       // harvest multiplier (e.g. 1.25)
-  speedBonus: number;       // growth time reduction (e.g. 0.9 = 10% faster)
+  size: 'small' | 'medium' | 'large';
+  category: 'tractor' | 'harvester' | 'truck' | 'trailer' | 'irrigation';
   maintenancePerDay: number;
-  category: 'field' | 'irrigation' | 'processing' | 'transport';
-  requires?: MachineRequirements;
+  haPerDay?: number;           // harvesters
+  capacityKg?: number;         // trucks (0 = needs trailer) and trailers
+  compatibleTrailerSizes?: ('small' | 'medium' | 'large')[];  // trucks only
+  compatibleTruckCategories?: string[];  // trailers: which truck ids can tow this
 }
 
 export const MACHINE_TYPES: MachineType[] = [
-  // Field
-  { id: 'tractor_small',  name: 'Small Tractor',   cost: 5000,   yieldBonus: 1.10, speedBonus: 0.95, maintenancePerDay: 2,  category: 'field' },
-  { id: 'tractor_med',    name: 'Medium Tractor',  cost: 15000,  yieldBonus: 1.15, speedBonus: 0.92, maintenancePerDay: 5,  category: 'field',      requires: { minHa: 5 } },
-  { id: 'tractor_large',  name: 'Large Tractor',   cost: 40000,  yieldBonus: 1.20, speedBonus: 0.88, maintenancePerDay: 10, category: 'field',      requires: { minHa: 10, minTier: 'C' } },
-  { id: 'cosechadora',    name: 'Harvester',        cost: 80000,  yieldBonus: 1.25, speedBonus: 0.85, maintenancePerDay: 18, category: 'field',      requires: { minHa: 15, minTier: 'B' } },
-  // Irrigation
-  { id: 'riego_goteo',    name: 'Drip Irrigation', cost: 8000,   yieldBonus: 1.10, speedBonus: 0.90, maintenancePerDay: 3,  category: 'irrigation' },
-  { id: 'riego_aspersor', name: 'Sprinklers',      cost: 20000,  yieldBonus: 1.15, speedBonus: 0.88, maintenancePerDay: 6,  category: 'irrigation', requires: { minHa: 5 } },
-  { id: 'riego_pivot',    name: 'Center Pivot',    cost: 60000,  yieldBonus: 1.20, speedBonus: 0.85, maintenancePerDay: 12, category: 'irrigation', requires: { minHa: 10, minTier: 'B' } },
-  // Processing
-  { id: 'molino',         name: 'Mill',             cost: 12000,  yieldBonus: 1.12, speedBonus: 1.00, maintenancePerDay: 4,  category: 'processing', requires: { minTier: 'C' } },
-  { id: 'silo',           name: 'Silo',             cost: 25000,  yieldBonus: 1.08, speedBonus: 1.00, maintenancePerDay: 3,  category: 'processing', requires: { minHa: 10, minTier: 'B' } },
-  // Transport
-  { id: 'camion',         name: 'Truck',            cost: 30000,  yieldBonus: 1.05, speedBonus: 1.00, maintenancePerDay: 8,  category: 'transport',  requires: { minHa: 5 } },
+  // ── Tractors ─────────────────────────────────────────────────────────────
+  { id: 'tractor-small',  name: 'Small Tractor',  cost: 18000,  size: 'small',  category: 'tractor',    maintenancePerDay: 4 },
+  { id: 'tractor-medium', name: 'Medium Tractor', cost: 48000,  size: 'medium', category: 'tractor',    maintenancePerDay: 9 },
+  { id: 'tractor-large',  name: 'Large Tractor',  cost: 120000, size: 'large',  category: 'tractor',    maintenancePerDay: 20 },
+  // ── Combine Harvesters ───────────────────────────────────────────────────
+  { id: 'combine-small',  name: 'Small Combine',  cost: 85000,  size: 'small',  category: 'harvester',  maintenancePerDay: 15, haPerDay: 4 },
+  { id: 'combine-medium', name: 'Medium Combine', cost: 175000, size: 'medium', category: 'harvester',  maintenancePerDay: 28, haPerDay: 10 },
+  { id: 'combine-large',  name: 'Large Combine',  cost: 340000, size: 'large',  category: 'harvester',  maintenancePerDay: 50, haPerDay: 22 },
+  // ── Irrigation Systems ───────────────────────────────────────────────────
+  { id: 'irrigation-drip',      name: 'Drip System',      cost: 8500,  size: 'small',  category: 'irrigation', maintenancePerDay: 2,  haPerDay: 1 },
+  { id: 'irrigation-sprinkler', name: 'Sprinkler Array',  cost: 28000, size: 'medium', category: 'irrigation', maintenancePerDay: 5,  haPerDay: 3 },
+  { id: 'irrigation-pivot',     name: 'Center Pivot',     cost: 95000, size: 'large',  category: 'irrigation', maintenancePerDay: 12, haPerDay: 8 },
+  // ── Trucks ───────────────────────────────────────────────────────────────
+  { id: 'truck-pickup', name: 'Pickup',     cost: 28000, size: 'small',  category: 'truck', maintenancePerDay: 5,  capacityKg: 0,      compatibleTrailerSizes: ['small', 'medium'] },
+  { id: 'truck-dump',   name: 'Dump Truck', cost: 43000, size: 'medium', category: 'truck', maintenancePerDay: 10, capacityKg: 10000 },
+  { id: 'truck-semi',   name: 'Semi Truck', cost: 72000, size: 'large',  category: 'truck', maintenancePerDay: 18, capacityKg: 0,      compatibleTrailerSizes: ['medium', 'large'] },
+  // ── Trailers (catalog entry — owned via OwnedTrailer[] not machines[]) ──
+  { id: 'trailer-small',    name: 'Small Trailer',    cost: 10000, size: 'small',  category: 'trailer', maintenancePerDay: 1, capacityKg: 2000,  compatibleTruckCategories: ['truck-pickup'] },
+  { id: 'trailer-standard', name: 'Standard Trailer', cost: 22000, size: 'medium', category: 'trailer', maintenancePerDay: 2, capacityKg: 6000,  compatibleTruckCategories: ['truck-pickup', 'truck-semi'] },
+  { id: 'trailer-large',    name: 'Large Trailer',    cost: 38000, size: 'large',  category: 'trailer', maintenancePerDay: 3, capacityKg: 22000, compatibleTruckCategories: ['truck-semi'] },
 ];
