@@ -830,10 +830,8 @@ export const useGameStore = create<GameState>()(
         const newClaims: InsuranceClaim[] = [];
 
         if (todayWeather && ['frost', 'hail', 'drought'].includes(todayWeather.event)) {
-          const isdrought = todayWeather.event === 'drought';
-          const coverType: InsuranceType = isdrought ? 'sequia' : 'helada';
-          const plan = INSURANCE_PLANS.find(pl => pl.type === coverType)!;
-          const insured = hasActiveInsurance(state.insurances, coverType);
+          const climaPlan = INSURANCE_PLANS.find(pl => pl.type === 'clima')!;
+          const insured = hasActiveInsurance(state.insurances, 'clima');
 
           parcels = parcels.map(p => {
             const destructChance = p.irrigated ? 0.05 : 0.15; // irrigation cuts drought/frost risk by 67%
@@ -841,14 +839,14 @@ export const useGameStore = create<GameState>()(
               destroyedCount++;
               if (insured) {
                 const cropVal = estimateCropValue(p, prices);
-                const payout = Math.round(cropVal * plan.coveragePercent);
+                const payout = Math.round(cropVal * climaPlan.coveragePercent);
                 weatherInsurancePayout += payout;
                 newClaims.push({
                   id: `claim_${newDay}_${p.id}`,
                   day: newDay,
-                  type: coverType,
+                  type: 'clima' as InsuranceType,
                   payout,
-                  description: `${p.hectares}ha plot destroyed by ${isdrought ? 'drought' : todayWeather.event === 'hail' ? 'hail' : 'frost'}`,
+                  description: `${p.hectares}ha plot destroyed by ${todayWeather.event === 'drought' ? 'drought' : todayWeather.event === 'hail' ? 'hail' : 'frost'}`,
                 });
               }
               return { ...p, plantedCrop: null };
@@ -1044,6 +1042,192 @@ export const useGameStore = create<GameState>()(
         // Auction: AI bidding + resolve
         const parcelAdditions: LandParcel[] = [];
         let moneyDelta = 0;
+
+        // ── Random events ────────────────────────────────────────────────────
+        const { rollEvent, calcRepairCost, calcRepairDays } = require('../engine/events');
+
+        let activeEvents: GameEvent[] = (state.activeEvents ?? [])
+          .filter(e => e.expiresDay > newDay);
+
+        let machineRepairs: MachineRepair[] = [...(state.machineRepairs ?? [])];
+
+        // Complete any repairs that are ready
+        machineRepairs = machineRepairs.filter(r => {
+          if (r.readyDay !== null && newDay >= r.readyDay) {
+            summary.push({
+              id: `repair_done_${r.machineId}`,
+              icon: '🔧',
+              title: 'Machine repair complete',
+              detail: 'Machine is back to full capacity',
+              severity: 'good',
+            });
+            return false;
+          }
+          return true;
+        });
+
+        // Roll for a new random event (8% chance)
+        const activeEventTypes = activeEvents.map((e: GameEvent) => e.type);
+        const newEventTemplate = rollEvent(activeEventTypes);
+
+        if (newEventTemplate) {
+          const ownedParcelsWithCrop = state.parcels.filter(p => p.owned && p.plantedCrop);
+          const allOwnedParcels = state.parcels.filter(p => p.owned);
+          const plantedCropIds = [...new Set(ownedParcelsWithCrop.map(p => p.plantedCrop!.cropId))];
+
+          let affectedIds: string[] = [];
+
+          if (['weather_frost', 'weather_heatwave', 'weather_hailstorm'].includes(newEventTemplate.type)) {
+            const shuffled = [...allOwnedParcels].sort(() => Math.random() - 0.5);
+            affectedIds = shuffled.slice(0, Math.min(3, Math.max(1, Math.floor(Math.random() * 3) + 1))).map(p => p.id);
+          } else if (newEventTemplate.type === 'pest_outbreak') {
+            if (plantedCropIds.length > 0) {
+              affectedIds = [plantedCropIds[Math.floor(Math.random() * plantedCropIds.length)]];
+            }
+          } else if (newEventTemplate.type === 'market_surge') {
+            const { CROP_TYPES: CT_EVENT } = require('../data/cropTypes');
+            affectedIds = [CT_EVENT[Math.floor(Math.random() * CT_EVENT.length)].id];
+          } else if (newEventTemplate.type === 'equipment_failure') {
+            const healthyMachines = state.machines.filter(
+              m => !machineRepairs.some(r => r.machineId === m.id)
+            );
+            if (healthyMachines.length > 0) {
+              const broken = healthyMachines[Math.floor(Math.random() * healthyMachines.length)];
+              affectedIds = [broken.id];
+              const cost = calcRepairCost(broken);
+              const maquinariaPlan = INSURANCE_PLANS.find(pl => pl.type === 'maquinaria')!;
+              const insurancePaid = hasActiveInsurance(state.insurances, 'maquinaria')
+                ? Math.round(cost * maquinariaPlan.coveragePercent)
+                : 0;
+              if (insurancePaid > 0) {
+                newClaims.push({
+                  id: `claim_maquinaria_${newDay}_${broken.id}`,
+                  day: newDay,
+                  type: 'maquinaria' as InsuranceType,
+                  payout: insurancePaid,
+                  description: `${MACHINE_TYPES.find(mt => mt.id === broken.typeId)?.name ?? broken.typeId} breakdown`,
+                });
+              }
+              machineRepairs.push({
+                id: `repair_${newDay}_${broken.id}`,
+                machineId: broken.id,
+                startDay: null,
+                readyDay: null,
+                cost,
+                insurancePaid,
+              });
+              summary.push({
+                id: `event_equip_${newDay}`,
+                icon: newEventTemplate.icon,
+                title: newEventTemplate.title,
+                detail: insurancePaid > 0
+                  ? `Repair cost: $${cost.toLocaleString()} · Insurance covers $${insurancePaid.toLocaleString()}`
+                  : `Repair cost: $${cost.toLocaleString()} · Go to Machinery tab to start repair`,
+                severity: 'danger',
+              });
+            }
+          } else if (newEventTemplate.type === 'animal_illness') {
+            const healthy = state.animals.filter((a: any) => !a.sick);
+            if (healthy.length > 0) {
+              const target = healthy[Math.floor(Math.random() * healthy.length)];
+              affectedIds = [target.id];
+            }
+          } else if (newEventTemplate.type === 'windfall_subsidy') {
+            const amount = newEventTemplate.modifier ?? 2500;
+            moneyDelta += amount;
+            summary.push({
+              id: `event_windfall_${newDay}`,
+              icon: newEventTemplate.icon,
+              title: newEventTemplate.title,
+              detail: `+$${amount.toLocaleString()} cash bonus`,
+              severity: 'good',
+            });
+          }
+
+          // Apply immediate price effects for market events
+          if (newEventTemplate.type === 'market_surge' && affectedIds.length > 0) {
+            prices = prices.map(p =>
+              p.cropId === affectedIds[0]
+                ? { ...p, price: Math.max(1, p.price * (newEventTemplate.modifier ?? 1.6)) }
+                : p
+            );
+          }
+          if (newEventTemplate.type === 'pest_outbreak' && affectedIds.length > 0) {
+            prices = prices.map(p =>
+              p.cropId === affectedIds[0]
+                ? { ...p, price: Math.max(1, p.price * 0.5) }
+                : p
+            );
+            // Plaga insurance check for pest_outbreak event
+            if (hasActiveInsurance(state.insurances, 'plaga')) {
+              const plagaPlanEvent = INSURANCE_PLANS.find(pl => pl.type === 'plaga')!;
+              const affectedHa = ownedParcelsWithCrop
+                .filter(p => p.plantedCrop?.cropId === affectedIds[0])
+                .reduce((s, p) => s + p.hectares, 0);
+              if (affectedHa > 0) {
+                const compensation = Math.round(150 * affectedHa * plagaPlanEvent.coveragePercent);
+                newClaims.push({
+                  id: `claim_plaga_event_${newDay}`,
+                  day: newDay,
+                  type: 'plaga' as InsuranceType,
+                  payout: compensation,
+                  description: `Pest outbreak — ${affectedHa}ha of ${affectedIds[0]} affected`,
+                });
+                moneyDelta += compensation;
+              }
+            }
+          }
+          // Clima insurance check for weather extreme events
+          if (['weather_frost', 'weather_hailstorm', 'weather_heatwave'].includes(newEventTemplate.type) && affectedIds.length > 0) {
+            if (hasActiveInsurance(state.insurances, 'clima')) {
+              const climaPlanEvent = INSURANCE_PLANS.find(pl => pl.type === 'clima')!;
+              for (const parcelId of affectedIds) {
+                const p = state.parcels.find(pr => pr.id === parcelId);
+                if (p?.plantedCrop) {
+                  const cropVal = estimateCropValue(p, prices);
+                  const payout = Math.round(cropVal * climaPlanEvent.coveragePercent);
+                  if (payout > 0) {
+                    newClaims.push({
+                      id: `claim_clima_event_${newDay}_${parcelId}`,
+                      day: newDay,
+                      type: 'clima' as InsuranceType,
+                      payout,
+                      description: `${newEventTemplate.title} on ${p.name}`,
+                    });
+                    moneyDelta += payout;
+                  }
+                }
+              }
+            }
+          }
+
+          // Push timed events to activeEvents (skip equipment_failure — handled above)
+          if (newEventTemplate.type !== 'equipment_failure' && newEventTemplate.durationDays > 0) {
+            const newEvent: GameEvent = {
+              id: `event_${newEventTemplate.id}_${newDay}`,
+              type: newEventTemplate.type,
+              title: newEventTemplate.title,
+              description: newEventTemplate.description,
+              icon: newEventTemplate.icon,
+              expiresDay: newDay + newEventTemplate.durationDays,
+              affectedIds: affectedIds.length > 0 ? affectedIds : undefined,
+              modifier: newEventTemplate.modifier,
+            };
+            activeEvents = [...activeEvents, newEvent];
+
+            if (newEventTemplate.type !== 'windfall_subsidy') {
+              summary.push({
+                id: `event_summary_${newDay}_${newEventTemplate.id}`,
+                icon: newEventTemplate.icon,
+                title: newEventTemplate.title,
+                detail: newEventTemplate.description,
+                severity: ['weather_frost','weather_heatwave','weather_hailstorm','pest_outbreak','animal_illness'].includes(newEventTemplate.type)
+                  ? 'danger'
+                  : 'good',
+              });
+            }
+          }
+        }
 
         const auctionLots: AuctionLot[] = state.auctionLots.map(lot => {
           if (lot.resolved) return lot;
@@ -1523,6 +1707,8 @@ export const useGameStore = create<GameState>()(
           processedInventory: processedInventoryForSet,
           seedVault: nextSeedVault,
           hybridJobs: nextHybridJobs,
+          activeEvents,
+          machineRepairs,
         });
       },
 
