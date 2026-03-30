@@ -1711,6 +1711,7 @@ export const useGameStore = create<GameState>()(
         const parentA = state.seedVault.find(s => s.id === parentAId);
         const parentB = state.seedVault.find(s => s.id === parentBId);
         if (!parentA || !parentB) return;
+        if (parentAId === parentBId) return;
         if (parentA.cropId !== cropId || parentB.cropId !== cropId) return;
         if (parentA.quantity < 1 || parentB.quantity < 1) return;
 
