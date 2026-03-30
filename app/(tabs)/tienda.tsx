@@ -5,8 +5,10 @@ import ScreenHeader from '../../components/ScreenHeader';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { PRODUCT_TYPES, CATEGORY_LABELS, ProductCategory } from '../../data/productTypes';
 import { BUILDING_TYPES, BUILDING_CATEGORY_LABELS, BuildingCategory } from '../../data/buildingTypes';
+import { MACHINE_TYPES } from '../../data/machineTypes';
+import { ATTACHMENT_TYPES } from '../../data/attachmentTypes';
 
-type ShopTab = 'seeds' | 'products' | 'buildings';
+type ShopTab = 'seeds' | 'products' | 'buildings' | 'machinery';
 
 const TIER_COLORS: Record<CropTier, string> = {
   D: '#9e9e9e', C: '#4caf50', B: '#2196f3', A: '#9c27b0', S: '#ff9800',
@@ -178,6 +180,144 @@ function BuildingsTab() {
   );
 }
 
+// ── Machinery Tab ────────────────────────────────────────────────────────────
+function MachineryTab() {
+  const { money, machines, attachments, trailers, buyMachine, buyAttachment, buyTrailer } = useGameStore();
+  const [section, setSection] = useState<'tractors' | 'combines' | 'trucks' | 'attachments'>('tractors');
+
+  const tractors    = MACHINE_TYPES.filter(m => m.category === 'tractor');
+  const combines    = MACHINE_TYPES.filter(m => m.category === 'harvester');
+  const trucks      = MACHINE_TYPES.filter(m => m.category === 'truck');
+  const trailerTypes = MACHINE_TYPES.filter(m => m.category === 'trailer');
+  const irrigTypes  = MACHINE_TYPES.filter(m => m.category === 'irrigation');
+
+  const ownedCount = (typeId: string) =>
+    [...(machines ?? []), ...(trailers ?? [])].filter(m => m.typeId === typeId).length;
+  const ownedAttachCount = (typeId: string) =>
+    (attachments ?? []).filter((a: { typeId: string }) => a.typeId === typeId).length;
+
+  const SECTION_LABELS = [
+    { key: 'tractors', label: '🚜 Tractors' },
+    { key: 'combines', label: '🌾 Combines' },
+    { key: 'trucks',   label: '🚛 Trucks' },
+    { key: 'attachments', label: '⚙️ Attachments' },
+  ] as const;
+
+  const renderMachineCard = (m: (typeof MACHINE_TYPES)[0], onBuy: () => void, owned: number) => (
+    <View key={m.id} style={mStyles.card}>
+      <View style={mStyles.cardHeader}>
+        <Text style={mStyles.cardName}>{m.name}</Text>
+        {owned > 0 && <Text style={mStyles.ownedBadge}>Owned: {owned}</Text>}
+      </View>
+      <Text style={mStyles.cardDetail}>💰 ${m.cost.toLocaleString()}</Text>
+      <Text style={mStyles.cardDetail}>🔧 ${m.maintenancePerDay}/day maintenance</Text>
+      {m.haPerDay !== undefined && <Text style={mStyles.cardDetail}>⚡ {m.haPerDay} ha/day</Text>}
+      {m.capacityKg !== undefined && (
+        <Text style={mStyles.cardDetail}>
+          📦 {m.capacityKg === 0 ? 'Needs trailer' : `${m.capacityKg.toLocaleString()} kg`}
+        </Text>
+      )}
+      <TouchableOpacity
+        style={[mStyles.buyBtn, money < m.cost && mStyles.buyBtnDisabled]}
+        onPress={onBuy}
+        disabled={money < m.cost}
+      >
+        <Text style={mStyles.buyBtnText}>{money < m.cost ? "Can't afford" : 'Buy'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderAttachCard = (a: (typeof ATTACHMENT_TYPES)[0]) => (
+    <View key={a.id} style={mStyles.card}>
+      <View style={mStyles.cardHeader}>
+        <Text style={mStyles.cardName}>{a.name}</Text>
+        {ownedAttachCount(a.id) > 0 && <Text style={mStyles.ownedBadge}>Owned: {ownedAttachCount(a.id)}</Text>}
+      </View>
+      <Text style={mStyles.cardDetail}>💰 ${a.cost.toLocaleString()}</Text>
+      <Text style={mStyles.cardDetail}>⚡ {a.haPerDay} ha/day</Text>
+      <Text style={mStyles.cardDetail}>🔧 {a.operation.charAt(0).toUpperCase() + a.operation.slice(1)}</Text>
+      <Text style={mStyles.cardDetail}>Fits: {a.compatibleTractorSizes.join(', ')} tractors</Text>
+      <TouchableOpacity
+        style={[mStyles.buyBtn, money < a.cost && mStyles.buyBtnDisabled]}
+        onPress={() => buyAttachment(a.id)}
+        disabled={money < a.cost}
+      >
+        <Text style={mStyles.buyBtnText}>{money < a.cost ? "Can't afford" : 'Buy'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  let listData: React.ReactNode;
+  if (section === 'tractors') {
+    listData = (
+      <ScrollView>
+        <Text style={mStyles.sectionHeader}>Tractors</Text>
+        {tractors.map(m => renderMachineCard(m, () => buyMachine(m.id), ownedCount(m.id)))}
+        <Text style={mStyles.sectionHeader}>Irrigation Systems</Text>
+        {irrigTypes.map(m => renderMachineCard(m, () => buyMachine(m.id), ownedCount(m.id)))}
+      </ScrollView>
+    );
+  } else if (section === 'combines') {
+    listData = (
+      <ScrollView>
+        <Text style={mStyles.sectionHeader}>Combine Harvesters</Text>
+        {combines.map(m => renderMachineCard(m, () => buyMachine(m.id), ownedCount(m.id)))}
+      </ScrollView>
+    );
+  } else if (section === 'trucks') {
+    listData = (
+      <ScrollView>
+        <Text style={mStyles.sectionHeader}>Vehicles</Text>
+        {trucks.map(m => renderMachineCard(m, () => buyMachine(m.id), ownedCount(m.id)))}
+        <Text style={mStyles.sectionHeader}>Trailers</Text>
+        {trailerTypes.map(m => renderMachineCard(m, () => buyTrailer(m.id), ownedCount(m.id)))}
+      </ScrollView>
+    );
+  } else {
+    listData = (
+      <ScrollView>
+        {ATTACHMENT_TYPES.map(renderAttachCard)}
+      </ScrollView>
+    );
+  }
+
+  return (
+    <View style={{ flex: 1 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={mStyles.sectionBar}>
+        {SECTION_LABELS.map(sl => (
+          <TouchableOpacity
+            key={sl.key}
+            style={[mStyles.sectionBtn, section === sl.key && mStyles.sectionBtnActive]}
+            onPress={() => setSection(sl.key)}
+          >
+            <Text style={[mStyles.sectionBtnText, section === sl.key && mStyles.sectionBtnTextActive]}>
+              {sl.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <View style={{ flex: 1 }}>{listData}</View>
+    </View>
+  );
+}
+
+const mStyles = StyleSheet.create({
+  sectionBar:        { flexGrow: 0, paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#333' },
+  sectionBtn:        { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, marginRight: 8, backgroundColor: '#1a1a2e' },
+  sectionBtnActive:  { backgroundColor: '#2e7d32' },
+  sectionBtnText:    { color: '#aaa', fontSize: 12 },
+  sectionBtnTextActive: { color: '#fff', fontWeight: 'bold' },
+  sectionHeader:     { color: '#e8d5a3', fontSize: 14, fontWeight: 'bold', marginTop: 16, marginBottom: 8, paddingHorizontal: 12 },
+  card:              { backgroundColor: '#16213e', borderRadius: 10, margin: 8, padding: 12 },
+  cardHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  cardName:          { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  ownedBadge:        { backgroundColor: '#1b5e20', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, color: '#81c784', fontSize: 11 },
+  cardDetail:        { color: '#aaa', fontSize: 12, marginBottom: 3 },
+  buyBtn:            { backgroundColor: '#2e7d32', borderRadius: 8, padding: 10, alignItems: 'center', marginTop: 8 },
+  buyBtnDisabled:    { backgroundColor: '#333' },
+  buyBtnText:        { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+});
+
 // ── Main Screen ─────────────────────────────────────────────────────────────
 export default function TiendaScreen() {
   const [activeTab, setActiveTab] = useState<ShopTab>('seeds');
@@ -192,6 +332,7 @@ export default function TiendaScreen() {
           { id: 'seeds',     label: '🌾 Seeds' },
           { id: 'products',  label: '🧪 Products' },
           { id: 'buildings', label: '🏗️ Buildings' },
+          { id: 'machinery',  label: '🚜 Machinery' },
         ] as { id: ShopTab; label: string }[]).map(tab => (
           <TouchableOpacity
             key={tab.id}
@@ -208,6 +349,7 @@ export default function TiendaScreen() {
       {activeTab === 'seeds'     && <SeedsTab />}
       {activeTab === 'products'  && <ProductsTab />}
       {activeTab === 'buildings' && <BuildingsTab />}
+      {activeTab === 'machinery' && <MachineryTab />}
     </View>
   );
 }
