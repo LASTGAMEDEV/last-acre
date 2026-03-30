@@ -101,7 +101,6 @@ export function useMapGestures({ screenW, screenH, initialX = 0, initialY = 0, i
         translateX.value = withTiming(clamped.x,  { duration: 350 }) as any;
         translateY.value = withTiming(clamped.y,  { duration: 350 }) as any;
       }
-      if (onSave) runOnJS(onSave)(translateX.value, translateY.value, scale.value);
     });
 
   const composed = Gesture.Simultaneous(

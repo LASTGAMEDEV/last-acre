@@ -7,6 +7,7 @@ const ITEMS = [
   { color: '#281858', label: 'Granja del Norte' },
   { color: '#906010', label: 'For sale' },
   { color: '#264818', label: 'Unplanted' },
+  { color: '#1a1810', label: 'Wilderness' },
 ];
 
 export default function MapLegend() {
