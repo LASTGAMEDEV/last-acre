@@ -570,7 +570,7 @@ function makeInitialState() {
     mapFields: INITIAL_MAP_FIELDS,
     mapPanX: 0,
     mapPanY: 0,
-    mapZoom: 1,
+    mapZoom: 0, // 0 = sentinel: first open, compute fit-to-screen in WorldMap component
     selectedMapFieldId: null,
   };
 }
@@ -1902,9 +1902,16 @@ export const useGameStore = create<GameState>()(
         if (!parcel || parcel.owned) return;
         const cost = parcel.pricePerHa * parcel.hectares;
         if (state.money < cost) return;
+        // Sync mapFields: parcel IDs for map fields are p-${mapFieldId}
+        const mapFieldId = parcelId.startsWith('p-mf-') ? parcelId.slice(2) : null;
         set({
           money: state.money - cost,
           parcels: state.parcels.map(p => p.id === parcelId ? { ...p, owned: true } : p),
+          mapFields: mapFieldId
+            ? state.mapFields.map(f =>
+                f.id === mapFieldId ? { ...f, owner: 'player' as MapOwner, parcelId } : f
+              )
+            : state.mapFields,
         });
       },
 
@@ -3108,7 +3115,7 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'granja-tycoon-save-v10',
+      name: 'granja-tycoon-save-v11',
       storage: createJSONStorage(() => {
         try {
           return localStorage;

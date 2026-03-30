@@ -4,11 +4,15 @@ import Animated from 'react-native-reanimated';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
 import { useGameStore } from '../../store/useGameStore';
-import MapCanvas from './MapCanvas';
+import MapCanvas, { CANVAS_W, CANVAS_H } from './MapCanvas';
 import FieldPanel from './FieldPanel';
 import MiniMap from './MiniMap';
-import { useMapGestures } from './useMapGestures';
+import { useMapGestures, MIN_ZOOM, MAX_ZOOM } from './useMapGestures';
 import MapLegend from './MapLegend';
+
+// Center of player's starting fields (nc6 + nc7)
+const PLAYER_START_X = 691;
+const PLAYER_START_Y = 272;
 
 export default function WorldMap() {
   const { width: W, height: H } = useWindowDimensions();
@@ -20,13 +24,24 @@ export default function WorldMap() {
     selectMapField, buyMapField, scoutMapField, savePanZoom,
   } = useGameStore();
 
+  // mapZoom === 0 is the first-open sentinel — compute a fit-to-screen position
+  // centred on the player's starting fields (nc6 + nc7).
+  const isFirstOpen = mapZoom === 0;
+  const fitZoom = Math.min(
+    Math.max(Math.min(W / CANVAS_W, H / CANVAS_H), MIN_ZOOM),
+    MAX_ZOOM,
+  );
+  const initZoom = isFirstOpen ? fitZoom : mapZoom;
+  const initX    = isFirstOpen ? W / 2 - PLAYER_START_X * fitZoom : mapPanX;
+  const initY    = isFirstOpen ? H / 2 - PLAYER_START_Y * fitZoom : mapPanY;
+
   const { translateX, translateY, scale, composed, animStyle, jumpTo } =
     useMapGestures({
       screenW: W,
       screenH: H,
-      initialX: mapPanX,
-      initialY: mapPanY,
-      initialZoom: mapZoom,
+      initialX: initX,
+      initialY: initY,
+      initialZoom: initZoom,
       onSave: savePanZoom,
     });
 

@@ -68,7 +68,7 @@ export default function TierrasScreen() {
   const [fieldFilter, setFieldFilter] = useState<FieldFilter>('all');
 
   const owned = parcels.filter(p => p.owned);
-  const available = parcels.filter(p => !p.owned).slice(0, 20);
+  const available = parcels.filter(p => !p.owned);
   const activeFieldEvents = fieldEvents.filter(e => !e.resolved);
 
   // Storage info
