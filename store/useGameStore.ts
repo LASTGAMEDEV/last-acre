@@ -1168,6 +1168,42 @@ export const useGameStore = create<GameState>()(
           ])
         );
 
+        // ── Seed Lab: settle completed hybrid jobs ──────────────────────
+        const completedJobs = state.hybridJobs.filter(j => newDay >= j.readyDay);
+        let nextSeedVault = [...(state.seedVault ?? [])];
+        for (const job of completedJobs) {
+          const parentA = state.seedVault.find(s => s.id === job.parentAId) ??
+            { genes: { yield: 1, drought: 1, growth: 1, quality: 1 } };
+          const parentB = state.seedVault.find(s => s.id === job.parentBId) ??
+            { genes: { yield: 1, drought: 1, growth: 1, quality: 1 } };
+
+          const clamp = (v: number) => Math.min(1.5, Math.max(0.5, v));
+          const mutate = (a: number, b: number) => clamp((a + b) / 2 + (Math.random() - 0.5) * 0.12);
+
+          const offspringGenes: SeedGenes = {
+            yield:   mutate(parentA.genes.yield,   parentB.genes.yield),
+            drought: mutate(parentA.genes.drought, parentB.genes.drought),
+            growth:  mutate(parentA.genes.growth,  parentB.genes.growth),
+            quality: mutate(parentA.genes.quality, parentB.genes.quality),
+          };
+
+          const generation = Math.max(
+            (state.seedVault.find(s => s.id === job.parentAId)?.generation ?? 1),
+            (state.seedVault.find(s => s.id === job.parentBId)?.generation ?? 1),
+          ) + 1;
+
+          const newEntry: SeedEntry = {
+            id: `seed_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            cropId: job.cropId,
+            generation,
+            genes: offspringGenes,
+            createdDay: newDay,
+            quantity: 3,
+          };
+          nextSeedVault.push(newEntry);
+        }
+        const nextHybridJobs = state.hybridJobs.filter(j => newDay < j.readyDay);
+
         // Auto-sell: sell crops automatically when price meets threshold
         let autoSellIncome = 0;
         const autoSellRules = state.autoSell ?? {};
@@ -1444,6 +1480,8 @@ export const useGameStore = create<GameState>()(
           bankrupt: isBankrupt || state.bankrupt,
           sellPressures,
           processedInventory: processedInventoryForSet,
+          seedVault: nextSeedVault,
+          hybridJobs: nextHybridJobs,
         });
       },
 
@@ -1488,9 +1526,14 @@ export const useGameStore = create<GameState>()(
         const crop = parcel.plantedCrop;
         const cropType = CROP_TYPES.find(c => c.id === crop.cropId);
         if (!cropType) return;
+        // Seed genes for this parcel
+        const seedEntry = parcel.seedEntryId
+          ? state.seedVault.find(s => s.id === parcel.seedEntryId)
+          : undefined;
+        const seedGenes = seedEntry?.genes ?? { yield: 1, drought: 1, growth: 1, quality: 1 };
         // Speed bonus: faster machines reduce effective growth days
         const speedBonus = getMachineSpeedBonus(state.machines);
-        const effectiveGrowthDays = Math.round(cropType.growthDays * speedBonus);
+        const effectiveGrowthDays = Math.round(cropType.growthDays * speedBonus / seedGenes.growth);
         if (state.day < crop.plantedDay + effectiveGrowthDays) return;
         // Silo cap
         const siloCapacity = getSiloCapacity(state.buildings);
@@ -1499,7 +1542,10 @@ export const useGameStore = create<GameState>()(
         const baseClimate = state.todayWeather?.climateModifier ?? 1.0;
         // Water need scales how much weather helps or hurts this crop (1=immune, 5=full effect)
         const waterScale = (cropType.waterNeed ?? 3) / 5;
-        const climateModifier = 1.0 + (baseClimate - 1.0) * waterScale;
+        const rawClimateDelta = (baseClimate - 1.0) * waterScale;
+        // Drought gene reduces penalty when weather is bad (delta < 0); no effect on bonuses
+        const droughtScale = rawClimateDelta < 0 ? 1.0 / seedGenes.drought : 1.0;
+        const climateModifier = 1.0 + rawClimateDelta * droughtScale;
         const yieldBonus = getMachineYieldBonus(state.machines);
         const { harvestAmount } = require('../engine/crops');
         const rawUnits = harvestAmount(crop, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, yieldBonus);
@@ -1514,18 +1560,28 @@ export const useGameStore = create<GameState>()(
         const irrigationBonus = parcel.irrigated ? 1.20 : 1.0;
         // Soil type affinity
         const soilMod = getSoilModifier(parcel.soilType, crop.cropId);
-        const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationBonus * soilMod), siloCapacity - totalInventory);
+        const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationBonus * soilMod * seedGenes.yield), siloCapacity - totalInventory);
+        // Update quality map and consume seed batch
+        const nextCropQualityMap = { ...state.cropQualityMap };
+        if (seedEntry) {
+          nextCropQualityMap[crop.cropId] = seedGenes.quality;
+        }
+        const nextSeedVaultAfterHarvest = seedEntry
+          ? state.seedVault.map(s => s.id === parcel.seedEntryId ? { ...s, quantity: s.quantity - 1 } : s).filter(s => s.quantity > 0)
+          : state.seedVault;
         const harvestedCropIds = state.harvestedCropIds.includes(crop.cropId)
           ? state.harvestedCropIds
           : [...state.harvestedCropIds, crop.cropId];
         const newFertility = Math.max(1, parcel.fertility - (cropType.fertilityDrain ?? 0));
         set({
           parcels: state.parcels.map(p => p.id === parcelId
-            ? { ...p, plantedCrop: null, lastCropId: crop.cropId, fertility: newFertility }
+            ? { ...p, plantedCrop: null, lastCropId: crop.cropId, fertility: newFertility, seedEntryId: undefined }
             : p
           ),
           inventory: { ...state.inventory, [crop.cropId]: (state.inventory[crop.cropId] ?? 0) + units },
           harvestedCropIds,
+          cropQualityMap: nextCropQualityMap,
+          seedVault: nextSeedVaultAfterHarvest,
         });
       },
 
@@ -2037,7 +2093,7 @@ export const useGameStore = create<GameState>()(
             inventory: { ...state.inventory, [recipe.input.itemId]: inStock - needed },
             processedInventory: {
               ...state.processedInventory,
-              [recipe.outputProductId]: (state.processedInventory[recipe.outputProductId] ?? 0) + Math.round(recipe.outputAmount * batches * wBonuses.processingOutputMult),
+              [recipe.outputProductId]: (state.processedInventory[recipe.outputProductId] ?? 0) + Math.round(recipe.outputAmount * batches * wBonuses.processingOutputMult * (state.cropQualityMap[recipe.input.itemId] ?? 1.0)),
             },
           });
         } else {
