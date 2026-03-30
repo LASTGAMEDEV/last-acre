@@ -17,7 +17,7 @@ const REV_CHART_W = SCREEN_W - 48;
 const REV_CHART_H = 120;
 const REV_PAD = { top: 8, bottom: 24, left: 44, right: 8 };
 
-type SaleRecord = { day: number; amount: number; category: string };
+type SaleRecord = { day: number; amount: number; category?: string };
 
 function RevenueHistoryChart({ salesLog, currentDay }: { salesLog: SaleRecord[]; currentDay: number }) {
   const DAYS = 30;

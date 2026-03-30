@@ -1,0 +1,184 @@
+<h2>Design — Section 1: Operation Flow & Data Model (v3)</h2>
+<p class="subtitle">Updated truck system — capacity in kg</p>
+
+<div class="section">
+  <h3>🔄 New Farming Lifecycle (per parcel)</h3>
+  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:16px 0;">
+    <div style="background:#1b3a1b;border:1px solid #2e7d32;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">🌱</div>
+      <div style="color:#81c784;font-size:12px;font-weight:bold;">TILL</div>
+      <div style="color:#555;font-size:10px;">Tractor +<br>Cultivator</div>
+    </div>
+    <div style="color:#555;font-size:20px;">→</div>
+    <div style="background:#1b3a1b;border:1px solid #2e7d32;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">🌾</div>
+      <div style="color:#81c784;font-size:12px;font-weight:bold;">PLANT</div>
+      <div style="color:#555;font-size:10px;">Tractor +<br>Planter</div>
+    </div>
+    <div style="color:#555;font-size:20px;">→</div>
+    <div style="background:#1b2d3a;border:1px solid #0288d1;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">💧</div>
+      <div style="color:#4fc3f7;font-size:12px;font-weight:bold;">IRRIGATE</div>
+      <div style="color:#555;font-size:10px;">Optional<br>anytime</div>
+    </div>
+    <div style="color:#555;font-size:20px;">→</div>
+    <div style="background:#2d1b3a;border:1px solid #7b1fa2;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">🌿</div>
+      <div style="color:#ce93d8;font-size:12px;font-weight:bold;">GROW</div>
+      <div style="color:#555;font-size:10px;">Automatic<br>(days pass)</div>
+    </div>
+    <div style="color:#555;font-size:20px;">→</div>
+    <div style="background:#3a2d1b;border:1px solid #f57f17;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">💊</div>
+      <div style="color:#ffb74d;font-size:12px;font-weight:bold;">SPRAY</div>
+      <div style="color:#555;font-size:10px;">Optional<br>during grow</div>
+    </div>
+    <div style="color:#555;font-size:20px;">→</div>
+    <div style="background:#3a1b1b;border:1px solid #c62828;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">🌾</div>
+      <div style="color:#ef5350;font-size:12px;font-weight:bold;">HARVEST</div>
+      <div style="color:#555;font-size:10px;">Combine<br>Harvester</div>
+    </div>
+    <div style="color:#555;font-size:20px;">→</div>
+    <div style="background:#1b2a3a;border:1px solid #1565c0;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">🚛</div>
+      <div style="color:#64b5f6;font-size:12px;font-weight:bold;">TRANSPORT</div>
+      <div style="color:#555;font-size:10px;">Truck<br>(optional)</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🚛 Truck System (updated)</h3>
+  <p style="color:#888;font-size:11px;margin-bottom:12px;">Capacity measured in <strong style="color:#e8d5a3;">kg</strong>. Pickup and Semi have future functionality planned — they are vehicle platforms. Dump Truck is transport-only.</p>
+
+  <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;">
+    <thead>
+      <tr style="background:#0f3460;color:#e8d5a3;">
+        <th style="padding:10px;text-align:left;">Vehicle</th>
+        <th style="padding:10px;text-align:center;">Transport Capacity</th>
+        <th style="padding:10px;text-align:center;">Needs Trailer?</th>
+        <th style="padding:10px;text-align:center;">Cost</th>
+        <th style="padding:10px;text-align:center;">Future Use?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #222;">
+        <td style="padding:10px;color:#fff;">🚙 Pickup</td>
+        <td style="padding:10px;text-align:center;color:#ef5350;">0 kg (needs trailer)</td>
+        <td style="padding:10px;text-align:center;color:#ef5350;">✅ Required</td>
+        <td style="padding:10px;text-align:center;color:#aaa;">$12,000</td>
+        <td style="padding:10px;text-align:center;color:#81c784;">✅ Yes</td>
+      </tr>
+      <tr style="border-bottom:1px solid #222;">
+        <td style="padding:10px;color:#fff;">🚛 Dump Truck</td>
+        <td style="padding:10px;text-align:center;color:#81c784;">10,000 kg</td>
+        <td style="padding:10px;text-align:center;color:#81c784;">❌ Standalone</td>
+        <td style="padding:10px;text-align:center;color:#aaa;">$35,000</td>
+        <td style="padding:10px;text-align:center;color:#555;">— Transport only</td>
+      </tr>
+      <tr>
+        <td style="padding:10px;color:#fff;">🚚 Semi</td>
+        <td style="padding:10px;text-align:center;color:#ef5350;">0 kg (needs trailer)</td>
+        <td style="padding:10px;text-align:center;color:#ef5350;">✅ Required</td>
+        <td style="padding:10px;text-align:center;color:#aaa;">$25,000</td>
+        <td style="padding:10px;text-align:center;color:#81c784;">✅ Yes</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>🔗 Trailers</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead>
+      <tr style="background:#0f3460;color:#e8d5a3;">
+        <th style="padding:10px;text-align:left;">Trailer</th>
+        <th style="padding:10px;text-align:center;">Capacity</th>
+        <th style="padding:10px;text-align:center;">Compatible With</th>
+        <th style="padding:10px;text-align:center;">Cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #222;">
+        <td style="padding:10px;color:#81c784;">Small Trailer</td>
+        <td style="padding:10px;text-align:center;color:#aaa;">2,000 kg</td>
+        <td style="padding:10px;text-align:center;color:#aaa;">Pickup</td>
+        <td style="padding:10px;text-align:center;color:#aaa;">$4,000</td>
+      </tr>
+      <tr style="border-bottom:1px solid #222;">
+        <td style="padding:10px;color:#ffb74d;">Standard Trailer</td>
+        <td style="padding:10px;text-align:center;color:#aaa;">6,000 kg</td>
+        <td style="padding:10px;text-align:center;color:#aaa;">Pickup or Semi</td>
+        <td style="padding:10px;text-align:center;color:#aaa;">$9,000</td>
+      </tr>
+      <tr>
+        <td style="padding:10px;color:#ef5350;">Large Trailer</td>
+        <td style="padding:10px;text-align:center;color:#aaa;">22,000 kg</td>
+        <td style="padding:10px;text-align:center;color:#aaa;">Semi only</td>
+        <td style="padding:10px;text-align:center;color:#aaa;">$16,000</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <h3>📦 Data Structures</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#e8d5a3;font-weight:bold;margin-bottom:8px;">MachineType (updated)</div>
+      <div style="font-size:11px;color:#aaa;line-height:1.8;">
+        id, name, cost, size: 'small'|'medium'|'large'<br>
+        category: 'tractor'|'harvester'|'truck'|'trailer'|'irrigation'<br>
+        maintenancePerDay<br>
+        <span style="color:#4fc3f7;">haPerDay</span> (harvesters)<br>
+        <span style="color:#4fc3f7;">capacityKg</span> (trucks/trailers)<br>
+        <span style="color:#4fc3f7;">compatibleAttachments</span>: string[]<br>
+        <span style="color:#4fc3f7;">compatibleTrailers</span>: string[]
+      </div>
+    </div>
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#e8d5a3;font-weight:bold;margin-bottom:8px;">AttachmentType (new)</div>
+      <div style="font-size:11px;color:#aaa;line-height:1.8;">
+        id, name, cost<br>
+        operation: 'till'|'plant'|'spray'<br>
+        size: 'small'|'medium'|'large'<br>
+        <span style="color:#4fc3f7;">haPerDay</span>: number<br>
+        compatibleTractors: string[]
+      </div>
+    </div>
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#e8d5a3;font-weight:bold;margin-bottom:8px;">TractorJob (new store state)</div>
+      <div style="font-size:11px;color:#aaa;line-height:1.8;">
+        id, tractorId, attachmentId<br>
+        operation: 'till'|'plant'|'spray'<br>
+        parcelIds: string[]<br>
+        totalHa: number, haPerDay: number<br>
+        <span style="color:#4fc3f7;">startDay, completesDay</span><br>
+        processedHa: number
+      </div>
+    </div>
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#e8d5a3;font-weight:bold;margin-bottom:8px;">Parcel (updated)</div>
+      <div style="font-size:11px;color:#aaa;line-height:1.8;">
+        (existing fields...)<br>
+        <span style="color:#4fc3f7;">tilled: boolean</span><br>
+        <span style="color:#555;font-style:italic;">plantedCrop stays as-is</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🔑 Key Rules</h3>
+  <div style="font-size:12px;line-height:2;color:#aaa;">
+    <div>• <span style="color:#81c784;">Till required before plant</span> — parcel must be tilled to accept a crop</div>
+    <div>• <span style="color:#81c784;">Harvest requires combine</span> — no combine = hire contractor or crop waits</div>
+    <div>• <span style="color:#ffb74d;">One job per tractor</span> — busy tractor can't be reassigned</div>
+    <div>• <span style="color:#ffb74d;">Attachment size match</span> — small fits small+medium tractor; large fits large only</div>
+    <div>• <span style="color:#4fc3f7;">Pickup/Semi need a trailer to transport</span> — no trailer = no cargo capacity</div>
+    <div>• <span style="color:#4fc3f7;">Dump Truck is standalone transport</span> — no trailer needed, transport only</div>
+    <div>• <span style="color:#4fc3f7;">Contractor = instant</span> — costs $/ha, no machine required</div>
+    <div>• <span style="color:#4fc3f7;">No truck = -12% sell price</span> — contractor cut built into price</div>
+  </div>
+</div>
+
+<p style="color:#888;font-size:12px;margin-top:16px;">Looks good? Let me know in terminal and I'll continue with Section 2 (store/engine design).</p>

@@ -1,0 +1,117 @@
+<h2>Design — Section 2: Store, Engine & UI</h2>
+<p class="subtitle">How tractor jobs flow through the system + what changes in the UI</p>
+
+<div class="section">
+  <h3>⚙️ Engine — New Pure Functions (<code>engine/machinery.ts</code>)</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;">
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#4fc3f7;font-weight:bold;margin-bottom:6px;">calcJobDays(totalHa, haPerDay)</div>
+      <div style="color:#aaa;">Returns Math.ceil(totalHa / haPerDay). A 5ha field with a 2ha/day cultivator = 3 days.</div>
+    </div>
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#4fc3f7;font-weight:bold;margin-bottom:6px;">getContractorCost(operation, totalHa, prices)</div>
+      <div style="color:#aaa;">Returns flat fee based on operation × hectares. Transport returns 12% of estimated sale value.</div>
+    </div>
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#4fc3f7;font-weight:bold;margin-bottom:6px;">canAssignJob(tractor, attachment, parcels)</div>
+      <div style="color:#aaa;">Validates: tractor not busy, attachment compatible, parcels in correct state (tilled for plant, etc.).</div>
+    </div>
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#4fc3f7;font-weight:bold;margin-bottom:6px;">getTransportCapacity(machines)</div>
+      <div style="color:#aaa;">Returns total kg capacity from owned truck+trailer combos. Used to check if crop can be self-transported.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🗄️ Store — New State Fields</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:12px;">
+    <div style="background:#0f3460;border-radius:8px;padding:12px;">
+      <div style="color:#e8d5a3;font-weight:bold;margin-bottom:6px;">attachments: OwnedAttachment[]</div>
+      <div style="color:#aaa;">{ id, typeId } — purchased attachments. Same pattern as OwnedMachine.</div>
+    </div>
+    <div style="background:#0f3460;border-radius:8px;padding:12px;">
+      <div style="color:#e8d5a3;font-weight:bold;margin-bottom:6px;">tractorJobs: TractorJob[]</div>
+      <div style="color:#aaa;">Active jobs. Each tractor can only appear once. Completed jobs removed by advanceDay.</div>
+    </div>
+    <div style="background:#0f3460;border-radius:8px;padding:12px;">
+      <div style="color:#e8d5a3;font-weight:bold;margin-bottom:6px;">trailers: OwnedTrailer[]</div>
+      <div style="color:#aaa;">{ id, typeId, attachedTo: truckId | null } — tracks which trailer is hitched to which truck.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🔧 Store — New Actions</h3>
+  <div style="font-size:12px;line-height:2;color:#aaa;">
+    <div><span style="color:#81c784;font-weight:bold;">buyAttachment(typeId)</span> — deduct cost, push to attachments[]</div>
+    <div><span style="color:#81c784;font-weight:bold;">buyTrailer(typeId)</span> — deduct cost, push to trailers[]</div>
+    <div><span style="color:#81c784;font-weight:bold;">hitchTrailer(trailerId, truckId)</span> — sets trailer.attachedTo = truckId</div>
+    <div><span style="color:#81c784;font-weight:bold;">assignJob(tractorId, attachmentId, operation, parcelIds)</span> — validates, computes completesDay, pushes TractorJob</div>
+    <div><span style="color:#81c784;font-weight:bold;">hireContractor(operation, parcelIds)</span> — deduct fee, instantly apply operation (set tilled=true / plant / harvest)</div>
+    <div><span style="color:#555;font-style:italic;">plantCrop updated</span> — now requires parcel.tilled === true, else blocked</div>
+    <div><span style="color:#555;font-style:italic;">harvestCrop updated</span> — now requires owned combine OR blocks with "hire contractor" prompt</div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>📅 advanceDay — Job Processing</h3>
+  <div style="background:#16213e;border-radius:8px;padding:12px;font-size:12px;color:#aaa;line-height:2;">
+    Each day, for each active TractorJob:<br>
+    1. If <span style="color:#4fc3f7;">completesDay &lt;= newDay</span> → apply results (set tilled, plant, spray parcels) → remove job → push day summary entry<br>
+    2. If still in progress → no action needed (completesDay was pre-calculated at assign time)<br><br>
+    <span style="color:#888;">Harvest jobs work differently — combine harvests N ha/day, so advanceDay tracks processedHa incrementally until all parcels done.</span>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🖥️ UI Changes</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;">
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#ffb74d;font-weight:bold;margin-bottom:8px;">🏪 Market Tab — Split into 2</div>
+      <div style="color:#aaa;line-height:1.8;">
+        <div>Current: Machinery + Buildings in one tab</div>
+        <div style="color:#81c784;">→ <strong>Machinery tab</strong>: Tractors, Combines, Trucks, Trailers, Attachments</div>
+        <div style="color:#81c784;">→ <strong>Buildings tab</strong>: All existing buildings (silo, workshop, greenhouse, etc.)</div>
+      </div>
+    </div>
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#ffb74d;font-weight:bold;margin-bottom:8px;">🚜 Machinery Tab — Redesign</div>
+      <div style="color:#aaa;line-height:1.8;">
+        Internal sub-tabs: <strong>Fleet</strong> · <strong>Attachments</strong> · <strong>Jobs</strong><br>
+        Fleet: owned tractors/combines/trucks with active job status<br>
+        Attachments: owned + shop<br>
+        Jobs: active jobs with progress + assign new job UI
+      </div>
+    </div>
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#ffb74d;font-weight:bold;margin-bottom:8px;">🌾 Fields Tab — Operation Buttons</div>
+      <div style="color:#aaa;line-height:1.8;">
+        Each parcel card gets operation buttons based on its state:<br>
+        Unowned → Buy<br>
+        Owned + untilled → <strong>Till</strong> (assign tractor or hire contractor)<br>
+        Tilled → <strong>Plant</strong><br>
+        Growing → <strong>Spray</strong> (optional)<br>
+        Ready → <strong>Harvest</strong>
+      </div>
+    </div>
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#ffb74d;font-weight:bold;margin-bottom:8px;">🤝 Contractor Modal</div>
+      <div style="color:#aaa;line-height:1.8;">
+        When player clicks an operation without the machine:<br>
+        → Modal: "You don't own a [machine]. Hire a contractor for $X?"<br>
+        → Shows cost breakdown (ha × rate)<br>
+        → Confirm → instant completion
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>💾 Save Key</h3>
+  <div style="background:#16213e;border-radius:8px;padding:12px;font-size:12px;color:#aaa;">
+    New state fields (attachments, tractorJobs, trailers) require a save key bump: <span style="color:#ef5350;font-weight:bold;">v6 → v7</span>. Old saves wiped.
+  </div>
+</div>
+
+<p style="color:#888;font-size:12px;margin-top:16px;">Does this architecture look right? Let me know in terminal.</p>

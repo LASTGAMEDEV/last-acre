@@ -1,0 +1,143 @@
+<h2>Design — Section 1: Operation Flow & Data Model</h2>
+<p class="subtitle">The farming lifecycle with machine-gated steps</p>
+
+<div class="section">
+  <h3>🔄 New Farming Lifecycle (per parcel)</h3>
+  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:16px 0;">
+    <div style="background:#1b3a1b;border:1px solid #2e7d32;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">🌱</div>
+      <div style="color:#81c784;font-size:12px;font-weight:bold;">TILL</div>
+      <div style="color:#555;font-size:10px;">Tractor +<br>Cultivator</div>
+    </div>
+    <div style="color:#555;font-size:20px;">→</div>
+    <div style="background:#1b3a1b;border:1px solid #2e7d32;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">🌾</div>
+      <div style="color:#81c784;font-size:12px;font-weight:bold;">PLANT</div>
+      <div style="color:#555;font-size:10px;">Tractor +<br>Planter</div>
+    </div>
+    <div style="color:#555;font-size:20px;">→</div>
+    <div style="background:#1b2d3a;border:1px solid #0288d1;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">💧</div>
+      <div style="color:#4fc3f7;font-size:12px;font-weight:bold;">IRRIGATE</div>
+      <div style="color:#555;font-size:10px;">Optional<br>anytime</div>
+    </div>
+    <div style="color:#555;font-size:20px;">→</div>
+    <div style="background:#2d1b3a;border:1px solid #7b1fa2;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">🌿</div>
+      <div style="color:#ce93d8;font-size:12px;font-weight:bold;">GROW</div>
+      <div style="color:#555;font-size:10px;">Automatic<br>(days pass)</div>
+    </div>
+    <div style="color:#555;font-size:20px;">→</div>
+    <div style="background:#3a2d1b;border:1px solid #f57f17;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">💊</div>
+      <div style="color:#ffb74d;font-size:12px;font-weight:bold;">SPRAY</div>
+      <div style="color:#555;font-size:10px;">Optional<br>during grow</div>
+    </div>
+    <div style="color:#555;font-size:20px;">→</div>
+    <div style="background:#3a1b1b;border:1px solid #c62828;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">🌾</div>
+      <div style="color:#ef5350;font-size:12px;font-weight:bold;">HARVEST</div>
+      <div style="color:#555;font-size:10px;">Combine<br>Harvester</div>
+    </div>
+    <div style="color:#555;font-size:20px;">→</div>
+    <div style="background:#1b2a3a;border:1px solid #1565c0;border-radius:8px;padding:10px 14px;text-align:center;min-width:90px;">
+      <div style="font-size:18px;">🚛</div>
+      <div style="color:#64b5f6;font-size:12px;font-weight:bold;">TRANSPORT</div>
+      <div style="color:#555;font-size:10px;">Truck<br>(optional)</div>
+    </div>
+  </div>
+  <p style="color:#666;font-size:11px;">Till and Plant are required. Irrigate, Spray, Transport are optional but beneficial. Harvest requires a combine. No machine = hire contractor.</p>
+</div>
+
+<div class="section">
+  <h3>📦 New Data Structures</h3>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#e8d5a3;font-weight:bold;margin-bottom:8px;">MachineType (updated)</div>
+      <div style="font-size:11px;color:#aaa;line-height:1.8;">
+        id, name, cost, size: 'small'|'medium'|'large'<br>
+        category: 'tractor'|'harvester'|'truck'|'trailer'|'irrigation'<br>
+        maintenancePerDay<br>
+        <span style="color:#4fc3f7;">haPerDay</span> (for harvesters)<br>
+        <span style="color:#4fc3f7;">capacity</span> (for trucks/trailers)<br>
+        <span style="color:#4fc3f7;">compatibleAttachments</span>: string[]
+      </div>
+    </div>
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#e8d5a3;font-weight:bold;margin-bottom:8px;">AttachmentType (new)</div>
+      <div style="font-size:11px;color:#aaa;line-height:1.8;">
+        id, name, cost<br>
+        operation: 'till'|'plant'|'spray'<br>
+        size: 'small'|'medium'|'large'<br>
+        <span style="color:#4fc3f7;">haPerDay</span>: number<br>
+        compatibleTractors: string[]
+      </div>
+    </div>
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#e8d5a3;font-weight:bold;margin-bottom:8px;">TractorJob (new store state)</div>
+      <div style="font-size:11px;color:#aaa;line-height:1.8;">
+        id, tractorId, attachmentId<br>
+        operation: 'till'|'plant'|'spray'<br>
+        parcelIds: string[]<br>
+        totalHa: number<br>
+        haPerDay: number<br>
+        <span style="color:#4fc3f7;">startDay, completesDay</span><br>
+        processedHa: number
+      </div>
+    </div>
+    <div style="background:#16213e;border-radius:8px;padding:12px;">
+      <div style="color:#e8d5a3;font-weight:bold;margin-bottom:8px;">Parcel (updated)</div>
+      <div style="font-size:11px;color:#aaa;line-height:1.8;">
+        (existing fields...)<br>
+        <span style="color:#4fc3f7;">tilled: boolean</span> — ready to plant?<br>
+        <span style="color:#555;font-style:italic;">plantedCrop stays as-is</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🚛 Truck System (Vehicle + Trailer)</h3>
+  <p style="color:#888;font-size:11px;margin-bottom:12px;">Trucks are purchased separately from trailers. This allows future functionality for pickups/semis beyond transport.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div style="background:#0f3460;border-radius:8px;padding:12px;border:1px solid #1565c0;">
+      <div style="color:#64b5f6;font-weight:bold;margin-bottom:8px;">Standalone Vehicles</div>
+      <div style="font-size:11px;color:#aaa;line-height:2;">
+        <div><span style="color:#fff;">🚙 Pickup</span> — $12,000 · 500 units</div>
+        <div><span style="color:#fff;">🚛 Dump Truck</span> — $18,000 · for future</div>
+      </div>
+    </div>
+    <div style="background:#0f3460;border-radius:8px;padding:12px;border:1px solid #4caf50;">
+      <div style="color:#81c784;font-weight:bold;margin-bottom:8px;">Vehicle + Trailer Combos</div>
+      <div style="font-size:11px;color:#aaa;line-height:2;">
+        <div><span style="color:#fff;">🚙 Pickup + Trailer</span> — Pickup ($12k) + Trailer ($5–12k)</div>
+        <div><span style="color:#fff;">🚛 Semi + Trailer</span> — Semi ($25k) + Trailer ($8–18k)</div>
+      </div>
+    </div>
+    <div style="background:#0f3460;border-radius:8px;padding:12px;border:1px solid #ffb74d;grid-column:1/-1;">
+      <div style="color:#ffb74d;font-weight:bold;margin-bottom:8px;">Trailer Types</div>
+      <div style="font-size:11px;color:#aaa;line-height:2;">
+        <div><span style="color:#fff;">Small Trailer</span> — $5,000 · 1,500 units · fits Pickup</div>
+        <div><span style="color:#fff;">Standard Trailer</span> — $8,000 · 3,500 units · fits Pickup or Semi</div>
+        <div><span style="color:#fff;">Large Trailer</span> — $15,000 · 8,000 units · Semi only</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🔑 Key Rules</h3>
+  <div style="font-size:12px;line-height:2;color:#aaa;">
+    <div>• <span style="color:#81c784;">Till required before plant</span> — parcel must be <code style="background:#0a1628;padding:2px 4px;border-radius:3px;">tilled: true</code> to accept a crop</div>
+    <div>• <span style="color:#81c784;">Harvest requires combine</span> — no combine = hire contractor or crop sits in field</div>
+    <div>• <span style="color:#ffb74d;">One job per tractor</span> — assigning a new job when busy is blocked</div>
+    <div>• <span style="color:#ffb74d;">Attachment must match tractor size</span> — small attachment fits small+medium tractor; large only fits large</div>
+    <div>• <span style="color:#4fc3f7;">Trailers are separate purchases</span> — pickup/semi alone can do other things; need trailer to transport</div>
+    <div>• <span style="color:#4fc3f7;">Contractor = instant</span> — hires complete the operation same day, no machine required</div>
+    <div>• <span style="color:#4fc3f7;">Transport optional</span> — without a truck, crops sell at -12% (contractor cut built into sell price)</div>
+  </div>
+</div>
+
+<p style="color:#888;font-size:12px;margin-top:16px;">Does this look good? Let me know in the terminal and I'll continue with the next section.</p>
