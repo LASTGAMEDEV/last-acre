@@ -2240,6 +2240,96 @@ export const useGameStore = create<GameState>()(
         set({ trailers: updatedTrailers });
       },
 
+      assignJob: (tractorId, attachmentId, operation, parcelIds, cropId) => {
+        const state = get();
+        const tractor = (state.machines ?? []).find((m: OwnedMachine) => m.id === tractorId);
+        const attachment = (state.attachments ?? []).find((a: OwnedAttachment) => a.id === attachmentId);
+        if (!tractor || !attachment) return;
+        const tractorType = MACHINE_TYPES.find(mt => mt.id === tractor.typeId);
+        const attachType = ATTACHMENT_TYPES.find(at => at.id === attachment.typeId);
+        if (!tractorType || !attachType) return;
+        const parcels = parcelIds
+          .map((id: string) => state.parcels.find((p: LandParcel) => p.id === id))
+          .filter((p): p is LandParcel => p !== undefined);
+        if (parcels.length === 0) return;
+        const parcelsTilled = parcels.map((p: LandParcel) => p.tilled);
+        const check = canAssignJob(
+          tractor, tractorType, attachment, attachType,
+          operation, parcelsTilled, state.tractorJobs ?? [],
+        );
+        if (!check.ok) return;
+        if (operation === 'plant' && !cropId) return;
+        const totalHa = parcels.reduce((s: number, p: LandParcel) => s + p.hectares, 0);
+        const haPerDay = attachType.haPerDay;
+        const completesDay = state.day + calcJobDays(totalHa, haPerDay);
+        const job: TractorJob = {
+          id: `job_${Date.now()}`,
+          tractorId,
+          attachmentId,
+          operation,
+          parcelIds,
+          cropId,
+          totalHa,
+          haPerDay,
+          startDay: state.day,
+          completesDay,
+        };
+        // For plant jobs: set plantedCrop with plantedDay = completesDay (crop grows from when tractor finishes)
+        if (operation === 'plant' && cropId) {
+          const { CROP_TYPES: CT } = require('../data/cropTypes');
+          const cropType = CT.find((c: { id: string }) => c.id === cropId);
+          if (!cropType) return;
+          const coopSeedDiscount = state.cooperative?.member ? 0.90 : 1.0;
+          const seedCost = cropType.seedCost * totalHa * coopSeedDiscount;
+          if (state.money < seedCost) return;
+          const { getSeason } = require('../engine/climate');
+          const currentSeason = getSeason(state.day);
+          const updatedParcels = state.parcels.map((p: LandParcel) => {
+            if (!parcelIds.includes(p.id)) return p;
+            if (!cropType.seasons.includes(currentSeason) && !p.greenhouse) return p;
+            const plantedCrop: PlantedCrop = {
+              cropId, parcelId: p.id, plantedDay: completesDay, hectares: p.hectares, fertilized: false,
+            };
+            return { ...p, plantedCrop };
+          });
+          set({
+            money: state.money - seedCost,
+            parcels: updatedParcels,
+            tractorJobs: [...(state.tractorJobs ?? []), job],
+          });
+          return;
+        }
+        set({ tractorJobs: [...(state.tractorJobs ?? []), job] });
+      },
+
+      assignHarvestJob: (combineId, parcelIds) => {
+        const state = get();
+        const combine = (state.machines ?? []).find((m: OwnedMachine) => m.id === combineId);
+        if (!combine) return;
+        const combineType = MACHINE_TYPES.find(mt => mt.id === combine.typeId && mt.category === 'harvester');
+        if (!combineType) return;
+        const alreadyBusy = (state.harvestJobs ?? []).some((j: HarvestJob) => j.combineId === combineId);
+        if (alreadyBusy) return;
+        const parcels = parcelIds
+          .map((id: string) => state.parcels.find((p: LandParcel) => p.id === id))
+          .filter((p): p is LandParcel => p !== undefined);
+        if (parcels.length === 0) return;
+        const totalHa = parcels.reduce((s: number, p: LandParcel) => s + p.hectares, 0);
+        const haPerDay = combineType.haPerDay ?? 4;
+        const completesDay = state.day + calcJobDays(totalHa, haPerDay);
+        const job: HarvestJob = {
+          id: `hjob_${Date.now()}`,
+          combineId,
+          parcelIds,
+          totalHa,
+          haPerDay,
+          startDay: state.day,
+          completesDay,
+          processedHa: 0,
+        };
+        set({ harvestJobs: [...(state.harvestJobs ?? []), job] });
+      },
+
       requestLoan: (principal, termDays, label) => {
         const state = get();
         const { rollingIncome, checkEligibility } = require('../engine/banking');
