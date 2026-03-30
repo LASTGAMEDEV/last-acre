@@ -1662,6 +1662,99 @@ export const useGameStore = create<GameState>()(
         const animalInventoryForSet = workerAnimalInventory ?? state.animalInventory;
         const harvestedCropIdsForSet = workerHarvestedIds ?? state.harvestedCropIds;
 
+        // ── Process TractorJobs ──────────────────────────────────────────────
+        const completedTractorJobIds: string[] = [];
+        for (const job of (state.tractorJobs ?? [])) {
+          if (job.completesDay > newDay) continue;
+          completedTractorJobIds.push(job.id);
+          if (job.operation === 'till') {
+            finalParcels = finalParcels.map((p: LandParcel) =>
+              job.parcelIds.includes(p.id) ? { ...p, tilled: true } : p
+            );
+            summary.push({
+              id: `tj_${job.id}`,
+              icon: '🚜',
+              title: 'Tilling Complete',
+              detail: `${job.parcelIds.length} parcel(s) tilled`,
+              severity: 'good' as const,
+            });
+          } else if (job.operation === 'spray') {
+            finalParcels = finalParcels.map((p: LandParcel) => {
+              if (!job.parcelIds.includes(p.id) || !p.plantedCrop) return p;
+              return {
+                ...p,
+                plantedCrop: {
+                  ...p.plantedCrop,
+                  appliedFertilizerBonus: Math.max(p.plantedCrop.appliedFertilizerBonus ?? 1.0, 1.10),
+                },
+              };
+            });
+            summary.push({
+              id: `tj_${job.id}`,
+              icon: '💊',
+              title: 'Spraying Complete',
+              detail: `${job.parcelIds.length} parcel(s) sprayed`,
+              severity: 'good' as const,
+            });
+          } else if (job.operation === 'plant') {
+            // Crop was already set at assignJob time with plantedDay = completesDay
+            // No parcel state change needed here — just record in summary
+            summary.push({
+              id: `tj_${job.id}`,
+              icon: '🌱',
+              title: 'Planting Complete',
+              detail: `${job.parcelIds.length} parcel(s) planted`,
+              severity: 'good' as const,
+            });
+          }
+        }
+        const remainingTractorJobs = (state.tractorJobs ?? []).filter(
+          (j: TractorJob) => !completedTractorJobIds.includes(j.id)
+        );
+
+        // ── Process HarvestJobs (incremental — combine harvests N ha/day) ────
+        let updatedHarvestJobs = [...(state.harvestJobs ?? [])];
+        let harvestInventory = { ...inventoryForSet };
+        const siloCapForHarvest = getSiloCapacity(state.buildings);
+
+        for (let hi = 0; hi < updatedHarvestJobs.length; hi++) {
+          const hj = updatedHarvestJobs[hi];
+          const haAvailable = Math.min(hj.haPerDay, hj.totalHa - hj.processedHa);
+          let processedHa = 0;
+          const { harvestAmount: ha } = require('../engine/crops');
+          const { CROP_TYPES: CT } = require('../data/cropTypes');
+
+          for (const pid of hj.parcelIds) {
+            if (processedHa >= haAvailable) break;
+            const parcel = finalParcels.find((p: LandParcel) => p.id === pid);
+            if (!parcel || !parcel.plantedCrop) continue;
+            const cropType = CT.find((c: { id: string }) => c.id === parcel.plantedCrop!.cropId);
+            if (!cropType) continue;
+            const currentTotal = Object.values(harvestInventory).reduce((a: number, b) => a + (b as number), 0);
+            if (currentTotal >= siloCapForHarvest) break;
+            const baseClimate = state.todayWeather?.climateModifier ?? 1.0;
+            const waterScale = (cropType.waterNeed ?? 3) / 5;
+            const climateModifier = 1.0 + (baseClimate - 1.0) * waterScale;
+            const units = Math.min(
+              Math.round(ha(parcel.plantedCrop!, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, 1.0)),
+              siloCapForHarvest - currentTotal,
+            );
+            const newFertility = Math.max(1, parcel.fertility - (cropType.fertilityDrain ?? 0));
+            finalParcels = finalParcels.map((p: LandParcel) =>
+              p.id === pid
+                ? { ...p, plantedCrop: null, lastCropId: parcel.plantedCrop!.cropId, fertility: newFertility, tilled: false }
+                : p
+            );
+            harvestInventory = {
+              ...harvestInventory,
+              [parcel.plantedCrop!.cropId]: (harvestInventory[parcel.plantedCrop!.cropId] ?? 0) + units,
+            };
+            processedHa += parcel.hectares;
+          }
+          updatedHarvestJobs[hi] = { ...hj, processedHa: hj.processedHa + processedHa };
+        }
+        updatedHarvestJobs = updatedHarvestJobs.filter((hj: HarvestJob) => hj.processedHa < hj.totalHa);
+
         const finalMoney = Math.max(0, moneyAfterMaintenance + moneyDelta + totalInsurancePayoutAll - defaultPenalty + depositPayoutTotal - contractPenaltyTotal + futuresIncome - futuresPenalty + autoSellIncome - vetTreatmentCost);
 
         // Crops ready to harvest (after field worker cleared some)
@@ -1759,7 +1852,7 @@ export const useGameStore = create<GameState>()(
           completedMilestones,
           animals,
           futures,
-          inventory: inventoryForSet,
+          inventory: harvestInventory,
           animalInventory: animalInventoryForSet,
           harvestedCropIds: harvestedCropIdsForSet,
           reputation,
@@ -1771,6 +1864,8 @@ export const useGameStore = create<GameState>()(
           activeEvents,
           machineRepairs,
           npcFarms,
+          tractorJobs: remainingTractorJobs,
+          harvestJobs: updatedHarvestJobs,
         });
       },
 
