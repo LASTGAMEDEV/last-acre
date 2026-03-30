@@ -7,7 +7,7 @@ import { useGameStore } from '../../store/useGameStore';
 import MapCanvas, { CANVAS_W, CANVAS_H } from './MapCanvas';
 import FieldPanel from './FieldPanel';
 import MiniMap from './MiniMap';
-import { useMapGestures, MIN_ZOOM, MAX_ZOOM } from './useMapGestures';
+import { useMapGestures, MIN_ZOOM, MAX_ZOOM, centreOnPoint } from './useMapGestures';
 import MapLegend from './MapLegend';
 
 // Center of player's starting fields (nc6 + nc7)
@@ -26,14 +26,19 @@ export default function WorldMap() {
 
   // mapZoom === 0 is the first-open sentinel — compute a fit-to-screen position
   // centred on the player's starting fields (nc6 + nc7).
+  // Scale is applied around the canvas element centre (CANVAS_W/2, CANVAS_H/2),
+  // so we use centreOnPoint() which accounts for that transform origin.
   const isFirstOpen = mapZoom === 0;
   const fitZoom = Math.min(
     Math.max(Math.min(W / CANVAS_W, H / CANVAS_H), MIN_ZOOM),
     MAX_ZOOM,
   );
+  const firstOpen = isFirstOpen
+    ? centreOnPoint(PLAYER_START_X, PLAYER_START_Y, fitZoom, W, H)
+    : { x: mapPanX, y: mapPanY };
   const initZoom = isFirstOpen ? fitZoom : mapZoom;
-  const initX    = isFirstOpen ? W / 2 - PLAYER_START_X * fitZoom : mapPanX;
-  const initY    = isFirstOpen ? H / 2 - PLAYER_START_Y * fitZoom : mapPanY;
+  const initX    = firstOpen.x;
+  const initY    = firstOpen.y;
 
   const { translateX, translateY, scale, composed, animStyle, jumpTo } =
     useMapGestures({
