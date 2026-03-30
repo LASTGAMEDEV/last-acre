@@ -236,35 +236,12 @@ export default function TierrasScreen() {
         ) : null}
 
         {parcel.plantedCrop ? (
-          <>
-            <Text style={styles.cropTag}>
-              🌱 {cropType?.name ?? parcel.plantedCrop.cropId}
-              {parcel.plantedCrop.fertilized ? ' ✨' : ''}
-            </Text>
-            {ready ? (
-              <TouchableOpacity
-                style={[styles.harvestBtn, storageFull && styles.btnDisabled]}
-                onPress={() => harvestCrop(parcel.id)}
-                disabled={storageFull}
-              >
-                <Text style={styles.btnText}>{storageFull ? '📦 Silo full' : '🌾 Harvest'}</Text>
-              </TouchableOpacity>
-            ) : (
-              <Text style={styles.daysLeft}>⏳ {days}d left</Text>
-            )}
-            {!parcel.plantedCrop.fertilized && fertilizerIds.length > 0 && (
-              <TouchableOpacity style={styles.fertilizeBtn} onPress={() => fertilizeCrop(parcel.id, fertilizerIds[0])}>
-                <Text style={styles.smallBtnText}>✨ Fertilize (1 dose)</Text>
-              </TouchableOpacity>
-            )}
-          </>
+          <Text style={styles.cropTag}>
+            🌱 {cropType?.name ?? parcel.plantedCrop.cropId}
+            {parcel.plantedCrop.fertilized ? ' ✨' : ''}
+          </Text>
         ) : (
-          <>
-            <Text style={styles.emptyTag}>Empty</Text>
-            <TouchableOpacity style={styles.plantBtn} onPress={() => setPlantingParcel(parcel)}>
-              <Text style={styles.btnText}>🌱 Plant</Text>
-            </TouchableOpacity>
-          </>
+          <Text style={styles.emptyTag}>Empty</Text>
         )}
 
         {parcel.owned && (() => {
@@ -306,9 +283,9 @@ export default function TierrasScreen() {
 
           if (parcel.tilled && !parcel.plantedCrop) {
             return (
-              <View style={localStyles.progressRow}>
-                <Text style={[localStyles.progressText, { color: '#81c784' }]}>✓ Ready to Plant</Text>
-              </View>
+              <TouchableOpacity style={localStyles.opBtn} onPress={() => setPlantingParcel(parcel)}>
+                <Text style={localStyles.opBtnText}>Plant Crop</Text>
+              </TouchableOpacity>
             );
           }
 
