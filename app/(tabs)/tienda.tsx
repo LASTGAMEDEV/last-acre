@@ -207,7 +207,7 @@ function MachineryTab() {
     <View key={m.id} style={mStyles.card}>
       <View style={mStyles.cardHeader}>
         <Text style={mStyles.cardName}>{m.name}</Text>
-        {owned > 0 && <Text style={mStyles.ownedBadge}>Owned: {owned}</Text>}
+        {owned > 0 && <Text style={mStyles.ownedPill}>Owned: {owned}</Text>}
       </View>
       <Text style={mStyles.cardDetail}>💰 ${m.cost.toLocaleString()}</Text>
       <Text style={mStyles.cardDetail}>🔧 ${m.maintenancePerDay}/day maintenance</Text>
@@ -231,7 +231,7 @@ function MachineryTab() {
     <View key={a.id} style={mStyles.card}>
       <View style={mStyles.cardHeader}>
         <Text style={mStyles.cardName}>{a.name}</Text>
-        {ownedAttachCount(a.id) > 0 && <Text style={mStyles.ownedBadge}>Owned: {ownedAttachCount(a.id)}</Text>}
+        {ownedAttachCount(a.id) > 0 && <Text style={mStyles.ownedPill}>Owned: {ownedAttachCount(a.id)}</Text>}
       </View>
       <Text style={mStyles.cardDetail}>💰 ${a.cost.toLocaleString()}</Text>
       <Text style={mStyles.cardDetail}>⚡ {a.haPerDay} ha/day</Text>
@@ -311,7 +311,7 @@ const mStyles = StyleSheet.create({
   card:              { backgroundColor: '#16213e', borderRadius: 10, margin: 8, padding: 12 },
   cardHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   cardName:          { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  ownedBadge:        { backgroundColor: '#1b5e20', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, color: '#81c784', fontSize: 11 },
+  ownedPill:         { backgroundColor: '#1b5e20', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, color: '#81c784', fontSize: 11 },
   cardDetail:        { color: '#aaa', fontSize: 12, marginBottom: 3 },
   buyBtn:            { backgroundColor: '#2e7d32', borderRadius: 8, padding: 10, alignItems: 'center', marginTop: 8 },
   buyBtnDisabled:    { backgroundColor: '#333' },
