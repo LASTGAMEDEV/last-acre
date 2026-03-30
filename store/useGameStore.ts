@@ -22,6 +22,8 @@ import { rollEvent, calcRepairCost, calcRepairDays, getHarvestModifier } from '.
 import { NPCFarmRuntime, initNpcFarms, npcSellVolume, npcAuctionBid } from '../engine/competitors';
 import { ATTACHMENT_TYPES, AttachmentType } from '../data/attachmentTypes';
 import { ContractorOperation, calcJobDays, canAssignJob, getTransportCapacityKg } from '../engine/machinery';
+import { MapField, MapOwner } from '../types/worldMap';
+import { INITIAL_MAP_FIELDS } from '../data/mapFields';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
 function getDailyMaintenance(machines: OwnedMachine[], buildings: string[]): number {
@@ -404,6 +406,17 @@ export interface GameState {
   assignJob: (tractorId: string, attachmentId: string, operation: 'till' | 'plant' | 'spray', parcelIds: string[], cropId?: string) => void;
   assignHarvestJob: (combineId: string, parcelIds: string[]) => void;
   hireContractor: (operation: ContractorOperation, parcelIds: string[], cropId?: string) => void;
+
+  // ── World Map ────────────────────────────────────────────────────────────
+  mapFields: MapField[];
+  mapPanX: number;
+  mapPanY: number;
+  mapZoom: number;
+  selectedMapFieldId: string | null;
+  selectMapField: (id: string | null) => void;
+  buyMapField: (id: string) => void;
+  scoutMapField: (id: string) => void;
+  savePanZoom: (x: number, y: number, zoom: number) => void;
 }
 
 const FIELD_NAMES: string[] = [
@@ -544,6 +557,11 @@ function makeInitialState() {
     activeEvents: [] as GameEvent[],
     machineRepairs: [] as MachineRepair[],
     npcFarms: initNpcFarms(),
+    mapFields: INITIAL_MAP_FIELDS,
+    mapPanX: 0,
+    mapPanY: 0,
+    mapZoom: 1,
+    selectedMapFieldId: null,
   };
 }
 
@@ -3044,6 +3062,51 @@ export const useGameStore = create<GameState>()(
       clearBankruptcy: () => {
         set({ bankrupt: false });
       },
+
+      selectMapField: (id) => set({ selectedMapFieldId: id }),
+
+      savePanZoom: (x, y, zoom) => set({ mapPanX: x, mapPanY: y, mapZoom: zoom }),
+
+      buyMapField: (id) => {
+        const state = get();
+        const field = state.mapFields.find(f => f.id === id);
+        if (!field || field.owner !== 'forsale' || !field.askingPrice) return;
+        if (state.money < field.askingPrice) return;
+        const parcelId = `p-${id}`;
+        const newParcel: LandParcel = {
+          id: parcelId,
+          name: field.name,
+          fertility: field.fertility ?? 70,
+          hectares: field.approximateHa,
+          pricePerHa: Math.round(field.askingPrice / field.approximateHa),
+          owned: true,
+          hasWeeds: false,
+          plantedCrop: null,
+          greenhouse: false,
+          irrigated: false,
+          tilled: false,
+        };
+        set({
+          money: state.money - field.askingPrice,
+          parcels: [...state.parcels, newParcel],
+          mapFields: state.mapFields.map(f =>
+            f.id === id ? { ...f, owner: 'player' as MapOwner, parcelId } : f
+          ),
+        });
+      },
+
+      scoutMapField: (id) => {
+        const state = get();
+        const field = state.mapFields.find(f => f.id === id);
+        if (!field || field.owner === 'player' || field.owner === 'forsale') return;
+        if (state.money < 500) return;
+        set({
+          money: state.money - 500,
+          mapFields: state.mapFields.map(f =>
+            f.id === id ? { ...f, scouted: true, scoutExpiresDay: state.day + 30 } : f
+          ),
+        });
+      },
     }),
     {
       name: 'granja-tycoon-save-v7',
@@ -3073,6 +3136,7 @@ export const useGameStore = create<GameState>()(
           setBreedingPair, clearBreedingPair,
           startHybridization, selectSeedForParcel, startRepair,
           buyAttachment, buyTrailer, hitchTrailer, assignJob, assignHarvestJob, hireContractor,
+          selectMapField, buyMapField, scoutMapField, savePanZoom,
           ...dataState
         } = state;
         return dataState;
