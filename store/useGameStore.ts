@@ -675,7 +675,34 @@ export const useGameStore = create<GameState>()(
           const pressure = activePressures.find(sp => sp.cropId === p.cropId);
           return pressure ? { ...p, price: Math.max(1, p.price * pressure.modifier) } : p;
         });
-        const sellPressures = activePressures;
+        const sellPressures = [...activePressures];
+
+        // ── NPC competitor sells ─────────────────────────────────────────────
+        const { npcSellVolume } = require('../engine/competitors');
+        const { computeSellPressureModifier, sellPressureDuration } = require('../engine/market');
+        let npcFarms: NPCFarm[] = [...(state.npcFarms ?? [])];
+        npcFarms = npcFarms.map(farm => {
+          if (farm.nextSellDay > newDay) return farm;
+          // Pick a random specialty crop
+          const cropId = farm.specialization[Math.floor(Math.random() * farm.specialization.length)];
+          const volume = npcSellVolume(farm);
+          // Apply sell pressure (uses existing sellPressures mechanism)
+          const pressureMod = computeSellPressureModifier(volume);
+          const duration = sellPressureDuration(volume);
+          if (pressureMod < 1.0) {
+            sellPressures.push({
+              cropId,
+              modifier: pressureMod,
+              expiresDay: newDay + duration,
+            });
+          }
+          // Grow NPC wealth slightly each sell cycle
+          return {
+            ...farm,
+            nextSellDay: newDay + farm.sellIntervalDays,
+            wealth: Math.round(farm.wealth * 1.02 + volume * 0.5),
+          };
+        });
 
         // Price history
         const priceHistory: Record<string, number[]> = {};
@@ -1245,8 +1272,15 @@ export const useGameStore = create<GameState>()(
           const daysLeft = lot.endDay - newDay;
           const aiBidChance = daysLeft <= 3 ? 0.5 : daysLeft <= 7 ? 0.25 : 0.1;
           if (Math.random() < aiBidChance) {
-            const increment = 1.05 + Math.random() * 0.12;
-            const aiBid = Math.ceil(lot.currentBid * increment);
+            // Use NPC farm bids: pick highest bid from eligible NPCs
+            const { npcAuctionBid } = require('../engine/competitors');
+            const parcelValue = lot.parcel.pricePerHa * lot.parcel.hectares;
+            const npcBids = npcFarms
+              .map(farm => npcAuctionBid(farm, parcelValue))
+              .filter(bid => bid > lot.currentBid);
+            const aiBid = npcBids.length > 0
+              ? Math.max(...npcBids)
+              : Math.ceil(lot.currentBid * (1.05 + Math.random() * 0.12));
             return {
               ...lot,
               currentBid: aiBid,
@@ -1709,6 +1743,7 @@ export const useGameStore = create<GameState>()(
           hybridJobs: nextHybridJobs,
           activeEvents,
           machineRepairs,
+          npcFarms,
         });
       },
 
