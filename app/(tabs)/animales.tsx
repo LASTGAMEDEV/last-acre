@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
-import { sellValue, isMature, canBreed, TRAIT_ICONS, TRAIT_DESC, AnimalGenes } from '../../engine/animals';
+import { sellValue, isMature, canBreed, TRAIT_ICONS, TRAIT_DESC, AnimalGenes, OwnedAnimal } from '../../engine/animals';
 import { ENCLOSURE_BUILDINGS } from '../../constants/enclosures';
 
 function geneGrade(v: number): string {
@@ -65,6 +65,7 @@ export default function AnimalesScreen() {
     money, animals, animalInventory, day, buildings, activeFair,
     buyAnimal, sellAnimal, collectAnimalProduction, sellAnimalProduct, breedAnimal,
     treatAnimal, collectAllProduction,
+    breedingPairs, setBreedingPair, clearBreedingPair,
   } = useGameStore();
   const fairMult = activeFair ? (1 - activeFair.discount) : 1.0;
   const [expandedAnimalId, setExpandedAnimalId] = useState<string | null>(null);
@@ -189,6 +190,67 @@ export default function AnimalesScreen() {
                     <GeneBar label="💪 Hardiness"  value={g.hardiness} />
                     <GeneBar label="⚡ Growth"     value={g.growth} />
                     <GeneBar label="💰 Value"      value={g.value} />
+                    {item.sex === 'female' && (() => {
+                      const matureMales = animals.filter(
+                        (a: OwnedAnimal) => a.id !== item.id && a.typeId === item.typeId && a.sex === 'male'
+                      );
+                      const preferredId = breedingPairs[item.id];
+                      return (
+                        <View style={{ marginTop: 10 }}>
+                          <Text style={genStyles.panelTitle}>🧬 Breeding Pair</Text>
+                          {matureMales.length === 0 ? (
+                            <Text style={{ color: '#555', fontSize: 11, marginTop: 4 }}>No males available.</Text>
+                          ) : (
+                            <>
+                              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
+                                {matureMales.map(male => {
+                                  const mg = male.genes ?? { production: 1, hardiness: 1, growth: 1, value: 1 };
+                                  const avgG = geneGrade((mg.production + mg.hardiness + mg.growth + mg.value) / 4);
+                                  const isSelected = preferredId === male.id;
+                                  return (
+                                    <TouchableOpacity
+                                      key={male.id}
+                                      style={[bpStyles.maleChip, isSelected && bpStyles.maleChipSelected]}
+                                      onPress={() => isSelected ? clearBreedingPair(item.id) : setBreedingPair(item.id, male.id)}
+                                    >
+                                      <Text style={bpStyles.maleName}>♂ {male.id.slice(-4)}</Text>
+                                      <Text style={[bpStyles.maleGrade, { color: gradeColor(avgG) }]}>{avgG}</Text>
+                                    </TouchableOpacity>
+                                  );
+                                })}
+                              </ScrollView>
+                              {preferredId && (() => {
+                                const pm = matureMales.find(m => m.id === preferredId);
+                                if (!pm) return null;
+                                const pg = pm.genes ?? { production: 1, hardiness: 1, growth: 1, value: 1 };
+                                const fg = item.genes ?? { production: 1, hardiness: 1, growth: 1, value: 1 };
+                                const pred = {
+                                  production: (pg.production + fg.production) / 2,
+                                  hardiness:  (pg.hardiness  + fg.hardiness)  / 2,
+                                  growth:     (pg.growth     + fg.growth)     / 2,
+                                  value:      (pg.value      + fg.value)      / 2,
+                                };
+                                return (
+                                  <View style={bpStyles.prediction}>
+                                    <Text style={bpStyles.predLabel}>Offspring prediction:</Text>
+                                    <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                                      {(['production','hardiness','growth','value'] as (keyof AnimalGenes)[]).map(k => {
+                                        const g = geneGrade(pred[k]);
+                                        return (
+                                          <Text key={k} style={[bpStyles.predChip, { color: gradeColor(g) }]}>
+                                            {k[0].toUpperCase()} {g}
+                                          </Text>
+                                        );
+                                      })}
+                                    </View>
+                                  </View>
+                                );
+                              })()}
+                            </>
+                          )}
+                        </View>
+                      );
+                    })()}
                   </View>
                 );
               })()}
@@ -371,4 +433,14 @@ const genStyles = StyleSheet.create({
   panelTitle:     { color: '#e8d5a3', fontWeight: 'bold', fontSize: 12 },
   gradeBadge:     { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
   gradeBadgeText: { fontSize: 11, fontWeight: 'bold' },
+});
+
+const bpStyles = StyleSheet.create({
+  maleChip:         { backgroundColor: '#16213e', borderRadius: 8, padding: 8, marginRight: 6, alignItems: 'center', minWidth: 60 },
+  maleChipSelected: { backgroundColor: '#0f3460', borderWidth: 1, borderColor: '#4fc3f7' },
+  maleName:         { color: '#aaa', fontSize: 10 },
+  maleGrade:        { fontSize: 12, fontWeight: 'bold', marginTop: 2 },
+  prediction:       { backgroundColor: '#0a1628', borderRadius: 6, padding: 8, marginTop: 8, borderLeftWidth: 3, borderLeftColor: '#ffd700' },
+  predLabel:        { color: '#ffd700', fontSize: 10, fontWeight: 'bold' },
+  predChip:         { fontSize: 11, fontWeight: 'bold' },
 });
