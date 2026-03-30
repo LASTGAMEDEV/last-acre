@@ -8,6 +8,8 @@ import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { getSeason } from '../../engine/climate';
 import { getSoilModifier } from '../../engine/crops';
 import { PRODUCT_TYPES } from '../../data/productTypes';
+import ContractorModal from '../../components/ContractorModal';
+import { getContractorCost, ContractorOperation } from '../../engine/machinery';
 
 const MAP_COLS = 8;
 
@@ -42,12 +44,21 @@ export default function TierrasScreen() {
     fieldEvents, resolveFieldEvent, productInventory,
     clearWeeds, fertilizeCrop, installGreenhouse, removeGreenhouse, installIrrigation,
     seedVault, selectSeedForParcel,
+    tractorJobs, harvestJobs, assignJob, assignHarvestJob, hireContractor,
   } = useGameStore();
 
   const [plantingParcel, setPlantingParcel] = useState<LandParcel | null>(null);
   const [fertilized, setFertilized] = useState(false);
   const [selectedCropId, setSelectedCropId] = useState<string | null>(null);
   const [selectedSeedId, setSelectedSeedId] = useState<string | null>(null);
+  const [contractorModal, setContractorModal] = useState<{
+    visible: boolean;
+    operation: ContractorOperation;
+    parcelIds: string[];
+    totalHa: number;
+    totalCost: number;
+    cropId?: string;
+  } | null>(null);
   const currentSeason: PlantingSeason = getSeason(day);
   const [mapView, setMapView] = useState(false);
   const [mapSelected, setMapSelected] = useState<LandParcel | null>(null);
@@ -100,6 +111,15 @@ export default function TierrasScreen() {
   function getEventForParcel(parcelId: string): FieldEvent | undefined {
     return activeFieldEvents.find(e => e.parcelId === parcelId);
   }
+
+  const ownedCombines = (machines ?? []).filter((m: any) =>
+    MACHINE_TYPES.find(t => t.id === m.typeId)?.category === 'harvester'
+  );
+
+  const getParcelJob = (parcelId: string) =>
+    (tractorJobs ?? []).find((j: any) => j.parcelIds.includes(parcelId));
+  const getHarvestJob = (parcelId: string) =>
+    (harvestJobs ?? []).find((j: any) => j.parcelIds.includes(parcelId));
 
   function renderMapCell(parcel: LandParcel) {
     const event = getEventForParcel(parcel.id);
@@ -246,6 +266,84 @@ export default function TierrasScreen() {
             </TouchableOpacity>
           </>
         )}
+
+        {parcel.owned && (() => {
+          const tractorJob = getParcelJob(parcel.id);
+          const harvestJob = getHarvestJob(parcel.id);
+
+          if (tractorJob) {
+            const daysRemaining = Math.max(0, tractorJob.completesDay - day);
+            return (
+              <View style={localStyles.progressRow}>
+                <Text style={localStyles.progressText}>
+                  {tractorJob.operation.charAt(0).toUpperCase() + tractorJob.operation.slice(1)} · {daysRemaining}d remaining
+                </Text>
+              </View>
+            );
+          }
+          if (harvestJob) {
+            const daysRemaining = Math.max(0, harvestJob.completesDay - day);
+            return (
+              <View style={localStyles.progressRow}>
+                <Text style={localStyles.progressText}>Harvesting · {daysRemaining}d remaining</Text>
+              </View>
+            );
+          }
+
+          if (!parcel.tilled && !parcel.plantedCrop) {
+            return (
+              <TouchableOpacity
+                style={localStyles.opBtn}
+                onPress={() => {
+                  const cost = getContractorCost('till', parcel.hectares);
+                  setContractorModal({ visible: true, operation: 'till', parcelIds: [parcel.id], totalHa: parcel.hectares, totalCost: cost });
+                }}
+              >
+                <Text style={localStyles.opBtnText}>Till Field</Text>
+              </TouchableOpacity>
+            );
+          }
+
+          if (parcel.tilled && !parcel.plantedCrop) {
+            return (
+              <View style={localStyles.progressRow}>
+                <Text style={[localStyles.progressText, { color: '#81c784' }]}>✓ Ready to Plant</Text>
+              </View>
+            );
+          }
+
+          if (parcel.plantedCrop && !ready) {
+            const sprayCost = getContractorCost('spray', parcel.hectares);
+            return (
+              <TouchableOpacity
+                style={[localStyles.opBtn, localStyles.opBtnYellow]}
+                onPress={() => setContractorModal({ visible: true, operation: 'spray', parcelIds: [parcel.id], totalHa: parcel.hectares, totalCost: sprayCost })}
+              >
+                <Text style={localStyles.opBtnText}>Spray (optional)</Text>
+              </TouchableOpacity>
+            );
+          }
+
+          if (ready) {
+            const harvestCostVal = getContractorCost('harvest', parcel.hectares);
+            return (
+              <TouchableOpacity
+                style={[localStyles.opBtn, localStyles.opBtnRed]}
+                onPress={() => {
+                  if (ownedCombines.length > 0) {
+                    harvestCrop(parcel.id);
+                  } else {
+                    setContractorModal({ visible: true, operation: 'harvest', parcelIds: [parcel.id], totalHa: parcel.hectares, totalCost: harvestCostVal });
+                  }
+                }}
+              >
+                <Text style={localStyles.opBtnText}>Harvest</Text>
+              </TouchableOpacity>
+            );
+          }
+
+          return null;
+        })()}
 
         {parcel.hasWeeds && (
           <View style={styles.weedRow}>
@@ -641,6 +739,22 @@ export default function TierrasScreen() {
         </View>
       </Modal>
 
+      {contractorModal && (
+        <ContractorModal
+          visible={contractorModal.visible}
+          operation={contractorModal.operation}
+          parcelCount={contractorModal.parcelIds.length}
+          totalHa={contractorModal.totalHa}
+          totalCost={contractorModal.totalCost}
+          canAfford={money >= contractorModal.totalCost}
+          onConfirm={() => {
+            hireContractor(contractorModal.operation, contractorModal.parcelIds, contractorModal.cropId);
+            setContractorModal(null);
+          }}
+          onCancel={() => setContractorModal(null)}
+        />
+      )}
+
       {/* Map parcel action modal */}
       <Modal visible={!!mapSelected} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -860,4 +974,13 @@ const styles = StyleSheet.create({
   mapActionAlertText: { color: '#ffb74d', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
   mapActionInfo:   { flex: 1, backgroundColor: '#1a2744', borderRadius: 10, padding: 11, alignItems: 'center' },
   mapActionInfoText: { color: '#81c784', fontSize: 13, fontWeight: 'bold' },
+});
+
+const localStyles = StyleSheet.create({
+  opBtn:       { backgroundColor: '#0f3460', borderRadius: 8, padding: 8, alignItems: 'center', marginTop: 8 },
+  opBtnYellow: { backgroundColor: '#e65100' },
+  opBtnRed:    { backgroundColor: '#b71c1c' },
+  opBtnText:   { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  progressRow: { backgroundColor: '#1a1a2e', borderRadius: 8, padding: 8, marginTop: 8 },
+  progressText:{ color: '#ffb74d', fontSize: 12, textAlign: 'center' },
 });
