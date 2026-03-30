@@ -19,7 +19,7 @@ import { ENCLOSURE_BUILDINGS } from '../constants/enclosures';
 import { WorkerRole, WorkerType as WorkerTypeDef } from '../data/workerTypes';
 import { GameEventType } from '../data/randomEvents';
 import { rollEvent, calcRepairCost } from '../engine/events';
-import { NPCFarmRuntime, initNpcFarms } from '../engine/competitors';
+import { NPCFarmRuntime, initNpcFarms, npcSellVolume, npcAuctionBid } from '../engine/competitors';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
 function getMachineYieldBonus(machines: OwnedMachine[], repairingIds?: Set<string>): number {
@@ -678,8 +678,7 @@ export const useGameStore = create<GameState>()(
         const sellPressures = [...activePressures];
 
         // ── NPC competitor sells ─────────────────────────────────────────────
-        const { npcSellVolume } = require('../engine/competitors');
-        const { computeSellPressureModifier, sellPressureDuration } = require('../engine/market');
+
         let npcFarms: NPCFarm[] = [...(state.npcFarms ?? [])];
         npcFarms = npcFarms.map(farm => {
           if (farm.nextSellDay > newDay) return farm;
@@ -1273,7 +1272,6 @@ export const useGameStore = create<GameState>()(
           const aiBidChance = daysLeft <= 3 ? 0.5 : daysLeft <= 7 ? 0.25 : 0.1;
           if (Math.random() < aiBidChance) {
             // Use NPC farm bids: pick highest bid from eligible NPCs
-            const { npcAuctionBid } = require('../engine/competitors');
             const parcelValue = lot.parcel.pricePerHa * lot.parcel.hectares;
             const npcBids = npcFarms
               .map(farm => npcAuctionBid(farm, parcelValue))
