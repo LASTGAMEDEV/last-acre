@@ -18,6 +18,7 @@ import { getSeason, generateForecast } from '../engine/climate';
 import { ENCLOSURE_BUILDINGS } from '../constants/enclosures';
 import { WorkerRole, WorkerType as WorkerTypeDef } from '../data/workerTypes';
 import { GameEventType } from '../data/randomEvents';
+import { rollEvent, calcRepairCost } from '../engine/events';
 import { NPCFarmRuntime, initNpcFarms } from '../engine/competitors';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
@@ -1044,7 +1045,6 @@ export const useGameStore = create<GameState>()(
         let moneyDelta = 0;
 
         // ── Random events ────────────────────────────────────────────────────
-        const { rollEvent, calcRepairCost, calcRepairDays } = require('../engine/events');
 
         let activeEvents: GameEvent[] = (state.activeEvents ?? [])
           .filter(e => e.expiresDay > newDay);
@@ -1085,8 +1085,7 @@ export const useGameStore = create<GameState>()(
               affectedIds = [plantedCropIds[Math.floor(Math.random() * plantedCropIds.length)]];
             }
           } else if (newEventTemplate.type === 'market_surge') {
-            const { CROP_TYPES: CT_EVENT } = require('../data/cropTypes');
-            affectedIds = [CT_EVENT[Math.floor(Math.random() * CT_EVENT.length)].id];
+            affectedIds = [CROP_TYPES[Math.floor(Math.random() * CROP_TYPES.length)].id];
           } else if (newEventTemplate.type === 'equipment_failure') {
             const healthyMachines = state.machines.filter(
               m => !machineRepairs.some(r => r.machineId === m.id)
@@ -1127,7 +1126,7 @@ export const useGameStore = create<GameState>()(
               });
             }
           } else if (newEventTemplate.type === 'animal_illness') {
-            const healthy = state.animals.filter((a: any) => !a.sick);
+            const healthy = state.animals.filter((a: OwnedAnimal) => !a.sick);
             if (healthy.length > 0) {
               const target = healthy[Math.floor(Math.random() * healthy.length)];
               affectedIds = [target.id];
@@ -1202,6 +1201,7 @@ export const useGameStore = create<GameState>()(
           }
 
           // Push timed events to activeEvents (skip equipment_failure — handled above)
+          // windfall_subsidy uses durationDays:1 to block a second subsidy the next day
           if (newEventTemplate.type !== 'equipment_failure' && newEventTemplate.durationDays > 0) {
             const newEvent: GameEvent = {
               id: `event_${newEventTemplate.id}_${newDay}`,
