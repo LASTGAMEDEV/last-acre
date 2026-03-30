@@ -164,7 +164,7 @@ function AttachmentsTab() {
                   {trucks.map((tk: OwnedMachine) => {
                     const tkType = MACHINE_TYPES.find(mt => mt.id === tk.typeId);
                     if (!tkType) return null;
-                    const compatible = tt.compatibleTruckCategories?.includes(tk.typeId);
+                    const compatible = tt.compatibleTruckTypeIds?.includes(tk.typeId);
                     if (!compatible) return null;
                     return (
                       <TouchableOpacity key={tk.id} style={s.smallBtn} onPress={() => hitchTrailer(tr.id, tk.id)}>
@@ -201,7 +201,7 @@ function JobsTab() {
         const daysLeft = Math.max(0, job.completesDay - day);
         const progress = job.kind === 'harvest'
           ? Math.round(((job as HarvestJob).processedHa / job.totalHa) * 100)
-          : Math.round(((day - job.startDay) / (job.completesDay - job.startDay)) * 100);
+          : Math.round(((day - job.startDay) / Math.max(1, job.completesDay - job.startDay)) * 100);
         const progressWidth = `${Math.min(100, progress)}%` as ViewStyle['width'];
         return (
           <View key={job.id} style={s.jobCard}>

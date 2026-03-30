@@ -8,7 +8,7 @@ export interface MachineType {
   haPerDay?: number;           // harvesters
   capacityKg?: number;         // trucks (0 = needs trailer) and trailers
   compatibleTrailerSizes?: ('small' | 'medium' | 'large')[];  // trucks only
-  compatibleTruckCategories?: string[];  // trailers: which truck ids can tow this
+  compatibleTruckTypeIds?: string[];  // trailers: which truck ids can tow this
 }
 
 export const MACHINE_TYPES: MachineType[] = [
@@ -29,7 +29,7 @@ export const MACHINE_TYPES: MachineType[] = [
   { id: 'truck-dump',   name: 'Dump Truck', cost: 43000, size: 'medium', category: 'truck', maintenancePerDay: 10, capacityKg: 10000 },
   { id: 'truck-semi',   name: 'Semi Truck', cost: 72000, size: 'large',  category: 'truck', maintenancePerDay: 18, capacityKg: 0,      compatibleTrailerSizes: ['medium', 'large'] },
   // ── Trailers (catalog entry — owned via OwnedTrailer[] not machines[]) ──
-  { id: 'trailer-small',    name: 'Small Trailer',    cost: 10000, size: 'small',  category: 'trailer', maintenancePerDay: 1, capacityKg: 2000,  compatibleTruckCategories: ['truck-pickup'] },
-  { id: 'trailer-standard', name: 'Standard Trailer', cost: 22000, size: 'medium', category: 'trailer', maintenancePerDay: 2, capacityKg: 6000,  compatibleTruckCategories: ['truck-pickup', 'truck-semi'] },
-  { id: 'trailer-large',    name: 'Large Trailer',    cost: 38000, size: 'large',  category: 'trailer', maintenancePerDay: 3, capacityKg: 22000, compatibleTruckCategories: ['truck-semi'] },
+  { id: 'trailer-small',    name: 'Small Trailer',    cost: 10000, size: 'small',  category: 'trailer', maintenancePerDay: 1, capacityKg: 2000,  compatibleTruckTypeIds: ['truck-pickup'] },
+  { id: 'trailer-standard', name: 'Standard Trailer', cost: 22000, size: 'medium', category: 'trailer', maintenancePerDay: 2, capacityKg: 6000,  compatibleTruckTypeIds: ['truck-pickup', 'truck-semi'] },
+  { id: 'trailer-large',    name: 'Large Trailer',    cost: 38000, size: 'large',  category: 'trailer', maintenancePerDay: 3, capacityKg: 22000, compatibleTruckTypeIds: ['truck-semi'] },
 ];
