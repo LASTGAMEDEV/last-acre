@@ -187,7 +187,7 @@ function SeedLabScreen() {
             const cropDef = CROP_TYPES.find(c => c.id === job.cropId);
             const total = job.readyDay - job.startDay;
             const elapsed = day - job.startDay;
-            const pct = Math.min(100, Math.round((elapsed / total) * 100));
+            const pct = Math.max(0, Math.min(100, Math.round((elapsed / total) * 100)));
             const daysLeft = job.readyDay - day;
             return (
               <View key={job.id} style={{ marginBottom: 10 }}>
