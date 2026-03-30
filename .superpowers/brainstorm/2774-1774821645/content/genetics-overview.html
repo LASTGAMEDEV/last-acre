@@ -1,0 +1,66 @@
+<h2>Genetics System — UI Layout Options</h2>
+<p class="subtitle">Where should genetics live in the existing tabs?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Inline sub-tabs</h3>
+      <p>Animals tab gets a new "🧬 Genetics" sub-tab. Farm tab gets a new "🌱 Seed Lab" sub-tab. Everything stays in its natural home.</p>
+      <div class="mockup" style="margin-top:10px">
+        <div class="mockup-header">🌾 Farm Tab</div>
+        <div class="mockup-body" style="padding:8px">
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <div style="background:#16213e;border-radius:6px;padding:5px 10px;color:#888;font-size:11px">🌾 Fields</div>
+            <div style="background:#16213e;border-radius:6px;padding:5px 10px;color:#888;font-size:11px">🐄 Animals</div>
+            <div style="background:#16213e;border-radius:6px;padding:5px 10px;color:#888;font-size:11px">🚜 Machinery</div>
+            <div style="background:#0f3460;border-radius:6px;padding:5px 10px;color:#e8d5a3;font-size:11px;font-weight:bold">🌱 Seed Lab</div>
+          </div>
+          <div style="background:#0a1628;border-radius:8px;padding:10px;color:#aaa;font-size:12px">Seed Lab content here…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Dedicated Genetics tab</h3>
+      <p>A new 6th main tab "🧬 Genetics" with sub-tabs for Crop Seeds and Animal Breeding. One place for all genetics.</p>
+      <div class="mockup" style="margin-top:10px">
+        <div class="mockup-header">Bottom Tab Bar</div>
+        <div class="mockup-body" style="padding:8px">
+          <div style="display:flex;gap:4px">
+            <div style="background:#16213e;border-radius:6px;padding:5px 8px;color:#888;font-size:10px;text-align:center">🌾<br>Farm</div>
+            <div style="background:#16213e;border-radius:6px;padding:5px 8px;color:#888;font-size:10px;text-align:center">💰<br>Market</div>
+            <div style="background:#16213e;border-radius:6px;padding:5px 8px;color:#888;font-size:10px;text-align:center">🏭<br>Process</div>
+            <div style="background:#16213e;border-radius:6px;padding:5px 8px;color:#888;font-size:10px;text-align:center">📋<br>Office</div>
+            <div style="background:#0f3460;border-radius:6px;padding:5px 8px;color:#e8d5a3;font-size:10px;text-align:center;font-weight:bold">🧬<br>Genetics</div>
+            <div style="background:#16213e;border-radius:6px;padding:5px 8px;color:#888;font-size:10px;text-align:center">☀️<br>Weather</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Mixed — Seed Lab in Farm, Breeding in Animals</h3>
+      <p>Seed Lab as a sub-tab under Farm. Animal Breeding panel inside the Animals sub-tab (not a new sub-tab — just a section within the animals list). Most contextual approach.</p>
+      <div class="mockup" style="margin-top:10px">
+        <div class="mockup-header">Animals Sub-tab (inside Farm)</div>
+        <div class="mockup-body" style="padding:8px">
+          <div style="color:#e8d5a3;font-size:12px;font-weight:bold;margin-bottom:6px">🐄 Cow — Bessie</div>
+          <div style="display:flex;gap:6px;font-size:11px;color:#aaa;margin-bottom:6px">
+            <span>🥚 Prod: <b style="color:#81c784">A</b></span>
+            <span>💪 Hardy: <b style="color:#64b5f6">B</b></span>
+            <span>⚡ Growth: <b style="color:#ffd700">S</b></span>
+            <span>💰 Value: <b style="color:#64b5f6">B</b></span>
+          </div>
+          <div style="background:#1b5e20;border-radius:6px;padding:5px 10px;color:#fff;font-size:11px;display:inline-block">🧬 Set as Breeding Pair</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

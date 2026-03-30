@@ -1,0 +1,160 @@
+<h2>🧬 Animal Genetics — UI Mockup</h2>
+<p class="subtitle">Breeding pair selection + lineage view inside the Animals screen</p>
+
+<div class="mockup">
+  <div class="mockup-header">Animals Tab → individual animal card (expanded)</div>
+  <div class="mockup-body" style="padding:12px;font-size:12px;color:#aaa;max-width:420px">
+
+    <!-- Animal card -->
+    <div style="background:#16213e;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div>
+          <div style="color:#e8d5a3;font-weight:bold;font-size:14px">🐄 Bessie <span style="color:#888;font-size:11px">· Cow · ♀</span></div>
+          <div style="color:#888;font-size:10px">Born Day 12 · Age 180d · Mature</div>
+        </div>
+        <div style="background:#1b5e20;border-radius:6px;padding:4px 8px;color:#81c784;font-size:10px;font-weight:bold">S Grade</div>
+      </div>
+
+      <!-- Gene bars -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+        <div style="background:#0a1628;border-radius:6px;padding:6px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+            <span style="font-size:10px">🥚 Production</span>
+            <span style="color:#ffd700;font-size:10px;font-weight:bold">S (1.45)</span>
+          </div>
+          <div style="background:#1a1a2e;border-radius:3px;height:5px">
+            <div style="background:#ffd700;width:95%;height:100%;border-radius:3px"></div>
+          </div>
+        </div>
+        <div style="background:#0a1628;border-radius:6px;padding:6px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+            <span style="font-size:10px">💪 Hardiness</span>
+            <span style="color:#81c784;font-size:10px;font-weight:bold">A (1.22)</span>
+          </div>
+          <div style="background:#1a1a2e;border-radius:3px;height:5px">
+            <div style="background:#81c784;width:72%;height:100%;border-radius:3px"></div>
+          </div>
+        </div>
+        <div style="background:#0a1628;border-radius:6px;padding:6px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+            <span style="font-size:10px">⚡ Growth</span>
+            <span style="color:#64b5f6;font-size:10px;font-weight:bold">B (1.05)</span>
+          </div>
+          <div style="background:#1a1a2e;border-radius:3px;height:5px">
+            <div style="background:#64b5f6;width:55%;height:100%;border-radius:3px"></div>
+          </div>
+        </div>
+        <div style="background:#0a1628;border-radius:6px;padding:6px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+            <span style="font-size:10px">💰 Value</span>
+            <span style="color:#81c784;font-size:10px;font-weight:bold">A (1.30)</span>
+          </div>
+          <div style="background:#1a1a2e;border-radius:3px;height:5px">
+            <div style="background:#81c784;width:80%;height:100%;border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Breeding controls -->
+      <div style="background:#0a1628;border-radius:8px;padding:8px;margin-bottom:8px">
+        <div style="color:#e8d5a3;font-size:11px;font-weight:bold;margin-bottom:6px">🧬 Breeding</div>
+        <div style="color:#888;font-size:10px;margin-bottom:6px">Pair with a male to breed. Pick the best genes.</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <div style="flex:1;background:#16213e;border-radius:6px;padding:6px;border:1px solid #0f3460">
+            <div style="color:#e8d5a3;font-size:10px;font-weight:bold">♂ Bruno</div>
+            <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">
+              <span style="background:#2a1b00;color:#ffd700;border-radius:3px;padding:1px 4px;font-size:9px">Prod S</span>
+              <span style="background:#1b2a1b;color:#81c784;border-radius:3px;padding:1px 4px;font-size:9px">Hard A</span>
+              <span style="background:#1b1b2a;color:#64b5f6;border-radius:3px;padding:1px 4px;font-size:9px">Grow B</span>
+              <span style="background:#2a1b1b;color:#ef9a9a;border-radius:3px;padding:1px 4px;font-size:9px">Val C</span>
+            </div>
+          </div>
+          <div style="flex:1;background:#16213e;border-radius:6px;padding:6px">
+            <div style="color:#888;font-size:10px;font-weight:bold">♂ Rex</div>
+            <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">
+              <span style="background:#1b2a1b;color:#81c784;border-radius:3px;padding:1px 4px;font-size:9px">Prod A</span>
+              <span style="background:#2a1b00;color:#ffd700;border-radius:3px;padding:1px 4px;font-size:9px">Hard S</span>
+              <span style="background:#1b1b2a;color:#64b5f6;border-radius:3px;padding:1px 4px;font-size:9px">Grow A</span>
+              <span style="background:#1b2a1b;color:#81c784;border-radius:3px;padding:1px 4px;font-size:9px">Val A</span>
+            </div>
+          </div>
+        </div>
+        <div style="background:#0a1628;border-radius:6px;padding:6px;border-left:3px solid #ffd700;margin-bottom:6px">
+          <div style="color:#ffd700;font-size:10px;font-weight:bold">Offspring prediction (Bruno × Bessie)</div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">
+            <span style="background:#2a1b00;color:#ffd700;border-radius:3px;padding:1px 4px;font-size:9px">Prod S</span>
+            <span style="background:#1b2a1b;color:#81c784;border-radius:3px;padding:1px 4px;font-size:9px">Hard A</span>
+            <span style="background:#1b1b2a;color:#64b5f6;border-radius:3px;padding:1px 4px;font-size:9px">Grow B</span>
+            <span style="background:#1b2a1b;color:#81c784;border-radius:3px;padding:1px 4px;font-size:9px">Val B</span>
+          </div>
+        </div>
+        <div style="background:#1b5e20;border-radius:6px;padding:6px;color:#fff;font-size:11px;text-align:center;font-weight:bold">🧬 Breed with Bruno</div>
+      </div>
+
+      <!-- Lineage tree -->
+      <div style="background:#0a1628;border-radius:8px;padding:8px">
+        <div style="color:#e8d5a3;font-size:11px;font-weight:bold;margin-bottom:8px">🌳 Lineage</div>
+        <div style="display:flex;align-items:center;gap:0">
+          <!-- Grandparents -->
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="background:#16213e;border-radius:6px;padding:4px 6px;font-size:9px;color:#888">
+              <div>♀ Daisy</div>
+              <div style="color:#81c784">Avg: A</div>
+            </div>
+            <div style="background:#16213e;border-radius:6px;padding:4px 6px;font-size:9px;color:#888">
+              <div>♂ Max</div>
+              <div style="color:#81c784">Avg: B</div>
+            </div>
+            <div style="background:#16213e;border-radius:6px;padding:4px 6px;font-size:9px;color:#888">
+              <div>♀ Luna</div>
+              <div style="color:#64b5f6">Avg: B</div>
+            </div>
+            <div style="background:#16213e;border-radius:6px;padding:4px 6px;font-size:9px;color:#888">
+              <div>♂ Duke</div>
+              <div style="color:#ffd700">Avg: S</div>
+            </div>
+          </div>
+          <!-- Lines -->
+          <div style="display:flex;flex-direction:column;gap:16px;color:#333;font-size:16px;margin:0 4px">
+            <span>─┐</span>
+            <span>─┘</span>
+            <span>─┐</span>
+            <span>─┘</span>
+          </div>
+          <!-- Parents -->
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="background:#16213e;border-radius:6px;padding:5px 8px;font-size:10px;color:#aaa">
+              <div>♀ Clover</div>
+              <div style="color:#81c784">Avg: A</div>
+            </div>
+            <div style="background:#16213e;border-radius:6px;padding:5px 8px;font-size:10px;color:#aaa">
+              <div>♂ Baron</div>
+              <div style="color:#ffd700">Avg: S</div>
+            </div>
+          </div>
+          <!-- Lines -->
+          <div style="display:flex;flex-direction:column;gap:32px;color:#333;font-size:16px;margin:0 4px">
+            <span>─┐</span>
+            <span>─┘</span>
+          </div>
+          <!-- Self -->
+          <div style="background:#0f3460;border-radius:8px;padding:8px;font-size:11px;text-align:center;border:1px solid #4fc3f7">
+            <div style="color:#e8d5a3;font-weight:bold">Bessie</div>
+            <div style="color:#ffd700;font-size:10px">Avg: S</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:16px">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>Looks good</h3><p>This is the right direction for animal genetics</p></div>
+  </div>
+  <div class="option" data-choice="changes" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>Needs changes</h3><p>Something feels off — I'll explain in the terminal</p></div>
+  </div>
+</div>
