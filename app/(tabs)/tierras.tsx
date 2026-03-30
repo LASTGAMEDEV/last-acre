@@ -507,7 +507,7 @@ export default function TierrasScreen() {
       )}
 
       {/* Plant crop modal */}
-      <Modal visible={!!plantingParcel} transparent animationType="slide">
+      <Modal visible={!!plantingParcel} transparent animationType="slide" onRequestClose={() => { setPlantingParcel(null); setFertilized(false); setSelectedCropId(null); setSelectedSeedId(null); }}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>
