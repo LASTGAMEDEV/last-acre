@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, useWindowDimensions } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useGameStore, LandParcel, FieldEvent } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import { CROP_TYPES, PlantingSeason } from '../../data/cropTypes';
@@ -35,6 +36,7 @@ const CROP_ICONS: Record<string, string> = {
 };
 
 export default function TierrasScreen() {
+  const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
   const CELL_SIZE = Math.min(60, Math.floor((Math.min(screenWidth, 480) - 20) / MAP_COLS));
 
@@ -391,6 +393,14 @@ export default function TierrasScreen() {
           <Text style={styles.viewToggleText}>{mapView ? '📋 List' : '🗺️ Map'}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* World Map button */}
+      <TouchableOpacity
+        style={styles.worldMapBtn}
+        onPress={() => router.push('/world-map')}
+      >
+        <Text style={styles.worldMapBtnText}>🗺️  World Map</Text>
+      </TouchableOpacity>
 
       {/* Field events banner */}
       {activeFieldEvents.length > 0 && (
@@ -945,6 +955,24 @@ const styles = StyleSheet.create({
   mapActionAlertText: { color: '#ffb74d', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
   mapActionInfo:   { flex: 1, backgroundColor: '#1a2744', borderRadius: 10, padding: 11, alignItems: 'center' },
   mapActionInfoText: { color: '#81c784', fontSize: 13, fontWeight: 'bold' },
+
+  // World Map button
+  worldMapBtn: {
+    backgroundColor: '#0e1e2a',
+    borderWidth: 1,
+    borderColor: '#1e4060',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  worldMapBtnText: {
+    color: '#4a8ab0',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });
 
 const localStyles = StyleSheet.create({
