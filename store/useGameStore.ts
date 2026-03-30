@@ -18,7 +18,7 @@ import { getSeason, generateForecast } from '../engine/climate';
 import { ENCLOSURE_BUILDINGS } from '../constants/enclosures';
 import { WorkerRole, WorkerType as WorkerTypeDef } from '../data/workerTypes';
 import { GameEventType } from '../data/randomEvents';
-import { rollEvent, calcRepairCost } from '../engine/events';
+import { rollEvent, calcRepairCost, calcRepairDays, getHarvestModifier } from '../engine/events';
 import { NPCFarmRuntime, initNpcFarms, npcSellVolume, npcAuctionBid } from '../engine/competitors';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
@@ -1825,7 +1825,8 @@ export const useGameStore = create<GameState>()(
         const irrigationBonus = parcel.irrigated ? 1.20 : 1.0;
         // Soil type affinity
         const soilMod = getSoilModifier(parcel.soilType, crop.cropId);
-        const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationBonus * soilMod * seedGenes.yield), siloCapacity - totalInventory);
+        const randomEventMod = getHarvestModifier(state.activeEvents ?? [], parcelId, crop.cropId);
+        const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationBonus * soilMod * seedGenes.yield * randomEventMod), siloCapacity - totalInventory);
         // Update quality map and consume seed batch
         const nextCropQualityMap = { ...state.cropQualityMap };
         if (seedEntry) {
@@ -2072,8 +2073,23 @@ export const useGameStore = create<GameState>()(
         }));
       },
 
-      startRepair: (_machineId) => {
-        // Full implementation added in Task 10
+      startRepair: (machineId) => {
+        const state = get();
+        const repair = (state.machineRepairs ?? []).find(
+          r => r.machineId === machineId && r.startDay === null
+        );
+        if (!repair) return; // no pending repair for this machine
+        const repairDays = calcRepairDays(state.workers ?? []);
+        const totalCost = Math.max(0, repair.cost - repair.insurancePaid);
+        if (state.money < totalCost) return;
+        set({
+          money: state.money - totalCost,
+          machineRepairs: (state.machineRepairs ?? []).map(r =>
+            r.machineId === machineId && r.startDay === null
+              ? { ...r, startDay: state.day, readyDay: state.day + repairDays }
+              : r
+          ),
+        });
       },
 
       collectAnimalProduction: (animalId) => {
@@ -2740,7 +2756,7 @@ export const useGameStore = create<GameState>()(
           hireWorker, fireWorker, installIrrigation,
           renegotiateLoan, takeBankruptcyLoan, clearBankruptcy,
           setBreedingPair, clearBreedingPair,
-          startHybridization, selectSeedForParcel,
+          startHybridization, selectSeedForParcel, startRepair,
           ...dataState
         } = state;
         return dataState;
