@@ -17,6 +17,8 @@ import { applyDailyFluctuation, sellRevenue, SellPressure, computeSellPressureMo
 import { getSeason, generateForecast } from '../engine/climate';
 import { ENCLOSURE_BUILDINGS } from '../constants/enclosures';
 import { WorkerRole, WorkerType as WorkerTypeDef } from '../data/workerTypes';
+import { GameEventType } from '../data/randomEvents';
+import { NPCFarmRuntime, initNpcFarms } from '../engine/competitors';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
 function getMachineYieldBonus(machines: OwnedMachine[]): number {
@@ -165,6 +167,28 @@ export interface HybridJob {
   cost: number;
 }
 
+export interface GameEvent {
+  id: string;
+  type: GameEventType;
+  title: string;
+  description: string;
+  icon: string;
+  expiresDay: number;    // day this event expires; 0 = already expired/one-shot
+  affectedIds?: string[]; // parcel IDs, animal ID, crop ID — depends on type
+  modifier?: number;
+}
+
+export interface MachineRepair {
+  id: string;
+  machineId: string;
+  startDay: number | null;  // null = broken, player hasn't started repair yet
+  readyDay: number | null;  // null until startRepair() is called
+  cost: number;
+  insurancePaid: number;
+}
+
+export type NPCFarm = NPCFarmRuntime;
+
 export interface FairEvent {
   id: string;
   daysRemaining: number;
@@ -281,6 +305,9 @@ export interface GameState {
   bankrupt: boolean;
   sellPressures: { cropId: string; modifier: number; expiresDay: number }[];
   breedingPairs: Record<string, string>; // femaleId → preferred maleId
+  activeEvents: GameEvent[];
+  machineRepairs: MachineRepair[];
+  npcFarms: NPCFarm[];
 
   seedVault: SeedEntry[];
   hybridJobs: HybridJob[];
@@ -341,6 +368,7 @@ export interface GameState {
   clearBreedingPair: (femaleId: string) => void;
   startHybridization: (cropId: string, parentAId: string, parentBId: string) => void;
   selectSeedForParcel: (parcelId: string, seedEntryId: string | null) => void;
+  startRepair: (machineId: string) => void;
 }
 
 const FIELD_NAMES: string[] = [
@@ -473,6 +501,9 @@ function makeInitialState() {
     seedVault: [] as SeedEntry[],
     hybridJobs: [] as HybridJob[],
     cropQualityMap: {} as Record<string, number>,
+    activeEvents: [] as GameEvent[],
+    machineRepairs: [] as MachineRepair[],
+    npcFarms: initNpcFarms(),
   };
 }
 
@@ -2441,7 +2472,7 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'granja-tycoon-save-v5',
+      name: 'granja-tycoon-save-v6',
       storage: createJSONStorage(() => {
         try {
           return localStorage;
