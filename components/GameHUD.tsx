@@ -4,8 +4,12 @@ import { useGameStore } from '../store/useGameStore';
 import { getSeason } from '../engine/climate';
 import { SEASON_THEME, C } from '../constants/theme';
 
+const WARN_DAYS = 7;
+
 export default function GameHUD() {
-  const { money, day, savings } = useGameStore();
+  const { money, day, savings, loans, contracts } = useGameStore();
+  const urgentLoan = loans.find(l => !l.paid && !l.defaulted && l.payoffDay - day <= WARN_DAYS && l.payoffDay >= day);
+  const urgentContract = contracts.find(c => !c.completed && !c.failed && c.deadlineDay - day <= WARN_DAYS && c.deadlineDay >= day);
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
 
@@ -35,6 +39,7 @@ export default function GameHUD() {
   const deltaText = delta >= 0 ? `+$${Math.round(delta).toLocaleString()}` : `-$${Math.abs(Math.round(delta)).toLocaleString()}`;
 
   return (
+    <>
     <View style={[styles.hud, { backgroundColor: theme.tabBar, borderBottomColor: theme.accent + '44' }]}>
       {/* Money */}
       <View style={styles.hudCell}>
@@ -78,6 +83,23 @@ export default function GameHUD() {
         <Text style={[styles.hudValue, { color: C.greenSoft }]}>${Math.round(savings.balance).toLocaleString()}</Text>
       </View>
     </View>
+
+    {/* Deadline warnings */}
+    {(urgentLoan || urgentContract) && (
+      <View style={styles.warnStrip}>
+        {urgentLoan && (
+          <Text style={styles.warnText}>
+            ⚠️ Loan due in {urgentLoan.payoffDay - day}d · ${Math.round(urgentLoan.totalOwed).toLocaleString()} owed
+          </Text>
+        )}
+        {urgentContract && (
+          <Text style={styles.warnText}>
+            ⚠️ Contract deadline in {urgentContract.deadlineDay - day}d
+          </Text>
+        )}
+      </View>
+    )}
+    </>
   );
 }
 
@@ -132,4 +154,6 @@ const styles = StyleSheet.create({
   },
   seasonIcon: { fontSize: 10 },
   seasonText: { fontSize: 10, fontWeight: 'bold' },
+  warnStrip: { backgroundColor: '#3a1a00', paddingHorizontal: 12, paddingVertical: 4, gap: 2 },
+  warnText:  { color: '#ffb74d', fontSize: 10, fontWeight: 'bold' },
 });

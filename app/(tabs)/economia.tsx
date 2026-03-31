@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Svg, { Polyline, Line, Text as SvgText, Rect, G } from 'react-native-svg';
 import { useGameStore } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
@@ -591,7 +592,7 @@ export default function EconomiaScreen() {
             })()}
             <TouchableOpacity
               style={[styles.sellBtn, inStock <= 0 && styles.sellBtnDisabled]}
-              onPress={() => sellCrop(selectedCrop, inStock)}
+              onPress={() => { sellCrop(selectedCrop, inStock); if (revenue >= 1000) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
               disabled={inStock <= 0}
             >
               <Text style={styles.sellBtnText}>

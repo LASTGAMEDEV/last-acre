@@ -10,6 +10,8 @@ import YearEndModal from '../../components/YearEndModal';
 import BankruptModal from '../../components/BankruptModal';
 import GameHUD from '../../components/GameHUD';
 import EventBanner from '../../components/EventBanner';
+import MilestonePopup from '../../components/MilestonePopup';
+import FirstMission from '../../components/FirstMission';
 
 export default function TabLayout() {
   const { day, advanceDay, advanceDays } = useGameStore();
@@ -34,7 +36,9 @@ export default function TabLayout() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       {/* Persistent status bar */}
       <GameHUD />
+      <FirstMission />
       <EventBanner />
+      <MilestonePopup />
 
       <Tabs
         screenOptions={{

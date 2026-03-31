@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, useWindowDimensions } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useGameStore, LandParcel, FieldEvent } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
@@ -305,6 +306,7 @@ export default function TierrasScreen() {
                 onPress={() => {
                   if (ownedCombines.length > 0) {
                     harvestCrop(parcel.id);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   } else {
                     setContractorModal({ visible: true, operation: 'harvest', parcelIds: [parcel.id], totalHa: parcel.hectares, totalCost: harvestCostVal });
                   }
@@ -504,7 +506,7 @@ export default function TierrasScreen() {
                   ) : ready ? (
                     <TouchableOpacity
                       style={[styles.mapActionBtn, styles.mapActionHarvest, storageFull && styles.mapActionDisabled]}
-                      onPress={() => { harvestCrop(p.id); setMapSelected(null); }}
+                      onPress={() => { harvestCrop(p.id); setMapSelected(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
                       disabled={storageFull}
                     >
                       <Text style={styles.mapActionText}>

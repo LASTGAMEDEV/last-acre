@@ -319,7 +319,9 @@ export interface GameState {
   processedInventory: Record<string, number>;
   harvestedCropIds: string[];
   completedMilestones: string[];
+  milestonePopup: { icon: string; title: string; reward: number } | null;
   tutorialSeen: boolean;
+  firstMissionStep: number; // 0=plant, 1=harvest, 2=sell, 3=done
   totalRevenue: number;
   yearEndShown: boolean;
   activeFair: FairEvent | null;
@@ -378,6 +380,7 @@ export interface GameState {
   sellProcessed: (productId: string, units: number) => void;
   openTimeDeposit: (amount: number, termDays: number, rate: number) => void;
   closeTimeDeposit: (depositId: string) => void;
+  clearMilestonePopup: () => void;
   resetGame: () => void;
   markTutorialSeen: () => void;
   markYearEndShown: () => void;
@@ -549,7 +552,9 @@ function makeInitialState() {
     processedInventory: {} as Record<string, number>,
     harvestedCropIds: [] as string[],
     completedMilestones: [] as string[],
+    milestonePopup: null as { icon: string; title: string; reward: number } | null,
     tutorialSeen: false,
+    firstMissionStep: 0,
     totalRevenue: 0,
     yearEndShown: false,
     activeFair: null as FairEvent | null,
@@ -1827,6 +1832,7 @@ export const useGameStore = create<GameState>()(
           state.completedMilestones
         );
         let milestoneBonus = 0;
+        let latestMilestonePopup: { icon: string; title: string; reward: number } | null = null;
         for (const id of newlyUnlocked) {
           const def = MILESTONES.find(m => m.id === id);
           const reward = MILESTONE_REWARDS[id] ?? 0;
@@ -1839,6 +1845,7 @@ export const useGameStore = create<GameState>()(
               detail: reward > 0 ? `${def.description} · +$${reward.toLocaleString()} reward!` : def.description,
               severity: 'good',
             });
+            latestMilestonePopup = { icon: def.icon, title: def.title, reward };
           }
         }
         finalMoney += milestoneBonus;
@@ -1898,6 +1905,7 @@ export const useGameStore = create<GameState>()(
           npcFarms,
           tractorJobs: remainingTractorJobs,
           harvestJobs: updatedHarvestJobs,
+          ...(latestMilestonePopup ? { milestonePopup: latestMilestonePopup } : {}),
         });
       },
 
@@ -1952,6 +1960,7 @@ export const useGameStore = create<GameState>()(
         set({
           money: state.money - seedCost,
           parcels: state.parcels.map(p => p.id === parcelId ? { ...p, plantedCrop } : p),
+          firstMissionStep: state.firstMissionStep === 0 ? 1 : state.firstMissionStep,
         });
       },
 
@@ -2016,6 +2025,7 @@ export const useGameStore = create<GameState>()(
           harvestedCropIds,
           cropQualityMap: nextCropQualityMap,
           seedVault: nextSeedVaultAfterHarvest,
+          firstMissionStep: state.firstMissionStep === 1 ? 2 : state.firstMissionStep,
         });
       },
 
@@ -2045,6 +2055,7 @@ export const useGameStore = create<GameState>()(
           salesLog: [...state.salesLog, { day: state.day, amount: revenue, category: 'crops' }],
           totalRevenue: state.totalRevenue + revenue,
           sellPressures: newPressures,
+          firstMissionStep: state.firstMissionStep === 2 ? 3 : state.firstMissionStep,
         });
       },
 
@@ -2845,6 +2856,10 @@ export const useGameStore = create<GameState>()(
 
       markTutorialSeen: () => {
         set({ tutorialSeen: true });
+      },
+
+      clearMilestonePopup: () => {
+        set({ milestonePopup: null });
       },
 
       markYearEndShown: () => {
