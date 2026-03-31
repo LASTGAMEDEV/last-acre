@@ -18,7 +18,7 @@ const PRODUCT_CATEGORY_ORDER: ProductCategory[] = [
   'fertilizer_solid', 'fertilizer_liquid', 'herbicide', 'fungicide', 'insecticide',
 ];
 
-const BUILDING_CATEGORY_ORDER: BuildingCategory[] = ['animal', 'silo', 'industrial'];
+const BUILDING_CATEGORY_ORDER: BuildingCategory[] = ['animal', 'silo', 'industrial', 'lab'];
 
 // ── Seeds Tab ───────────────────────────────────────────────────────────────
 function SeedsTab() {
