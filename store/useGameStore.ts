@@ -3115,7 +3115,7 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'granja-tycoon-save-v12',
+      name: 'granja-tycoon-save-v13',
       storage: createJSONStorage(() => {
         try {
           return localStorage;
