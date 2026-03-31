@@ -29,9 +29,11 @@ export default function WorldMap() {
   // Scale is applied around the canvas element centre (CANVAS_W/2, CANVAS_H/2),
   // so we use centreOnPoint() which accounts for that transform origin.
   const isFirstOpen = mapZoom === 0;
+  // Use Math.max so the canvas fills the screen edge-to-edge (no black bars).
+  // The other dimension will extend beyond the viewport — player can pan to it.
   const fitZoom = Math.min(
-    Math.max(Math.min(W / CANVAS_W, H / CANVAS_H), MIN_ZOOM),
-    MAX_ZOOM,
+    Math.max(Math.max(W / CANVAS_W, H / CANVAS_H), MIN_ZOOM),
+    1.5, // cap so very wide screens don't start too zoomed-in
   );
   const firstOpen = isFirstOpen
     ? centreOnPoint(PLAYER_START_X, PLAYER_START_Y, fitZoom, W, H)
