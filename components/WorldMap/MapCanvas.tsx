@@ -68,11 +68,6 @@ export default function MapCanvas({ fields, parcels, selectedId, zoom, onFieldPr
         Río Grande
       </Text>
 
-      {/* ── Lake ── */}
-      <Ellipse cx={210} cy={1180} rx={140} ry={100} fill="#09304a" opacity={0.9}/>
-      <Ellipse cx={210} cy={1180} rx={118} ry={80} fill="#0c4a78" opacity={0.7}/>
-      <Ellipse cx={210} cy={1180} rx={90} ry={60} fill="#0d5585" opacity={0.5}/>
-      <Text x={210} y={1185} fontSize={10} fill="#0a4070" textAnchor="middle" fontStyle="italic">Laguna</Text>
 
       {/* ── Route 1 (N-S) ── */}
       <Path
