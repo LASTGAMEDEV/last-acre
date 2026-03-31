@@ -2,14 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import OficinaScreen from './oficina';
 import CalendarioScreen from './calendario';
-import LogrosScreen from './logros';
 
-type OfficeTab = 'office' | 'calendar' | 'achievements';
+type OfficeTab = 'office' | 'calendar';
 
 const TABS: { id: OfficeTab; label: string }[] = [
-  { id: 'office',       label: '📋 Office' },
-  { id: 'calendar',     label: '📅 Calendar' },
-  { id: 'achievements', label: '🏆 Goals' },
+  { id: 'office',   label: '📋 Office' },
+  { id: 'calendar', label: '📅 Calendar' },
 ];
 
 export default function GestionScreen() {
@@ -31,9 +29,8 @@ export default function GestionScreen() {
         ))}
       </View>
 
-      {tab === 'office'       && <OficinaScreen />}
-      {tab === 'calendar'     && <CalendarioScreen />}
-      {tab === 'achievements' && <LogrosScreen />}
+      {tab === 'office'   && <OficinaScreen />}
+      {tab === 'calendar' && <CalendarioScreen />}
     </View>
   );
 }
