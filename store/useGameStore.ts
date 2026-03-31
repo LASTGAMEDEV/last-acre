@@ -515,7 +515,7 @@ function generateInitialAuctions(): AuctionLot[] {
 function makeInitialState() {
   return {
     day: 1,
-    money: 3500,
+    money: 1_000_000,
     farmName: 'My Farm',
     parcels: generateParcelsFromMap(),
     animals: [] as OwnedAnimal[],
@@ -3115,7 +3115,7 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'granja-tycoon-save-v13',
+      name: 'granja-tycoon-save-v14',
       storage: createJSONStorage(() => {
         try {
           return localStorage;
