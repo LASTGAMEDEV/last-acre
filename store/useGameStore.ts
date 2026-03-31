@@ -346,6 +346,7 @@ export interface GameState {
 
   // Actions
   advanceDay: () => void;
+  advanceDays: (n: number) => void;
   buyParcel: (parcelId: string) => void;
   plantCrop: (parcelId: string, cropId: string, hectares: number, fertilized: boolean) => void;
   harvestCrop: (parcelId: string) => void;
@@ -1894,6 +1895,18 @@ export const useGameStore = create<GameState>()(
           tractorJobs: remainingTractorJobs,
           harvestJobs: updatedHarvestJobs,
         });
+      },
+
+      advanceDays: (n: number) => {
+        // Stop early if bankrupt mid-run
+        for (let i = 0; i < n; i++) {
+          if (get().bankrupt) break;
+          // Suppress day summary for all but the last iteration
+          get().advanceDay();
+          if (i < n - 1) {
+            set({ daySummary: null });
+          }
+        }
       },
 
       buyParcel: (parcelId) => {

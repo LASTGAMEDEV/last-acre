@@ -12,7 +12,7 @@ import GameHUD from '../../components/GameHUD';
 import EventBanner from '../../components/EventBanner';
 
 export default function TabLayout() {
-  const { day, advanceDay } = useGameStore();
+  const { day, advanceDay, advanceDays } = useGameStore();
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
 
@@ -67,7 +67,7 @@ export default function TabLayout() {
         <Tabs.Screen name="logros"       options={{ href: null }} />
       </Tabs>
 
-      {/* Floating Advance Day button */}
+      {/* Floating Advance Day button group */}
       <Animated.View style={[styles.advanceBtnWrap, { transform: [{ scale: pulse }] }]}>
         <TouchableOpacity
           style={[styles.advanceBtn, { backgroundColor: theme.accent, shadowColor: theme.accent }]}
@@ -76,6 +76,17 @@ export default function TabLayout() {
           <Text style={styles.advanceDay}>Day {day}</Text>
           <Text style={styles.advanceLabel}>▶ Advance</Text>
         </TouchableOpacity>
+        <View style={styles.skipRow}>
+          {([5, 10, 30] as const).map(n => (
+            <TouchableOpacity
+              key={n}
+              style={[styles.skipBtn, { borderColor: theme.accent }]}
+              onPress={() => advanceDays(n)}
+            >
+              <Text style={[styles.skipLabel, { color: theme.accent }]}>+{n}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </Animated.View>
 
       <DaySummaryModal />
@@ -104,4 +115,7 @@ const styles = StyleSheet.create({
   },
   advanceDay:   { color: '#fff', fontSize: 11, opacity: 0.85 },
   advanceLabel: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  skipRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 4, marginTop: 5 },
+  skipBtn: { flex: 1, borderWidth: 1, borderRadius: 6, paddingVertical: 3, alignItems: 'center' },
+  skipLabel: { fontSize: 11, fontWeight: 'bold' },
 });
