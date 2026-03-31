@@ -4,7 +4,7 @@ import { useGameStore } from '../store/useGameStore';
 
 const STEPS = [
   {
-    title: 'Welcome to Granja Tycoon',
+    title: 'Welcome to Last Acre',
     icon: '🌾',
     body: [
       'You start with a small farm, $3,500, and 2 plots of land.',

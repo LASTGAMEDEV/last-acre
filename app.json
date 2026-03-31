@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "granja-tycoon",
-    "slug": "granja-tycoon",
+    "name": "Last Acre",
+    "slug": "last-acre",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "granjatycoon",
+    "scheme": "lastacre",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
