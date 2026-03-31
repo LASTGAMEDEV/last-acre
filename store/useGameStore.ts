@@ -12,7 +12,7 @@ import { MACHINE_TYPES } from '../data/machineTypes';
 import { BUILDING_TYPES } from '../data/buildingTypes';
 import { INSURANCE_PLANS, InsuranceType } from '../data/insuranceTypes';
 import { PROCESSING_RECIPES, PROCESSED_PRODUCTS } from '../data/processingTypes';
-import { MILESTONES, checkNewMilestones } from '../data/milestones';
+import { MILESTONES, checkNewMilestones, MILESTONE_REWARDS } from '../data/milestones';
 import { applyDailyFluctuation, sellRevenue, SellPressure, computeSellPressureModifier, sellPressureDuration } from '../engine/market';
 import { getSeason, generateForecast } from '../engine/climate';
 import { ENCLOSURE_BUILDINGS } from '../constants/enclosures';
@@ -1783,7 +1783,7 @@ export const useGameStore = create<GameState>()(
         }
         updatedHarvestJobs = updatedHarvestJobs.filter((hj: HarvestJob) => hj.processedHa < hj.totalHa);
 
-        const finalMoney = Math.max(0, moneyAfterMaintenance + moneyDelta + totalInsurancePayoutAll - defaultPenalty + depositPayoutTotal - contractPenaltyTotal + futuresIncome - futuresPenalty + autoSellIncome - vetTreatmentCost);
+        let finalMoney = Math.max(0, moneyAfterMaintenance + moneyDelta + totalInsurancePayoutAll - defaultPenalty + depositPayoutTotal - contractPenaltyTotal + futuresIncome - futuresPenalty + autoSellIncome - vetTreatmentCost);
 
         // Crops ready to harvest (after field worker cleared some)
         const cropsReady = finalParcels.filter(p => {
@@ -1826,18 +1826,22 @@ export const useGameStore = create<GameState>()(
           },
           state.completedMilestones
         );
+        let milestoneBonus = 0;
         for (const id of newlyUnlocked) {
           const def = MILESTONES.find(m => m.id === id);
+          const reward = MILESTONE_REWARDS[id] ?? 0;
+          milestoneBonus += reward;
           if (def) {
             summary.push({
               id: `milestone_${id}`,
               icon: def.icon,
               title: `Milestone: ${def.title}`,
-              detail: def.description,
+              detail: reward > 0 ? `${def.description} · +$${reward.toLocaleString()} reward!` : def.description,
               severity: 'good',
             });
           }
         }
+        finalMoney += milestoneBonus;
         const completedMilestones = [...state.completedMilestones, ...newlyUnlocked];
 
         // Bankruptcy detection: money=0, at least 1 defaulted loan, no sales in last 14 days

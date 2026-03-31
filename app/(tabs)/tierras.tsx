@@ -41,7 +41,7 @@ export default function TierrasScreen() {
   const CELL_SIZE = Math.min(60, Math.floor((Math.min(screenWidth, 480) - 20) / MAP_COLS));
 
   const {
-    parcels, money, day, inventory, machines, buildings, cooperative,
+    parcels, money, day, inventory, machines, buildings, cooperative, prices,
     buyParcel, plantCrop, harvestCrop, harvestAllReady,
     fieldEvents, resolveFieldEvent, productInventory,
     clearWeeds, fertilizeCrop, installGreenhouse, removeGreenhouse, installIrrigation,
@@ -612,11 +612,15 @@ export default function TierrasScreen() {
                 const isGreenhouse = !!plantingParcel?.greenhouse;
                 const inSeason = isGreenhouse || crop.seasons.includes(currentSeason);
                 const coopDiscount = cooperative?.member ? 0.90 : 1.0;
-                const seedCost = crop.seedCost * (plantingParcel?.hectares ?? 1) * (fertilized ? 1.3 : 1.0) * coopDiscount;
+                const ha = plantingParcel?.hectares ?? 1;
+                const seedCost = crop.seedCost * ha * (fertilized ? 1.3 : 1.0) * coopDiscount;
                 const canAfford = money >= seedCost;
                 const rotation = plantingParcel?.lastCropId !== undefined && plantingParcel.lastCropId !== crop.id;
                 const soilMod = getSoilModifier(plantingParcel?.soilType, crop.id);
                 const disabled = !inSeason || !canAfford;
+                const currentPrice = prices.find(p => p.cropId === crop.id)?.price ?? crop.basePrice;
+                const estGross = crop.baseYield * ha * soilMod * (rotation ? 1.15 : 1.0) * currentPrice;
+                const estProfit = estGross - seedCost;
                 return (
                   <TouchableOpacity
                     key={crop.id}
@@ -653,6 +657,11 @@ export default function TierrasScreen() {
                           ? `${crop.growthDays}d · ${crop.baseYield} ${crop.unit}/ha`
                           : `🚫 ${crop.seasons.join(', ')} only`}
                       </Text>
+                      {inSeason && (
+                        <Text style={{ fontSize: 10, color: estProfit >= 0 ? '#4caf50' : '#f44336', marginTop: 1 }}>
+                          Est. profit: {estProfit >= 0 ? '+' : ''}${Math.round(estProfit).toLocaleString()}
+                        </Text>
+                      )}
                     </View>
                     {inSeason && (
                       <Text style={[styles.cropOptionCost, !canAfford && { color: '#f44336' }]}>

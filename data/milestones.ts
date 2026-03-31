@@ -30,6 +30,29 @@ export const MILESTONES: MilestoneDef[] = [
   { id: 'day_365',         icon: '🗓️', title: 'One Full Year',     description: 'Survive a full year (365 days)' },
 ];
 
+export const MILESTONE_REWARDS: Record<string, number> = {
+  first_harvest:   500,
+  tier_c:        1_000,
+  tier_b:        2_500,
+  tier_a:        5_000,
+  tier_s:       10_000,
+  five_ha:       1_500,
+  ten_ha:        3_000,
+  twenty_ha:     7_500,
+  cash_10k:      1_000,
+  cash_50k:      2_500,
+  cash_250k:    10_000,
+  first_animal:    500,
+  five_animals:  2_000,
+  first_machine: 1_000,
+  three_machines:3_000,
+  first_contract:1_500,
+  first_insurance: 500,
+  savings_5k:    1_000,
+  day_100:       2_000,
+  day_365:      10_000,
+};
+
 export function checkNewMilestones(
   state: {
     day: number;

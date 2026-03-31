@@ -619,7 +619,22 @@ export default function EconomiaScreen() {
 
           {/* Inventory Summary */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Stored inventory</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <Text style={styles.sectionTitle}>Stored inventory</Text>
+              {stockedCrops.length > 1 && (() => {
+                const totalVal = stockedCrops.reduce((sum, { qty, price }) => sum + sellRevenue(qty, price), 0);
+                return (
+                  <TouchableOpacity
+                    style={{ backgroundColor: '#1b4a1b', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 }}
+                    onPress={() => stockedCrops.forEach(({ crop, qty }) => sellCrop(crop.id, qty))}
+                  >
+                    <Text style={{ color: '#4caf50', fontSize: 11, fontWeight: 'bold' }}>
+                      Sell All · ${Math.round(totalVal).toLocaleString()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })()}
+            </View>
             {stockedCrops.length === 0 ? (
               <Text style={styles.emptyText}>No harvests stored</Text>
             ) : (
