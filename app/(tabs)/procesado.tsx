@@ -6,6 +6,7 @@ import { PROCESSING_RECIPES, PROCESSED_PRODUCTS, ProcessingRecipe } from '../../
 import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
+import HelpSheet from '../../components/HelpSheet';
 
 const BUILDING_GROUPS: { buildingId: string; label: string; icon: string }[] = [
   { buildingId: 'bld_molino',      label: 'Flour Mill',             icon: '⚙️' },
@@ -61,6 +62,13 @@ export default function ProcesadoScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <ScreenHeader title="Processing" subtitle="Transform raw materials into higher-value products" />
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 4 }}>
+        <HelpSheet
+          title="Processing"
+          body="Processing raw crops into products (flour, oil, cheese, etc.) increases their sell value by 50–200%. It takes time and requires the right building, but produces goods that are immune to crop market fluctuations."
+        />
+        <Text style={{ color: '#555', fontSize: 11, marginLeft: 6 }}>What is processing?</Text>
+      </View>
 
       {/* Processed inventory */}
       {Object.keys(processedInventory).some(k => (processedInventory[k] ?? 0) > 0) && (

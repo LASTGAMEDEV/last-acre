@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { playSound } from '../../engine/sounds';
 import Svg, { Polyline, Line, Text as SvgText, Rect, G } from 'react-native-svg';
 import { useGameStore } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { sellRevenue, computeSellPressureModifier, sellPressureDuration } from '../../engine/market';
 import { getSeason } from '../../engine/climate';
+import HelpSheet from '../../components/HelpSheet';
 
 const TIER_COLORS: Record<CropTier, string> = {
   D: '#9e9e9e', C: '#4caf50', B: '#2196f3', A: '#9c27b0', S: '#ff9800',
@@ -329,6 +331,13 @@ export default function EconomiaScreen() {
         return (
           <ScrollView style={styles.futuresScroll} showsVerticalScrollIndicator={false}>
             {/* ── Crop picker ── */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <Text style={[styles.futuresSectionLabel, { marginBottom: 0 }]}>📉 Futures Trading</Text>
+              <HelpSheet
+                title="Futures Trading"
+                body="A futures contract locks in today's price for a crop you'll deliver later. Useful when prices are high but your harvest isn't ready yet. If you can't deliver the agreed quantity, you pay a penalty."
+              />
+            </View>
             <Text style={styles.futuresSectionLabel}>Select Crop</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.futuresCropScroll}>
               {CROP_TYPES.map(crop => (
@@ -499,6 +508,13 @@ export default function EconomiaScreen() {
             const p = prices.find(px => px.cropId === crop.id);
             const cpct = p ? ((p.price - p.basePrice) / p.basePrice) * 100 : 0;
             const isSelected = selectedCrop === crop.id;
+            // 3-day trend: compare last price vs 3 days ago
+            const hist = priceHistory[crop.id] ?? [];
+            const recentTrend = hist.length >= 3
+              ? hist[hist.length - 1] - hist[hist.length - 4 < 0 ? 0 : hist.length - 4]
+              : 0;
+            const trendIcon = recentTrend > 0.5 ? '↗' : recentTrend < -0.5 ? '↘' : '→';
+            const trendColor = recentTrend > 0.5 ? '#66bb6a' : recentTrend < -0.5 ? '#ef5350' : '#888';
             return (
               <TouchableOpacity
                 key={crop.id}
@@ -514,6 +530,7 @@ export default function EconomiaScreen() {
                     {cpct >= 0 ? '▲' : '▼'} {Math.abs(cpct).toFixed(1)}%
                   </Text>
                 </View>
+                <Text style={{ fontSize: 14, color: trendColor, fontWeight: 'bold' }}>{trendIcon}</Text>
               </TouchableOpacity>
             );
           })}
@@ -578,9 +595,16 @@ export default function EconomiaScreen() {
               return (
                 <>
                   {inStock > 500 && pressureMod < 1.0 && (
-                    <Text style={styles.sellPressureWarn}>
-                      ⚠️ Selling {Math.round(inStock).toLocaleString()} {selected.unit} will depress price by {Math.round((1 - pressureMod) * 100)}% for {sellPressureDuration(inStock)} days
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={[styles.sellPressureWarn, { flex: 1 }]}>
+                        ⚠️ Selling {Math.round(inStock).toLocaleString()} {selected.unit} will depress price by {Math.round((1 - pressureMod) * 100)}% for {sellPressureDuration(inStock)} days
+                      </Text>
+                      <HelpSheet
+                        title="Sell Pressure"
+                        body="Selling a large quantity of a crop at once drives the market price down temporarily. Spreading sales over several days or selling smaller amounts avoids the penalty. The pressure lifts after a few days."
+                        buttonSize={12}
+                      />
+                    </View>
                   )}
                   {activePressure && (
                     <Text style={styles.sellPressureActive}>
@@ -592,7 +616,7 @@ export default function EconomiaScreen() {
             })()}
             <TouchableOpacity
               style={[styles.sellBtn, inStock <= 0 && styles.sellBtnDisabled]}
-              onPress={() => { sellCrop(selectedCrop, inStock); if (revenue >= 1000) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
+              onPress={() => { sellCrop(selectedCrop, inStock); playSound(revenue >= 5000 ? 'bigSale' : 'sell'); if (revenue >= 1000) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
               disabled={inStock <= 0}
             >
               <Text style={styles.sellBtnText}>
@@ -636,13 +660,22 @@ export default function EconomiaScreen() {
                 );
               })()}
             </View>
+            {/* Spoilage warning: crops sitting below 85% of base price */}
+            {stockedCrops.filter(({ crop, price }) => price < crop.basePrice * 0.85).length > 0 && (
+              <View style={styles.spoilageWarn}>
+                <Text style={styles.spoilageWarnText}>
+                  ⚠️ {stockedCrops.filter(({ crop, price }) => price < crop.basePrice * 0.85).map(x => x.crop.name).join(', ')} — prices down {'>'}15% from base. Consider selling now.
+                </Text>
+              </View>
+            )}
             {stockedCrops.length === 0 ? (
               <Text style={styles.emptyText}>No harvests stored</Text>
             ) : (
               stockedCrops.map(({ crop, qty, price }) => {
                 const val = sellRevenue(qty, price);
+                const isSpoiling = price < crop.basePrice * 0.85;
                 return (
-                  <TouchableOpacity key={crop.id} style={styles.invRow} onPress={() => setSelectedCrop(crop.id)}>
+                  <TouchableOpacity key={crop.id} style={[styles.invRow, isSpoiling && styles.invRowWarn]} onPress={() => setSelectedCrop(crop.id)}>
                     <View style={[styles.tierDot, { backgroundColor: TIER_COLORS[crop.tier] }]} />
                     <Text style={styles.invName}>{crop.name}</Text>
                     <Text style={styles.invQty}>{qty.toLocaleString()} {crop.unit}</Text>
@@ -725,10 +758,13 @@ const styles = StyleSheet.create({
   roiPrice: { color: '#666', fontSize: 10 },
 
   invRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
+  invRowWarn: { backgroundColor: '#2a1a0a', borderRadius: 6 },
   invName: { flex: 1, color: '#ccc', fontSize: 12 },
   invQty: { color: '#888', fontSize: 11, marginRight: 8 },
   invSellBtn: { backgroundColor: '#1b5e20', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
   invSellText: { color: '#81c784', fontSize: 11, fontWeight: 'bold' },
+  spoilageWarn: { backgroundColor: '#2a1400', borderRadius: 6, padding: 8, marginBottom: 6, borderLeftWidth: 3, borderLeftColor: '#ff7043' },
+  spoilageWarnText: { color: '#ff8a65', fontSize: 11 },
 
   // Tab bar
   tabBar: { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 6, gap: 6 },

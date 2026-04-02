@@ -13,6 +13,7 @@ import { getSoilModifier } from '../../engine/crops';
 import { PRODUCT_TYPES } from '../../data/productTypes';
 import ContractorModal from '../../components/ContractorModal';
 import { getContractorCost, ContractorOperation } from '../../engine/machinery';
+import HelpSheet from '../../components/HelpSheet';
 
 const MAP_COLS = 8;
 
@@ -660,10 +661,18 @@ export default function TierrasScreen() {
             <Text style={styles.modalTitle}>
               Plant on {plantingParcel?.name} ({plantingParcel?.hectares} ha)
             </Text>
-            <Text style={styles.seasonLabel}>
-              Season: {currentSeason.charAt(0).toUpperCase() + currentSeason.slice(1)}
-              {plantingParcel?.soilType ? ` · ${SOIL_ICONS[plantingParcel.soilType]} ${plantingParcel.soilType} soil` : ''}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.seasonLabel}>
+                Season: {currentSeason.charAt(0).toUpperCase() + currentSeason.slice(1)}
+                {plantingParcel?.soilType ? ` · ${SOIL_ICONS[plantingParcel.soilType]} ${plantingParcel.soilType} soil` : ''}
+              </Text>
+              {plantingParcel?.soilType && (
+                <HelpSheet
+                  title="Soil Type"
+                  body="Each soil type favours different crops. Loamy soil gives balanced yields, sandy soil suits drought-tolerant crops, clay soil suits root vegetables, and chalky soil suits specialty crops. Matching crop to soil gives up to +20% yield."
+                />
+              )}
+            </View>
 
             <View style={styles.fertRow}>
               <Text style={styles.fertLabel}>With fertilizer (+30% cost, +yield)</Text>
@@ -750,7 +759,13 @@ export default function TierrasScreen() {
               if (willRotate) {
                 return (
                   <View style={{ backgroundColor: '#0a2a0a', borderRadius: 8, padding: 10, marginTop: 8, borderLeftWidth: 3, borderLeftColor: '#4caf50' }}>
-                    <Text style={{ color: '#66bb6a', fontSize: 12, fontWeight: 'bold' }}>✅ +15% Rotation Bonus</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ color: '#66bb6a', fontSize: 12, fontWeight: 'bold' }}>✅ +15% Rotation Bonus</Text>
+                      <HelpSheet
+                        title="Crop Rotation"
+                        body="Planting a different crop than the previous one gives a +15% yield bonus. Rotating also slows fertility loss over time. Try to avoid planting the same high-drain crop twice in a row."
+                      />
+                    </View>
                     <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }}>Different crop from last harvest — you get a yield boost.</Text>
                   </View>
                 );

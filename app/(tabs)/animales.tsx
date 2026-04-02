@@ -7,6 +7,7 @@ import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
 import { sellValue, isMature, canBreed, TRAIT_ICONS, TRAIT_DESC, AnimalGenes, OwnedAnimal } from '../../engine/animals';
 import { ENCLOSURE_BUILDINGS } from '../../constants/enclosures';
+import HelpSheet from '../../components/HelpSheet';
 
 function geneGrade(v: number): string {
   if (v >= 1.4) return 'S';
@@ -66,6 +67,7 @@ export default function AnimalesScreen() {
     buyAnimal, sellAnimal, collectAnimalProduction, sellAnimalProduct, breedAnimal,
     treatAnimal, collectAllProduction,
     breedingPairs, setBreedingPair, clearBreedingPair,
+    animalPrices, upgradeAnimalGene,
   } = useGameStore();
   const fairMult = activeFair ? (1 - activeFair.discount) : 1.0;
   const [expandedAnimalId, setExpandedAnimalId] = useState<string | null>(null);
@@ -90,14 +92,18 @@ export default function AnimalesScreen() {
             {ANIMAL_PRODUCTS.map(product => {
               const qty = Math.round(animalInventory[product.productType] ?? 0);
               if (qty <= 0) return null;
-              const revenue = Math.round(qty * product.basePrice * 0.85);
+              const livePrice = (animalPrices ?? {})[product.productType] ?? product.basePrice;
+              const pctChange = ((livePrice - product.basePrice) / product.basePrice) * 100;
+              const revenue = Math.round(qty * livePrice * 0.85);
               return (
                 <View key={product.productType} style={styles.inventoryCard}>
                   <Text style={styles.inventoryName}>{product.name}</Text>
                   <Text style={styles.inventoryQty}>
                     {qty.toLocaleString()} {product.unit}
                   </Text>
-                  <Text style={styles.inventoryPrice}>${product.basePrice}/{product.unit}</Text>
+                  <Text style={[styles.inventoryPrice, { color: pctChange >= 0 ? '#66bb6a' : '#ef5350' }]}>
+                    ${livePrice.toFixed(2)}/{product.unit} {pctChange >= 0 ? '▲' : '▼'}{Math.abs(pctChange).toFixed(1)}%
+                  </Text>
                   <TouchableOpacity
                     style={styles.sellProductBtn}
                     onPress={() => sellAnimalProduct(product.productType, qty)}
@@ -181,15 +187,41 @@ export default function AnimalesScreen() {
                 return (
                   <View style={genStyles.panel}>
                     <View style={genStyles.panelHeader}>
-                      <Text style={genStyles.panelTitle}>🧬 Genes</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={genStyles.panelTitle}>🧬 Genes</Text>
+                        <HelpSheet
+                          title="Gene Grade"
+                          body="Each gene is scored D (weak) to S (exceptional). The overall grade is the average of all four genes. Higher grades mean more production, disease resistance, faster growth, or better sell price. Breed selectively to improve grades over generations."
+                          buttonSize={12}
+                        />
+                      </View>
                       <View style={[genStyles.gradeBadge, { backgroundColor: avgColor + '33', borderColor: avgColor }]}>
                         <Text style={[genStyles.gradeBadgeText, { color: avgColor }]}>{avgGrade} Grade</Text>
                       </View>
                     </View>
-                    <GeneBar label="🥚 Production" value={g.production} />
-                    <GeneBar label="💪 Hardiness"  value={g.hardiness} />
-                    <GeneBar label="⚡ Growth"     value={g.growth} />
-                    <GeneBar label="💰 Value"      value={g.value} />
+                    {(['production', 'hardiness', 'growth', 'value'] as (keyof AnimalGenes)[]).map(gKey => {
+                      const GENE_LABELS: Record<keyof AnimalGenes, string> = { production: '🥚 Production', hardiness: '💪 Hardiness', growth: '⚡ Growth', value: '💰 Value' };
+                      const val = g[gKey];
+                      const upgradeCost = Math.round(800 * val * val);
+                      const atMax = val >= 1.5;
+                      const canAfford = money >= upgradeCost;
+                      return (
+                        <View key={gKey} style={upgradeStyles.row}>
+                          <View style={{ flex: 1 }}>
+                            <GeneBar label={GENE_LABELS[gKey]} value={val} />
+                          </View>
+                          <TouchableOpacity
+                            style={[upgradeStyles.upgradeBtn, (atMax || !canAfford) && upgradeStyles.upgradeBtnDisabled]}
+                            onPress={() => upgradeAnimalGene(item.id, gKey)}
+                            disabled={atMax || !canAfford}
+                          >
+                            <Text style={upgradeStyles.upgradeBtnText}>
+                              {atMax ? 'MAX' : `+0.05\n$${upgradeCost}`}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    })}
                     {item.sex === 'female' && (() => {
                       const matureMales = animals.filter(
                         (a: OwnedAnimal) => a.id !== item.id && a.typeId === item.typeId && a.sex === 'male' && isMature(a, type, day)
@@ -502,6 +534,13 @@ const bpStyles = StyleSheet.create({
   prediction:       { backgroundColor: '#0a1628', borderRadius: 6, padding: 8, marginTop: 8, borderLeftWidth: 3, borderLeftColor: '#ffd700' },
   predLabel:        { color: '#ffd700', fontSize: 10, fontWeight: 'bold' },
   predChip:         { fontSize: 11, fontWeight: 'bold' },
+});
+
+const upgradeStyles = StyleSheet.create({
+  row:                { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+  upgradeBtn:         { backgroundColor: '#1a3a1a', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 4, marginLeft: 6, alignItems: 'center', minWidth: 48 },
+  upgradeBtnDisabled: { backgroundColor: '#1a1a1a', opacity: 0.5 },
+  upgradeBtnText:     { color: '#66bb6a', fontSize: 9, fontWeight: 'bold', textAlign: 'center' },
 });
 
 const ltStyles = StyleSheet.create({

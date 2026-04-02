@@ -6,6 +6,7 @@ import MaquinariaScreen from './maquinaria';
 import TrabajadoresScreen from './trabajadores';
 import { useGameStore, SeedEntry, SeedGenes, HybridJob } from '../../store/useGameStore';
 import { CROP_TYPES } from '../../data/cropTypes';
+import HelpSheet from '../../components/HelpSheet';
 
 type FarmTab = 'fields' | 'animals' | 'machinery' | 'workers' | 'seedlab';
 
@@ -178,7 +179,14 @@ function SeedLabScreen() {
       )}
 
       {/* Active jobs */}
-      <Text style={slStyles.sectionLabel}>Active Jobs ({hybridJobs.length}/{maxSlots})</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 12, marginTop: 8, marginBottom: 4 }}>
+        <Text style={[slStyles.sectionLabel, { marginHorizontal: 0, marginTop: 0, marginBottom: 0 }]}>Active Jobs ({hybridJobs.length}/{maxSlots})</Text>
+        <HelpSheet
+          title="Seed Lab"
+          body="The Seed Lab lets you hybridize two seed batches to breed offspring with combined genes. Higher-generation seeds have better yield, drought resistance, and quality. Requires a Seed Lab building."
+          buttonSize={12}
+        />
+      </View>
       <View style={slStyles.card}>
         {hybridJobs.length === 0 ? (
           <Text style={slStyles.emptyText}>No active jobs.</Text>

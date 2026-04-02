@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
-import { useGameStore, FuturesPosition } from '../../store/useGameStore';
+import { useGameStore, FuturesPosition, SeasonGoal } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import { CONTRACT_TEMPLATES } from '../../engine/contracts';
 import { CROP_TYPES, CropType } from '../../data/cropTypes';
@@ -8,6 +8,7 @@ import { INSURANCE_PLANS, InsuranceType } from '../../data/insuranceTypes';
 import { MILESTONES } from '../../data/milestones';
 import { LOAN_TIERS, computeCreditScore, creditRating, calculateRate,
          loanTotalOwed, checkEligibility, rollingIncome, timeDepositPayout, timeDepositMatured } from '../../engine/banking';
+import HelpSheet from '../../components/HelpSheet';
 
 const TERM_OPTIONS = [
   { days: 30,  label: '30d' },
@@ -67,7 +68,14 @@ function BankingSection() {
       <View style={styles.creditCard}>
         <View style={styles.creditRow}>
           <View>
-            <Text style={styles.creditLabel}>Credit score</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.creditLabel}>Credit score</Text>
+              <HelpSheet
+                title="Credit Score"
+                body="Your credit score determines how much you can borrow and at what interest rate. It's based on your rolling income over recent days, your existing debt, and how reliably you've repaid past loans."
+                buttonSize={12}
+              />
+            </View>
             <Text style={[styles.creditScore, { color: rating.color }]}>{creditScore}</Text>
             <Text style={[styles.creditRating, { color: rating.color }]}>{rating.label}</Text>
           </View>
@@ -491,7 +499,8 @@ function BankingSection() {
 
 // ── Contracts Section ────────────────────────────────────────────────────────
 function ContractsSection() {
-  const { contracts, prices, inventory, day, acceptContract, declineContract, deliverCrop, declinedTemplates } = useGameStore();
+  const { contracts, prices, inventory, day, acceptContract, declineContract, deliverCrop, declinedTemplates, counterOfferContract } = useGameStore();
+  const [negotiatingId, setNegotiatingId] = React.useState<string | null>(null);
 
   const activeContracts = contracts.filter(c => !c.completed && !c.failed);
   const availableTemplates = CONTRACT_TEMPLATES.filter(
@@ -551,6 +560,8 @@ function ContractsSection() {
           const unit = crop?.unit ?? 'kg';
           const marketPrice = prices.find(p => p.cropId === t.cropId)?.price ?? 0;
           const bonusPrice = (marketPrice * t.priceBonus).toFixed(2);
+          const negotiatedPrice = (marketPrice * t.priceBonus * 1.10).toFixed(2);
+          const isNegotiating = negotiatingId === t.id;
           return (
             <View key={t.id} style={styles.offerCard}>
               <Text style={styles.offerName}>{t.name}</Text>
@@ -563,14 +574,39 @@ function ContractsSection() {
               <Text style={[styles.offerDetail, { color: '#ef9a9a' }]}>
                 ⚠️ {(t.penaltyRate * 100).toFixed(0)}% penalty if you default
               </Text>
-              <View style={styles.offerBtns}>
-                <TouchableOpacity style={styles.acceptBtn} onPress={() => acceptContract(t.id)}>
-                  <Text style={styles.acceptBtnText}>✓ Accept</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.declineBtn} onPress={() => declineContract(t.id)}>
-                  <Text style={styles.declineBtnText}>✕ Decline</Text>
-                </TouchableOpacity>
-              </View>
+
+              {isNegotiating ? (
+                <View style={negStyles.negotiateBox}>
+                  <Text style={negStyles.negotiateTitle}>🤝 Choose a counter-offer:</Text>
+                  <TouchableOpacity style={negStyles.counterBtn} onPress={() => { counterOfferContract(t.id, 'price'); setNegotiatingId(null); }}>
+                    <Text style={negStyles.counterBtnText}>💰 Better Price</Text>
+                    <Text style={negStyles.counterBtnSub}>${negotiatedPrice}/{unit} (+10%)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={negStyles.counterBtn} onPress={() => { counterOfferContract(t.id, 'quantity'); setNegotiatingId(null); }}>
+                    <Text style={negStyles.counterBtnText}>📦 Less Quantity</Text>
+                    <Text style={negStyles.counterBtnSub}>{t.amountRange[0].toLocaleString()} {unit} (min)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={negStyles.counterBtn} onPress={() => { counterOfferContract(t.id, 'deadline'); setNegotiatingId(null); }}>
+                    <Text style={negStyles.counterBtnText}>⏰ More Time</Text>
+                    <Text style={negStyles.counterBtnSub}>+20 days ({t.termDays + 20}d total)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={negStyles.cancelBtn} onPress={() => setNegotiatingId(null)}>
+                    <Text style={negStyles.cancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.offerBtns}>
+                  <TouchableOpacity style={styles.acceptBtn} onPress={() => acceptContract(t.id)}>
+                    <Text style={styles.acceptBtnText}>✓ Accept</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={negStyles.negotiateBtn} onPress={() => setNegotiatingId(t.id)}>
+                    <Text style={negStyles.negotiateBtnText}>🤝 Negotiate</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.declineBtn} onPress={() => declineContract(t.id)}>
+                    <Text style={styles.declineBtnText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           );
         })}
@@ -581,7 +617,7 @@ function ContractsSection() {
 
 // ── Reputation & Cooperative Section ─────────────────────────────────────────
 function ReputationSection() {
-  const { reputation, cooperative, money, prices, futures, joinCooperative, leaveCooperative, openFuture } = useGameStore();
+  const { reputation, cooperative, money, prices, futures, prestige, joinCooperative, leaveCooperative, openFuture } = useGameStore();
   const rep = reputation ?? 50;
   const repColor = rep >= 80 ? '#4caf50' : rep >= 60 ? '#ffb74d' : rep >= 40 ? '#e8d5a3' : '#f44336';
   const repTier = rep >= 80 ? 'Excellent' : rep >= 65 ? 'Good' : rep >= 40 ? 'Average' : 'Poor';
@@ -614,6 +650,21 @@ function ReputationSection() {
           <View style={[styles.repFill, { width: `${rep}%` as any, backgroundColor: repColor }]} />
         </View>
       </View>
+
+      {/* Prestige card */}
+      {(prestige ?? 0) > 0 && (
+        <View style={[styles.repCard, { marginTop: 0, borderColor: '#ffb74d', borderWidth: 1 }]}>
+          <Text style={styles.sectionTitle}>⚡ Prestige</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Text style={{ color: '#ffb74d', fontSize: 32, fontWeight: 'bold' }}>{prestige}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' }}>Level {prestige} Farmer</Text>
+              <Text style={{ color: '#888', fontSize: 11 }}>+{(prestige ?? 0) * 5}% revenue on all sales</Text>
+              <Text style={{ color: '#555', fontSize: 10, marginTop: 2 }}>Earned by completing full years</Text>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Cooperative card */}
       <View style={styles.coopCard}>
@@ -724,6 +775,86 @@ function ReputationSection() {
 }
 
 // ── Milestones Section ───────────────────────────────────────────────────────
+function SeasonGoalsSection() {
+  const {
+    seasonGoals, seasonGoalSeason, money, seasonStartMoney, seasonStartRevenue,
+    totalRevenue, seasonHarvestCount, parcels, claimSeasonGoalReward,
+  } = useGameStore();
+
+  if (seasonGoals.length === 0) {
+    return (
+      <View style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
+        <View style={{ backgroundColor: '#16213e', borderRadius: 10, padding: 14 }}>
+          <Text style={{ color: '#888', fontSize: 12, textAlign: 'center' }}>
+            Seasonal goals appear when a new season begins.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  function getProgress(goal: SeasonGoal): number {
+    switch (goal.type) {
+      case 'earn':
+        return Math.max(0, (totalRevenue ?? 0) - (seasonStartRevenue ?? 0));
+      case 'harvest_count':
+        return seasonHarvestCount ?? 0;
+      case 'own_ha':
+        return parcels.filter(p => p.owned).reduce((s, p) => s + p.hectares, 0);
+    }
+  }
+
+  function progressLabel(goal: SeasonGoal, progress: number): string {
+    switch (goal.type) {
+      case 'earn':
+        return `$${Math.round(progress).toLocaleString()} / $${goal.target.toLocaleString()}`;
+      case 'harvest_count':
+        return `${progress} / ${goal.target} harvests`;
+      case 'own_ha':
+        return `${progress.toFixed(1)} / ${goal.target} ha`;
+    }
+  }
+
+  return (
+    <View style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
+      <Text style={{ color: '#e8d5a3', fontSize: 13, fontWeight: 'bold', marginBottom: 8 }}>
+        {seasonGoalSeason.charAt(0).toUpperCase() + seasonGoalSeason.slice(1)} Goals
+      </Text>
+      {seasonGoals.map(goal => {
+        const progress = getProgress(goal);
+        const pct = Math.min(1, progress / goal.target);
+        const complete = pct >= 1;
+        return (
+          <View key={goal.id} style={{ backgroundColor: complete ? '#0f3460' : '#16213e', borderRadius: 10, padding: 14, marginBottom: 10, borderWidth: complete && !goal.claimed ? 1 : 0, borderColor: '#4caf50' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 18 }}>{goal.icon}</Text>
+                <Text style={{ color: complete ? '#e8d5a3' : '#aaa', fontSize: 13, fontWeight: 'bold', flex: 1 }}>{goal.label}</Text>
+              </View>
+              {goal.claimed ? (
+                <Text style={{ color: '#4caf50', fontSize: 12, fontWeight: 'bold' }}>✓ Claimed</Text>
+              ) : complete ? (
+                <TouchableOpacity
+                  style={{ backgroundColor: '#4caf50', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 5 }}
+                  onPress={() => claimSeasonGoalReward(goal.id)}
+                >
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Claim +${goal.reward.toLocaleString()}</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={{ color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' }}>+${goal.reward.toLocaleString()}</Text>
+              )}
+            </View>
+            <Text style={{ color: '#888', fontSize: 11, marginBottom: 6 }}>{progressLabel(goal, progress)}</Text>
+            <View style={{ height: 6, backgroundColor: '#0d1117', borderRadius: 3 }}>
+              <View style={{ height: 6, width: `${Math.round(pct * 100)}%` as any, backgroundColor: complete ? '#4caf50' : '#1565c0', borderRadius: 3 }} />
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function MilestonesSection() {
   const { completedMilestones } = useGameStore();
   const done = new Set(completedMilestones);
@@ -732,6 +863,9 @@ function MilestonesSection() {
 
   return (
     <View style={styles.milestoneContainer}>
+      {/* Seasonal goals at the top */}
+      <SeasonGoalsSection />
+
       {earned.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Earned ({earned.length}/{MILESTONES.length})</Text>
@@ -868,18 +1002,25 @@ function InsuranceSection() {
 
 // ── Competitors Section ──────────────────────────────────────────────────────
 function CompetitorsSection() {
-  const { npcFarms = [], sellPressures = [], day } = useGameStore();
+  const { npcFarms = [], sellPressures = [], mapFields = [], day, rivalNews = [] } = useGameStore();
+  const [expandedFarmId, setExpandedFarmId] = React.useState<string | null>(null);
 
-  function wealthLabel(wealth: number): string {
-    if (wealth < 10000) return 'Low';
-    if (wealth < 30000) return 'Medium';
-    return 'High';
-  }
+  const NPC_MAP_OWNER: Record<string, string> = {
+    'npc_rivera': 'rivalA', 'npc_verde': 'rivalA', 'npc_sierra': 'rivalA',
+    'npc_golden': 'rivalB', 'npc_altavista': 'rivalB',
+  };
 
   function wealthColor(wealth: number): string {
     if (wealth < 10000) return '#66bb6a';
     if (wealth < 30000) return '#ffb74d';
     return '#ef5350';
+  }
+
+  function wealthTrend(wealth: number): string {
+    if (wealth < 3000) return '📉 Struggling';
+    if (wealth < 10000) return '🟡 Growing';
+    if (wealth < 30000) return '🟠 Established';
+    return '🔴 Dominant';
   }
 
   function activePressure(farm: { specialization: string[] }): string | null {
@@ -890,47 +1031,139 @@ function CompetitorsSection() {
     return null;
   }
 
+  function landCount(farmId: string): number {
+    const owner = NPC_MAP_OWNER[farmId];
+    if (!owner) return 0;
+    return mapFields.filter((f: any) => f.owner === owner).length;
+  }
+
   return (
     <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
-      <Text style={{ color: '#888', fontSize: 12, marginBottom: 4 }}>
-        Competitor farms apply sell pressure to the market and bid at auction.
+      <Text style={{ color: '#888', fontSize: 12, marginBottom: 8 }}>
+        Rivals apply sell pressure to the market and bid at auction. Watch them expand.
       </Text>
       {npcFarms.map(farm => {
         const pressure = activePressure(farm);
+        const fields = landCount(farm.id);
+        const isExpanded = expandedFarmId === farm.id;
+        const farmNews = rivalNews.filter((n: any) => n.detail?.includes(farm.name) || n.title?.includes(farm.name));
+        const totalHa = mapFields.filter((f: any) => f.owner === NPC_MAP_OWNER[farm.id]).reduce((s: number, f: any) => s + (f.approximateHa ?? 0), 0);
         return (
           <View key={farm.id} style={{ backgroundColor: '#16213e', borderRadius: 10, padding: 14, marginBottom: 10 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ color: '#e8d5a3', fontSize: 14, fontWeight: 'bold' }}>{farm.name}</Text>
-                <View style={{ backgroundColor: farm.tier === 3 ? '#c62828' : farm.tier === 2 ? '#f57f17' : '#1b5e20', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>Tier {farm.tier}</Text>
+            <TouchableOpacity onPress={() => setExpandedFarmId(isExpanded ? null : farm.id)} activeOpacity={0.7}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ color: '#e8d5a3', fontSize: 14, fontWeight: 'bold' }}>{farm.name}</Text>
+                  <View style={{ backgroundColor: farm.tier === 3 ? '#c62828' : farm.tier === 2 ? '#f57f17' : '#1b5e20', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>Tier {farm.tier}</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ color: wealthColor(farm.wealth), fontSize: 12, fontWeight: 'bold' }}>
+                    ${Math.round(farm.wealth).toLocaleString()}
+                  </Text>
+                  <Text style={{ color: '#555', fontSize: 12 }}>{isExpanded ? '▲' : '▼'}</Text>
                 </View>
               </View>
-              <Text style={{ color: wealthColor(farm.wealth), fontSize: 12, fontWeight: 'bold' }}>
-                {wealthLabel(farm.wealth)} wealth
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
-              {farm.specialization.map((cropId: string) => {
-                const crop = CROP_TYPES.find(c => c.id === cropId);
-                return (
-                  <View key={cropId} style={{ backgroundColor: '#0f3460', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3 }}>
-                    <Text style={{ color: '#ccc', fontSize: 11 }}>{crop?.name ?? cropId}</Text>
+
+              {/* Stats row */}
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
+                  <Text style={{ color: '#888', fontSize: 9 }}>STATUS</Text>
+                  <Text style={{ color: wealthColor(farm.wealth), fontSize: 11, fontWeight: 'bold' }}>{wealthTrend(farm.wealth)}</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
+                  <Text style={{ color: '#888', fontSize: 9 }}>MAP FIELDS</Text>
+                  <Text style={{ color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' }}>{fields} field{fields !== 1 ? 's' : ''} · {Math.round(totalHa)}ha</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
+                  <Text style={{ color: '#888', fontSize: 9 }}>NEXT SELL</Text>
+                  <Text style={{ color: '#ccc', fontSize: 11, fontWeight: 'bold' }}>in {Math.max(0, farm.nextSellDay - day)}d</Text>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                {farm.specialization.map((cropId: string) => {
+                  const crop = CROP_TYPES.find(c => c.id === cropId);
+                  return (
+                    <View key={cropId} style={{ backgroundColor: '#0f3460', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3 }}>
+                      <Text style={{ color: '#ccc', fontSize: 11 }}>{crop?.name ?? cropId}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+              {pressure && (
+                <Text style={{ color: '#ef9a9a', fontSize: 11 }}>
+                  ⚠️ Flooding market with {CROP_TYPES.find(c => c.id === pressure)?.name ?? pressure} — price depressed
+                </Text>
+              )}
+              {farm.wealth < 5000 && (
+                <Text style={{ color: '#ffb74d', fontSize: 11 }}>
+                  ⚡ Financial trouble — foreclosure risk
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Expanded profile */}
+            {isExpanded && (
+              <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: '#1e2a3a', paddingTop: 10 }}>
+                <Text style={{ color: '#888', fontSize: 11, fontWeight: 'bold', marginBottom: 6, letterSpacing: 0.5 }}>📊 PROFILE</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                  <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
+                    <Text style={{ color: '#888', fontSize: 9 }}>WEALTH</Text>
+                    <Text style={{ color: wealthColor(farm.wealth), fontSize: 13, fontWeight: 'bold' }}>${Math.round(farm.wealth).toLocaleString()}</Text>
                   </View>
-                );
-              })}
-            </View>
-            {pressure && (
-              <Text style={{ color: '#ef9a9a', fontSize: 11 }}>
-                ⚠️ Currently pushing {CROP_TYPES.find(c => c.id === pressure)?.name ?? pressure} — price depressed
-              </Text>
+                  <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
+                    <Text style={{ color: '#888', fontSize: 9 }}>SELL INTERVAL</Text>
+                    <Text style={{ color: '#ccc', fontSize: 13, fontWeight: 'bold' }}>every {farm.sellIntervalDays}d</Text>
+                  </View>
+                  <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
+                    <Text style={{ color: '#888', fontSize: 9 }}>TIER</Text>
+                    <Text style={{ color: farm.tier === 3 ? '#ef5350' : farm.tier === 2 ? '#ffb74d' : '#66bb6a', fontSize: 13, fontWeight: 'bold' }}>
+                      {farm.tier === 3 ? 'Dominant' : farm.tier === 2 ? 'Growing' : 'Small'}
+                    </Text>
+                  </View>
+                </View>
+
+                {farmNews.length > 0 && (
+                  <View>
+                    <Text style={{ color: '#888', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>📡 Recent Activity</Text>
+                    {farmNews.slice(0, 5).map((item: any) => (
+                      <View key={item.id} style={{ flexDirection: 'row', gap: 8, paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#1e2a3a' }}>
+                        <Text style={{ fontSize: 14 }}>{item.icon}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: '#e8d5a3', fontSize: 11 }}>{item.title}</Text>
+                          <Text style={{ color: '#555', fontSize: 10 }}>Day {item.day}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {farmNews.length === 0 && (
+                  <Text style={{ color: '#444', fontSize: 11, fontStyle: 'italic' }}>No recent activity recorded for this farm.</Text>
+                )}
+              </View>
             )}
-            <Text style={{ color: '#555', fontSize: 10, marginTop: 4 }}>
-              Sells every {farm.sellIntervalDays}d · next in {Math.max(0, farm.nextSellDay - day)}d
-            </Text>
           </View>
         );
       })}
+
+      {/* Rival Intel feed */}
+      {rivalNews.length > 0 && (
+        <View style={{ marginTop: 16 }}>
+          <Text style={{ color: '#888', fontSize: 11, fontWeight: 'bold', marginBottom: 8, letterSpacing: 0.5 }}>📡 RIVAL INTEL</Text>
+          {rivalNews.slice(0, 10).map(item => (
+            <View key={item.id} style={{ flexDirection: 'row', gap: 10, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#1e2a3a', alignItems: 'flex-start' }}>
+              <Text style={{ fontSize: 16 }}>{item.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' }}>{item.title}</Text>
+                <Text style={{ color: '#666', fontSize: 10, marginTop: 2 }}>{item.detail}</Text>
+              </View>
+              <Text style={{ color: '#444', fontSize: 10 }}>d{item.day}</Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -1004,6 +1237,18 @@ export default function OficinaScreen() {
     </View>
   );
 }
+
+const negStyles = StyleSheet.create({
+  negotiateBtn:     { flex: 1, backgroundColor: '#1a3a5c', borderRadius: 8, paddingVertical: 8, alignItems: 'center', marginHorizontal: 3 },
+  negotiateBtnText: { color: '#64b5f6', fontSize: 11, fontWeight: 'bold' },
+  negotiateBox:     { backgroundColor: '#0d2137', borderRadius: 8, padding: 10, marginTop: 8, gap: 6 },
+  negotiateTitle:   { color: '#90caf9', fontSize: 11, fontWeight: 'bold', marginBottom: 2 },
+  counterBtn:       { backgroundColor: '#1a3a5c', borderRadius: 7, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  counterBtnText:   { color: '#e3f2fd', fontSize: 12, fontWeight: 'bold' },
+  counterBtnSub:    { color: '#64b5f6', fontSize: 10 },
+  cancelBtn:        { alignItems: 'center', paddingVertical: 6 },
+  cancelBtnText:    { color: '#555', fontSize: 11 },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a2e' },
