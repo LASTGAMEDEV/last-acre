@@ -144,7 +144,7 @@ import { View, Text, TouchableOpacity, Modal, Animated, StyleSheet, Pressable } 
 interface HelpSheetProps {
   title: string;
   body: string;
-  size?: number;
+  buttonSize?: number;
 }
 
 export default function HelpSheet({ title, body, size = 14 }: HelpSheetProps) {
@@ -318,7 +318,7 @@ Replace with:
                         <HelpSheet
                           title="Gene Grade"
                           body="Each gene is scored D (weak) to S (exceptional). The overall grade is the average of all four genes. Higher grades mean more production, disease resistance, faster growth, or better sell price. Breed selectively to improve grades over generations."
-                          size={12}
+                          buttonSize={12}
                         />
                       </View>
                       <View style={[genStyles.gradeBadge, { backgroundColor: avgColor + '33', borderColor: avgColor }]}>
@@ -373,7 +373,7 @@ Replace with:
                       <HelpSheet
                         title="Sell Pressure"
                         body="Selling a large quantity of a crop at once drives the market price down temporarily. Spreading sales over several days or selling smaller amounts avoids the penalty. The pressure lifts after a few days."
-                        size={12}
+                        buttonSize={12}
                       />
                     </View>
 ```
@@ -438,7 +438,7 @@ Replace with:
               <HelpSheet
                 title="Credit Score"
                 body="Your credit score determines how much you can borrow and at what interest rate. It's based on your rolling income over recent days, your existing debt, and how reliably you've repaid past loans."
-                size={12}
+                buttonSize={12}
               />
             </View>
 ```
@@ -531,7 +531,7 @@ Replace with:
         <HelpSheet
           title="Seed Lab"
           body="The Seed Lab lets you hybridize two seed batches to breed offspring with combined genes. Higher-generation seeds have better yield, drought resistance, and quality. Requires a Seed Lab building."
-          size={12}
+          buttonSize={12}
         />
       </View>
 ```
