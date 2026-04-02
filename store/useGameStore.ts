@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { PlantedCrop, SoilType, getSoilModifier, harvestAmount } from '../engine/crops';
-import { OwnedAnimal, inheritTrait, randomGenes, breedGenes } from '../engine/animals';
+import { OwnedAnimal, AnimalGenes, inheritTrait, randomGenes, breedGenes } from '../engine/animals';
 import { MarketPrice, NewsEvent } from '../engine/market';
 import { WeatherDay } from '../engine/climate';
 import { Loan, SavingsAccount, TimeDeposit, SaleRecord, LoanRecord,
@@ -115,6 +115,8 @@ export interface LandParcel {
   tilled: boolean;
   seedEntryId?: string; // SeedEntry id used when this parcel was planted
   soilType?: SoilType; // undefined on old saves → treated as 'loamy'
+  diseased?: boolean;   // crop blight — reduces yield, spreads to neighbors
+  diseasedDay?: number; // day disease started; crop dies after 20 days untreated
 }
 
 export interface OwnedWorker {
@@ -157,6 +159,16 @@ export interface HybridJob {
   startDay: number;
   readyDay: number;
   cost: number;
+}
+
+export interface SeasonGoal {
+  id: string;
+  icon: string;
+  label: string;
+  type: 'earn' | 'harvest_count' | 'own_ha';
+  target: number;
+  reward: number;
+  claimed?: boolean;
 }
 
 export interface GameEvent {
@@ -278,10 +290,24 @@ export interface DaySummaryEvent {
   severity: 'info' | 'good' | 'warning' | 'danger';
 }
 
+export interface RivalNewsItem {
+  id: string;
+  icon: string;
+  title: string;
+  detail: string;
+  day: number;
+}
+
+export interface PriceAlert {
+  id: string;
+  cropId: string;
+  targetPrice: number;
+  direction: 'above' | 'below';
+}
+
 export interface GameState {
   day: number;
   money: number;
-  farmName: string;
 
   parcels: LandParcel[];
   animals: OwnedAnimal[];
@@ -321,7 +347,7 @@ export interface GameState {
   completedMilestones: string[];
   milestonePopup: { icon: string; title: string; reward: number } | null;
   tutorialSeen: boolean;
-  firstMissionStep: number; // 0=plant, 1=harvest, 2=sell, 3=done
+  firstMissionStep: number; // 0=plant, 1=harvest, 2=sell, 3=hire worker, 4=sign contract, 5=done
   totalRevenue: number;
   yearEndShown: boolean;
   activeFair: FairEvent | null;
@@ -341,12 +367,55 @@ export interface GameState {
   tractorJobs: TractorJob[];
   harvestJobs: HarvestJob[];
   npcFarms: NPCFarm[];
+  rivalNews: RivalNewsItem[];
+
+  // Seasonal goals
+  seasonGoals: SeasonGoal[];
+  seasonGoalSeason: string;      // which season goals belong to
+  seasonStartMoney: number;      // money when season started (for earn goal)
+  seasonStartRevenue: number;    // totalRevenue when season started
+  seasonHarvestCount: number;    // harvests done this season
 
   seedVault: SeedEntry[];
   hybridJobs: HybridJob[];
   cropQualityMap: Record<string, number>; // cropId → quality gene from last harvested seed
 
+  // Settings
+  soundEnabled: boolean;
+  hapticEnabled: boolean;
+  musicEnabled: boolean;
+
+  // Animal product prices (fluctuate like crop prices)
+  animalPrices: Record<string, number>;
+
+  // Personal records
+  personalRecords: {
+    peakMoney: number;
+    totalHarvests: number;
+    bestSeasonRevenue: number;
+    longestDay: number;         // highest day survived across resets
+  };
+
+  // Active seasonal weather event
+  seasonalEvent: { type: 'heat_wave' | 'flood' | 'frost'; startDay: number; endsDay: number; severity: number } | null;
+
+  farmName: string;
+  priceAlerts: PriceAlert[];
+
   // Actions
+  setSoundEnabled: (enabled: boolean) => void;
+  setHapticEnabled: (enabled: boolean) => void;
+  setMusicEnabled: (enabled: boolean) => void;
+  performPrestige: () => void;
+  counterOfferContract: (templateId: string, mod: 'price' | 'quantity' | 'deadline') => void;
+  upgradeAnimalGene: (animalId: string, gene: keyof AnimalGenes) => void;
+  sellSeedBatch: (seedEntryId: string) => void;
+  buyMarketSeed: (cropId: string) => void;
+  cureDisease: (parcelId: string) => void;
+  plantCropBatch: (cropId: string, fertilized: boolean) => void;
+  setFarmName: (name: string) => void;
+  addPriceAlert: (cropId: string, targetPrice: number, direction: 'above' | 'below') => void;
+  removePriceAlert: (alertId: string) => void;
   advanceDay: () => void;
   advanceDays: (n: number) => void;
   buyParcel: (parcelId: string) => void;
@@ -381,6 +450,7 @@ export interface GameState {
   openTimeDeposit: (amount: number, termDays: number, rate: number) => void;
   closeTimeDeposit: (depositId: string) => void;
   clearMilestonePopup: () => void;
+  claimSeasonGoalReward: (goalId: string) => void;
   resetGame: () => void;
   markTutorialSeen: () => void;
   markYearEndShown: () => void;
@@ -520,7 +590,6 @@ function makeInitialState() {
   return {
     day: 1,
     money: 1_000_000,
-    farmName: 'My Farm',
     parcels: generateParcelsFromMap(),
     animals: [] as OwnedAnimal[],
     animalInventory: {} as Record<string, number>,
@@ -573,17 +642,32 @@ function makeInitialState() {
     activeEvents: [] as GameEvent[],
     machineRepairs: [] as MachineRepair[],
     npcFarms: initNpcFarms(),
+    rivalNews: [] as RivalNewsItem[],
+    seasonGoals: [] as SeasonGoal[],
+    seasonGoalSeason: '',
+    seasonStartMoney: 1_000_000,
+    seasonStartRevenue: 0,
+    seasonHarvestCount: 0,
     mapFields: INITIAL_MAP_FIELDS,
     mapPanX: 0,
     mapPanY: 0,
     mapZoom: 0, // 0 = sentinel: first open, compute fit-to-screen in WorldMap component
     selectedMapFieldId: null,
+    soundEnabled: true,
+    hapticEnabled: true,
+    musicEnabled: true,
+    animalPrices: { eggs: 3.50, milk: 0.90, honey: 25.0, wool: 42.0, meat: 14.0 },
+    personalRecords: { peakMoney: 1_000_000, totalHarvests: 0, bestSeasonRevenue: 0, longestDay: 1 },
+    seasonalEvent: null as { type: 'heat_wave' | 'flood' | 'frost'; startDay: number; endsDay: number; severity: number } | null,
+    farmName: 'My Farm',
+    priceAlerts: [] as PriceAlert[],
   };
 }
 
 function getWorkerBonuses(workers: OwnedWorker[]) {
   const fieldWorkerCount = workers.filter(w => w.typeId === 'field_worker').length;
   const agronomistCount  = workers.filter(w => w.typeId === 'agronomist').length;
+  const botanistCount    = workers.filter(w => w.typeId === 'botanist').length;
   const keeperCount      = workers.filter(w => w.typeId === 'animal_keeper').length;
   const zootechCount     = workers.filter(w => w.typeId === 'zootechnician').length;
   const mechanicCount    = workers.filter(w => w.typeId === 'mechanic').length;
@@ -595,6 +679,8 @@ function getWorkerBonuses(workers: OwnedWorker[]) {
     // Fields
     cropYieldMultiplier:    1 + (fieldWorkerCount * 0.05) + (agronomistCount * 0.15),
     cropGrowthReduction:    agronomistCount > 0 ? 1 : 0,
+    fertilityDrainMult:     botanistCount > 0 ? 0.5 : 1.0,      // Botanist: −50% fertility drain
+    fallowRestoreInterval:  botanistCount > 0 ? 15 : 30,         // Botanist: fallow recovers 2× faster
     // Animals
     animalProductionMult:   1 + (keeperCount * 0.08) + (zootechCount * 0.25),
     sicknessBonusReduction: zootechCount > 0 ? 0.3 : 0,
@@ -655,8 +741,9 @@ export const useGameStore = create<GameState>()(
           return { ...p, price: Math.max(1, nudged) };
         });
 
-        // Fallow recovery: owned empty parcels regain +1 fertility every 30 days
-        const fallowParcels = newDay % 30 === 0
+        // Fallow recovery: owned empty parcels regain +1 fertility (Botanist speeds this up)
+        const fallowInterval = workerBonuses.fallowRestoreInterval;
+        const fallowParcels = newDay % fallowInterval === 0
           ? state.parcels.map(p =>
               p.owned && !p.plantedCrop && p.fertility < 25
                 ? { ...p, fertility: Math.min(25, p.fertility + 1) }
@@ -704,7 +791,12 @@ export const useGameStore = create<GameState>()(
           });
         }
 
-        // Season change announcement
+        // Season change announcement + goal generation
+        let newSeasonGoals: SeasonGoal[] | null = null;
+        let newSeasonGoalSeason: string | null = null;
+        let newSeasonStartMoney = 0;
+        let newSeasonStartRevenue = 0;
+
         if (season !== prevSeason) {
           const SEASON_ICONS: Record<string, string> = { spring: '🌸', summer: '☀️', autumn: '🍂', winter: '❄️' };
           const enteringPeak = CROP_TYPES.filter(c => c.peakSeason === season).map(c => c.name);
@@ -719,6 +811,20 @@ export const useGameStore = create<GameState>()(
             ].filter(Boolean).join(' · '),
             severity: 'info',
           });
+
+          // Generate fresh seasonal goals
+          const ownedHa = state.parcels.filter(p => p.owned).reduce((s, p) => s + p.hectares, 0);
+          const earnTarget = Math.round(Math.max(20_000, state.totalRevenue * 0.15) / 5_000) * 5_000;
+          const harvestTarget = Math.max(5, Math.min(25, state.parcels.filter(p => p.owned).length * 2));
+          const haTarget = Math.round(ownedHa + Math.max(5, Math.floor(ownedHa * 0.2)));
+          newSeasonGoals = [
+            { id: `earn_${newDay}`, icon: '💰', label: `Earn $${earnTarget.toLocaleString()} this season`, type: 'earn', target: earnTarget, reward: 3000 },
+            { id: `harvest_${newDay}`, icon: '🌾', label: `Harvest ${harvestTarget} times`, type: 'harvest_count', target: harvestTarget, reward: 2000 },
+            { id: `land_${newDay}`, icon: '🗺️', label: `Own ${haTarget}+ ha`, type: 'own_ha', target: haTarget, reward: 1500 },
+          ];
+          newSeasonGoalSeason = season;
+          newSeasonStartMoney = state.money;
+          newSeasonStartRevenue = state.totalRevenue;
         }
 
         // Farm Fair: tick down or randomly start
@@ -737,6 +843,37 @@ export const useGameStore = create<GameState>()(
           });
         }
 
+        // ── Seasonal weather events ──────────────────────────────────────────
+        const EVENT_BY_SEASON: Record<string, ('heat_wave' | 'flood' | 'frost')[]> = {
+          spring: ['flood'],
+          summer: ['heat_wave'],
+          autumn: ['flood', 'frost'],
+          winter: ['frost'],
+        };
+        let seasonalEvent = state.seasonalEvent ?? null;
+        // Expire old event
+        if (seasonalEvent && newDay > seasonalEvent.endsDay) {
+          summary.push({ id: 'event_end', icon: '✅', title: `${seasonalEvent.type.replace('_', ' ')} has passed`, severity: 'info' });
+          seasonalEvent = null;
+        }
+        // Chance to start new event (3% per day if none active)
+        if (!seasonalEvent && Math.random() < 0.03) {
+          const possible = EVENT_BY_SEASON[season] ?? ['heat_wave'];
+          const type = possible[Math.floor(Math.random() * possible.length)];
+          const severity = 0.5 + Math.random() * 0.5; // 0.5–1.0
+          const durationDays = Math.round(5 + Math.random() * 10); // 5–15 days
+          seasonalEvent = { type, startDay: newDay, endsDay: newDay + durationDays, severity };
+          const EVENT_ICONS: Record<string, string> = { heat_wave: '🌡️', flood: '🌊', frost: '❄️' };
+          const EVENT_NAMES: Record<string, string> = { heat_wave: 'Heat Wave', flood: 'Flood', frost: 'Early Frost' };
+          summary.push({
+            id: 'seasonal_event',
+            icon: EVENT_ICONS[type],
+            title: `${EVENT_NAMES[type]}! (${durationDays}d)`,
+            detail: type === 'heat_wave' ? '−15% crop yield while active' : type === 'flood' ? 'Soil fertility draining faster' : 'Crops at risk of damage',
+            severity: 'danger',
+          });
+        }
+
         // Sell pressure: apply active modifiers to prices, then expire old ones
         const activePressures = (state.sellPressures ?? []).filter(sp => sp.expiresDay >= newDay);
         prices = prices.map(p => {
@@ -745,9 +882,38 @@ export const useGameStore = create<GameState>()(
         });
         const sellPressures = [...activePressures];
 
+        // ── Animal product price fluctuation ────────────────────────────────
+        const { ANIMAL_PRODUCTS: AP_DATA } = require('../data/animalProducts');
+        const ANIMAL_PEAK_SEASON: Record<string, string> = {
+          eggs: 'spring', milk: 'summer', honey: 'summer', wool: 'winter', meat: 'autumn',
+        };
+        let animalPrices = { ...(state.animalPrices ?? { eggs: 3.50, milk: 0.90, honey: 25.0, wool: 42.0, meat: 14.0 }) };
+        for (const product of AP_DATA) {
+          const base = product.basePrice as number;
+          const current = animalPrices[product.productType] ?? base;
+          const peakBonus = ANIMAL_PEAK_SEASON[product.productType] === season ? 0.12 : -0.04;
+          const randomDelta = (Math.random() - 0.5) * 0.08;
+          const meanRevert = (base - current) / base * 0.05;
+          const newPrice = Math.max(base * 0.4, Math.min(base * 2.5, current * (1 + peakBonus / 90 + randomDelta * 0.1 + meanRevert)));
+          animalPrices[product.productType] = Math.round(newPrice * 100) / 100;
+        }
+
         // ── NPC competitor sells ─────────────────────────────────────────────
 
+        // Map NPC farm IDs to map owner types
+        const NPC_MAP_OWNER: Record<string, MapOwner> = {
+          'npc_rivera':    'rivalA',
+          'npc_verde':     'rivalA',
+          'npc_sierra':    'rivalA',
+          'npc_golden':    'rivalB',
+          'npc_altavista': 'rivalB',
+        };
+
         let npcFarms: NPCFarm[] = [...(state.npcFarms ?? [])];
+        let mapFields = [...state.mapFields];
+        const rivalNewsItems: RivalNewsItem[] = [];
+        const foreclosureParcels: LandParcel[] = [];
+
         npcFarms = npcFarms.map(farm => {
           if (farm.nextSellDay > newDay) return farm;
           // Pick a random specialty crop
@@ -762,12 +928,79 @@ export const useGameStore = create<GameState>()(
               modifier: pressureMod,
               expiresDay: newDay + duration,
             });
+            const { CROP_TYPES: CT } = require('../data/cropTypes');
+            const cropName = CT.find((c: any) => c.id === cropId)?.name ?? cropId;
+            const sellEvent = {
+              id: `npc_sell_${farm.id}_${newDay}`,
+              icon: '🏭',
+              title: `${farm.name} flooded the market`,
+              detail: `Sold ${volume} ${cropName} · prices depressed ${Math.round((1 - pressureMod) * 100)}% for ${duration}d`,
+              severity: 'warning' as const,
+            };
+            summary.push(sellEvent);
+            rivalNewsItems.push({ ...sellEvent, day: newDay });
           }
           // Grow NPC wealth slightly each sell cycle
+          const newWealth = Math.round(farm.wealth * 1.02 + volume * 0.5);
+
+          // NPC land buying: if wealthy enough, occasionally buy a forsale field
+          const mapOwner = NPC_MAP_OWNER[farm.id];
+          if (mapOwner && newWealth > 25_000 && Math.random() < 0.04) {
+            const forsaleFields = mapFields.filter(f => f.owner === 'forsale');
+            if (forsaleFields.length > 0) {
+              const target = forsaleFields[Math.floor(Math.random() * forsaleFields.length)];
+              mapFields = mapFields.map(f => f.id === target.id ? { ...f, owner: mapOwner } : f);
+              const buyEvent = {
+                id: `npc_buy_${farm.id}_${newDay}`,
+                icon: '🏴',
+                title: `${farm.name} acquired new land!`,
+                detail: `${target.name} (~${target.approximateHa}ha) is now under rival control`,
+                severity: 'warning' as const,
+              };
+              summary.push(buyEvent);
+              rivalNewsItems.push({ ...buyEvent, day: newDay });
+            }
+          }
+
+          // NPC land losing / bankruptcy: if broke, revert a field + offer discounted parcel
+          if (mapOwner && newWealth < 5_000) {
+            const ownedFields = mapFields.filter(f => f.owner === mapOwner);
+            if (ownedFields.length > 0) {
+              const lost = ownedFields[Math.floor(Math.random() * ownedFields.length)];
+              mapFields = mapFields.map(f => f.id === lost.id ? { ...f, owner: 'forsale', askingPrice: Math.round(lost.approximateHa * 1400) } : f);
+              // Add a discounted foreclosure parcel to the player's buy list (if not already there)
+              const foreId = `foreclosure_${farm.id}`;
+              if (!state.parcels.some(p => p.id === foreId)) {
+                foreclosureParcels.push({
+                  id: foreId,
+                  name: `${farm.name}'s Holding`,
+                  fertility: 8 + (farm.tier * 3),
+                  hectares: farm.tier * 2,
+                  pricePerHa: 1200 + (farm.tier * 300), // ~40% below market
+                  owned: false,
+                  hasWeeds: true,
+                  plantedCrop: null,
+                  greenhouse: false,
+                  irrigated: false,
+                  tilled: false,
+                } as LandParcel);
+              }
+              const loseEvent = {
+                id: `npc_lose_${farm.id}_${newDay}`,
+                icon: '📉',
+                title: `${farm.name} is going bankrupt!`,
+                detail: `Foreclosure sale — ${farm.tier * 2}ha parcel available at 40% off`,
+                severity: 'info' as const,
+              };
+              summary.push(loseEvent);
+              rivalNewsItems.push({ ...loseEvent, day: newDay });
+            }
+          }
+
           return {
             ...farm,
             nextSellDay: newDay + farm.sellIntervalDays,
-            wealth: Math.round(farm.wealth * 1.02 + volume * 0.5),
+            wealth: newWealth,
           };
         });
 
@@ -1633,7 +1866,7 @@ export const useGameStore = create<GameState>()(
               siloTotal += units;
               workerNewInventory[p.plantedCrop.cropId] = (workerNewInventory[p.plantedCrop.cropId] ?? 0) + units;
               if (!newHarvestedIds.includes(p.plantedCrop.cropId)) newHarvestedIds.push(p.plantedCrop.cropId);
-              const newFertility = Math.max(1, p.fertility - (cropType.fertilityDrain ?? 0));
+              const newFertility = Math.max(1, p.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonuses.fertilityDrainMult));
               return { ...p, plantedCrop: null, lastCropId: p.plantedCrop.cropId, fertility: newFertility };
             });
             (autoSellFinalInventory as any).__workerInventory = workerNewInventory;
@@ -1772,7 +2005,7 @@ export const useGameStore = create<GameState>()(
               Math.round(harvestAmount(parcel.plantedCrop!, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, 1.0)),
               siloCapForHarvest - currentTotal,
             );
-            const newFertility = Math.max(1, parcel.fertility - (cropType.fertilityDrain ?? 0));
+            const newFertility = Math.max(1, parcel.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonuses.fertilityDrainMult));
             finalParcels = finalParcels.map((p: LandParcel) =>
               p.id === pid
                 ? { ...p, plantedCrop: null, lastCropId: parcel.plantedCrop!.cropId, fertility: newFertility, tilled: false }
@@ -1788,7 +2021,65 @@ export const useGameStore = create<GameState>()(
         }
         updatedHarvestJobs = updatedHarvestJobs.filter((hj: HarvestJob) => hj.processedHa < hj.totalHa);
 
-        let finalMoney = Math.max(0, moneyAfterMaintenance + moneyDelta + totalInsurancePayoutAll - defaultPenalty + depositPayoutTotal - contractPenaltyTotal + futuresIncome - futuresPenalty + autoSellIncome - vetTreatmentCost);
+        // ── Crop disease spread ──────────────────────────────────────────────
+        const hasShelter = state.buildings.includes('bld_shelter');
+        const anyDisease = finalParcels.some(p => p.owned && p.diseased);
+        const fieldWorkerCount = (state.workers ?? []).filter(w => w.typeId === 'field_worker').length;
+        let autoChemistryCures = fieldWorkerCount; // field workers cure 1 diseased parcel/day each
+        finalParcels = finalParcels.map(p => {
+          if (!p.owned) return p;
+          // Auto-cure by field workers
+          if (p.diseased && autoChemistryCures > 0) {
+            autoChemistryCures--;
+            return { ...p, diseased: false, diseasedDay: undefined };
+          }
+          // Destroy crop if diseased > 20 days untreated
+          if (p.diseased && p.diseasedDay && newDay - p.diseasedDay > 20) {
+            summary.push({ id: `blight_${p.id}`, icon: '🦠', title: `Blight destroyed crop on ${p.name}`, severity: 'danger' });
+            return { ...p, plantedCrop: null, diseased: false, diseasedDay: undefined };
+          }
+          if (!p.plantedCrop || p.diseased) return p;
+          // Spread: 0.4% base + 1.2% extra if any disease present on farm
+          const spreadChance = 0.004 + (anyDisease ? 0.012 : 0);
+          if (Math.random() < spreadChance) {
+            return { ...p, diseased: true, diseasedDay: newDay };
+          }
+          return p;
+        });
+        // Announce new outbreaks (parcels that just became diseased this day)
+        const newlyDiseased = finalParcels.filter(p => p.diseased && p.diseasedDay === newDay);
+        if (newlyDiseased.length > 0) {
+          summary.push({ id: 'blight_new', icon: '🦠', title: `Crop blight on ${newlyDiseased.length} plot${newlyDiseased.length > 1 ? 's' : ''}`, detail: 'Treat quickly or lose the crop', severity: 'danger' });
+        }
+
+        // ── Price alert triggers ─────────────────────────────────────────────
+        let priceAlerts = [...(state.priceAlerts ?? [])];
+        let alertSellIncome = 0;
+        const alertSalesEntries: SaleRecord[] = [];
+        const triggeredAlertIds: string[] = [];
+        for (const alert of priceAlerts) {
+          const currentPrice = prices.find(p => p.cropId === alert.cropId)?.price ?? 0;
+          const triggered =
+            alert.direction === 'below'
+              ? currentPrice <= alert.targetPrice
+              : currentPrice >= alert.targetPrice;
+          if (triggered) {
+            const qty = Math.round(harvestInventory[alert.cropId] ?? 0);
+            if (qty > 0) {
+              const revenue = Math.round(qty * currentPrice);
+              alertSellIncome += revenue;
+              harvestInventory = { ...harvestInventory, [alert.cropId]: 0 };
+              const cropName = CROP_TYPES.find(c => c.id === alert.cropId)?.name ?? alert.cropId;
+              alertSalesEntries.push({ day: newDay, amount: revenue, category: 'crops' as const });
+              const dirLabel = alert.direction === 'below' ? '≤' : '≥';
+              summary.push({ id: `alert_${alert.id}`, icon: '🎯', title: `Price alert: sold ${qty.toLocaleString()} ${cropName}`, detail: `${dirLabel}$${alert.targetPrice.toFixed(2)} hit · $${revenue.toLocaleString()} total`, severity: 'good' });
+            }
+            triggeredAlertIds.push(alert.id);
+          }
+        }
+        priceAlerts = priceAlerts.filter(a => !triggeredAlertIds.includes(a.id));
+
+        let finalMoney = Math.max(0, moneyAfterMaintenance + moneyDelta + totalInsurancePayoutAll - defaultPenalty + depositPayoutTotal - contractPenaltyTotal + futuresIncome - futuresPenalty + autoSellIncome + alertSellIncome - vetTreatmentCost);
 
         // Crops ready to harvest (after field worker cleared some)
         const cropsReady = finalParcels.filter(p => {
@@ -1828,6 +2119,8 @@ export const useGameStore = create<GameState>()(
             insurances: state.insurances,
             savings,
             harvestedCropIds: state.harvestedCropIds,
+            seedVault: state.seedVault,
+            workers: state.workers,
           },
           state.completedMilestones
         );
@@ -1876,9 +2169,12 @@ export const useGameStore = create<GameState>()(
           savings,
           loans,
           loanHistory,
-          salesLog: [...salesLog, ...autoSellSalesEntries],
-          totalRevenue: state.totalRevenue + autoSellIncome,
-          parcels: finalParcels,
+          salesLog: [...salesLog, ...autoSellSalesEntries, ...alertSalesEntries],
+          totalRevenue: state.totalRevenue + autoSellIncome + alertSellIncome,
+          priceAlerts,
+          parcels: foreclosureParcels.length > 0
+            ? [...finalParcels, ...foreclosureParcels]
+            : finalParcels,
           fieldEvents,
           newsEvents,
           activeFair,
@@ -1903,9 +2199,26 @@ export const useGameStore = create<GameState>()(
           activeEvents,
           machineRepairs,
           npcFarms,
+          mapFields,
+          rivalNews: [...rivalNewsItems, ...(state.rivalNews ?? [])].slice(0, 30),
+          seasonalEvent,
+          animalPrices,
           tractorJobs: remainingTractorJobs,
           harvestJobs: updatedHarvestJobs,
+          personalRecords: {
+            peakMoney: Math.max(state.personalRecords?.peakMoney ?? 0, finalMoney),
+            totalHarvests: state.personalRecords?.totalHarvests ?? 0,
+            bestSeasonRevenue: state.personalRecords?.bestSeasonRevenue ?? 0,
+            longestDay: Math.max(state.personalRecords?.longestDay ?? 0, newDay),
+          },
           ...(latestMilestonePopup ? { milestonePopup: latestMilestonePopup } : {}),
+          ...(newSeasonGoals ? {
+            seasonGoals: newSeasonGoals,
+            seasonGoalSeason: newSeasonGoalSeason!,
+            seasonStartMoney: newSeasonStartMoney,
+            seasonStartRevenue: newSeasonStartRevenue,
+            seasonHarvestCount: 0,
+          } : {}),
         });
       },
 
@@ -1978,6 +2291,8 @@ export const useGameStore = create<GameState>()(
         const seedGenes = seedEntry?.genes ?? { yield: 1, drought: 1, growth: 1, quality: 1 };
         const effectiveGrowthDays = Math.round(cropType.growthDays / seedGenes.growth);
         if (state.day < crop.plantedDay + effectiveGrowthDays) return;
+        // Worker bonuses apply to manual harvest too
+        const workerBonusesManual = getWorkerBonuses(state.workers ?? []);
         // Silo cap
         const siloCapacity = getSiloCapacity(state.buildings);
         const totalInventory = Object.values(state.inventory).reduce((a, b) => a + b, 0);
@@ -2003,7 +2318,8 @@ export const useGameStore = create<GameState>()(
         // Soil type affinity
         const soilMod = getSoilModifier(parcel.soilType, crop.cropId);
         const randomEventMod = getHarvestModifier(state.activeEvents ?? [], parcelId, crop.cropId);
-        const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationBonus * soilMod * seedGenes.yield * randomEventMod), siloCapacity - totalInventory);
+        const diseaseMod = parcel.diseased ? 0.80 : 1.0;
+        const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationBonus * soilMod * seedGenes.yield * randomEventMod * workerBonusesManual.cropYieldMultiplier * diseaseMod), siloCapacity - totalInventory);
         // Update quality map and consume seed batch
         const nextCropQualityMap = { ...state.cropQualityMap };
         if (seedEntry) {
@@ -2015,10 +2331,10 @@ export const useGameStore = create<GameState>()(
         const harvestedCropIds = state.harvestedCropIds.includes(crop.cropId)
           ? state.harvestedCropIds
           : [...state.harvestedCropIds, crop.cropId];
-        const newFertility = Math.max(1, parcel.fertility - (cropType.fertilityDrain ?? 0));
+        const newFertility = Math.max(1, parcel.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonusesManual.fertilityDrainMult));
         set({
           parcels: state.parcels.map(p => p.id === parcelId
-            ? { ...p, plantedCrop: null, lastCropId: crop.cropId, fertility: newFertility, seedEntryId: undefined }
+            ? { ...p, plantedCrop: null, lastCropId: crop.cropId, fertility: newFertility, seedEntryId: undefined, diseased: false, diseasedDay: undefined }
             : p
           ),
           inventory: { ...state.inventory, [crop.cropId]: (state.inventory[crop.cropId] ?? 0) + units },
@@ -2026,6 +2342,14 @@ export const useGameStore = create<GameState>()(
           cropQualityMap: nextCropQualityMap,
           seedVault: nextSeedVaultAfterHarvest,
           firstMissionStep: state.firstMissionStep === 1 ? 2 : state.firstMissionStep,
+          seasonHarvestCount: (state.seasonHarvestCount ?? 0) + 1,
+          personalRecords: {
+            ...(state.personalRecords ?? {}),
+            peakMoney: state.personalRecords?.peakMoney ?? 0,
+            totalHarvests: (state.personalRecords?.totalHarvests ?? 0) + 1,
+            bestSeasonRevenue: state.personalRecords?.bestSeasonRevenue ?? 0,
+            longestDay: state.personalRecords?.longestDay ?? state.day,
+          },
         });
       },
 
@@ -2056,6 +2380,7 @@ export const useGameStore = create<GameState>()(
           totalRevenue: state.totalRevenue + revenue,
           sellPressures: newPressures,
           firstMissionStep: state.firstMissionStep === 2 ? 3 : state.firstMissionStep,
+          // note: step 3=hire worker, 4=sign contract are advanced by hireWorker and acceptContract
         });
       },
 
@@ -2301,7 +2626,8 @@ export const useGameStore = create<GameState>()(
         if (toSell <= 0) return;
         const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
-        const revenue = sellRevenue(toSell, product.basePrice) * coopBonus * prestigeBonus;
+        const livePrice = (state.animalPrices ?? {})[productType] ?? product.basePrice;
+        const revenue = sellRevenue(toSell, livePrice) * coopBonus * prestigeBonus;
         set({
           money: state.money + revenue,
           animalInventory: { ...state.animalInventory, [productType]: inStock - toSell },
@@ -2620,12 +2946,143 @@ export const useGameStore = create<GameState>()(
           completed: false,
           failed: false,
         };
-        set({ contracts: [...state.contracts, contract] });
+        set({
+          contracts: [...state.contracts, contract],
+          firstMissionStep: state.firstMissionStep === 4 ? 5 : state.firstMissionStep,
+        });
       },
 
       declineContract: (templateId) => {
         const state = get();
         set({ declinedTemplates: [...state.declinedTemplates, templateId] });
+      },
+
+      counterOfferContract: (templateId, mod) => {
+        const state = get();
+        const { CONTRACT_TEMPLATES } = require('../engine/contracts');
+        const template = CONTRACT_TEMPLATES.find((t: any) => t.id === templateId);
+        if (!template) return;
+        const price = state.prices.find(p => p.cropId === template.cropId);
+        if (!price) return;
+        const priceBonus = mod === 'price' ? template.priceBonus * 1.10 : template.priceBonus;
+        const termDays = mod === 'deadline' ? template.termDays + 20 : template.termDays;
+        const baseAmount = template.amountRange[0] + Math.floor(Math.random() * (template.amountRange[1] - template.amountRange[0]));
+        const amount = mod === 'quantity' ? template.amountRange[0] : baseAmount;
+        const contract: Contract = {
+          id: `contract_${Date.now()}`,
+          templateId,
+          cropId: template.cropId,
+          amount,
+          pricePerUnit: price.price * priceBonus,
+          deadlineDay: state.day + termDays,
+          acceptedDay: state.day,
+          delivered: 0,
+          completed: false,
+          failed: false,
+        };
+        set({ contracts: [...state.contracts, contract] });
+      },
+
+      upgradeAnimalGene: (animalId, gene) => {
+        const state = get();
+        const animal = state.animals.find(a => a.id === animalId);
+        if (!animal) return;
+        const genes = animal.genes ?? { production: 1, hardiness: 1, growth: 1, value: 1 };
+        const currentVal = (genes as any)[gene] as number;
+        if (currentVal >= 1.5) return;
+        const cost = Math.round(800 * currentVal * currentVal);
+        if (state.money < cost) return;
+        const newGenes = { ...genes, [gene]: Math.min(1.5, parseFloat((currentVal + 0.05).toFixed(2))) };
+        set({
+          animals: state.animals.map(a => a.id === animalId ? { ...a, genes: newGenes } : a),
+          money: state.money - cost,
+        });
+      },
+
+      sellSeedBatch: (seedEntryId) => {
+        const state = get();
+        const entry = state.seedVault.find(s => s.id === seedEntryId);
+        if (!entry) return;
+        const avgGene = (entry.genes.yield + entry.genes.drought + entry.genes.growth + entry.genes.quality) / 4;
+        const pricePerSeed = Math.round(30 * avgGene * Math.max(1, entry.generation));
+        const revenue = pricePerSeed * entry.quantity;
+        set({
+          seedVault: state.seedVault.filter(s => s.id !== seedEntryId),
+          money: state.money + revenue,
+        });
+      },
+
+      buyMarketSeed: (cropId) => {
+        const state = get();
+        const crop = CROP_TYPES.find(c => c.id === cropId);
+        if (!crop) return;
+        const costPerSeed = Math.round((crop.seedCost ?? 50) * 1.5 + 25);
+        const quantity = 5;
+        const totalCost = costPerSeed * quantity;
+        if (state.money < totalCost) return;
+        const existing = state.seedVault.find(s => s.cropId === cropId && s.generation === 1 && s.genes.yield === 1.0 && s.genes.drought === 1.0);
+        if (existing) {
+          set({
+            seedVault: state.seedVault.map(s => s.id === existing.id ? { ...s, quantity: s.quantity + quantity } : s),
+            money: state.money - totalCost,
+          });
+        } else {
+          const newEntry: SeedEntry = {
+            id: `seed_mkt_${Date.now()}`,
+            cropId,
+            generation: 1,
+            genes: { yield: 1.0, drought: 1.0, growth: 1.0, quality: 1.0 },
+            createdDay: state.day,
+            quantity,
+          };
+          set({
+            seedVault: [...state.seedVault, newEntry],
+            money: state.money - totalCost,
+          });
+        }
+      },
+
+      cureDisease: (parcelId) => {
+        const state = get();
+        const CURE_COST = 150;
+        if (state.money < CURE_COST) return;
+        set({
+          parcels: state.parcels.map(p => p.id === parcelId ? { ...p, diseased: false, diseasedDay: undefined } : p),
+          money: state.money - CURE_COST,
+        });
+      },
+
+      plantCropBatch: (cropId, fertilized) => {
+        const state = get();
+        const crop = CROP_TYPES.find(c => c.id === cropId);
+        if (!crop) return;
+        const idleParcels = state.parcels.filter(p => p.owned && !p.plantedCrop && !p.hasWeeds);
+        if (idleParcels.length === 0) return;
+        const fertilizerCostPerHa = fertilized ? 50 : 0;
+        const totalCost = idleParcels.reduce((sum, p) => sum + Math.round((crop.seedCost + fertilizerCostPerHa) * p.hectares), 0);
+        if (state.money < totalCost) return;
+        const plantDay = state.day;
+        const idleIds = new Set(idleParcels.map(p => p.id));
+        set({
+          parcels: state.parcels.map(p => {
+            if (!idleIds.has(p.id)) return p;
+            return { ...p, plantedCrop: { cropId, parcelId: p.id, plantedDay: plantDay, hectares: p.hectares, fertilized }, tilled: false };
+          }),
+          money: state.money - totalCost,
+        });
+      },
+
+      setFarmName: (name) => set({ farmName: name.trim() || 'My Farm' }),
+
+      addPriceAlert: (cropId, targetPrice, direction) => {
+        const state = get();
+        if ((state.priceAlerts ?? []).some(a => a.cropId === cropId)) return;
+        set({ priceAlerts: [...(state.priceAlerts ?? []), { id: `alert_${Date.now()}`, cropId, targetPrice, direction }] });
+      },
+
+      removePriceAlert: (alertId) => {
+        const state = get();
+        set({ priceAlerts: (state.priceAlerts ?? []).filter(a => a.id !== alertId) });
       },
 
       deliverCrop: (contractId, amount) => {
@@ -2862,6 +3319,43 @@ export const useGameStore = create<GameState>()(
         set({ milestonePopup: null });
       },
 
+      setSoundEnabled: (enabled: boolean) => set({ soundEnabled: enabled }),
+      setHapticEnabled: (enabled: boolean) => set({ hapticEnabled: enabled }),
+      setMusicEnabled: (enabled: boolean) => set({ musicEnabled: enabled }),
+
+      performPrestige: () => {
+        const state = get();
+        if (state.day < 1080) return;
+        const newPrestige = (state.prestige ?? 0) + 1;
+        const newRecords = {
+          peakMoney: Math.max(state.personalRecords?.peakMoney ?? 0, state.money),
+          totalHarvests: state.personalRecords?.totalHarvests ?? 0,
+          bestSeasonRevenue: state.personalRecords?.bestSeasonRevenue ?? 0,
+          longestDay: Math.max(state.personalRecords?.longestDay ?? 0, state.day),
+        };
+        const fresh = makeInitialState();
+        set({
+          ...fresh,
+          prestige: newPrestige,
+          tutorialSeen: true,
+          personalRecords: newRecords,
+          money: fresh.money + newPrestige * 2000, // $2k bonus per prestige level
+          soundEnabled: state.soundEnabled,
+          hapticEnabled: state.hapticEnabled,
+          musicEnabled: state.musicEnabled,
+        });
+      },
+
+      claimSeasonGoalReward: (goalId: string) => {
+        const state = get();
+        const goal = state.seasonGoals.find(g => g.id === goalId);
+        if (!goal || goal.claimed) return;
+        set({
+          money: state.money + goal.reward,
+          seasonGoals: state.seasonGoals.map(g => g.id === goalId ? { ...g, claimed: true } : g),
+        });
+      },
+
       markYearEndShown: () => {
         set({ yearEndShown: true });
       },
@@ -2936,6 +3430,7 @@ export const useGameStore = create<GameState>()(
       harvestAllReady: () => {
         const state = get();
         const yieldBonus = 1.0;
+        const workerBonusesAll = getWorkerBonuses(state.workers ?? []);
         const siloCapacity = getSiloCapacity(state.buildings);
         const { harvestAmount } = require('../engine/crops');
         let totalInventory = Object.values(state.inventory).reduce((a: number, b) => a + (b as number), 0);
@@ -2960,7 +3455,7 @@ export const useGameStore = create<GameState>()(
           totalInventory += units;
           newInventory[p.plantedCrop.cropId] = (newInventory[p.plantedCrop.cropId] ?? 0) + units;
           if (!newHarvestedCropIds.includes(p.plantedCrop.cropId)) newHarvestedCropIds.push(p.plantedCrop.cropId);
-          const newFertility = Math.max(1, p.fertility - (cropType.fertilityDrain ?? 0));
+          const newFertility = Math.max(1, p.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonusesAll.fertilityDrainMult));
           return { ...p, plantedCrop: null, lastCropId: p.plantedCrop.cropId, fertility: newFertility };
         });
         set({ parcels: newParcels, inventory: newInventory, harvestedCropIds: newHarvestedCropIds });
@@ -3034,7 +3529,11 @@ export const useGameStore = create<GameState>()(
         if (state.money < workerType.dailyWage) return;
 
         const worker: OwnedWorker = { id: `worker_${Date.now()}`, typeId, hiredDay: state.day };
-        set({ money: state.money - workerType.dailyWage, workers: [...(state.workers ?? []), worker] });
+        set({
+          money: state.money - workerType.dailyWage,
+          workers: [...(state.workers ?? []), worker],
+          firstMissionStep: state.firstMissionStep === 3 ? 4 : state.firstMissionStep,
+        });
       },
 
       fireWorker: (workerId) => {
@@ -3147,7 +3646,7 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'last-acre-save-v1',
+      name: 'last-acre-save-v3',
       storage: createJSONStorage(() => {
         try {
           return localStorage;
@@ -3172,6 +3671,8 @@ export const useGameStore = create<GameState>()(
           hireWorker, fireWorker, installIrrigation,
           renegotiateLoan, takeBankruptcyLoan, clearBankruptcy,
           setBreedingPair, clearBreedingPair,
+          counterOfferContract, upgradeAnimalGene, sellSeedBatch, buyMarketSeed,
+          cureDisease, plantCropBatch, setFarmName, addPriceAlert, removePriceAlert,
           startHybridization, selectSeedForParcel, startRepair,
           buyAttachment, buyTrailer, hitchTrailer, assignJob, assignHarvestJob, hireContractor,
           selectMapField, buyMapField, scoutMapField, savePanZoom,
