@@ -783,9 +783,14 @@ export default function TierrasScreen() {
               const ha = plantingParcel.hectares;
               const rotation = plantingParcel.lastCropId !== undefined && plantingParcel.lastCropId !== selectedCropId;
               const soilMod = getSoilModifier(plantingParcel.soilType, crop.id);
-              const seedCostPrev = Math.round(crop.seedCost * ha * (fertilized ? 1.3 : 1.0) * coopDiscount);
+              const baseSeedCost = Math.round(crop.seedCost * ha * coopDiscount);
               const fertCost = fertilized ? Math.round(crop.seedCost * ha * coopDiscount * 0.3) : 0;
-              const estYield = crop.baseYield * ha * soilMod * (rotation ? 1.15 : 1.0) * (fertilized ? 1.15 : 1.0);
+              const seedCostPrev = baseSeedCost + fertCost;
+              const fertilityMod = 0.5 + (plantingParcel.fertility / 25) * 0.5;
+              const weedMod = plantingParcel.hasWeeds ? 0.75 : 1.0;
+              const estYield = crop.baseYield * ha * fertilityMod * weedMod * soilMod
+                * (rotation ? 1.15 : 1.0)
+                * (fertilized ? (crop.fertilizerBonus ?? 1.3) : 1.0);
               const currentPrice = prices.find(p => p.cropId === crop.id)?.price ?? crop.basePrice;
               const estRevenue = Math.round(estYield * currentPrice);
               const estProfit = estRevenue - seedCostPrev;
@@ -798,7 +803,7 @@ export default function TierrasScreen() {
                 ? Math.round((cheapestHerbicide?.cost ?? 70) * ha)
                 : 0;
               const rows: [string, string, string][] = [
-                ['Seed cost', `-$${seedCostPrev.toLocaleString()}`, '#ef9a9a'],
+                ['Seed cost', `-$${baseSeedCost.toLocaleString()}`, '#ef9a9a'],
                 ...(fertilized ? [['Fertilizer addon', `-$${fertCost.toLocaleString()}`, '#ef9a9a'] as [string, string, string]] : []),
                 [`Est. yield (${Math.round(estYield).toLocaleString()} ${crop.unit})`, `+$${estRevenue.toLocaleString()}`, '#4caf50'],
                 ['Est. profit', `${estProfit >= 0 ? '+' : ''}$${estProfit.toLocaleString()}`, profitColor],
@@ -827,7 +832,7 @@ export default function TierrasScreen() {
                     </View>
                   )}
                   {herbCost > 0 && (
-                    <Text style={{ color: '#665500', fontSize: 9, marginBottom: 2 }}>* Weed cost not included in profit above</Text>
+                    <Text style={{ color: '#665500', fontSize: 9, marginBottom: 2 }}>* Yield shown at −25% weed penalty. Herbicide cost advisory only.</Text>
                   )}
                   <Text style={{ color: '#444', fontSize: 9, marginTop: 6 }}>* Estimate. Actual yield varies with weather, events, and workers.</Text>
                 </View>
