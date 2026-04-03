@@ -2,10 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { playSound } from '../../engine/sounds';
-import Svg, { Polyline, Line, Text as SvgText, Rect, G } from 'react-native-svg';
+import Svg, { Polyline, Line, Text as SvgText, Rect, G, Circle } from 'react-native-svg';
 import { useGameStore } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
+import { MARKET_REGIONS, MarketId } from '../../data/marketRegions';
 import { sellRevenue, computeSellPressureModifier, sellPressureDuration } from '../../engine/market';
 import { getSeason } from '../../engine/climate';
 import HelpSheet from '../../components/HelpSheet';
@@ -112,6 +113,18 @@ function PriceChart({ history, basePrice }: { history: number[]; basePrice: numb
   const up = current >= basePrice;
   const yLabels = [minVal, (minVal + maxVal) / 2, maxVal];
 
+  // 7-day simple moving average
+  const MA_WINDOW = 7;
+  const maPointsStr = history.reduce<string>((acc, _, i) => {
+    if (i < MA_WINDOW - 1) return acc;
+    const slice = history.slice(i - MA_WINDOW + 1, i + 1);
+    const avg = slice.reduce((s, v) => s + v, 0) / MA_WINDOW;
+    return acc + (acc ? ' ' : '') + `${toX(i).toFixed(1)},${toY(avg).toFixed(1)}`;
+  }, '');
+
+  const lastX = toX(history.length - 1);
+  const lastY = toY(current);
+
   return (
     <Svg width={CHART_W} height={CHART_H}>
       <Rect x={PAD.left} y={PAD.top} width={w} height={h} fill="#0a1628" rx={4} />
@@ -127,14 +140,18 @@ function PriceChart({ history, basePrice }: { history: number[]; basePrice: numb
         </SvgText>
       ))}
       <Polyline points={points} fill="none" stroke={up ? '#4caf50' : '#ef5350'} strokeWidth={2} />
+      {history.length >= MA_WINDOW && (
+        <Polyline points={maPointsStr} fill="none" stroke="#ffd54f" strokeWidth={1.5} strokeDasharray="5,3" opacity={0.8} />
+      )}
+      <Circle cx={lastX} cy={lastY} r={4} fill={up ? '#4caf50' : '#ef5350'} stroke="#fff" strokeWidth={1} />
     </Svg>
   );
 }
 
-type EcoTab = 'market' | 'autosell' | 'stats' | 'futures';
+type EcoTab = 'market' | 'autosell' | 'stats' | 'futures' | 'orders';
 
 export default function EconomiaScreen() {
-  const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture, priceAlerts, addPriceAlert, removePriceAlert, money } = useGameStore();
+  const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture, priceAlerts, addPriceAlert, removePriceAlert, money, marketOrders, placeMarketOrder, cancelMarketOrder, selectedMarket, setSelectedMarket } = useGameStore();
   const [selectedCrop, setSelectedCrop] = useState<string>(CROP_TYPES[0].id);
   const [ecoTab, setEcoTab] = useState<EcoTab>('market');
   const [autoSellMinPrice, setAutoSellMinPrice] = useState<Record<string, string>>({});
@@ -145,6 +162,10 @@ export default function EconomiaScreen() {
   const futuresFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [alertTargetPrice, setAlertTargetPrice] = useState('');
   const [alertDirection, setAlertDirection] = useState<'above' | 'below'>('above');
+  const [orderCrop, setOrderCrop] = useState<string>(CROP_TYPES[0].id);
+  const [orderQty, setOrderQty] = useState('');
+  const [orderTargetPrice, setOrderTargetPrice] = useState('');
+  const [orderTerm, setOrderTerm] = useState<7 | 14 | 30>(7);
 
   useEffect(() => {
     return () => {
@@ -158,6 +179,11 @@ export default function EconomiaScreen() {
   const inStock = inventory[selectedCrop] ?? 0;
   const revenue = sellRevenue(inStock, selectedPrice?.price ?? 0);
   const current = selectedPrice?.price ?? selected.basePrice;
+
+  const activeRegion = MARKET_REGIONS.find(r => r.id === (selectedMarket ?? 'local')) ?? MARKET_REGIONS[0];
+  const regionalEffectivePrice = current * activeRegion.priceMultiplier;
+  const transportTotal = Math.round(inStock * activeRegion.transportCostPerUnit);
+  const regionalRevenue = Math.max(0, Math.round(sellRevenue(inStock, regionalEffectivePrice) - transportTotal));
   const pct = ((current - selected.basePrice) / selected.basePrice) * 100;
   const up = pct >= 0;
 
@@ -209,15 +235,15 @@ export default function EconomiaScreen() {
       )}
 
       {/* Tab bar */}
-      <View style={styles.tabBar}>
-        {(['market', 'autosell', 'stats', 'futures'] as EcoTab[]).map(t => (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={{ flexDirection: 'row' }}>
+        {(['market', 'autosell', 'stats', 'futures', 'orders'] as EcoTab[]).map(t => (
           <TouchableOpacity key={t} style={[styles.tabBtn, ecoTab === t && styles.tabBtnActive]} onPress={() => setEcoTab(t)}>
             <Text style={[styles.tabBtnText, ecoTab === t && styles.tabBtnTextActive]}>
-              {t === 'market' ? '📈 Market' : t === 'autosell' ? '🤖 Auto-Sell' : t === 'stats' ? '📊 Stats' : '📉 Futures'}
+              {t === 'market' ? '📈 Market' : t === 'autosell' ? '🤖 Auto-Sell' : t === 'stats' ? '📊 Stats' : t === 'futures' ? '📉 Futures' : '📋 Orders'}
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {/* AUTO-SELL TAB */}
       {ecoTab === 'autosell' && (
@@ -488,6 +514,144 @@ export default function EconomiaScreen() {
         );
       })()}
 
+      {/* ORDERS TAB */}
+      {ecoTab === 'orders' && (() => {
+        const activeOrders = (marketOrders ?? []).filter(o => o.status === 'active');
+        const historyOrders = (marketOrders ?? []).filter(o => o.status !== 'active').slice(-20).reverse();
+        const orderCropDef = CROP_TYPES.find(c => c.id === orderCrop)!;
+        const orderCropPrice = prices.find(p => p.cropId === orderCrop)?.price ?? orderCropDef.basePrice;
+        const orderInStock = inventory[orderCrop] ?? 0;
+        const parsedOrderQty = parseInt(orderQty) || 0;
+        const parsedOrderPrice = parseFloat(orderTargetPrice) || 0;
+        const canPlaceOrder = parsedOrderQty > 0 && parsedOrderPrice > 0 && orderInStock >= parsedOrderQty;
+        return (
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+            <View style={styles.ordersSection}>
+              <Text style={styles.futuresSectionLabel}>Place Market Order</Text>
+              <Text style={styles.ordersSubtitle}>Reserve crop now; auto-sell when price target is met</Text>
+
+              {/* Crop picker */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.orderCropScroll}>
+                {CROP_TYPES.filter(c => (inventory[c.id] ?? 0) > 0).map(c => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={[styles.orderCropChip, orderCrop === c.id && styles.orderCropChipActive]}
+                    onPress={() => setOrderCrop(c.id)}
+                  >
+                    <Text style={[styles.orderCropChipText, orderCrop === c.id && styles.orderCropChipTextActive]}>{c.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <View style={styles.ordersFormRow}>
+                <View style={styles.ordersFormHalf}>
+                  <Text style={styles.ordersFormLabel}>Quantity ({orderCropDef.unit})</Text>
+                  <TextInput
+                    style={styles.ordersInput}
+                    keyboardType="numeric"
+                    value={orderQty}
+                    onChangeText={setOrderQty}
+                    placeholder={`Max ${Math.round(orderInStock)}`}
+                    placeholderTextColor="#555"
+                  />
+                </View>
+                <View style={styles.ordersFormHalf}>
+                  <Text style={styles.ordersFormLabel}>Target Price (current: ${orderCropPrice.toFixed(2)})</Text>
+                  <TextInput
+                    style={styles.ordersInput}
+                    keyboardType="numeric"
+                    value={orderTargetPrice}
+                    onChangeText={setOrderTargetPrice}
+                    placeholder={`≥ $${orderCropPrice.toFixed(2)}`}
+                    placeholderTextColor="#555"
+                  />
+                </View>
+              </View>
+
+              {/* Term selector */}
+              <View style={styles.ordersTermRow}>
+                {([7, 14, 30] as const).map(t => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.ordersTermBtn, orderTerm === t && styles.ordersTermBtnActive]}
+                    onPress={() => setOrderTerm(t)}
+                  >
+                    <Text style={[styles.ordersTermText, orderTerm === t && styles.ordersTermTextActive]}>{t}d</Text>
+                  </TouchableOpacity>
+                ))}
+                <Text style={styles.ordersTermHint}>Expires Day {day + orderTerm}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.ordersPlaceBtn, !canPlaceOrder && styles.ordersPlaceBtnDisabled]}
+                disabled={!canPlaceOrder}
+                onPress={() => {
+                  placeMarketOrder(orderCrop, parsedOrderQty, parsedOrderPrice, orderTerm);
+                  setOrderQty('');
+                  setOrderTargetPrice('');
+                }}
+              >
+                <Text style={styles.ordersPlaceBtnText}>
+                  {!canPlaceOrder
+                    ? parsedOrderQty > orderInStock ? 'Insufficient stock' : 'Enter quantity & price'
+                    : `Place Order — sell ${parsedOrderQty.toLocaleString()} ${orderCropDef.unit} @ ≥$${parsedOrderPrice.toFixed(2)}`}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Active orders */}
+            <Text style={styles.futuresSectionLabel}>Active Orders ({activeOrders.length})</Text>
+            <View style={styles.ordersCard}>
+              {activeOrders.length === 0 ? (
+                <Text style={styles.futuresEmpty}>No active orders.</Text>
+              ) : (
+                activeOrders.map(o => {
+                  const cropDef = CROP_TYPES.find(c => c.id === o.cropId);
+                  const daysLeft = o.expiresDay - day;
+                  return (
+                    <View key={o.id} style={styles.ordersRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.ordersRowName}>{cropDef?.name ?? o.cropId}</Text>
+                        <Text style={styles.ordersRowDetail}>
+                          {o.quantity.toLocaleString()} {cropDef?.unit} @ ≥${o.targetPrice.toFixed(2)}
+                        </Text>
+                        <Text style={styles.ordersRowExpiry}>⏳ {daysLeft}d remaining (Day {o.expiresDay})</Text>
+                      </View>
+                      <TouchableOpacity style={styles.ordersCancelBtn} onPress={() => cancelMarketOrder(o.id)}>
+                        <Text style={styles.ordersCancelText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+
+            {/* Order history */}
+            <Text style={styles.futuresSectionLabel}>History (last 20)</Text>
+            <View style={[styles.ordersCard, { marginBottom: 32 }]}>
+              {historyOrders.length === 0 ? (
+                <Text style={styles.futuresEmpty}>No completed orders yet.</Text>
+              ) : (
+                historyOrders.map(o => {
+                  const cropDef = CROP_TYPES.find(c => c.id === o.cropId);
+                  const badgeStyle = o.status === 'executed' ? styles.ordersBadgeGood : o.status === 'expired' ? styles.ordersBadgeWarn : styles.ordersBadgeGray;
+                  const badgeText = o.status === 'executed' ? `✅ Filled · +$${(o.executedRevenue ?? 0).toLocaleString()}` : o.status === 'expired' ? '⏰ Expired' : '❌ Cancelled';
+                  return (
+                    <View key={o.id} style={styles.ordersRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.ordersRowName}>{cropDef?.name ?? o.cropId}</Text>
+                        <Text style={styles.ordersRowDetail}>{o.quantity.toLocaleString()} {cropDef?.unit} @ ≥${o.targetPrice.toFixed(2)}</Text>
+                      </View>
+                      <Text style={badgeStyle}>{badgeText}</Text>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          </ScrollView>
+        );
+      })()}
+
       {/* MARKET TAB */}
       {ecoTab === 'market' && <>
       {/* News ticker */}
@@ -612,6 +776,34 @@ export default function EconomiaScreen() {
 
           {/* Sell panel */}
           <View style={styles.sellPanel}>
+            {/* Regional market selector */}
+            <View style={regionStyles.row}>
+              {MARKET_REGIONS.map(region => {
+                const locked = day < region.unlockDay;
+                const active = (selectedMarket ?? 'local') === region.id;
+                return (
+                  <TouchableOpacity
+                    key={region.id}
+                    style={[regionStyles.chip, active && regionStyles.chipActive, locked && regionStyles.chipLocked]}
+                    onPress={() => !locked && setSelectedMarket(region.id as MarketId)}
+                    disabled={locked}
+                    activeOpacity={locked ? 1 : 0.75}
+                  >
+                    <Text style={regionStyles.chipIcon}>{region.icon}</Text>
+                    <Text style={[regionStyles.chipName, active && regionStyles.chipNameActive, locked && regionStyles.chipNameLocked]}>
+                      {region.name}
+                    </Text>
+                    {locked ? (
+                      <Text style={regionStyles.chipLockLabel}>Unlocks day {region.unlockDay}</Text>
+                    ) : (
+                      <Text style={[regionStyles.chipMult, active && { color: '#ffd700' }]}>
+                        ×{region.priceMultiplier.toFixed(2)}{region.transportCostPerUnit > 0 ? ` -$${region.transportCostPerUnit.toFixed(2)}/u` : ''}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
             <Text style={styles.sellStock}>
               In stock:{' '}
               <Text style={styles.sellStockNum}>
@@ -643,13 +835,18 @@ export default function EconomiaScreen() {
                 </>
               );
             })()}
+            {activeRegion.transportCostPerUnit > 0 && inStock > 0 && (
+              <Text style={regionStyles.transportNote}>
+                🚚 Transport: -${transportTotal.toLocaleString()} · Net: ${regionalRevenue.toLocaleString()}
+              </Text>
+            )}
             <TouchableOpacity
               style={[styles.sellBtn, inStock <= 0 && styles.sellBtnDisabled]}
-              onPress={() => { sellCrop(selectedCrop, inStock); playSound(revenue >= 5000 ? 'bigSale' : 'sell'); if (revenue >= 1000) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
+              onPress={() => { sellCrop(selectedCrop, inStock, selectedMarket ?? 'local'); playSound(regionalRevenue >= 5000 ? 'bigSale' : 'sell'); if (regionalRevenue >= 1000) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
               disabled={inStock <= 0}
             >
               <Text style={styles.sellBtnText}>
-                {inStock > 0 ? `Sell all · $${Math.round(revenue).toLocaleString()}` : 'No stock'}
+                {inStock > 0 ? `Sell all · $${regionalRevenue.toLocaleString()}` : 'No stock'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -950,4 +1147,50 @@ const styles = StyleSheet.create({
   alertSummaryChipName:     { color: '#e8d5a3', fontSize: 10, fontWeight: 'bold' },
   alertSummaryChipPrice:    { color: '#66bb6a', fontSize: 10 },
   alertSummaryChipRemove:   { color: '#ef5350', fontSize: 11, paddingLeft: 2 },
+
+  // Orders tab
+  ordersSection:            { margin: 12, backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
+  ordersSubtitle:           { color: '#666', fontSize: 11, marginBottom: 10, marginTop: -6 },
+  orderCropScroll:          { marginBottom: 10 },
+  orderCropChip:            { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, marginRight: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  orderCropChipActive:      { backgroundColor: '#1565c0', borderColor: '#42a5f5' },
+  orderCropChipText:        { color: '#888', fontSize: 12 },
+  orderCropChipTextActive:  { color: '#fff', fontWeight: 'bold' },
+  ordersFormRow:            { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  ordersFormHalf:           { flex: 1 },
+  ordersFormLabel:          { color: '#888', fontSize: 10, marginBottom: 4 },
+  ordersInput:              { backgroundColor: '#0d1b2e', borderRadius: 8, color: '#e8d5a3', paddingHorizontal: 10, paddingVertical: 7, fontSize: 13, borderWidth: 1, borderColor: '#1e2a3a' },
+  ordersTermRow:            { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  ordersTermBtn:            { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  ordersTermBtnActive:      { backgroundColor: '#1565c0', borderColor: '#42a5f5' },
+  ordersTermText:           { color: '#888', fontSize: 12, fontWeight: 'bold' },
+  ordersTermTextActive:     { color: '#fff' },
+  ordersTermHint:           { color: '#555', fontSize: 11, flex: 1, textAlign: 'right' },
+  ordersPlaceBtn:           { backgroundColor: '#1565c0', borderRadius: 10, paddingVertical: 11, alignItems: 'center' },
+  ordersPlaceBtnDisabled:   { backgroundColor: '#333' },
+  ordersPlaceBtnText:       { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  ordersCard:               { marginHorizontal: 12, backgroundColor: '#16213e', borderRadius: 12, padding: 12, marginBottom: 8 },
+  ordersRow:                { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1e2a3a' },
+  ordersRowName:            { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
+  ordersRowDetail:          { color: '#888', fontSize: 11, marginTop: 1 },
+  ordersRowExpiry:          { color: '#ffa726', fontSize: 10, marginTop: 2 },
+  ordersCancelBtn:          { backgroundColor: '#b71c1c', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  ordersCancelText:         { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  ordersBadgeGood:          { color: '#66bb6a', fontSize: 11, fontWeight: 'bold' },
+  ordersBadgeWarn:          { color: '#ffa726', fontSize: 11 },
+  ordersBadgeGray:          { color: '#555', fontSize: 11 },
+});
+
+const regionStyles = StyleSheet.create({
+  row:             { flexDirection: 'row', gap: 6, marginBottom: 10, flexWrap: 'wrap' },
+  chip:            { flex: 1, minWidth: 90, borderWidth: 1, borderColor: '#2a3a2a', backgroundColor: '#0f1e0f', borderRadius: 8, padding: 8, alignItems: 'center' },
+  chipActive:      { borderColor: '#4caf50', backgroundColor: '#0f2a0f' },
+  chipLocked:      { opacity: 0.4 },
+  chipIcon:        { fontSize: 18, marginBottom: 2 },
+  chipName:        { color: '#888', fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
+  chipNameActive:  { color: '#e8d5a3' },
+  chipNameLocked:  { color: '#555' },
+  chipMult:        { color: '#888', fontSize: 10, textAlign: 'center', marginTop: 1 },
+  chipLockLabel:   { color: '#555', fontSize: 9, textAlign: 'center', marginTop: 1 },
+  transportNote:   { color: '#ef9a9a', fontSize: 10, marginBottom: 4 },
 });

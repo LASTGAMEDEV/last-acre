@@ -24,6 +24,7 @@ import { ATTACHMENT_TYPES, AttachmentType } from '../data/attachmentTypes';
 import { ContractorOperation, calcJobDays, canAssignJob, getTransportCapacityKg } from '../engine/machinery';
 import { MapField, MapOwner } from '../types/worldMap';
 import { INITIAL_MAP_FIELDS } from '../data/mapFields';
+import { MarketId, MARKET_REGIONS } from '../data/marketRegions';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
 function getDailyMaintenance(machines: OwnedMachine[], buildings: string[]): number {
@@ -163,6 +164,18 @@ export interface FuturesPosition {
   deliveryDay: number;
   createdDay: number;
   settled: boolean;
+}
+
+export interface MarketOrder {
+  id: string;
+  cropId: string;
+  quantity: number;
+  targetPrice: number;
+  createdDay: number;
+  expiresDay: number;
+  status: 'active' | 'executed' | 'expired' | 'cancelled';
+  executedDay?: number;
+  executedRevenue?: number;
 }
 
 export interface SeedGenes {
@@ -438,6 +451,12 @@ export interface GameState {
   showResults: ShowResult[];
   showWindowOpen: boolean;
 
+  // Commodity Exchange
+  marketOrders: MarketOrder[];
+
+  // Regional Market
+  selectedMarket: MarketId;
+
   // Actions
   setSoundEnabled: (enabled: boolean) => void;
   setHapticEnabled: (enabled: boolean) => void;
@@ -452,6 +471,9 @@ export interface GameState {
   setFarmName: (name: string) => void;
   addPriceAlert: (cropId: string, targetPrice: number, direction: 'above' | 'below') => void;
   removePriceAlert: (alertId: string) => void;
+  placeMarketOrder: (cropId: string, quantity: number, targetPrice: number, termDays: number) => void;
+  cancelMarketOrder: (orderId: string) => void;
+  setSelectedMarket: (marketId: MarketId) => void;
   buyFuel: (litres: number) => void;
   enterAnimalShow: (animalId: string) => void;
   withdrawAnimalShow: (animalId: string) => void;
@@ -460,7 +482,7 @@ export interface GameState {
   buyParcel: (parcelId: string) => void;
   plantCrop: (parcelId: string, cropId: string, hectares: number, fertilized: boolean) => void;
   harvestCrop: (parcelId: string) => void;
-  sellCrop: (cropId: string, units: number) => void;
+  sellCrop: (cropId: string, units: number, marketId?: MarketId) => void;
   buyAnimal: (typeId: string, sex: 'male' | 'female') => void;
   sellAnimal: (animalId: string) => void;
   collectAnimalProduction: (animalId: string) => void;
@@ -706,6 +728,8 @@ function makeInitialState() {
     showEntries: [] as ShowEntry[],
     showResults: [] as ShowResult[],
     showWindowOpen: false,
+    marketOrders: [] as MarketOrder[],
+    selectedMarket: 'local' as MarketId,
   };
 }
 
@@ -1819,6 +1843,49 @@ export const useGameStore = create<GameState>()(
           ])
         );
 
+        // ── Market Orders: execute if price target met ──────────────────
+        let marketOrderIncome = 0;
+        const marketOrderInventoryDelta: Record<string, number> = {};
+        const updatedMarketOrders = (state.marketOrders ?? []).map((o: MarketOrder) => {
+          if (o.status !== 'active') return o;
+          if (newDay > o.expiresDay) {
+            // Return inventory for expired orders
+            marketOrderInventoryDelta[o.cropId] = (marketOrderInventoryDelta[o.cropId] ?? 0) + o.quantity;
+            summary.push({
+              id: `order_expired_${o.id}`,
+              icon: '📋',
+              title: `Market order expired — ${CROP_TYPES.find(c => c.id === o.cropId)?.name ?? o.cropId}`,
+              detail: `${o.quantity.toLocaleString()} units returned to inventory`,
+              severity: 'warning',
+            });
+            return { ...o, status: 'expired' as const };
+          }
+          const currentPrice = prices.find(p => p.cropId === o.cropId)?.price ?? 0;
+          if (currentPrice >= o.targetPrice) {
+            const secaderoBonus = hasSecadero(state.buildings) ? 1.05 : 1.0;
+            const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
+            const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
+            const revenue = Math.round(sellRevenue(o.quantity, currentPrice) * secaderoBonus * coopBonus * prestigeBonus);
+            marketOrderIncome += revenue;
+            const crop = CROP_TYPES.find(c => c.id === o.cropId);
+            summary.push({
+              id: `order_executed_${o.id}`,
+              icon: '✅',
+              title: `Market order filled — ${crop?.name ?? o.cropId} · +$${revenue.toLocaleString()}`,
+              detail: `Sold ${o.quantity.toLocaleString()} ${crop?.unit ?? ''} @ $${currentPrice.toFixed(2)}`,
+              severity: 'good',
+            });
+            return { ...o, status: 'executed' as const, executedDay: newDay, executedRevenue: revenue };
+          }
+          return o;
+        });
+        // Merge returned inventory from expired orders back into finalInventory
+        const orderAdjustedInventory = Object.fromEntries(
+          Object.keys({ ...finalInventory, ...marketOrderInventoryDelta }).map(k => [
+            k, Math.max(0, (finalInventory[k] ?? 0) + (marketOrderInventoryDelta[k] ?? 0)),
+          ])
+        );
+
         // ── Seed Lab: settle completed hybrid jobs ──────────────────────
         const completedJobs = state.hybridJobs.filter(j => newDay >= j.readyDay);
         let nextSeedVault = [...(state.seedVault ?? [])];
@@ -1864,7 +1931,7 @@ export const useGameStore = create<GameState>()(
           if (!rule.enabled) continue;
           const currentPrice = prices.find(p => p.cropId === cropId)?.price ?? 0;
           if (currentPrice < rule.minPrice) continue;
-          const inStock = Math.max(0, (finalInventory[cropId] ?? 0) + (autoSellInventoryDelta[cropId] ?? 0));
+          const inStock = Math.max(0, (orderAdjustedInventory[cropId] ?? 0) + (autoSellInventoryDelta[cropId] ?? 0));
           if (inStock <= 0) continue;
           const secaderoBonus = hasSecadero(state.buildings) ? 1.05 : 1.0;
           const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
@@ -1875,8 +1942,8 @@ export const useGameStore = create<GameState>()(
           autoSellLog.push({ cropId, qty: inStock, revenue: rev });
         }
         const autoSellFinalInventory = Object.fromEntries(
-          Object.keys({ ...finalInventory, ...autoSellInventoryDelta }).map(k => [
-            k, Math.max(0, (finalInventory[k] ?? 0) + (autoSellInventoryDelta[k] ?? 0)),
+          Object.keys({ ...orderAdjustedInventory, ...autoSellInventoryDelta }).map(k => [
+            k, Math.max(0, (orderAdjustedInventory[k] ?? 0) + (autoSellInventoryDelta[k] ?? 0)),
           ])
         );
         if (autoSellLog.length > 0) {
@@ -2209,7 +2276,7 @@ export const useGameStore = create<GameState>()(
         }
         priceAlerts = priceAlerts.filter(a => !triggeredAlertIds.includes(a.id));
 
-        let finalMoney = Math.max(0, moneyAfterMaintenance + moneyDelta + totalInsurancePayoutAll - defaultPenalty + depositPayoutTotal - contractPenaltyTotal + futuresIncome - futuresPenalty + autoSellIncome + alertSellIncome - vetTreatmentCost);
+        let finalMoney = Math.max(0, moneyAfterMaintenance + moneyDelta + totalInsurancePayoutAll - defaultPenalty + depositPayoutTotal - contractPenaltyTotal + futuresIncome - futuresPenalty + autoSellIncome + alertSellIncome - vetTreatmentCost + marketOrderIncome);
 
         // Crops ready to harvest (after field worker cleared some)
         const cropsReady = finalParcels.filter(p => {
@@ -2310,7 +2377,6 @@ export const useGameStore = create<GameState>()(
           loans,
           loanHistory,
           salesLog: [...salesLog, ...autoSellSalesEntries, ...alertSalesEntries],
-          totalRevenue: state.totalRevenue + autoSellIncome + alertSellIncome,
           priceAlerts,
           parcels: foreclosureParcels.length > 0
             ? [...finalParcels, ...foreclosureParcels]
@@ -2346,6 +2412,8 @@ export const useGameStore = create<GameState>()(
           tractorJobs: remainingTractorJobs,
           harvestJobs: updatedHarvestJobs,
           fuel: currentFuel,
+          marketOrders: updatedMarketOrders,
+          totalRevenue: (state.totalRevenue ?? 0) + autoSellIncome + alertSellIncome + marketOrderIncome,
           personalRecords: {
             peakMoney: Math.max(state.personalRecords?.peakMoney ?? 0, finalMoney),
             totalHarvests: state.personalRecords?.totalHarvests ?? 0,
@@ -2494,16 +2562,24 @@ export const useGameStore = create<GameState>()(
         });
       },
 
-      sellCrop: (cropId, units) => {
+      sellCrop: (cropId, units, marketId) => {
         const state = get();
         const inStock = state.inventory[cropId] ?? 0;
         const toSell = Math.min(units, inStock);
         if (toSell <= 0) return;
+
+        // Regional market
+        const activeMarketId = marketId ?? state.selectedMarket ?? 'local';
+        const region = MARKET_REGIONS.find(r => r.id === activeMarketId) ?? MARKET_REGIONS[0];
         const price = state.prices.find(p => p.cropId === cropId)?.price ?? 0;
-        const secaderoBonus = hasSecadero(state.buildings) ? 1.05 : 1.0;
-        const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
-        const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
-        const revenue = sellRevenue(toSell, price) * secaderoBonus * coopBonus * prestigeBonus;
+        const effectivePrice = price * region.priceMultiplier;
+        const transportCost  = Math.round(toSell * region.transportCostPerUnit);
+
+        const secaderoBonus  = hasSecadero(state.buildings) ? 1.05 : 1.0;
+        const coopBonus      = state.cooperative?.member ? 1.12 : 1.0;
+        const prestigeBonus  = 1 + 0.05 * (state.prestige ?? 0);
+        const grossRevenue   = sellRevenue(toSell, effectivePrice) * secaderoBonus * coopBonus * prestigeBonus;
+        const revenue        = Math.max(0, Math.round(grossRevenue - transportCost));
 
         // Sell pressure: large sales depress price for several days
         const pressureMod = computeSellPressureModifier(toSell);
@@ -2521,7 +2597,6 @@ export const useGameStore = create<GameState>()(
           totalRevenue: state.totalRevenue + revenue,
           sellPressures: newPressures,
           firstMissionStep: state.firstMissionStep === 2 ? 3 : state.firstMissionStep,
-          // note: step 3=hire worker, 4=sign contract are advanced by hireWorker and acceptContract
         });
       },
 
@@ -3265,6 +3340,44 @@ export const useGameStore = create<GameState>()(
         set({ priceAlerts: (state.priceAlerts ?? []).filter(a => a.id !== alertId) });
       },
 
+      placeMarketOrder: (cropId, quantity, targetPrice, termDays) => {
+        const state = get();
+        const inStock = state.inventory[cropId] ?? 0;
+        if (inStock < quantity || quantity <= 0) return;
+        // Reserve inventory immediately
+        const newInventory = { ...state.inventory, [cropId]: inStock - quantity };
+        const order: MarketOrder = {
+          id: `order_${Date.now()}`,
+          cropId,
+          quantity,
+          targetPrice,
+          createdDay: state.day,
+          expiresDay: state.day + termDays,
+          status: 'active',
+        };
+        set({ inventory: newInventory, marketOrders: [...(state.marketOrders ?? []), order] });
+      },
+
+      cancelMarketOrder: (orderId) => {
+        const state = get();
+        const order = (state.marketOrders ?? []).find(o => o.id === orderId && o.status === 'active');
+        if (!order) return;
+        // Return reserved inventory
+        const newInventory = { ...state.inventory, [order.cropId]: (state.inventory[order.cropId] ?? 0) + order.quantity };
+        const updatedOrders = (state.marketOrders ?? []).map(o =>
+          o.id === orderId ? { ...o, status: 'cancelled' as const } : o
+        );
+        set({ inventory: newInventory, marketOrders: updatedOrders });
+      },
+
+      setSelectedMarket: (marketId) => {
+        const state = get();
+        const region = MARKET_REGIONS.find(r => r.id === marketId);
+        if (!region) return;
+        if (state.day < region.unlockDay) return;
+        set({ selectedMarket: marketId });
+      },
+
       deliverCrop: (contractId, amount) => {
         const state = get();
         const contract = state.contracts.find(c => c.id === contractId);
@@ -3860,7 +3973,7 @@ export const useGameStore = create<GameState>()(
           enterAnimalShow, withdrawAnimalShow,
           dismissHint,
           counterOfferContract, upgradeAnimalGene, sellSeedBatch, buyMarketSeed,
-          cureDisease, plantCropBatch, setFarmName, addPriceAlert, removePriceAlert,
+          cureDisease, plantCropBatch, setFarmName, addPriceAlert, removePriceAlert, placeMarketOrder, cancelMarketOrder, setSelectedMarket,
           startHybridization, selectSeedForParcel, startRepair,
           buyAttachment, buyTrailer, hitchTrailer, assignJob, assignHarvestJob, hireContractor,
           selectMapField, buyMapField, scoutMapField, savePanZoom,
