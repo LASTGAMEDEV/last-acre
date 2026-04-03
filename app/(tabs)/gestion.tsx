@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, Alert, TextInput } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 import OficinaScreen from './oficina';
 import CalendarioScreen from './calendario';
 import Encyclopedia from '../../components/Encyclopedia';
@@ -185,6 +189,77 @@ function SettingsSection() {
   const [alertCropId, setAlertCropId] = useState(CROP_TYPES[0]?.id ?? '');
   const [alertPrice, setAlertPrice] = useState('');
 
+  async function exportSave() {
+    try {
+      const raw = await AsyncStorage.getItem('granja-tycoon-save-v4');
+      if (!raw) {
+        Alert.alert('Export Failed', 'No save data found.');
+        return;
+      }
+      const path = (FileSystem.cacheDirectory ?? '') + 'granja-tycoon-save.json';
+      await FileSystem.writeAsStringAsync(path, raw, { encoding: FileSystem.EncodingType.UTF8 });
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        Alert.alert('Export Failed', 'Sharing is not available on this device.');
+        return;
+      }
+      await Sharing.shareAsync(path, { mimeType: 'application/json', dialogTitle: 'Export Granja Tycoon Save' });
+    } catch (e) {
+      Alert.alert('Export Failed', String(e));
+    }
+  }
+
+  async function importSave() {
+    Alert.alert(
+      'Import Save',
+      'This will overwrite your current save with the selected file. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Import',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = await DocumentPicker.getDocumentAsync({
+                type: 'application/json',
+                copyToCacheDirectory: true,
+              });
+              if (result.canceled) return;
+              const asset = result.assets?.[0];
+              if (!asset?.uri) return;
+              const raw = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.UTF8 });
+              let parsed: unknown;
+              try {
+                parsed = JSON.parse(raw);
+              } catch {
+                Alert.alert('Import Failed', 'File is not valid JSON.');
+                return;
+              }
+              if (
+                typeof parsed !== 'object' ||
+                parsed === null ||
+                !('state' in parsed) ||
+                typeof (parsed as Record<string, unknown>).state !== 'object'
+              ) {
+                Alert.alert('Import Failed', 'File does not look like a valid Granja Tycoon save (missing "state" key).');
+                return;
+              }
+              const state = (parsed as Record<string, Record<string, unknown>>).state;
+              if (typeof state.day !== 'number' || typeof state.money !== 'number') {
+                Alert.alert('Import Failed', 'Save file is missing required fields (day, money).');
+                return;
+              }
+              await AsyncStorage.setItem('granja-tycoon-save-v4', raw);
+              Alert.alert('Import Successful', 'Save imported. Please restart the app to load your save.');
+            } catch (e) {
+              Alert.alert('Import Failed', String(e));
+            }
+          },
+        },
+      ]
+    );
+  }
+
   function confirmReset() {
     Alert.alert(
       'Reset Game',
@@ -270,6 +345,19 @@ function SettingsSection() {
             <Text style={set.nameBtnText}>Add Alert</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Save Data */}
+      <View style={set.section}>
+        <Text style={set.sectionTitle}>💾 Save Data</Text>
+        <TouchableOpacity style={set.saveDataBtn} onPress={exportSave}>
+          <Text style={set.saveDataBtnText}>📤 Export Save</Text>
+        </TouchableOpacity>
+        <Text style={[set.rowSub, { marginTop: 4, marginBottom: 8 }]}>Shares your save as a JSON file you can back up or transfer.</Text>
+        <TouchableOpacity style={[set.saveDataBtn, { backgroundColor: '#3a1a00' }]} onPress={importSave}>
+          <Text style={[set.saveDataBtnText, { color: '#ffb74d' }]}>📥 Import Save</Text>
+        </TouchableOpacity>
+        <Text style={[set.rowSub, { marginTop: 4 }]}>Load a previously exported save file. Overwrites current progress.</Text>
       </View>
 
       {/* Audio */}
@@ -414,6 +502,8 @@ const set = StyleSheet.create({
   cropChip:      { backgroundColor: '#0d1a2e', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, marginRight: 5, borderWidth: 1, borderColor: '#2a3a5e' },
   cropChipActive:{ backgroundColor: '#0f3460', borderColor: '#64b5f6' },
   cropChipText:  { color: '#888', fontSize: 11 },
+  saveDataBtn:     { backgroundColor: '#0f3460', borderRadius: 8, paddingVertical: 10, alignItems: 'center', marginTop: 4 },
+  saveDataBtnText: { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' },
 });
 
 // ── Seed Market ───────────────────────────────────────────────────────────────
