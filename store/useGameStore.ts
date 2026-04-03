@@ -1722,116 +1722,290 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        const auctionLots: AuctionLot[] = state.auctionLots.map(lot => {
-          if (lot.resolved) return lot;
+        // ── Auction House ────────────────────────────────────────────────────
+        const { geneScore, randomGenes } = require('../engine/animals');
+        const { ANIMAL_TYPES: AT_AUCTION } = require('../data/animalTypes');
 
-          if (newDay >= lot.endDay) {
-            const canAfford = lot.playerBid !== null && state.money >= lot.playerBid;
-            const playerWon = lot.playerBid !== null && lot.playerBid >= lot.currentBid && canAfford;
-            if (playerWon && lot.playerBid !== null) {
-              moneyDelta -= lot.playerBid;
-              parcelAdditions.push({ ...lot.parcel, owned: true });
+        let auctionMoneyDelta = 0;
+        const auctionParcelAdditions: LandParcel[] = [];
+        const auctionAnimalAdditions: OwnedAnimal[] = [];
+        const auctionInventoryDelta: Record<string, number> = {};
+        const auctionMachineAdditions: OwnedMachine[] = [];
+
+        // Animal event: resolve on nextAnimalAuctionDay
+        const isAnimalEventDay = newDay >= state.nextAnimalAuctionDay;
+        let nextAnimalAuctionDay = state.nextAnimalAuctionDay;
+
+        const updatedListings: AuctionListing[] = (state.listings ?? []).map((listing: AuctionListing) => {
+          if (listing.resolved) return listing;
+
+          // ── NPC bidding on crop / machinery listings (daily) ──
+          if (listing.category === 'crop' || listing.category === 'machinery') {
+            const candidateNpcs = [...(npcFarms ?? [])].sort(() => Math.random() - 0.5).slice(0, 3);
+            let updated = { ...listing };
+            for (const npc of candidateNpcs) {
+              if (Math.random() > 0.15) continue;
+              let npcValuation = 0;
+              if (listing.category === 'crop' && listing.cropId && listing.cropQuantity) {
+                const cropPrice = prices.find((p: any) => p.cropId === listing.cropId)?.price ?? 0;
+                npcValuation = listing.cropQuantity * cropPrice * 0.80;
+              } else if (listing.category === 'machinery' && listing.machineTypeId) {
+                const mt = MACHINE_TYPES.find(t => t.id === listing.machineTypeId);
+                const suggested = mt ? mt.cost * ((listing.conditionScore ?? 70) / 100) * 0.70 : 0;
+                npcValuation = suggested * (0.85 + Math.random() * 0.25);
+              }
+              if (updated.currentBid >= npcValuation) continue;
+              const npcBid = Math.min(Math.ceil(updated.currentBid * 1.05), Math.ceil(npcValuation));
+              updated = {
+                ...updated,
+                currentBid: npcBid,
+                bids: [...updated.bids, { day: newDay, amount: npcBid, isPlayer: false }],
+              };
             }
-            return { ...lot, resolved: true, playerWon: playerWon };
+            listing = updated;
           }
 
-          const daysLeft = lot.endDay - newDay;
-          const aiBidChance = daysLeft <= 3 ? 0.5 : daysLeft <= 7 ? 0.25 : 0.1;
-          if (Math.random() < aiBidChance) {
-            // Use NPC farm bids: pick highest bid from eligible NPCs
-            const parcelValue = lot.parcel.pricePerHa * lot.parcel.hectares;
-            const npcBids = npcFarms
-              .map(farm => npcAuctionBid(farm, parcelValue))
-              .filter(bid => bid > lot.currentBid);
-            const aiBid = npcBids.length > 0
-              ? Math.max(...npcBids)
-              : Math.ceil(lot.currentBid * (1.05 + Math.random() * 0.12));
-            return {
-              ...lot,
-              currentBid: aiBid,
-              bids: [...lot.bids, { day: newDay, amount: aiBid, isPlayer: false }],
-            };
+          // ── NPC bidding on land listings (existing logic) ──
+          if (listing.category === 'land' && !listing.resolved) {
+            const daysLeft = listing.expiresDay - newDay;
+            const aiBidChance = daysLeft <= 3 ? 0.5 : daysLeft <= 7 ? 0.25 : 0.1;
+            if (Math.random() < aiBidChance) {
+              const parcelValue = (listing.parcel?.pricePerHa ?? 0) * (listing.parcel?.hectares ?? 0);
+              const npcBids = (npcFarms ?? [])
+                .map((farm: any) => npcAuctionBid(farm, parcelValue))
+                .filter((bid: number) => bid > listing.currentBid);
+              const aiBid = npcBids.length > 0
+                ? Math.max(...npcBids)
+                : Math.ceil(listing.currentBid * (1.05 + Math.random() * 0.12));
+              listing = {
+                ...listing,
+                currentBid: aiBid,
+                bids: [...listing.bids, { day: newDay, amount: aiBid, isPlayer: false }],
+              };
+            }
           }
-          return lot;
+
+          // ── NPC bidding on animal event listings (batch on event day) ──
+          if (listing.category === 'animal' && isAnimalEventDay && !listing.resolved) {
+            // Simulate 2–4 NPC bids up to a valuation based on gene score
+            const score = listing.animalGenes ? geneScore(listing.animalGenes) : 1.0;
+            const animalTypeDef = AT_AUCTION.find((a: any) => a.typeId === listing.animalTypeId || a.id === listing.animalTypeId);
+            const baseValue = animalTypeDef ? animalTypeDef.buyCost * score : 500;
+            const npcBidCount = 2 + Math.floor(Math.random() * 3);
+            let currentBid = listing.currentBid;
+            const newBids = [...listing.bids];
+            for (let i = 0; i < npcBidCount; i++) {
+              const npcVal = baseValue * (0.8 + Math.random() * 0.4);
+              if (currentBid >= npcVal) continue;
+              const npcBid = Math.min(Math.ceil(currentBid * 1.05), Math.ceil(npcVal));
+              currentBid = npcBid;
+              newBids.push({ day: newDay, amount: npcBid, isPlayer: false });
+            }
+            listing = { ...listing, currentBid, bids: newBids };
+          }
+
+          // ── Resolution: land, crop, machinery (expires), animal (event day) ──
+          const shouldResolve =
+            (listing.category !== 'animal' && newDay >= listing.expiresDay) ||
+            (listing.category === 'animal' && isAnimalEventDay);
+
+          if (!shouldResolve) return listing;
+
+          const reserveMet = listing.reservePrice === 0 || listing.currentBid >= listing.reservePrice;
+          const playerWon = reserveMet && listing.playerBid !== null && listing.playerBid >= listing.currentBid;
+          const playerSold = reserveMet && listing.sellerId === 'player' && listing.currentBid > listing.startingBid;
+
+          if (playerWon) {
+            auctionMoneyDelta -= listing.playerBid!;
+            if (listing.category === 'land' && listing.parcel) {
+              auctionParcelAdditions.push({ ...listing.parcel, owned: true });
+            } else if (listing.category === 'animal' && listing.animalTypeId && listing.animalGenes) {
+              const newAnimal: OwnedAnimal = {
+                id: `animal_auction_${listing.id}`,
+                typeId: listing.animalTypeId,
+                sex: Math.random() < 0.5 ? 'female' : 'male',
+                bornDay: newDay - 30,
+                genes: listing.animalGenes,
+                sick: false,
+                lastProductionDay: newDay,
+                lastBreedDay: newDay,
+              };
+              auctionAnimalAdditions.push(newAnimal);
+            } else if (listing.category === 'crop' && listing.cropId && listing.cropQuantity) {
+              auctionInventoryDelta[listing.cropId] = (auctionInventoryDelta[listing.cropId] ?? 0) + listing.cropQuantity;
+            } else if (listing.category === 'machinery' && listing.machineTypeId) {
+              auctionMachineAdditions.push({
+                id: `machine_auction_${listing.id}`,
+                typeId: listing.machineTypeId,
+                purchasedDay: newDay,
+              });
+            }
+          }
+
+          if (playerSold) {
+            auctionMoneyDelta += listing.currentBid;
+            // Item already removed from inventory/animals/machines when listed
+          }
+
+          if (!playerSold && listing.sellerId === 'player') {
+            // Reserve not met — return item to player
+            if (listing.category === 'crop' && listing.cropId && listing.cropQuantity) {
+              auctionInventoryDelta[listing.cropId] = (auctionInventoryDelta[listing.cropId] ?? 0) + listing.cropQuantity;
+            } else if (listing.category === 'machinery' && listing.machineId && listing.machineTypeId) {
+              auctionMachineAdditions.push({
+                id: listing.machineId,
+                typeId: listing.machineTypeId,
+                purchasedDay: listing.machinePurchasedDay ?? newDay,
+              });
+            } else if (listing.category === 'animal' && listing.animalId && listing.animalTypeId && listing.animalGenes) {
+              const returnedAnimal: OwnedAnimal = {
+                id: listing.animalId,
+                typeId: listing.animalTypeId,
+                sex: listing.animalSex ?? 'female',
+                bornDay: listing.animalBornDay ?? newDay - 30,
+                genes: listing.animalGenes,
+                sick: false,
+                lastProductionDay: newDay,
+                lastBreedDay: newDay,
+              };
+              auctionAnimalAdditions.push(returnedAnimal);
+            }
+          }
+
+          // Push day summary event
+          if (playerWon) {
+            const labelMap: Record<AuctionCategory, string> = { land: 'Land', animal: 'Animal', crop: 'Crop lot', machinery: 'Machine' };
+            summary.push({
+              id: `auction_won_${listing.id}`,
+              icon: '🏆',
+              title: `Auction won — ${labelMap[listing.category]}`,
+              detail: `Paid $${listing.playerBid?.toLocaleString()}`,
+              severity: 'good',
+            });
+          } else if (listing.playerBid !== null && !playerWon) {
+            summary.push({
+              id: `auction_lost_${listing.id}`,
+              icon: '😔',
+              title: 'Auction lost',
+              detail: `Your bid $${listing.playerBid?.toLocaleString()} · Final $${listing.currentBid.toLocaleString()}`,
+              severity: 'warning',
+            });
+          } else if (playerSold) {
+            summary.push({
+              id: `auction_sold_${listing.id}`,
+              icon: '💰',
+              title: 'Your listing sold',
+              detail: `+$${listing.currentBid.toLocaleString()}`,
+              severity: 'good',
+            });
+          } else if (listing.sellerId === 'player' && !reserveMet) {
+            summary.push({
+              id: `auction_unsold_${listing.id}`,
+              icon: '📋',
+              title: 'Reserve not met — item returned',
+              detail: `Highest bid: $${listing.currentBid.toLocaleString()}`,
+              severity: 'warning',
+            });
+          }
+
+          return { ...listing, resolved: true, playerWon };
         });
 
-        // Auction resolution summaries
-        for (const lot of auctionLots) {
-          const wasUnresolved = !state.auctionLots.find(ol => ol.id === lot.id)?.resolved;
-          if (lot.resolved && wasUnresolved) {
-            if (lot.playerWon) {
-              summary.push({
-                id: `auction_won_${lot.id}`,
-                icon: '🏆',
-                title: `Auction won!`,
-                detail: `${lot.parcel.hectares} ha, fertility ${lot.parcel.fertility}/25 — $${lot.playerBid?.toLocaleString()}`,
-                severity: 'good',
-              });
-            } else if (lot.playerBid !== null) {
-              summary.push({
-                id: `auction_lost_${lot.id}`,
-                icon: '😔',
-                title: 'Auction lost',
-                detail: `Your bid: $${lot.playerBid?.toLocaleString()} · Final: $${lot.currentBid.toLocaleString()}`,
-                severity: 'warning',
-              });
-            }
-          }
-        }
-
-        // Generate new auction lot if fewer than 2 active
-        const activeLots = auctionLots.filter(l => !l.resolved);
-        if (activeLots.length < 2 && Math.random() < 0.3) {
+        // Generate new land listing if fewer than 2 active land listings
+        const activeLandListings = updatedListings.filter(l => !l.resolved && l.category === 'land');
+        if (activeLandListings.length < 2 && Math.random() < 0.3) {
           const fertility = Math.floor(Math.random() * 10) + 16;
-          const hectares = ([2, 5, 10])[Math.floor(Math.random() * 3)];
+          const hectares = ([2, 5, 10] as const)[Math.floor(Math.random() * 3)];
           const pricePerHa = Math.round((20000 + (fertility / 25) * 50000) / 1000) * 1000;
           const startingBid = Math.round(pricePerHa * hectares * 0.7);
-          const auctionNames = [
-            'Riverside Lot', 'Hilltop Parcel', 'Valley Premium', 'Lakeside Acre',
-            'Woodland Plot', 'Cliffside Field', 'Meadow Estate', 'Ridge Premium',
-            'Orchard Lot', 'Vineyard Parcel', 'Sunrise Estate', 'Highfield Lot',
-          ];
+          const auctionNames = ['Riverside Lot','Hilltop Parcel','Valley Premium','Lakeside Acre','Woodland Plot','Cliffside Field','Meadow Estate','Ridge Premium','Orchard Lot','Vineyard Parcel'];
           const newParcel: LandParcel = {
             id: `auction_p${newDay}`,
             name: auctionNames[newDay % auctionNames.length],
-            fertility,
-            hectares,
-            pricePerHa,
-            owned: false,
-            hasWeeds: false,
-            plantedCrop: null,
-            greenhouse: false,
-            irrigated: false,
-            tilled: false,
+            fertility, hectares, pricePerHa,
+            owned: false, hasWeeds: false, plantedCrop: null,
+            greenhouse: false, irrigated: false, tilled: false,
           };
-          auctionLots.push({
-            id: `lot_${newDay}`,
+          updatedListings.push({
+            id: `listing_land_${newDay}`,
+            category: 'land',
+            sellerId: 'npc',
             parcel: newParcel,
-            startDay: newDay,
-            endDay: newDay + 10 + Math.floor(Math.random() * 10),
             startingBid,
+            reservePrice: 0,
             currentBid: startingBid,
             bids: [],
             playerBid: null,
+            createdDay: newDay,
+            expiresDay: newDay + 10 + Math.floor(Math.random() * 10),
             resolved: false,
             playerWon: null,
           });
           summary.push({
             id: `auction_new_${newDay}`,
             icon: '🏷️',
-            title: 'New auction lot available',
-            detail: `${hectares} ha · fertility ${fertility}/25 · starting bid $${startingBid.toLocaleString()}`,
+            title: 'New land auction available',
+            detail: `${hectares} ha · fertility ${fertility}/25 · starting $${startingBid.toLocaleString()}`,
             severity: 'info',
           });
         }
 
-        // Trim resolved auction lots — keep only the 10 most recent to prevent unbounded growth
-        const trimmedAuctionLots = [
-          ...auctionLots.filter(l => !l.resolved),
-          ...auctionLots.filter(l => l.resolved).slice(-10),
-        ];
+        // Generate NPC animal listings for next event if today is event day
+        if (isAnimalEventDay) {
+          nextAnimalAuctionDay = newDay + 7;
+          const animalCount = 3 + Math.floor(Math.random() * 3);
+          const eligibleTypes = AT_AUCTION.filter((a: any) => a.productionType !== null);
+          for (let i = 0; i < animalCount; i++) {
+            const animalType = eligibleTypes[Math.floor(Math.random() * eligibleTypes.length)];
+            // Genes weighted toward A/B (score ~1.1–1.3)
+            const genes: AnimalGenes = {
+              production: 0.9 + Math.random() * 0.5,
+              hardiness:  0.9 + Math.random() * 0.5,
+              growth:     0.9 + Math.random() * 0.5,
+              value:      0.9 + Math.random() * 0.5,
+            };
+            const score = geneScore(genes);
+            const startingBid = Math.round(animalType.buyCost * score * 0.6);
+            updatedListings.push({
+              id: `listing_animal_${newDay}_${i}`,
+              category: 'animal',
+              sellerId: 'npc',
+              animalTypeId: animalType.id,
+              animalGenes: genes,
+              startingBid,
+              reservePrice: 0,
+              currentBid: startingBid,
+              bids: [],
+              playerBid: null,
+              createdDay: newDay,
+              expiresDay: nextAnimalAuctionDay,
+              resolved: false,
+              playerWon: null,
+            });
+          }
+          summary.push({
+            id: `animal_auction_event_${newDay}`,
+            icon: '🐄',
+            title: 'Animal Auction Event',
+            detail: `${animalCount} new animals listed · next event Day ${nextAnimalAuctionDay}`,
+            severity: 'info',
+          });
+        }
 
-        let finalParcels = [...parcels, ...parcelAdditions];
+        // Trim resolved listings — keep 20 most recent resolved
+        const resolvedListings = updatedListings.filter(l => l.resolved).slice(-20);
+        const activeListings = updatedListings.filter(l => !l.resolved);
+        const trimmedListings = [...activeListings, ...resolvedListings];
+
+        // Apply auction money / inventory / asset deltas (merged into advanceDay final set)
+        moneyDelta += auctionMoneyDelta;
+        const auctionFinalInventory = Object.fromEntries(
+          Object.keys({ ...state.inventory, ...auctionInventoryDelta }).map(k => [
+            k, Math.max(0, (state.inventory[k] ?? 0) + (auctionInventoryDelta[k] ?? 0)),
+          ])
+        );
+
+        let finalParcels = [...parcels, ...parcelAdditions, ...auctionParcelAdditions];
         // Time deposit maturity payouts
         const maturedDeposits = state.timeDeposits.filter(
           d => newDay >= d.startDay + d.termDays
@@ -2429,16 +2603,22 @@ export const useGameStore = create<GameState>()(
           fieldEvents,
           newsEvents,
           activeFair,
-          auctionLots: trimmedAuctionLots,
+          listings: trimmedListings,
+          nextAnimalAuctionDay,
+          animals: [...animals, ...auctionAnimalAdditions],
+          machines: [...(state.machines ?? []), ...auctionMachineAdditions],
           daySummary: summary,
           timeDeposits,
           insuranceClaims: [...state.insuranceClaims, ...newClaims].slice(-100),
           contracts,
           declinedTemplates,
           completedMilestones,
-          animals,
           futures,
-          inventory: harvestInventory,
+          inventory: Object.fromEntries(
+            Object.keys({ ...harvestInventory, ...auctionInventoryDelta }).map(k => [
+              k, Math.max(0, (harvestInventory[k] ?? 0) + (auctionInventoryDelta[k] ?? 0)),
+            ])
+          ),
           animalInventory: animalInventoryForSet,
           harvestedCropIds: harvestedCropIdsForSet,
           reputation,
