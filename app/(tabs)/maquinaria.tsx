@@ -9,7 +9,7 @@ type MachineryTab = 'fleet' | 'attachments' | 'jobs';
 
 // ── Fleet Tab ────────────────────────────────────────────────────────────────
 function FleetTab() {
-  const { machines, trailers, tractorJobs, harvestJobs, machineRepairs, day, fuel, buyFuel, buildings, money } = useGameStore();
+  const { machines, trailers, tractorJobs, harvestJobs, machineRepairs, day, fuel, buyFuel, buildings, money, listings } = useGameStore();
   const fuelCapacity = (buildings ?? []).reduce((cap: number, id: string) => {
     if (id === 'bld_fuel_tank_s') return cap + 500;
     if (id === 'bld_fuel_tank_l') return cap + 2000;
@@ -33,6 +33,9 @@ function FleetTab() {
     const mt = MACHINE_TYPES.find(t => t.id === m.typeId);
     if (!mt) return null;
     const repair = (machineRepairs ?? []).find(r => r.machineId === m.id);
+    const isListed = (listings ?? []).some(
+      l => l.category === 'machinery' && l.machineId === m.id && !l.resolved
+    );
     return (
       <View key={m.id} style={s.machineCard}>
         <Text style={s.machineName}>{mt.name}</Text>
@@ -41,7 +44,13 @@ function FleetTab() {
             {repair.startDay === null ? '⚠️ Broken' : `🔧 Repairing · ready day ${repair.readyDay}`}
           </Text>
         )}
-        {jobLine}
+        {isListed ? (
+          <View style={s.escrowBadge}>
+            <Text style={s.escrowText}>📋 Listed for auction</Text>
+          </View>
+        ) : (
+          jobLine
+        )}
       </View>
     );
   };
@@ -330,4 +339,6 @@ const s = StyleSheet.create({
   fuelFillBtn:        { backgroundColor: '#1a3a20' },
   fuelBuyBtnTop:      { color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' },
   fuelBuyBtnSub:      { color: '#66bb6a', fontSize: 10 },
+  escrowBadge: { backgroundColor: '#2a2a2a', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start', marginTop: 6 },
+  escrowText:  { color: '#666', fontSize: 11, fontStyle: 'italic' },
 });
