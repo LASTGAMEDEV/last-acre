@@ -406,7 +406,154 @@ const anStyles = StyleSheet.create({
   cancelBtnText:     { color: '#888', fontSize: 13 },
 });
 
-function CropView(_props: any) { return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#888' }}>Crops — coming soon</Text></View>; }
+function CropView({ listings, day, money, placeBid, listItem, withdrawListing,
+                    inventory, bidInputs, setBidInputs }: {
+  listings: AuctionListing[];
+  day: number; money: number;
+  placeBid: (id: string, amount: number) => void;
+  listItem: (params: any) => void;
+  withdrawListing: (id: string) => void;
+  inventory: Record<string, number>;
+  bidInputs: Record<string, string>;
+  setBidInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+}) {
+  const [cropId, setCropId] = React.useState<string>(CROP_TYPES[0].id);
+  const [qtyInput, setQtyInput] = React.useState('');
+  const [startBidInput, setStartBidInput] = React.useState('');
+  const [reserveInput, setReserveInput] = React.useState('');
+  const [termDays, setTermDays] = React.useState<3 | 7 | 14>(7);
+
+  const activeListings = listings.filter(l => !l.resolved && l.category === 'crop');
+  const playerListings = activeListings.filter(l => l.sellerId === 'player');
+  const npcListings = activeListings.filter(l => l.sellerId !== 'player');
+  const resolvedListings = listings.filter(l => l.resolved && l.category === 'crop').slice(-5).reverse();
+  const stockedCrops = CROP_TYPES.filter(c => (inventory[c.id] ?? 0) > 0);
+  const inStock = inventory[cropId] ?? 0;
+  const parsedQty = parseInt(qtyInput) || 0;
+  const parsedBid = parseInt(startBidInput) || 0;
+  const parsedReserve = parseInt(reserveInput) || parsedBid;
+  const canList = parsedQty > 0 && parsedQty <= inStock && parsedBid > 0;
+
+  function renderCropCard(listing: AuctionListing, isPlayer: boolean) {
+    const cropDef = CROP_TYPES.find(c => c.id === listing.cropId);
+    const daysLeft = listing.expiresDay - day;
+    const minBid = Math.ceil(listing.currentBid * 1.05);
+    const bidText = bidInputs[listing.id] ?? '';
+    const bidAmount = parseFloat(bidText.replace(/,/g, '')) || 0;
+    const canBid = !isPlayer && bidAmount >= minBid && money >= bidAmount;
+    const hasBids = listing.bids.some(b => !b.isPlayer);
+    return (
+      <View key={listing.id} style={[cropStyles.card, listing.playerWon === true && cropStyles.cardWon]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+          <View>
+            <Text style={cropStyles.cardTitle}>{cropDef?.name ?? listing.cropId}</Text>
+            <Text style={cropStyles.cardSub}>{listing.cropQuantity?.toLocaleString()} {cropDef?.unit ?? 'units'}</Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={cropStyles.currentBid}>${listing.currentBid.toLocaleString()}</Text>
+            {!listing.resolved && <Text style={cropStyles.daysLeft}>{daysLeft}d left</Text>}
+          </View>
+        </View>
+        {!isPlayer && !listing.resolved && (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TextInput style={[cropStyles.bidInput, { flex: 1 }]} keyboardType="numeric" placeholder={`Min $${minBid.toLocaleString()}`} placeholderTextColor="#555" value={bidText} onChangeText={v => setBidInputs(b => ({ ...b, [listing.id]: v }))} />
+            <TouchableOpacity style={[cropStyles.bidBtn, !canBid && cropStyles.bidBtnDisabled]} disabled={!canBid} onPress={() => { placeBid(listing.id, bidAmount); setBidInputs(b => ({ ...b, [listing.id]: '' })); }}>
+              <Text style={cropStyles.bidBtnText}>Bid</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {isPlayer && !listing.resolved && (
+          <TouchableOpacity style={[cropStyles.withdrawBtn, hasBids && cropStyles.withdrawBtnDisabled]} disabled={hasBids} onPress={() => withdrawListing(listing.id)}>
+            <Text style={cropStyles.withdrawBtnText}>{hasBids ? 'Bids placed — cannot withdraw' : 'Withdraw'}</Text>
+          </TouchableOpacity>
+        )}
+        {listing.resolved && (
+          <Text style={{ color: listing.playerWon ? '#66bb6a' : '#666', fontSize: 12, marginTop: 4 }}>
+            {listing.playerWon ? '🏆 Won' : listing.sellerId === 'player' ? (listing.currentBid > listing.startingBid ? '💰 Sold' : '📋 Reserve not met') : '❌ Lost'}
+          </Text>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+      {/* List crops form */}
+      <View style={cropStyles.form}>
+        <Text style={cropStyles.formTitle}>List Crops for Auction</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+          {stockedCrops.length === 0
+            ? <Text style={{ color: '#555', fontSize: 12 }}>No crops in inventory</Text>
+            : stockedCrops.map(c => (
+              <TouchableOpacity key={c.id} style={[cropStyles.cropChip, cropId === c.id && cropStyles.cropChipActive]} onPress={() => setCropId(c.id)}>
+                <Text style={[cropStyles.cropChipText, cropId === c.id && { color: '#fff' }]}>{c.name}</Text>
+                <Text style={cropStyles.cropChipStock}>{Math.round(inventory[c.id] ?? 0)} {c.unit}</Text>
+              </TouchableOpacity>
+            ))}
+        </ScrollView>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+          <View style={{ flex: 1 }}><Text style={cropStyles.label}>Quantity</Text><TextInput style={cropStyles.input} keyboardType="numeric" value={qtyInput} onChangeText={setQtyInput} placeholder={`Max ${Math.round(inStock)}`} placeholderTextColor="#555" /></View>
+          <View style={{ flex: 1 }}><Text style={cropStyles.label}>Starting Bid</Text><TextInput style={cropStyles.input} keyboardType="numeric" value={startBidInput} onChangeText={setStartBidInput} placeholder="$0" placeholderTextColor="#555" /></View>
+          <View style={{ flex: 1 }}><Text style={cropStyles.label}>Reserve</Text><TextInput style={cropStyles.input} keyboardType="numeric" value={reserveInput} onChangeText={setReserveInput} placeholder="$0" placeholderTextColor="#555" /></View>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>
+          {([3, 7, 14] as const).map(t => (
+            <TouchableOpacity key={t} style={[cropStyles.termBtn, termDays === t && cropStyles.termBtnActive]} onPress={() => setTermDays(t)}>
+              <Text style={[cropStyles.termText, termDays === t && { color: '#fff' }]}>{t}d</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TouchableOpacity style={[cropStyles.listBtn, !canList && cropStyles.listBtnDisabled]} disabled={!canList} onPress={() => {
+          listItem({ category: 'crop', cropId, cropQuantity: parsedQty, startingBid: parsedBid, reservePrice: parsedReserve, durationDays: termDays });
+          setQtyInput(''); setStartBidInput(''); setReserveInput('');
+        }}>
+          <Text style={cropStyles.listBtnText}>{canList ? `List ${parsedQty.toLocaleString()} ${CROP_TYPES.find(c => c.id === cropId)?.unit ?? 'units'} for ${termDays}d` : 'Enter quantity & bid'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.sectionLabel}>Your Listings ({playerListings.length})</Text>
+      {playerListings.length === 0 ? <Text style={styles.emptyHint}>No active listings.</Text> : playerListings.map(l => renderCropCard(l, true))}
+
+      <Text style={styles.sectionLabel}>NPC Listings ({npcListings.length})</Text>
+      {npcListings.length === 0 ? <Text style={styles.emptyHint}>No NPC crop listings yet.</Text> : npcListings.map(l => renderCropCard(l, false))}
+
+      {resolvedListings.length > 0 && (
+        <><Text style={styles.sectionLabel}>Recent Results</Text>{resolvedListings.map(l => renderCropCard(l, false))}</>
+      )}
+    </ScrollView>
+  );
+}
+
+const cropStyles = StyleSheet.create({
+  form:              { margin: 12, backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
+  formTitle:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 10 },
+  label:             { color: '#888', fontSize: 10, marginBottom: 4 },
+  input:             { backgroundColor: '#0d1b2e', borderRadius: 8, color: '#e8d5a3', padding: 8, fontSize: 12, borderWidth: 1, borderColor: '#1e2a3a' },
+  cropChip:          { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginRight: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  cropChipActive:    { borderColor: '#4caf50', backgroundColor: '#0f2a0f' },
+  cropChipText:      { color: '#888', fontSize: 12, fontWeight: 'bold' },
+  cropChipStock:     { color: '#555', fontSize: 9 },
+  termBtn:           { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  termBtnActive:     { backgroundColor: '#1565c0', borderColor: '#42a5f5' },
+  termText:          { color: '#888', fontSize: 12, fontWeight: 'bold' },
+  listBtn:           { backgroundColor: '#1565c0', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  listBtnDisabled:   { backgroundColor: '#333' },
+  listBtnText:       { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  card:              { backgroundColor: '#16213e', borderRadius: 10, marginHorizontal: 12, marginVertical: 4, padding: 12, borderWidth: 1, borderColor: '#1e2a3a' },
+  cardWon:           { borderColor: '#4caf50' },
+  cardTitle:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
+  cardSub:           { color: '#888', fontSize: 11, marginTop: 1 },
+  currentBid:        { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  daysLeft:          { color: '#888', fontSize: 10, marginTop: 1 },
+  bidInput:          { backgroundColor: '#0d1117', borderRadius: 8, borderWidth: 1, borderColor: '#2a2a4a', color: '#e8d5a3', padding: 8, fontSize: 13 },
+  bidBtn:            { backgroundColor: '#c8860a', borderRadius: 8, paddingHorizontal: 14, justifyContent: 'center' },
+  bidBtnDisabled:    { backgroundColor: '#333' },
+  bidBtnText:        { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  withdrawBtn:       { marginTop: 6, backgroundColor: '#b71c1c', borderRadius: 8, paddingVertical: 6, alignItems: 'center' },
+  withdrawBtnDisabled:{ backgroundColor: '#2a2a2a' },
+  withdrawBtnText:   { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+});
+
 function MachineryView(_props: any) { return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#888' }}>Machinery — coming soon</Text></View>; }
 
 const styles = StyleSheet.create({
