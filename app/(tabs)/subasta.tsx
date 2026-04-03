@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import { useGameStore, AuctionLot } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
+import HintCard from '../../components/HintCard';
 
 export default function SubastaScreen() {
   const { auctionLots, day, money, placeBid } = useGameStore();
@@ -124,6 +125,9 @@ export default function SubastaScreen() {
   return (
     <View style={styles.container}>
       <ScreenHeader title="Land Auction" subtitle="Premium parcels — winner pays their bid at close" />
+      {!auctionLots.some(lot => lot.bids.some((b: { isPlayer?: boolean }) => b.isPlayer)) && (
+        <HintCard id="hint_auction" title="Buy rare items at auction" body="New auction lots appear every few days — rare seeds, animals, and machinery at below-market prices. Place a bid before the deadline and win if you're the highest bidder." />
+      )}
       <Text style={styles.subtitle}>
         Auctioned land consists of premium parcels. The winner pays their bid at close.
       </Text>

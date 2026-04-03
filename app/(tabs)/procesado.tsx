@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
+import HintCard from '../../components/HintCard';
 import { PROCESSING_RECIPES, PROCESSED_PRODUCTS, ProcessingRecipe } from '../../data/processingTypes';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
@@ -62,6 +63,9 @@ export default function ProcesadoScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <ScreenHeader title="Processing" subtitle="Transform raw materials into higher-value products" />
+      {Object.values(inventory).some(v => v > 0) && !Object.values(processedInventory).some(v => v > 0) && (
+        <HintCard id="hint_processing" title="Process crops for higher margins" body="Raw crops sell at base price, but processed goods (flour, oil, juice) sell for 2–4× more. Select a recipe and tap Process to start a batch." />
+      )}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 4 }}>
         <HelpSheet
           title="Processing"

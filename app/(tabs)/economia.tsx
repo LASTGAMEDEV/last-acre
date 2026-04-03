@@ -9,6 +9,7 @@ import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { sellRevenue, computeSellPressureModifier, sellPressureDuration } from '../../engine/market';
 import { getSeason } from '../../engine/climate';
 import HelpSheet from '../../components/HelpSheet';
+import HintCard from '../../components/HintCard';
 
 const TIER_COLORS: Record<CropTier, string> = {
   D: '#9e9e9e', C: '#4caf50', B: '#2196f3', A: '#9c27b0', S: '#ff9800',
@@ -133,7 +134,7 @@ function PriceChart({ history, basePrice }: { history: number[]; basePrice: numb
 type EcoTab = 'market' | 'autosell' | 'stats' | 'futures';
 
 export default function EconomiaScreen() {
-  const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture, priceAlerts, addPriceAlert, removePriceAlert } = useGameStore();
+  const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture, priceAlerts, addPriceAlert, removePriceAlert, money } = useGameStore();
   const [selectedCrop, setSelectedCrop] = useState<string>(CROP_TYPES[0].id);
   const [ecoTab, setEcoTab] = useState<EcoTab>('market');
   const [autoSellMinPrice, setAutoSellMinPrice] = useState<Record<string, string>>({});
@@ -203,6 +204,9 @@ export default function EconomiaScreen() {
   return (
     <View style={styles.container}>
       <ScreenHeader title="Economy" />
+      {Object.values(inventory).reduce((a, b) => a + b, 0) > 0 && money < 5000 && (
+        <HintCard id="hint_sell" title="You have crops to sell!" body="Your inventory has stock but funds are low. Go to the Market tab, select a crop, and tap Sell All to convert it to cash." />
+      )}
 
       {/* Tab bar */}
       <View style={styles.tabBar}>

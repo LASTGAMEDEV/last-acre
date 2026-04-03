@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore, OwnedWorker } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
+import HintCard from '../../components/HintCard';
 import { WORKER_TYPES, WorkerType, WorkerRole } from '../../data/workerTypes';
 
 const DEPARTMENTS: { id: string; label: string; icon: string; basicId: WorkerRole; specialistId: WorkerRole }[] = [
@@ -70,6 +71,9 @@ export default function TrabajadoresScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <ScreenHeader title="Staff" />
+      {activeWorkers.length === 0 && (
+        <HintCard id="hint_workers" title="Hire workers to automate tasks" body="Field Workers harvest automatically, Animal Keepers collect daily production, and Agronomists boost crop yield. Each worker costs a daily wage deducted at midnight." />
+      )}
 
       {totalDailyWage > 0 && (
         <View style={styles.wageBanner}>

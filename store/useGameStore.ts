@@ -378,6 +378,7 @@ export interface GameState {
   milestonePopup: { icon: string; title: string; reward: number } | null;
   tutorialSeen: boolean;
   firstMissionStep: number; // 0=plant, 1=harvest, 2=sell, 3=hire worker, 4=sign contract, 5=done
+  dismissedHints: string[];  // IDs of hints the player has permanently dismissed
   totalRevenue: number;
   yearEndShown: boolean;
   activeFair: FairEvent | null;
@@ -491,6 +492,7 @@ export interface GameState {
   claimSeasonGoalReward: (goalId: string) => void;
   resetGame: () => void;
   markTutorialSeen: () => void;
+  dismissHint: (id: string) => void;
   markYearEndShown: () => void;
   installGreenhouse: (parcelId: string) => void;
   removeGreenhouse: (parcelId: string) => void;
@@ -662,6 +664,7 @@ function makeInitialState() {
     milestonePopup: null as { icon: string; title: string; reward: number } | null,
     tutorialSeen: false,
     firstMissionStep: 0,
+    dismissedHints: [] as string[],
     totalRevenue: 0,
     yearEndShown: false,
     activeFair: null as FairEvent | null,
@@ -3492,6 +3495,12 @@ export const useGameStore = create<GameState>()(
         set({ tutorialSeen: true });
       },
 
+      dismissHint: (id) => {
+        const state = get();
+        if ((state.dismissedHints ?? []).includes(id)) return;
+        set({ dismissedHints: [...(state.dismissedHints ?? []), id] });
+      },
+
       clearMilestonePopup: () => {
         set({ milestonePopup: null });
       },
@@ -3849,6 +3858,7 @@ export const useGameStore = create<GameState>()(
           renegotiateLoan, takeBankruptcyLoan, clearBankruptcy,
           setBreedingPair, clearBreedingPair,
           enterAnimalShow, withdrawAnimalShow,
+          dismissHint,
           counterOfferContract, upgradeAnimalGene, sellSeedBatch, buyMarketSeed,
           cureDisease, plantCropBatch, setFarmName, addPriceAlert, removePriceAlert,
           startHybridization, selectSeedForParcel, startRepair,

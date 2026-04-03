@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import AnimalShowModal from '../../components/AnimalShowModal';
+import HintCard from '../../components/HintCard';
 import { useGameStore } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
@@ -80,6 +81,10 @@ export default function AnimalesScreen() {
   return (
     <View style={styles.container}>
       <ScreenHeader title="Animals" />
+
+      {animals.length === 0 && (
+        <HintCard id="hint_animals" title="Start your livestock" body="Animals produce eggs, milk, honey, wool, and meat every day. Buy a chicken coop from the Shop first, then purchase hens from this screen." />
+      )}
 
       {/* County Show banner */}
       {showWindowOpen && (

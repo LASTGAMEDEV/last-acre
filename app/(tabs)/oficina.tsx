@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
 import { useGameStore, FuturesPosition, SeasonGoal } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
+import HintCard from '../../components/HintCard';
 import { CONTRACT_TEMPLATES } from '../../engine/contracts';
 import { CROP_TYPES, CropType } from '../../data/cropTypes';
 import { INSURANCE_PLANS, InsuranceType } from '../../data/insuranceTypes';
@@ -1172,13 +1173,20 @@ function CompetitorsSection() {
 type OfficeTab = 'banking' | 'contracts' | 'reputation' | 'milestones' | 'insurance' | 'competitors';
 
 export default function OficinaScreen() {
-  const { money, savings, timeDeposits } = useGameStore();
+  const { money, savings, timeDeposits, loans, contracts } = useGameStore();
+  const activeLoans = (loans ?? []).filter((l: { paid: boolean; defaulted: boolean }) => !l.paid && !l.defaulted);
   const totalLocked = timeDeposits.reduce((s, d) => s + d.amount, 0);
   const [activeTab, setActiveTab] = useState<OfficeTab>('banking');
 
   return (
     <View style={styles.container}>
       <ScreenHeader title="My Office" />
+      {activeLoans.length === 0 && (
+        <HintCard id="hint_banking" title="Banking & Loans" body="Need capital? The Banking tab lets you take loans at rates based on your credit score. Repay on time to unlock larger tiers." />
+      )}
+      {!(contracts ?? []).some((c: { completed: boolean; failed: boolean }) => !c.completed && !c.failed) && (
+        <HintCard id="hint_contract" title="Sign a delivery contract" body="Contracts guarantee a buyer for your crops at a fixed price. Go to the Contracts tab and accept an offer — fulfilled contracts raise your reputation." />
+      )}
 
       {/* Balance card */}
       <View style={styles.balanceCard}>

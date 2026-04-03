@@ -5,6 +5,7 @@ import { playSound } from '../../engine/sounds';
 import { useRouter } from 'expo-router';
 import { useGameStore, LandParcel, FieldEvent } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
+import HintCard from '../../components/HintCard';
 import { CROP_TYPES, PlantingSeason } from '../../data/cropTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
@@ -418,6 +419,20 @@ export default function TierrasScreen() {
           <Text style={styles.viewToggleText}>{mapView ? '📋 List' : '🗺️ Map'}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Hint cards */}
+      {!parcels.some(p => p.owned && p.plantedCrop) && (
+        <HintCard id="hint_plant" title="Plant your first crop" body="Tap any owned parcel (green), then tap Till and Plant Crop to get started. Crops take a few days to mature." />
+      )}
+      {parcels.some(p => p.owned && p.plantedCrop && isReady(p)) && (
+        <HintCard id="hint_harvest" title="Crop is ready to harvest!" body="One or more of your crops has finished growing. Tap the parcel and hit Harvest to collect it." />
+      )}
+      {parcels.some(p => p.owned && p.plantedCrop && !p.plantedCrop.fertilized) && !parcels.some(p => p.owned && p.plantedCrop && isReady(p)) && (
+        <HintCard id="hint_fertilize" title="Boost yield with fertilizer" body="You have a growing crop that wasn't fertilized. Buy fertilizer from the Shop and apply it to increase your harvest by up to 30%." />
+      )}
+      {day > 30 && (
+        <HintCard id="hint_worldmap" title="Expand to new regions" body="After day 30 you can scout and purchase fields on the World Map. Bigger farms unlock better contracts and prestige bonuses." />
+      )}
 
       {/* World Map button */}
       <TouchableOpacity
