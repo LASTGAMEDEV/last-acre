@@ -8,7 +8,7 @@ import { Loan, SavingsAccount, TimeDeposit, SaleRecord, LoanRecord,
          loanTotalOwed, calculateRate, accrueInterest } from '../engine/banking';
 import { Contract } from '../engine/contracts';
 import { CROP_TYPES } from '../data/cropTypes';
-import { MACHINE_TYPES } from '../data/machineTypes';
+import { MACHINE_TYPES, MachineType } from '../data/machineTypes';
 import { BUILDING_TYPES } from '../data/buildingTypes';
 import { INSURANCE_PLANS, InsuranceType } from '../data/insuranceTypes';
 import { PROCESSING_RECIPES, PROCESSED_PRODUCTS } from '../data/processingTypes';
@@ -46,6 +46,15 @@ function getSiloCapacity(buildings: string[]): number {
     const t = BUILDING_TYPES.find(bt => bt.id === bId && bt.category === 'silo');
     return s + (t?.capacity ?? 0);
   }, BASE);
+}
+
+function getFuelCapacity(buildings: string[]): number {
+  let cap = 200; // default tank
+  for (const id of buildings) {
+    if (id === 'bld_fuel_tank_s') cap += 500;
+    else if (id === 'bld_fuel_tank_l') cap += 2000;
+  }
+  return cap;
 }
 
 // ENCLOSURE_BUILDINGS imported from constants/enclosures.ts
@@ -400,6 +409,7 @@ export interface GameState {
   seasonalEvent: { type: 'heat_wave' | 'flood' | 'frost'; startDay: number; endsDay: number; severity: number } | null;
 
   farmName: string;
+  fuel: number;
   priceAlerts: PriceAlert[];
 
   // Actions
@@ -416,6 +426,7 @@ export interface GameState {
   setFarmName: (name: string) => void;
   addPriceAlert: (cropId: string, targetPrice: number, direction: 'above' | 'below') => void;
   removePriceAlert: (alertId: string) => void;
+  buyFuel: (litres: number) => void;
   advanceDay: () => void;
   advanceDays: (n: number) => void;
   buyParcel: (parcelId: string) => void;
@@ -660,6 +671,7 @@ function makeInitialState() {
     personalRecords: { peakMoney: 1_000_000, totalHarvests: 0, bestSeasonRevenue: 0, longestDay: 1 },
     seasonalEvent: null as { type: 'heat_wave' | 'flood' | 'frost'; startDay: number; endsDay: number; severity: number } | null,
     farmName: 'My Farm',
+    fuel: 200,
     priceAlerts: [] as PriceAlert[],
   };
 }
@@ -1929,10 +1941,23 @@ export const useGameStore = create<GameState>()(
         const animalInventoryForSet = workerAnimalInventory ?? state.animalInventory;
         const harvestedCropIdsForSet = workerHarvestedIds ?? state.harvestedCropIds;
 
+        // ── Fuel tracking for job day ────────────────────────────────────────
+        let currentFuel = state.fuel ?? 200;
+        const fuelPausedNames: string[] = [];
+
         // ── Process TractorJobs ──────────────────────────────────────────────
         const completedTractorJobIds: string[] = [];
         for (const job of (state.tractorJobs ?? [])) {
           if (job.completesDay > newDay) continue;
+          // Fuel check
+          const tractorOwned = (state.machines ?? []).find((m: OwnedMachine) => m.id === job.tractorId);
+          const tractorMachineType = MACHINE_TYPES.find((mt: MachineType) => mt.id === (tractorOwned?.typeId ?? ''));
+          const fuelNeeded = tractorMachineType?.fuelPerDay ?? 0;
+          if (fuelNeeded > 0 && currentFuel < fuelNeeded) {
+            fuelPausedNames.push(tractorMachineType?.name ?? 'Tractor');
+            continue;
+          }
+          currentFuel -= fuelNeeded;
           completedTractorJobIds.push(job.id);
           if (job.operation === 'till') {
             finalParcels = finalParcels.map((p: LandParcel) =>
@@ -1986,6 +2011,15 @@ export const useGameStore = create<GameState>()(
 
         for (let hi = 0; hi < updatedHarvestJobs.length; hi++) {
           const hj = updatedHarvestJobs[hi];
+          // Fuel check
+          const combineOwned = (state.machines ?? []).find((m: OwnedMachine) => m.id === hj.combineId);
+          const combineMachineType = MACHINE_TYPES.find((mt: MachineType) => mt.id === (combineOwned?.typeId ?? ''));
+          const harvestFuelNeeded = combineMachineType?.fuelPerDay ?? 0;
+          if (harvestFuelNeeded > 0 && currentFuel < harvestFuelNeeded) {
+            fuelPausedNames.push(combineMachineType?.name ?? 'Combine');
+            continue;
+          }
+          currentFuel -= harvestFuelNeeded;
           const haAvailable = Math.min(hj.haPerDay, hj.totalHa - hj.processedHa);
           let processedHa = 0;
 
@@ -2020,6 +2054,17 @@ export const useGameStore = create<GameState>()(
           updatedHarvestJobs[hi] = { ...hj, processedHa: hj.processedHa + processedHa };
         }
         updatedHarvestJobs = updatedHarvestJobs.filter((hj: HarvestJob) => hj.processedHa < hj.totalHa);
+
+        if (fuelPausedNames.length > 0) {
+          const uniqueNames = [...new Set(fuelPausedNames)];
+          summary.push({
+            id: 'fuel_paused',
+            icon: '⛽',
+            title: `Fuel too low — ${uniqueNames.join(', ')} idle`,
+            detail: `Refuel in the Machinery tab to resume jobs`,
+            severity: 'danger',
+          });
+        }
 
         // ── Crop disease spread ──────────────────────────────────────────────
         const hasShelter = state.buildings.includes('bld_shelter');
@@ -2205,6 +2250,7 @@ export const useGameStore = create<GameState>()(
           animalPrices,
           tractorJobs: remainingTractorJobs,
           harvestJobs: updatedHarvestJobs,
+          fuel: currentFuel,
           personalRecords: {
             peakMoney: Math.max(state.personalRecords?.peakMoney ?? 0, finalMoney),
             totalHarvests: state.personalRecords?.totalHarvests ?? 0,
@@ -3073,6 +3119,17 @@ export const useGameStore = create<GameState>()(
       },
 
       setFarmName: (name) => set({ farmName: name.trim() || 'My Farm' }),
+
+      buyFuel: (litres) => {
+        const state = get();
+        const capacity = getFuelCapacity(state.buildings);
+        const canAdd = Math.max(0, capacity - state.fuel);
+        const actualLitres = Math.min(litres, canAdd);
+        if (actualLitres <= 0) return;
+        const cost = Math.round(actualLitres * 1.20);
+        if (state.money < cost) return;
+        set({ fuel: Math.min(capacity, state.fuel + actualLitres), money: state.money - cost });
+      },
 
       addPriceAlert: (cropId, targetPrice, direction) => {
         const state = get();

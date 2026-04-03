@@ -9,7 +9,15 @@ type MachineryTab = 'fleet' | 'attachments' | 'jobs';
 
 // ── Fleet Tab ────────────────────────────────────────────────────────────────
 function FleetTab() {
-  const { machines, trailers, tractorJobs, harvestJobs, machineRepairs, day } = useGameStore();
+  const { machines, trailers, tractorJobs, harvestJobs, machineRepairs, day, fuel, buyFuel, buildings, money } = useGameStore();
+  const fuelCapacity = (buildings ?? []).reduce((cap: number, id: string) => {
+    if (id === 'bld_fuel_tank_s') return cap + 500;
+    if (id === 'bld_fuel_tank_l') return cap + 2000;
+    return cap;
+  }, 200);
+  const fuelPct = Math.min(1, (fuel ?? 0) / fuelCapacity);
+  const fuelColor = fuelPct > 0.5 ? '#66bb6a' : fuelPct > 0.2 ? '#ffa726' : '#ef5350';
+  const fillCost = Math.round(Math.max(0, fuelCapacity - (fuel ?? 0)) * 1.20);
 
   const getJobForTractor = (tractorId: string): TractorJob | undefined =>
     (tractorJobs ?? []).find((j: TractorJob) => j.tractorId === tractorId);
@@ -63,6 +71,43 @@ function FleetTab() {
 
   return (
     <ScrollView style={{ flex: 1 }}>
+      {/* Fuel section */}
+      <View style={s.fuelCard}>
+        <View style={s.fuelHeader}>
+          <Text style={s.fuelTitle}>⛽ Fuel</Text>
+          <Text style={s.fuelAmount}>{Math.round(fuel ?? 0).toLocaleString()} / {fuelCapacity.toLocaleString()} L</Text>
+        </View>
+        <View style={s.fuelGaugeBg}>
+          <View style={[s.fuelGaugeFill, { width: `${Math.round(fuelPct * 100)}%` as `${number}%`, backgroundColor: fuelColor }]} />
+        </View>
+        <View style={s.fuelBuyRow}>
+          {([50, 100, 200] as const).map(litres => {
+            const cost = Math.round(litres * 1.20);
+            const canAfford = money >= cost;
+            const hasRoom = (fuel ?? 0) + litres <= fuelCapacity;
+            return (
+              <TouchableOpacity
+                key={litres}
+                style={[s.fuelBuyBtn, (!canAfford || !hasRoom) && s.fuelBuyBtnDisabled]}
+                onPress={() => buyFuel(litres)}
+                disabled={!canAfford || !hasRoom}
+              >
+                <Text style={s.fuelBuyBtnTop}>+{litres} L</Text>
+                <Text style={s.fuelBuyBtnSub}>${cost}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          <TouchableOpacity
+            style={[s.fuelBuyBtn, s.fuelFillBtn, (fillCost <= 0 || money < fillCost) && s.fuelBuyBtnDisabled]}
+            onPress={() => buyFuel(fuelCapacity - (fuel ?? 0))}
+            disabled={fillCost <= 0 || money < fillCost}
+          >
+            <Text style={s.fuelBuyBtnTop}>Fill</Text>
+            <Text style={s.fuelBuyBtnSub}>${fillCost.toLocaleString()}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {tractors.length > 0 && (
         <>
           <Text style={s.sectionHeader}>🚜 Tractors</Text>
@@ -273,4 +318,16 @@ const s = StyleSheet.create({
   jobTitle:     { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 4 },
   progressBar:  { height: 6, backgroundColor: '#1a1a2e', borderRadius: 3, marginTop: 8, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: '#81c784', borderRadius: 3 },
+  fuelCard:           { backgroundColor: '#16213e', borderRadius: 10, padding: 12, margin: 8, gap: 8 },
+  fuelHeader:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  fuelTitle:          { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' },
+  fuelAmount:         { color: '#888', fontSize: 11 },
+  fuelGaugeBg:        { height: 8, backgroundColor: '#0d1117', borderRadius: 4, overflow: 'hidden' },
+  fuelGaugeFill:      { height: 8, borderRadius: 4 },
+  fuelBuyRow:         { flexDirection: 'row', gap: 6 },
+  fuelBuyBtn:         { flex: 1, backgroundColor: '#0f3460', borderRadius: 8, paddingVertical: 7, alignItems: 'center' },
+  fuelBuyBtnDisabled: { backgroundColor: '#1a1a2e', opacity: 0.5 },
+  fuelFillBtn:        { backgroundColor: '#1a3a20' },
+  fuelBuyBtnTop:      { color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' },
+  fuelBuyBtnSub:      { color: '#66bb6a', fontSize: 10 },
 });

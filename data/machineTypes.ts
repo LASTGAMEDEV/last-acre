@@ -5,6 +5,7 @@ export interface MachineType {
   size: 'small' | 'medium' | 'large';
   category: 'tractor' | 'harvester' | 'truck' | 'trailer' | 'irrigation';
   maintenancePerDay: number;
+  fuelPerDay?: number;         // litres consumed per active job-day (tractors & harvesters only)
   haPerDay?: number;           // harvesters
   capacityKg?: number;         // trucks (0 = needs trailer) and trailers
   compatibleTrailerSizes?: ('small' | 'medium' | 'large')[];  // trucks only
@@ -13,13 +14,13 @@ export interface MachineType {
 
 export const MACHINE_TYPES: MachineType[] = [
   // ── Tractors ─────────────────────────────────────────────────────────────
-  { id: 'tractor-small',  name: 'Small Tractor',  cost: 18000,  size: 'small',  category: 'tractor',    maintenancePerDay: 4 },
-  { id: 'tractor-medium', name: 'Medium Tractor', cost: 48000,  size: 'medium', category: 'tractor',    maintenancePerDay: 9 },
-  { id: 'tractor-large',  name: 'Large Tractor',  cost: 120000, size: 'large',  category: 'tractor',    maintenancePerDay: 20 },
+  { id: 'tractor-small',  name: 'Small Tractor',  cost: 18000,  size: 'small',  category: 'tractor',    maintenancePerDay: 4,  fuelPerDay: 8 },
+  { id: 'tractor-medium', name: 'Medium Tractor', cost: 48000,  size: 'medium', category: 'tractor',    maintenancePerDay: 9,  fuelPerDay: 18 },
+  { id: 'tractor-large',  name: 'Large Tractor',  cost: 120000, size: 'large',  category: 'tractor',    maintenancePerDay: 20, fuelPerDay: 40 },
   // ── Combine Harvesters ───────────────────────────────────────────────────
-  { id: 'combine-small',  name: 'Small Combine',  cost: 85000,  size: 'small',  category: 'harvester',  maintenancePerDay: 15, haPerDay: 4 },
-  { id: 'combine-medium', name: 'Medium Combine', cost: 175000, size: 'medium', category: 'harvester',  maintenancePerDay: 28, haPerDay: 10 },
-  { id: 'combine-large',  name: 'Large Combine',  cost: 340000, size: 'large',  category: 'harvester',  maintenancePerDay: 50, haPerDay: 22 },
+  { id: 'combine-small',  name: 'Small Combine',  cost: 85000,  size: 'small',  category: 'harvester',  maintenancePerDay: 15, fuelPerDay: 15, haPerDay: 4 },
+  { id: 'combine-medium', name: 'Medium Combine', cost: 175000, size: 'medium', category: 'harvester',  maintenancePerDay: 28, fuelPerDay: 30, haPerDay: 10 },
+  { id: 'combine-large',  name: 'Large Combine',  cost: 340000, size: 'large',  category: 'harvester',  maintenancePerDay: 50, fuelPerDay: 60, haPerDay: 22 },
   // ── Irrigation Systems ───────────────────────────────────────────────────
   { id: 'irrigation-drip',      name: 'Drip System',      cost: 8500,  size: 'small',  category: 'irrigation', maintenancePerDay: 2,  haPerDay: 1 },
   { id: 'irrigation-sprinkler', name: 'Sprinkler Array',  cost: 28000, size: 'medium', category: 'irrigation', maintenancePerDay: 5,  haPerDay: 3 },

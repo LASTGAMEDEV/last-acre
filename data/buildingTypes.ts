@@ -1,4 +1,4 @@
-export type BuildingCategory = 'animal' | 'silo' | 'industrial' | 'lab';
+export type BuildingCategory = 'animal' | 'silo' | 'industrial' | 'lab' | 'upgrade';
 
 export interface BuildingType {
   id: string;
@@ -403,6 +403,84 @@ export const BUILDING_TYPES: BuildingType[] = [
     maintenancePerDay: 25,
     effectLabel: '3 hybridization slots · 7-day cycles',
   },
+
+  // ── Farm Upgrades (late game, high-cost, game-changing effects) ────────────
+  {
+    id: 'bld_cold_storage',
+    name: 'Cold Storage',
+    category: 'upgrade',
+    cost: 60_000,
+    maintenancePerDay: 12,
+    effectLabel: 'Prevents crop spoilage · +10% sell price on stored inventory',
+  },
+  {
+    id: 'bld_smart_irrigation',
+    name: 'Smart Irrigation System',
+    category: 'upgrade',
+    cost: 80_000,
+    maintenancePerDay: 10,
+    effectLabel: '+30% crop yield on all owned parcels (stacks with irrigation)',
+  },
+  {
+    id: 'bld_research_station',
+    name: 'Research Station',
+    category: 'upgrade',
+    cost: 120_000,
+    maintenancePerDay: 20,
+    effectLabel: 'Cuts all crop growth time by 20% · unlocks advanced contracts',
+  },
+  {
+    id: 'bld_solar_array',
+    name: 'Solar Panel Array',
+    category: 'upgrade',
+    cost: 90_000,
+    maintenancePerDay: -20,
+    effectLabel: 'Generates energy — reduces all maintenance costs by 30%',
+  },
+  {
+    id: 'bld_shelter',
+    name: 'Storm Shelter',
+    category: 'upgrade' as BuildingCategory,
+    cost: 35_000,
+    maintenancePerDay: 6,
+    effectLabel: 'Protects all animals from seasonal events (heat wave, frost, flood) — halves sickness chance during events',
+  },
+  {
+    id: 'bld_export_terminal',
+    name: 'Export Terminal',
+    category: 'upgrade',
+    cost: 150_000,
+    maintenancePerDay: 30,
+    effectLabel: '+50% revenue on all delivery contracts · unlocks export-tier contracts',
+  },
+  {
+    id: 'bld_hydroponic_lab',
+    name: 'Hydroponic Lab',
+    category: 'upgrade',
+    cost: 200_000,
+    maintenancePerDay: 35,
+    capacity: 10,
+    effectLabel: '10 hydroponic slots — any crop, any season, +40% yield, no soil degradation',
+  },
+  // ── Fuel Tanks ─────────────────────────────────────────────────────────────
+  {
+    id: 'bld_fuel_tank_s',
+    name: 'Small Fuel Tank',
+    category: 'upgrade',
+    cost: 3_500,
+    maintenancePerDay: 0,
+    capacity: 500,
+    effectLabel: '+500 L fuel capacity for tractors and combines',
+  },
+  {
+    id: 'bld_fuel_tank_l',
+    name: 'Large Fuel Tank',
+    category: 'upgrade',
+    cost: 9_000,
+    maintenancePerDay: 0,
+    capacity: 2000,
+    effectLabel: '+2000 L fuel capacity for tractors and combines',
+  },
 ];
 
 export const BUILDING_CATEGORY_LABELS: Record<BuildingCategory, string> = {
@@ -410,4 +488,5 @@ export const BUILDING_CATEGORY_LABELS: Record<BuildingCategory, string> = {
   silo:       '🏗️ Silos',
   industrial: '🏭 Industrial Buildings',
   lab:        '🧪 Seed Lab',
+  upgrade:    '⚡ Farm Upgrades',
 };
