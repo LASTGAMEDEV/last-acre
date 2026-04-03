@@ -3524,12 +3524,113 @@ export const useGameStore = create<GameState>()(
         });
       },
 
-      listItem: (_params) => {
-        // TODO: implement in auction-house feature
+      listItem: (params) => {
+        const state = get();
+        const { category, animalId, cropId, cropQuantity, machineId,
+                startingBid, reservePrice, durationDays } = params;
+        if (startingBid <= 0 || reservePrice < startingBid) return;
+
+        const listing: AuctionListing = {
+          id: `listing_${Date.now()}`,
+          category,
+          sellerId: 'player',
+          startingBid,
+          reservePrice,
+          currentBid: startingBid,
+          bids: [],
+          playerBid: null,
+          createdDay: state.day,
+          expiresDay: state.day + durationDays,
+          resolved: false,
+          playerWon: null,
+        };
+
+        if (category === 'animal') {
+          if (!animalId) return;
+          const animal = state.animals.find(a => a.id === animalId);
+          if (!animal) return;
+          listing.animalId = animalId;
+          listing.animalGenes = animal.genes;
+          listing.animalTypeId = animal.typeId;
+          listing.expiresDay = state.nextAnimalAuctionDay;
+          set({
+            listings: [...(state.listings ?? []), listing],
+            animals: state.animals.filter(a => a.id !== animalId),
+          });
+        } else if (category === 'crop') {
+          if (!cropId || !cropQuantity || cropQuantity <= 0) return;
+          const inStock = state.inventory[cropId] ?? 0;
+          if (inStock < cropQuantity) return;
+          listing.cropId = cropId;
+          listing.cropQuantity = cropQuantity;
+          set({
+            listings: [...(state.listings ?? []), listing],
+            inventory: { ...state.inventory, [cropId]: inStock - cropQuantity },
+          });
+        } else if (category === 'machinery') {
+          if (!machineId) return;
+          const machine = state.machines.find(m => m.id === machineId);
+          if (!machine) return;
+          const machineType = MACHINE_TYPES.find(t => t.id === machine.typeId);
+          if (!machineType) return;
+          const ageDays = state.day - machine.purchasedDay;
+          const repairs = (state.machineRepairs ?? []).filter(r => r.machineId === machineId);
+          const repairedOnTime = repairs.filter(r => r.readyDay !== null).length;
+          const missedRepairs = repairs.filter(r => r.startDay === null).length;
+          const conditionScore = Math.min(100, Math.max(0,
+            100 - Math.floor(ageDays / 5) + repairedOnTime * 3 - missedRepairs * 8
+          ));
+          listing.machineId = machineId;
+          listing.machineTypeId = machine.typeId;
+          listing.conditionScore = conditionScore;
+          set({
+            listings: [...(state.listings ?? []), listing],
+            machines: state.machines.filter(m => m.id !== machineId),
+          });
+        }
       },
 
-      withdrawListing: (_listingId) => {
-        // TODO: implement in auction-house feature
+      withdrawListing: (listingId) => {
+        const state = get();
+        const listing = (state.listings ?? []).find(l => l.id === listingId && !l.resolved);
+        if (!listing || listing.sellerId !== 'player') return;
+        if (listing.bids.some(b => b.isPlayer === false)) return; // bids exist, can't withdraw
+
+        let inventoryPatch: Partial<typeof state> = {};
+        if (listing.category === 'animal' && listing.animalId && listing.animalGenes && listing.animalTypeId) {
+          const returnedAnimal: OwnedAnimal = {
+            id: listing.animalId,
+            typeId: listing.animalTypeId,
+            sex: 'female',
+            bornDay: state.day,
+            genes: listing.animalGenes,
+            sick: false,
+            lastProductionDay: state.day,
+            lastBreedDay: state.day,
+          };
+          inventoryPatch = { animals: [...state.animals, returnedAnimal] };
+        } else if (listing.category === 'crop' && listing.cropId && listing.cropQuantity) {
+          inventoryPatch = {
+            inventory: {
+              ...state.inventory,
+              [listing.cropId]: (state.inventory[listing.cropId] ?? 0) + listing.cropQuantity,
+            },
+          };
+        } else if (listing.category === 'machinery' && listing.machineId && listing.machineTypeId) {
+          const restoredMachine: OwnedMachine = {
+            id: listing.machineId,
+            typeId: listing.machineTypeId,
+            purchasedDay: state.day,
+          };
+          inventoryPatch = { machines: [...state.machines, restoredMachine] };
+        }
+
+        set({
+          ...inventoryPatch,
+          listings: (state.listings ?? []).map(l =>
+            l.id === listingId ? { ...l, resolved: true, playerWon: null } : l
+          ),
+        });
       },
 
       placeBid: (listingId, amount) => {
