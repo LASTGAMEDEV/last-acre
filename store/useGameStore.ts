@@ -1999,12 +1999,6 @@ export const useGameStore = create<GameState>()(
 
         // Apply auction money / inventory / asset deltas (merged into advanceDay final set)
         moneyDelta += auctionMoneyDelta;
-        const auctionFinalInventory = Object.fromEntries(
-          Object.keys({ ...state.inventory, ...auctionInventoryDelta }).map(k => [
-            k, Math.max(0, (state.inventory[k] ?? 0) + (auctionInventoryDelta[k] ?? 0)),
-          ])
-        );
-
         let finalParcels = [...parcels, ...parcelAdditions, ...auctionParcelAdditions];
         // Time deposit maturity payouts
         const maturedDeposits = state.timeDeposits.filter(
