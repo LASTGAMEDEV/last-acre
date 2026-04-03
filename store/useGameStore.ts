@@ -323,6 +323,9 @@ export interface AuctionListing {
   animalId?: string;                 // animal (player-listed)
   animalTypeId?: string;             // animal (NPC-generated)
   animalGenes?: AnimalGenes;         // animal
+  animalSex?: 'male' | 'female';           // animal — preserved for withdrawal
+  animalBornDay?: number;                   // animal — preserved for withdrawal
+  machinePurchasedDay?: number;             // machinery — preserved for withdrawal
   cropId?: string;                   // crop
   cropQuantity?: number;             // crop
   machineId?: string;                // machinery (player-listed)
@@ -3552,6 +3555,8 @@ export const useGameStore = create<GameState>()(
           listing.animalId = animalId;
           listing.animalGenes = animal.genes;
           listing.animalTypeId = animal.typeId;
+          listing.animalSex = animal.sex;
+          listing.animalBornDay = animal.bornDay;
           listing.expiresDay = state.nextAnimalAuctionDay;
           set({
             listings: [...(state.listings ?? []), listing],
@@ -3583,6 +3588,7 @@ export const useGameStore = create<GameState>()(
           listing.machineId = machineId;
           listing.machineTypeId = machine.typeId;
           listing.conditionScore = conditionScore;
+          listing.machinePurchasedDay = machine.purchasedDay;
           set({
             listings: [...(state.listings ?? []), listing],
             machines: state.machines.filter(m => m.id !== machineId),
@@ -3601,8 +3607,8 @@ export const useGameStore = create<GameState>()(
           const returnedAnimal: OwnedAnimal = {
             id: listing.animalId,
             typeId: listing.animalTypeId,
-            sex: 'female',
-            bornDay: state.day,
+            sex: listing.animalSex ?? 'female',
+            bornDay: listing.animalBornDay ?? state.day,
             genes: listing.animalGenes,
             sick: false,
             lastProductionDay: state.day,
@@ -3620,7 +3626,7 @@ export const useGameStore = create<GameState>()(
           const restoredMachine: OwnedMachine = {
             id: listing.machineId,
             typeId: listing.machineTypeId,
-            purchasedDay: state.day,
+            purchasedDay: listing.machinePurchasedDay ?? state.day,
           };
           inventoryPatch = { machines: [...state.machines, restoredMachine] };
         }
