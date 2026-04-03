@@ -310,6 +310,36 @@ export interface AuctionLot {
   playerWon: boolean | null;
 }
 
+// ── Auction House ─────────────────────────────────────────────────────────────
+export type AuctionCategory = 'land' | 'animal' | 'crop' | 'machinery';
+
+export interface AuctionListing {
+  id: string;
+  category: AuctionCategory;
+  sellerId: 'player' | string;      // 'player' or NPC farm id
+  // Payload — only the relevant field is set per category
+  parcelId?: string;                 // land
+  parcel?: LandParcel;               // land (kept for display, same as AuctionLot)
+  animalId?: string;                 // animal (player-listed)
+  animalTypeId?: string;             // animal (NPC-generated)
+  animalGenes?: AnimalGenes;         // animal
+  cropId?: string;                   // crop
+  cropQuantity?: number;             // crop
+  machineId?: string;                // machinery (player-listed)
+  machineTypeId?: string;            // machinery (NPC-generated)
+  conditionScore?: number;           // machinery (0–100)
+  // Auction terms
+  startingBid: number;
+  reservePrice: number;              // 0 = no reserve; hidden from bidders
+  currentBid: number;
+  bids: AuctionBid[];
+  playerBid: number | null;
+  createdDay: number;
+  expiresDay: number;                // for animal listings: equals nextAnimalAuctionDay at creation
+  resolved: boolean;
+  playerWon: boolean | null;
+}
+
 export interface InsurancePolicy {
   id: string;
   type: InsuranceType;
@@ -379,7 +409,8 @@ export interface GameState {
   declinedTemplates: string[];
 
   fieldEvents: FieldEvent[];
-  auctionLots: AuctionLot[];
+  listings: AuctionListing[];
+  nextAnimalAuctionDay: number;
   daySummary: DaySummaryEvent[] | null;
 
   insurances: InsurancePolicy[];
@@ -502,7 +533,18 @@ export interface GameState {
   resolveFieldEvent: (eventId: string, productId: string) => void;
   clearWeeds: (parcelId: string) => void;
   fertilizeCrop: (parcelId: string, productId: string) => void;
-  placeBid: (lotId: string, amount: number) => void;
+  listItem: (params: {
+    category: AuctionCategory;
+    animalId?: string;
+    cropId?: string;
+    cropQuantity?: number;
+    machineId?: string;
+    startingBid: number;
+    reservePrice: number;
+    durationDays: 3 | 7 | 14;
+  }) => void;
+  withdrawListing: (listingId: string) => void;
+  placeBid: (listingId: string, amount: number) => void;
   clearDaySummary: () => void;
   buyInsurance: (type: InsuranceType) => void;
   cancelInsurance: (policyId: string) => void;
@@ -625,27 +667,26 @@ function generateInitialPrices(): MarketPrice[] {
   return CROP_TYPES.map(c => ({ cropId: c.id, price: c.basePrice, basePrice: c.basePrice }));
 }
 
-function generateInitialAuctions(): AuctionLot[] {
+function generateInitialListings(): AuctionListing[] {
   const premiumParcels: LandParcel[] = [
-    { id: 'auction_p0', name: 'Gold Acre',     fertility: 22, hectares: 5,  pricePerHa: 55000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
-    { id: 'auction_p1', name: 'Prime Ridge',   fertility: 25, hectares: 2,  pricePerHa: 60000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
-    { id: 'auction_p2', name: 'Blessed Bottom',fertility: 20, hectares: 10, pricePerHa: 50000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
+    { id: 'auction_p0', name: 'Gold Acre',   fertility: 22, hectares: 5,  pricePerHa: 55000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
+    { id: 'auction_p1', name: 'Prime Ridge', fertility: 25, hectares: 2,  pricePerHa: 60000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
   ];
-  return premiumParcels.map((parcel, i) => {
-    const startingBid = Math.round(parcel.pricePerHa * parcel.hectares * 0.75);
-    return {
-      id: `lot_init_${i}`,
-      parcel,
-      startDay: 1,
-      endDay: 12 + i * 6,
-      startingBid,
-      currentBid: startingBid,
-      bids: [],
-      playerBid: null,
-      resolved: false,
-      playerWon: null,
-    };
-  });
+  return premiumParcels.map((parcel, i) => ({
+    id: `lot_init_${i}`,
+    category: 'land' as AuctionCategory,
+    sellerId: 'npc',
+    parcel,
+    startingBid: Math.round(parcel.pricePerHa * parcel.hectares * 0.7),
+    reservePrice: 0,
+    currentBid: Math.round(parcel.pricePerHa * parcel.hectares * 0.7),
+    bids: [],
+    playerBid: null,
+    createdDay: 1,
+    expiresDay: 10 + i * 5,
+    resolved: false,
+    playerWon: null,
+  }));
 }
 
 function makeInitialState() {
@@ -676,7 +717,8 @@ function makeInitialState() {
     buildings: [] as string[],
     declinedTemplates: [] as string[],
     fieldEvents: [] as FieldEvent[],
-    auctionLots: generateInitialAuctions(),
+    listings: generateInitialListings(),
+    nextAnimalAuctionDay: 8,
     daySummary: null as DaySummaryEvent[] | null,
     insurances: [] as InsurancePolicy[],
     insuranceClaims: [] as InsuranceClaim[],
@@ -3482,6 +3524,14 @@ export const useGameStore = create<GameState>()(
         });
       },
 
+      listItem: (_params) => {
+        // TODO: implement in auction-house feature
+      },
+
+      withdrawListing: (_listingId) => {
+        // TODO: implement in auction-house feature
+      },
+
       placeBid: (lotId, amount) => {
         const state = get();
         const lot = state.auctionLots.find(l => l.id === lotId);
@@ -3961,7 +4011,7 @@ export const useGameStore = create<GameState>()(
           buyAnimal, sellAnimal, collectAnimalProduction, sellAnimalProduct, breedAnimal, treatAnimal,
           buyMachine, requestLoan, repayLoan, depositSavings, withdrawSavings,
           acceptContract, declineContract, deliverCrop, buyProduct, buyBuilding,
-          resolveFieldEvent, clearWeeds, fertilizeCrop, placeBid, clearDaySummary,
+          resolveFieldEvent, clearWeeds, fertilizeCrop, listItem, withdrawListing, placeBid, clearDaySummary,
           buyInsurance, cancelInsurance,
           processProduct, sellProcessed,
           openTimeDeposit, closeTimeDeposit, resetGame, markTutorialSeen, markYearEndShown,
