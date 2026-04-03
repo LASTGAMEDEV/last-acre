@@ -133,7 +133,7 @@ function PriceChart({ history, basePrice }: { history: number[]; basePrice: numb
 type EcoTab = 'market' | 'autosell' | 'stats' | 'futures';
 
 export default function EconomiaScreen() {
-  const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture } = useGameStore();
+  const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture, priceAlerts, addPriceAlert, removePriceAlert } = useGameStore();
   const [selectedCrop, setSelectedCrop] = useState<string>(CROP_TYPES[0].id);
   const [ecoTab, setEcoTab] = useState<EcoTab>('market');
   const [autoSellMinPrice, setAutoSellMinPrice] = useState<Record<string, string>>({});
@@ -142,6 +142,8 @@ export default function EconomiaScreen() {
   const [futuresTerm, setFuturesTerm] = useState<30 | 60 | 90>(30);
   const [futuresFlash, setFuturesFlash] = useState(false);
   const futuresFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [alertTargetPrice, setAlertTargetPrice] = useState('');
+  const [alertDirection, setAlertDirection] = useState<'above' | 'below'>('above');
 
   useEffect(() => {
     return () => {
@@ -501,6 +503,29 @@ export default function EconomiaScreen() {
         </ScrollView>
       )}
 
+      {/* Active alerts summary */}
+      {(priceAlerts ?? []).length > 0 && (
+        <View style={styles.alertSummaryBar}>
+          <Text style={styles.alertSummaryTitle}>🎯 Active Alerts</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingRight: 8 }}>
+            {(priceAlerts ?? []).map(alert => {
+              const cropDef = CROP_TYPES.find(c => c.id === alert.cropId);
+              return (
+                <View key={alert.id} style={styles.alertSummaryChip}>
+                  <Text style={styles.alertSummaryChipName}>{cropDef?.name ?? alert.cropId}</Text>
+                  <Text style={styles.alertSummaryChipPrice}>
+                    {alert.direction === 'below' ? '≤' : '≥'}${alert.targetPrice.toFixed(2)}
+                  </Text>
+                  <TouchableOpacity onPress={() => removePriceAlert(alert.id)}>
+                    <Text style={styles.alertSummaryChipRemove}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       <View style={styles.body}>
         {/* Left column */}
         <ScrollView style={styles.leftCol} showsVerticalScrollIndicator={false}>
@@ -624,6 +649,63 @@ export default function EconomiaScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Price Alert */}
+          {(() => {
+            const existingAlert = (priceAlerts ?? []).find(a => a.cropId === selectedCrop);
+            return (
+              <View style={styles.alertPanel}>
+                <Text style={styles.alertPanelTitle}>🎯 Price Alert</Text>
+                {existingAlert ? (
+                  <View style={styles.alertActiveRow}>
+                    <Text style={styles.alertActiveText}>
+                      {existingAlert.direction === 'below' ? 'Sell when ≤' : 'Sell when ≥'} ${existingAlert.targetPrice.toFixed(2)}
+                    </Text>
+                    <TouchableOpacity onPress={() => removePriceAlert(existingAlert.id)}>
+                      <Text style={styles.alertRemoveBtn}>✕ Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <>
+                    <View style={styles.alertDirectionRow}>
+                      {(['above', 'below'] as const).map(dir => (
+                        <TouchableOpacity
+                          key={dir}
+                          style={[styles.alertDirBtn, alertDirection === dir && styles.alertDirBtnActive]}
+                          onPress={() => setAlertDirection(dir)}
+                        >
+                          <Text style={[styles.alertDirBtnText, alertDirection === dir && styles.alertDirBtnTextActive]}>
+                            {dir === 'above' ? '≥ Above' : '≤ Below'}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={styles.alertInputRow}>
+                      <TextInput
+                        style={styles.alertInput}
+                        value={alertTargetPrice}
+                        onChangeText={setAlertTargetPrice}
+                        placeholder="Target $"
+                        placeholderTextColor="#444"
+                        keyboardType="numeric"
+                      />
+                      <TouchableOpacity
+                        style={styles.alertSetBtn}
+                        onPress={() => {
+                          const tp = parseFloat(alertTargetPrice);
+                          if (!tp || tp <= 0) return;
+                          addPriceAlert(selectedCrop, tp, alertDirection);
+                          setAlertTargetPrice('');
+                        }}
+                      >
+                        <Text style={styles.alertSetBtnText}>Set Alert</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+              </View>
+            );
+          })()}
 
           {/* ROI Ranking */}
           <View style={styles.section}>
@@ -844,4 +926,24 @@ const styles = StyleSheet.create({
   futuresPosDelivery:  { color: '#aaa', fontSize: 12, fontWeight: 'bold' },
   futuresPosDay:       { color: '#555', fontSize: 10, marginTop: 2 },
   futuresSettledBadge: { color: '#66bb6a', fontSize: 12, fontWeight: 'bold' },
+  alertPanel:           { backgroundColor: '#16213e', borderRadius: 10, padding: 10, marginTop: 8, gap: 6 },
+  alertPanelTitle:      { color: '#e8d5a3', fontSize: 11, fontWeight: 'bold', marginBottom: 2 },
+  alertActiveRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  alertActiveText:      { color: '#66bb6a', fontSize: 12 },
+  alertRemoveBtn:       { color: '#ef5350', fontSize: 12, paddingHorizontal: 6 },
+  alertDirectionRow:    { flexDirection: 'row', gap: 6 },
+  alertDirBtn:          { flex: 1, backgroundColor: '#0d1117', borderRadius: 6, paddingVertical: 5, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
+  alertDirBtnActive:    { backgroundColor: '#0f3460', borderColor: '#e8d5a3' },
+  alertDirBtnText:      { color: '#666', fontSize: 11, fontWeight: 'bold' },
+  alertDirBtnTextActive:{ color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' },
+  alertInputRow:        { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  alertInput:           { flex: 1, backgroundColor: '#0d1117', borderRadius: 6, borderWidth: 1, borderColor: '#333', color: '#e8d5a3', fontSize: 12, paddingHorizontal: 8, paddingVertical: 5 },
+  alertSetBtn:          { backgroundColor: '#0f3460', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
+  alertSetBtnText:      { color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' },
+  alertSummaryBar:          { backgroundColor: '#16213e', paddingHorizontal: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
+  alertSummaryTitle:        { color: '#e8d5a3', fontSize: 10, fontWeight: 'bold', marginBottom: 4 },
+  alertSummaryChip:         { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f3460', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, gap: 4 },
+  alertSummaryChipName:     { color: '#e8d5a3', fontSize: 10, fontWeight: 'bold' },
+  alertSummaryChipPrice:    { color: '#66bb6a', fontSize: 10 },
+  alertSummaryChipRemove:   { color: '#ef5350', fontSize: 11, paddingLeft: 2 },
 });
