@@ -7,6 +7,8 @@ import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { geneScore } from '../../engine/animals';
 import { OwnedAnimal } from '../../engine/animals';
 import { CROP_TYPES } from '../../data/cropTypes';
+import { MACHINE_TYPES } from '../../data/machineTypes';
+import { OwnedMachine } from '../../store/useGameStore';
 
 type AuctionView = 'hub' | AuctionCategory;
 
@@ -554,7 +556,217 @@ const cropStyles = StyleSheet.create({
   withdrawBtnText:   { color: '#fff', fontSize: 11, fontWeight: 'bold' },
 });
 
-function MachineryView(_props: any) { return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#888' }}>Machinery — coming soon</Text></View>; }
+function computeConditionScore(machine: OwnedMachine, day: number, machineRepairs: any[]): number {
+  const ageDays = day - machine.purchasedDay;
+  const repairs = machineRepairs.filter((r: any) => r.machineId === machine.id);
+  const repairedOnTime = repairs.filter((r: any) => r.readyDay !== null).length;
+  const missedRepairs = repairs.filter((r: any) => r.startDay === null).length;
+  return Math.min(100, Math.max(0,
+    100 - Math.floor(ageDays / 5) + repairedOnTime * 3 - missedRepairs * 8
+  ));
+}
+
+function conditionLabel(score: number): { label: string; color: string; bg: string } {
+  if (score >= 75) return { label: 'Good', color: '#81c784', bg: '#2e5a2e' };
+  if (score >= 40) return { label: 'Fair', color: '#ffa726', bg: '#3a2a0a' };
+  return { label: 'Poor', color: '#ef5350', bg: '#3a1a0a' };
+}
+
+function MachineryView({ listings, day, money, placeBid, listItem, withdrawListing,
+                         machines, bidInputs, setBidInputs }: {
+  listings: AuctionListing[];
+  day: number; money: number;
+  placeBid: (id: string, amount: number) => void;
+  listItem: (params: any) => void;
+  withdrawListing: (id: string) => void;
+  machines: any[];
+  bidInputs: Record<string, string>;
+  setBidInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+}) {
+  const { machineRepairs } = useGameStore.getState();
+  const [selectedMachineId, setSelectedMachineId] = React.useState<string | null>(null);
+  const [startBidInput, setStartBidInput] = React.useState('');
+  const [reserveInput, setReserveInput] = React.useState('');
+  const [termDays, setTermDays] = React.useState<3 | 7 | 14>(7);
+
+  const activeListings = listings.filter(l => !l.resolved && l.category === 'machinery');
+  const playerListings = activeListings.filter(l => l.sellerId === 'player');
+  const npcListings = activeListings.filter(l => l.sellerId !== 'player');
+  const resolvedListings = listings.filter(l => l.resolved && l.category === 'machinery').slice(-5).reverse();
+
+  const eligibleMachines = (machines ?? []).filter((m: OwnedMachine) => {
+    const mt = MACHINE_TYPES.find(t => t.id === m.typeId);
+    return mt && (mt.category === 'tractor' || mt.category === 'harvester');
+  });
+
+  const selectedMachine = eligibleMachines.find((m: OwnedMachine) => m.id === selectedMachineId);
+  const selectedMachineType = selectedMachine ? MACHINE_TYPES.find(t => t.id === selectedMachine.typeId) : null;
+  const selectedCondition = selectedMachine ? computeConditionScore(selectedMachine, day, machineRepairs ?? []) : 0;
+  const suggestedPrice = selectedMachineType ? Math.round(selectedMachineType.cost * (selectedCondition / 100) * 0.70) : 0;
+  const { label: condLabel, color: condColor } = conditionLabel(selectedCondition);
+
+  const parsedBid = parseInt(startBidInput) || 0;
+  const parsedReserve = parseInt(reserveInput) || parsedBid;
+  const canList = !!selectedMachineId && parsedBid > 0;
+
+  function renderMachineCard(listing: AuctionListing, isPlayer: boolean) {
+    const machineType = MACHINE_TYPES.find(t => t.id === listing.machineTypeId);
+    const daysLeft = listing.expiresDay - day;
+    const score = listing.conditionScore ?? 70;
+    const { label, color, bg } = conditionLabel(score);
+    const minBid = Math.ceil(listing.currentBid * 1.05);
+    const bidText = bidInputs[listing.id] ?? '';
+    const bidAmount = parseFloat(bidText.replace(/,/g, '')) || 0;
+    const canBid = !isPlayer && bidAmount >= minBid && money >= bidAmount;
+    const hasBids = listing.bids.some(b => !b.isPlayer);
+    return (
+      <View key={listing.id} style={[mStyles.card, listing.playerWon === true && mStyles.cardWon]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={mStyles.cardTitle}>{machineType?.name ?? listing.machineTypeId}</Text>
+            <View style={{ flexDirection: 'row', gap: 6, marginTop: 3, alignItems: 'center' }}>
+              <View style={[mStyles.condBadge, { backgroundColor: bg }]}>
+                <Text style={[mStyles.condText, { color }]}>{label} {score}/100</Text>
+              </View>
+              {!listing.resolved && <Text style={mStyles.daysLeft}>{daysLeft}d left</Text>}
+            </View>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={mStyles.currentBid}>${listing.currentBid.toLocaleString()}</Text>
+            {listing.sellerId !== 'player' && <Text style={mStyles.sellerName}>NPC Farm</Text>}
+          </View>
+        </View>
+        {!isPlayer && !listing.resolved && (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TextInput style={[mStyles.bidInput, { flex: 1 }]} keyboardType="numeric" placeholder={`Min $${minBid.toLocaleString()}`} placeholderTextColor="#555" value={bidText} onChangeText={v => setBidInputs(b => ({ ...b, [listing.id]: v }))} />
+            <TouchableOpacity style={[mStyles.bidBtn, !canBid && mStyles.bidBtnDisabled]} disabled={!canBid} onPress={() => { placeBid(listing.id, bidAmount); setBidInputs(b => ({ ...b, [listing.id]: '' })); }}>
+              <Text style={mStyles.bidBtnText}>Bid</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {isPlayer && !listing.resolved && (
+          <TouchableOpacity style={[mStyles.withdrawBtn, hasBids && mStyles.withdrawBtnDisabled]} disabled={hasBids} onPress={() => withdrawListing(listing.id)}>
+            <Text style={mStyles.withdrawBtnText}>{hasBids ? 'Bids placed — cannot withdraw' : 'Withdraw'}</Text>
+          </TouchableOpacity>
+        )}
+        {listing.resolved && (
+          <Text style={{ color: listing.playerWon ? '#66bb6a' : '#666', fontSize: 12, marginTop: 4 }}>
+            {listing.playerWon ? '🏆 Won' : listing.sellerId === 'player' ? (listing.currentBid > listing.startingBid ? '💰 Sold' : '📋 Reserve not met') : '❌ Lost'}
+          </Text>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+      {/* List machine form */}
+      <View style={mStyles.form}>
+        <Text style={mStyles.formTitle}>List a Machine</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+          {eligibleMachines.length === 0
+            ? <Text style={{ color: '#555', fontSize: 12 }}>No tractors or combines to list</Text>
+            : eligibleMachines.map((m: OwnedMachine) => {
+              const mt = MACHINE_TYPES.find(t => t.id === m.typeId);
+              const score = computeConditionScore(m, day, machineRepairs ?? []);
+              const { label, color } = conditionLabel(score);
+              return (
+                <TouchableOpacity key={m.id} style={[mStyles.machineChip, selectedMachineId === m.id && mStyles.machineChipActive]} onPress={() => {
+                  setSelectedMachineId(m.id);
+                  const sugg = mt ? Math.round(mt.cost * (score / 100) * 0.70) : 0;
+                  setStartBidInput(String(Math.round(sugg * 0.8)));
+                  setReserveInput(String(sugg));
+                }}>
+                  <Text style={mStyles.machineChipName}>{mt?.name ?? m.typeId}</Text>
+                  <Text style={[mStyles.machineChipCond, { color }]}>{label} {score}/100</Text>
+                </TouchableOpacity>
+              );
+            })}
+        </ScrollView>
+
+        {selectedMachine && (
+          <View style={mStyles.condBar}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={mStyles.condBarLabel}>Condition</Text>
+              <Text style={[mStyles.condBarScore, { color: condColor }]}>{condLabel} {selectedCondition}/100</Text>
+            </View>
+            <View style={mStyles.condBarTrack}>
+              <View style={[mStyles.condBarFill, { width: `${selectedCondition}%` as any, backgroundColor: condColor }]} />
+            </View>
+            <Text style={mStyles.condBarHint}>Suggested price: ${suggestedPrice.toLocaleString()}</Text>
+          </View>
+        )}
+
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+          <View style={{ flex: 1 }}><Text style={mStyles.label}>Starting Bid</Text><TextInput style={mStyles.input} keyboardType="numeric" value={startBidInput} onChangeText={setStartBidInput} placeholder="$0" placeholderTextColor="#555" /></View>
+          <View style={{ flex: 1 }}><Text style={mStyles.label}>Reserve Price</Text><TextInput style={mStyles.input} keyboardType="numeric" value={reserveInput} onChangeText={setReserveInput} placeholder="$0" placeholderTextColor="#555" /></View>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>
+          {([3, 7, 14] as const).map(t => (
+            <TouchableOpacity key={t} style={[mStyles.termBtn, termDays === t && mStyles.termBtnActive]} onPress={() => setTermDays(t)}>
+              <Text style={[mStyles.termText, termDays === t && { color: '#fff' }]}>{t}d</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TouchableOpacity style={[mStyles.listBtn, !canList && mStyles.listBtnDisabled]} disabled={!canList} onPress={() => {
+          if (!selectedMachineId) return;
+          listItem({ category: 'machinery', machineId: selectedMachineId, startingBid: parsedBid, reservePrice: parsedReserve, durationDays: termDays });
+          setSelectedMachineId(null); setStartBidInput(''); setReserveInput('');
+        }}>
+          <Text style={mStyles.listBtnText}>{canList ? 'List for Auction' : 'Select a machine & set price'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.sectionLabel}>Your Listings ({playerListings.length})</Text>
+      {playerListings.length === 0 ? <Text style={styles.emptyHint}>No machines listed.</Text> : playerListings.map(l => renderMachineCard(l, true))}
+
+      <Text style={styles.sectionLabel}>NPC Listings ({npcListings.length})</Text>
+      {npcListings.length === 0 ? <Text style={styles.emptyHint}>No NPC machinery listed yet.</Text> : npcListings.map(l => renderMachineCard(l, false))}
+
+      {resolvedListings.length > 0 && (
+        <><Text style={styles.sectionLabel}>Recent Results</Text>{resolvedListings.map(l => renderMachineCard(l, false))}</>
+      )}
+    </ScrollView>
+  );
+}
+
+const mStyles = StyleSheet.create({
+  form:              { margin: 12, backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
+  formTitle:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 10 },
+  label:             { color: '#888', fontSize: 10, marginBottom: 4 },
+  input:             { backgroundColor: '#0d1b2e', borderRadius: 8, color: '#e8d5a3', padding: 8, fontSize: 12, borderWidth: 1, borderColor: '#1e2a3a' },
+  machineChip:       { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginRight: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  machineChipActive: { borderColor: '#1565c0', backgroundColor: '#0d1b3e' },
+  machineChipName:   { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' },
+  machineChipCond:   { fontSize: 10, marginTop: 2 },
+  condBar:           { backgroundColor: '#0d1b2e', borderRadius: 8, padding: 10, marginBottom: 10 },
+  condBarLabel:      { color: '#888', fontSize: 10 },
+  condBarScore:      { fontSize: 11, fontWeight: 'bold' },
+  condBarTrack:      { backgroundColor: '#1e2a3a', borderRadius: 4, height: 6, marginBottom: 4 },
+  condBarFill:       { height: 6, borderRadius: 4 },
+  condBarHint:       { color: '#555', fontSize: 10 },
+  termBtn:           { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  termBtnActive:     { backgroundColor: '#1565c0', borderColor: '#42a5f5' },
+  termText:          { color: '#888', fontSize: 12, fontWeight: 'bold' },
+  listBtn:           { backgroundColor: '#1565c0', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  listBtnDisabled:   { backgroundColor: '#333' },
+  listBtnText:       { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  card:              { backgroundColor: '#16213e', borderRadius: 10, marginHorizontal: 12, marginVertical: 4, padding: 12, borderWidth: 1, borderColor: '#1e2a3a' },
+  cardWon:           { borderColor: '#4caf50' },
+  cardTitle:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
+  condBadge:         { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
+  condText:          { fontSize: 10, fontWeight: 'bold' },
+  daysLeft:          { color: '#888', fontSize: 10 },
+  currentBid:        { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  sellerName:        { color: '#555', fontSize: 9 },
+  bidInput:          { backgroundColor: '#0d1117', borderRadius: 8, borderWidth: 1, borderColor: '#2a2a4a', color: '#e8d5a3', padding: 8, fontSize: 13 },
+  bidBtn:            { backgroundColor: '#c8860a', borderRadius: 8, paddingHorizontal: 14, justifyContent: 'center' },
+  bidBtnDisabled:    { backgroundColor: '#333' },
+  bidBtnText:        { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  withdrawBtn:       { marginTop: 6, backgroundColor: '#b71c1c', borderRadius: 8, paddingVertical: 6, alignItems: 'center' },
+  withdrawBtnDisabled:{ backgroundColor: '#2a2a2a' },
+  withdrawBtnText:   { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+});
 
 const styles = StyleSheet.create({
   container:       { flex: 1, backgroundColor: '#1a1a2e' },
