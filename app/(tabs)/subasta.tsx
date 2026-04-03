@@ -3,6 +3,9 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput } from 
 import { useGameStore, AuctionListing, AuctionCategory } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import HintCard from '../../components/HintCard';
+import { ANIMAL_TYPES } from '../../data/animalTypes';
+import { geneScore } from '../../engine/animals';
+import { OwnedAnimal } from '../../engine/animals';
 
 type AuctionView = 'hub' | AuctionCategory;
 
@@ -170,7 +173,238 @@ function LandView({ listings, day, money, placeBid, bidInputs, setBidInputs }: {
 }
 
 // Placeholder components — will be replaced in Tasks 5, 6, 7
-function AnimalView(_props: any) { return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#888' }}>Animals — coming soon</Text></View>; }
+function geneLabel(score: number): { grade: string; color: string } {
+  if (score >= 1.3) return { grade: 'S', color: '#7eb8f7' };
+  if (score >= 1.15) return { grade: 'A', color: '#66bb6a' };
+  if (score >= 1.0)  return { grade: 'B', color: '#ffa726' };
+  if (score >= 0.85) return { grade: 'C', color: '#ef5350' };
+  return { grade: 'D', color: '#888' };
+}
+
+function AnimalView({ listings, day, money, placeBid, listItem, withdrawListing,
+                      nextAnimalAuctionDay, animals, bidInputs, setBidInputs }: {
+  listings: AuctionListing[];
+  day: number; money: number;
+  placeBid: (id: string, amount: number) => void;
+  listItem: (params: any) => void;
+  withdrawListing: (id: string) => void;
+  nextAnimalAuctionDay: number;
+  animals: OwnedAnimal[];
+  bidInputs: Record<string, string>;
+  setBidInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+}) {
+  const [showListForm, setShowListForm] = React.useState(false);
+  const [selectedAnimalId, setSelectedAnimalId] = React.useState<string | null>(null);
+  const [startBidInput, setStartBidInput] = React.useState('');
+  const [reserveInput, setReserveInput] = React.useState('');
+
+  const daysToEvent = nextAnimalAuctionDay - day;
+  const activeListings = listings.filter(l => !l.resolved && l.category === 'animal');
+  const playerListings = activeListings.filter(l => l.sellerId === 'player');
+  const npcListings = activeListings.filter(l => l.sellerId !== 'player');
+  const resolvedListings = listings.filter(l => l.resolved && l.category === 'animal').slice(-5).reverse();
+
+  function renderAnimalCard(listing: AuctionListing, isPlayer: boolean) {
+    const animalTypeDef = ANIMAL_TYPES.find((a: any) => a.id === listing.animalTypeId);
+    const score = listing.animalGenes ? geneScore(listing.animalGenes) : 1.0;
+    const { grade, color } = geneLabel(score);
+    const minBid = Math.ceil(listing.currentBid * 1.05);
+    const bidText = bidInputs[listing.id] ?? '';
+    const bidAmount = parseFloat(bidText.replace(/,/g, '')) || 0;
+    const canBid = !isPlayer && bidAmount >= minBid && money >= bidAmount;
+    const hasBids = listing.bids.length > 0;
+
+    return (
+      <View key={listing.id} style={[anStyles.card, listing.playerWon === true && anStyles.cardWon]}>
+        <View style={anStyles.cardHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={anStyles.cardTitle}>{animalTypeDef?.name ?? listing.animalTypeId}</Text>
+            <View style={{ flexDirection: 'row', gap: 6, marginTop: 3, alignItems: 'center' }}>
+              <View style={[anStyles.gradeBadge, { backgroundColor: color + '33', borderColor: color }]}>
+                <Text style={[anStyles.gradeText, { color }]}>Grade {grade}</Text>
+              </View>
+              {listing.sellerId === 'player' && <Text style={anStyles.yourTag}>Your listing</Text>}
+            </View>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={anStyles.currentBid}>${listing.currentBid.toLocaleString()}</Text>
+            <Text style={anStyles.bidSub}>current bid</Text>
+          </View>
+        </View>
+
+        {!isPlayer && !listing.resolved && (
+          <View style={anStyles.bidRow}>
+            <TextInput
+              style={anStyles.bidInput}
+              keyboardType="numeric"
+              placeholder={`Min: $${minBid.toLocaleString()}`}
+              placeholderTextColor="#555"
+              value={bidText}
+              onChangeText={v => setBidInputs(b => ({ ...b, [listing.id]: v }))}
+            />
+            <TouchableOpacity
+              style={[anStyles.bidBtn, !canBid && anStyles.bidBtnDisabled]}
+              disabled={!canBid}
+              onPress={() => { placeBid(listing.id, bidAmount); setBidInputs(b => ({ ...b, [listing.id]: '' })); }}
+            >
+              <Text style={anStyles.bidBtnText}>Bid</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {isPlayer && !listing.resolved && (
+          <TouchableOpacity
+            style={[anStyles.withdrawBtn, hasBids && anStyles.withdrawBtnDisabled]}
+            disabled={hasBids}
+            onPress={() => withdrawListing(listing.id)}
+          >
+            <Text style={anStyles.withdrawBtnText}>
+              {hasBids ? 'Bids placed — cannot withdraw' : 'Withdraw'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {listing.resolved && (
+          <Text style={[anStyles.resolvedTag, listing.playerWon ? { color: '#66bb6a' } : { color: '#666' }]}>
+            {listing.playerWon ? '🏆 Won' : listing.sellerId === 'player' ? '💰 Sold' : '❌ Lost'}
+          </Text>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+      {/* Event countdown banner */}
+      <View style={anStyles.eventBanner}>
+        <View>
+          <Text style={anStyles.eventTitle}>⚡ County Livestock Auction</Text>
+          <Text style={anStyles.eventSub}>Resolves Day {nextAnimalAuctionDay} · List before that day</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={anStyles.eventDays}>{daysToEvent <= 0 ? 'Today!' : `${daysToEvent}d`}</Text>
+          <Text style={anStyles.eventDaysSub}>remaining</Text>
+        </View>
+      </View>
+
+      {/* Player listings */}
+      <Text style={styles.sectionLabel}>Your Listings ({playerListings.length})</Text>
+      {playerListings.map(l => renderAnimalCard(l, true))}
+
+      {/* List an animal form */}
+      {!showListForm ? (
+        <TouchableOpacity style={anStyles.listBtn} onPress={() => setShowListForm(true)}>
+          <Text style={anStyles.listBtnText}>+ List an Animal</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={anStyles.listForm}>
+          <Text style={anStyles.formTitle}>List an Animal</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+            {animals.map(a => {
+              const typeDef = ANIMAL_TYPES.find((t: any) => t.id === a.typeId);
+              const score = a.genes ? geneScore(a.genes) : 1.0;
+              const { grade, color } = geneLabel(score);
+              return (
+                <TouchableOpacity
+                  key={a.id}
+                  style={[anStyles.animalChip, selectedAnimalId === a.id && anStyles.animalChipActive]}
+                  onPress={() => setSelectedAnimalId(a.id)}
+                >
+                  <Text style={anStyles.animalChipName}>{typeDef?.name ?? a.typeId}</Text>
+                  <Text style={[anStyles.animalChipGrade, { color }]}>Grade {grade}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={anStyles.formLabel}>Starting Bid</Text>
+              <TextInput style={anStyles.formInput} keyboardType="numeric" value={startBidInput} onChangeText={setStartBidInput} placeholder="$0" placeholderTextColor="#555" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={anStyles.formLabel}>Reserve Price</Text>
+              <TextInput style={anStyles.formInput} keyboardType="numeric" value={reserveInput} onChangeText={setReserveInput} placeholder="$0" placeholderTextColor="#555" />
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              style={[anStyles.confirmBtn, (!selectedAnimalId || !startBidInput) && anStyles.confirmBtnDisabled]}
+              disabled={!selectedAnimalId || !startBidInput}
+              onPress={() => {
+                if (!selectedAnimalId) return;
+                const sb = parseInt(startBidInput) || 0;
+                const rp = parseInt(reserveInput) || sb;
+                listItem({ category: 'animal', animalId: selectedAnimalId, startingBid: sb, reservePrice: rp, durationDays: 7 });
+                setShowListForm(false); setSelectedAnimalId(null); setStartBidInput(''); setReserveInput('');
+              }}
+            >
+              <Text style={anStyles.confirmBtnText}>Confirm Listing</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={anStyles.cancelBtn} onPress={() => setShowListForm(false)}>
+              <Text style={anStyles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* NPC listings */}
+      <Text style={styles.sectionLabel}>NPC Listings ({npcListings.length})</Text>
+      {npcListings.length === 0
+        ? <Text style={styles.emptyHint}>No animals listed yet — check back after the event.</Text>
+        : npcListings.map(l => renderAnimalCard(l, false))}
+
+      {/* History */}
+      {resolvedListings.length > 0 && (
+        <>
+          <Text style={styles.sectionLabel}>Recent Results</Text>
+          {resolvedListings.map(l => renderAnimalCard(l, false))}
+        </>
+      )}
+    </ScrollView>
+  );
+}
+
+const anStyles = StyleSheet.create({
+  card:              { backgroundColor: '#16213e', borderRadius: 12, marginHorizontal: 12, marginVertical: 5, padding: 12, borderWidth: 1, borderColor: '#1e2a3a' },
+  cardWon:           { borderColor: '#4caf50' },
+  cardHeader:        { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
+  cardTitle:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14 },
+  gradeBadge:        { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1 },
+  gradeText:         { fontSize: 11, fontWeight: 'bold' },
+  yourTag:           { color: '#888', fontSize: 10, fontStyle: 'italic' },
+  currentBid:        { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  bidSub:            { color: '#555', fontSize: 9 },
+  bidRow:            { flexDirection: 'row', gap: 8, marginTop: 4 },
+  bidInput:          { flex: 1, backgroundColor: '#0d1117', borderRadius: 8, borderWidth: 1, borderColor: '#2a2a4a', color: '#e8d5a3', padding: 10, fontSize: 13 },
+  bidBtn:            { backgroundColor: '#c8860a', borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center' },
+  bidBtnDisabled:    { backgroundColor: '#333' },
+  bidBtnText:        { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  withdrawBtn:       { marginTop: 6, backgroundColor: '#b71c1c', borderRadius: 8, paddingVertical: 7, alignItems: 'center' },
+  withdrawBtnDisabled:{ backgroundColor: '#2a2a2a' },
+  withdrawBtnText:   { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  resolvedTag:       { marginTop: 6, fontSize: 13, fontWeight: 'bold' },
+  eventBanner:       { margin: 12, backgroundColor: '#1a2744', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#ffd700', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  eventTitle:        { color: '#ffd700', fontWeight: 'bold', fontSize: 13 },
+  eventSub:          { color: '#888', fontSize: 10, marginTop: 2 },
+  eventDays:         { color: '#ffd700', fontSize: 22, fontWeight: 'bold' },
+  eventDaysSub:      { color: '#888', fontSize: 9 },
+  listBtn:           { margin: 12, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#4caf50', borderStyle: 'dashed', alignItems: 'center' },
+  listBtnText:       { color: '#4caf50', fontWeight: 'bold', fontSize: 13 },
+  listForm:          { margin: 12, backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
+  formTitle:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 10 },
+  formLabel:         { color: '#888', fontSize: 10, marginBottom: 4 },
+  formInput:         { backgroundColor: '#0d1b2e', borderRadius: 8, color: '#e8d5a3', padding: 10, fontSize: 13, borderWidth: 1, borderColor: '#1e2a3a' },
+  animalChip:        { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginRight: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  animalChipActive:  { borderColor: '#4caf50', backgroundColor: '#0f2a0f' },
+  animalChipName:    { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' },
+  animalChipGrade:   { fontSize: 10, marginTop: 2 },
+  confirmBtn:        { flex: 1, backgroundColor: '#1565c0', borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
+  confirmBtnDisabled:{ backgroundColor: '#333' },
+  confirmBtnText:    { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  cancelBtn:         { backgroundColor: '#2a2a2a', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center' },
+  cancelBtnText:     { color: '#888', fontSize: 13 },
+});
+
 function CropView(_props: any) { return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#888' }}>Crops — coming soon</Text></View>; }
 function MachineryView(_props: any) { return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#888' }}>Machinery — coming soon</Text></View>; }
 
