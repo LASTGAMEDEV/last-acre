@@ -134,6 +134,27 @@ export interface OwnedWorker {
   hiredDay: number;
 }
 
+// ── Animal Shows ─────────────────────────────────────────────────────────────
+export interface ShowEntry {
+  animalId: string;
+  seasonKey: string;
+  entryFee: number;
+  enteredDay: number;
+}
+
+export interface ShowResult {
+  id: string;
+  seasonKey: string;
+  seasonLabel: string;
+  animalId: string;
+  animalTypeId: string;
+  playerScore: number;
+  placement: number;
+  prize: number;
+  npcScores: number[];
+  resolvedDay: number;
+}
+
 export interface FuturesPosition {
   id: string;
   cropId: string;
@@ -411,6 +432,10 @@ export interface GameState {
   farmName: string;
   fuel: number;
   priceAlerts: PriceAlert[];
+  // Animal Shows
+  showEntries: ShowEntry[];
+  showResults: ShowResult[];
+  showWindowOpen: boolean;
 
   // Actions
   setSoundEnabled: (enabled: boolean) => void;
@@ -427,6 +452,8 @@ export interface GameState {
   addPriceAlert: (cropId: string, targetPrice: number, direction: 'above' | 'below') => void;
   removePriceAlert: (alertId: string) => void;
   buyFuel: (litres: number) => void;
+  enterAnimalShow: (animalId: string) => void;
+  withdrawAnimalShow: (animalId: string) => void;
   advanceDay: () => void;
   advanceDays: (n: number) => void;
   buyParcel: (parcelId: string) => void;
@@ -673,6 +700,9 @@ function makeInitialState() {
     farmName: 'My Farm',
     fuel: 200,
     priceAlerts: [] as PriceAlert[],
+    showEntries: [] as ShowEntry[],
+    showResults: [] as ShowResult[],
+    showWindowOpen: false,
   };
 }
 
@@ -803,6 +833,14 @@ export const useGameStore = create<GameState>()(
           });
         }
 
+        // ── Animal Show: open entry window at days 83–89 of each season quarter ──
+        const dayInSeason = (newDay - 1) % 90;
+        const showWindowOpen = dayInSeason >= 82 && dayInSeason <= 88;
+
+        // Show resolution state (populated inside season change block if needed)
+        let newShowResults: ShowResult[] = [];
+        let showPrizeMoney = 0;
+
         // Season change announcement + goal generation
         let newSeasonGoals: SeasonGoal[] | null = null;
         let newSeasonGoalSeason: string | null = null;
@@ -837,6 +875,50 @@ export const useGameStore = create<GameState>()(
           newSeasonGoalSeason = season;
           newSeasonStartMoney = state.money;
           newSeasonStartRevenue = state.totalRevenue;
+
+          // ── Animal Show: resolve results at season transition ──────────────
+          const { geneScore: geneScoreShow } = require('../engine/animals');
+          const prevSeasonStart = state.day - ((state.day - 1) % 90);
+          const prevSeasonKey = `${prevSeason}_${prevSeasonStart}`;
+          const seasonEntries = (state.showEntries ?? []).filter(e => e.seasonKey === prevSeasonKey);
+          const PRIZE_TABLE_SHOW = [2500, 1000, 500];
+          newShowResults = seasonEntries.map(entry => {
+            const animal = state.animals.find(a => a.id === entry.animalId);
+            if (!animal) return null as unknown as ShowResult;
+            const genes = animal.genes ?? { production: 1, hardiness: 1, growth: 1, value: 1 };
+            const traitBonus = (animal.traits ?? []).length * 0.05;
+            const playerScore = parseFloat((geneScoreShow(genes) + traitBonus).toFixed(3));
+            const npcBase = 0.85 + Math.min(state.day / 3600, 0.35);
+            const npcScores = Array.from({ length: 5 }, () =>
+              parseFloat((npcBase + (Math.random() - 0.5) * 0.30).toFixed(3))
+            );
+            const allScores = [...npcScores, playerScore].sort((a, b) => b - a);
+            const placement = allScores.indexOf(playerScore) + 1;
+            const prize = placement <= 3 ? PRIZE_TABLE_SHOW[placement - 1] : 0;
+            showPrizeMoney += prize;
+            const seasonLabels: Record<string, string> = { spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter' };
+            const year = Math.ceil(state.day / 360);
+            return {
+              id: `show_${entry.animalId}_${state.day}`,
+              seasonKey: prevSeasonKey,
+              seasonLabel: `${seasonLabels[prevSeason] ?? prevSeason} Year ${year}`,
+              animalId: entry.animalId,
+              animalTypeId: animal.typeId,
+              playerScore,
+              placement,
+              prize,
+              npcScores,
+              resolvedDay: newDay,
+            } as ShowResult;
+          }).filter(Boolean);
+
+          for (const result of newShowResults) {
+            if (result.placement === 1) {
+              summary.push({ id: `show_win_${result.id}`, icon: '🏆', title: `1st place at the County Show! +$${result.prize.toLocaleString()}`, detail: '', severity: 'good' });
+            } else if (result.placement <= 3) {
+              summary.push({ id: `show_place_${result.id}`, icon: '🎖️', title: `${result.placement === 2 ? '2nd' : '3rd'} place at the County Show! +$${result.prize.toLocaleString()}`, detail: '', severity: 'good' });
+            }
+          }
         }
 
         // Farm Fair: tick down or randomly start
@@ -2206,7 +2288,17 @@ export const useGameStore = create<GameState>()(
         const autoSellSalesEntries = autoSellLog.map(s => ({ day: newDay, amount: Math.round(s.revenue), category: 'crops' as const }));
         set({
           day: newDay,
-          money: finalMoney,
+          money: finalMoney + showPrizeMoney,
+          showWindowOpen,
+          showEntries: season !== prevSeason
+            ? (state.showEntries ?? []).filter(e => {
+                const prevStart = state.day - ((state.day - 1) % 90);
+                return e.seasonKey !== `${prevSeason}_${prevStart}`;
+              })
+            : (state.showEntries ?? []),
+          showResults: season !== prevSeason
+            ? [...(state.showResults ?? []), ...newShowResults].slice(-40)
+            : (state.showResults ?? []),
           forecast,
           todayWeather,
           prices,
@@ -2562,6 +2654,34 @@ export const useGameStore = create<GameState>()(
           const next = { ...state.breedingPairs };
           delete next[femaleId];
           return { breedingPairs: next };
+        });
+      },
+
+      enterAnimalShow: (animalId) => {
+        const state = get();
+        if (!state.showWindowOpen) return;
+        const { getSeason } = require('../engine/climate');
+        const season = getSeason(state.day);
+        const seasonKey = `${season}_${state.day - ((state.day - 1) % 90)}`;
+        if (state.showEntries.some(e => e.seasonKey === seasonKey && e.animalId === animalId)) return;
+        const ENTRY_FEE = 250;
+        if (state.money < ENTRY_FEE) return;
+        set({
+          money: state.money - ENTRY_FEE,
+          showEntries: [...state.showEntries, { animalId, seasonKey, entryFee: ENTRY_FEE, enteredDay: state.day }],
+        });
+      },
+
+      withdrawAnimalShow: (animalId) => {
+        const state = get();
+        const { getSeason } = require('../engine/climate');
+        const season = getSeason(state.day);
+        const seasonKey = `${season}_${state.day - ((state.day - 1) % 90)}`;
+        const entry = state.showEntries.find(e => e.seasonKey === seasonKey && e.animalId === animalId);
+        const refund = entry ? Math.round(entry.entryFee * 0.5) : 0;
+        set({
+          money: state.money + refund,
+          showEntries: state.showEntries.filter(e => !(e.seasonKey === seasonKey && e.animalId === animalId)),
         });
       },
 
@@ -3728,6 +3848,7 @@ export const useGameStore = create<GameState>()(
           hireWorker, fireWorker, installIrrigation,
           renegotiateLoan, takeBankruptcyLoan, clearBankruptcy,
           setBreedingPair, clearBreedingPair,
+          enterAnimalShow, withdrawAnimalShow,
           counterOfferContract, upgradeAnimalGene, sellSeedBatch, buyMarketSeed,
           cureDisease, plantCropBatch, setFarmName, addPriceAlert, removePriceAlert,
           startHybridization, selectSeedForParcel, startRepair,

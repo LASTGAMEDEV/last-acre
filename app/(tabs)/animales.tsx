@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import AnimalShowModal from '../../components/AnimalShowModal';
 import { useGameStore } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
@@ -68,14 +69,46 @@ export default function AnimalesScreen() {
     treatAnimal, collectAllProduction,
     breedingPairs, setBreedingPair, clearBreedingPair,
     animalPrices, upgradeAnimalGene,
+    showWindowOpen, showResults,
   } = useGameStore();
   const fairMult = activeFair ? (1 - activeFair.discount) : 1.0;
   const [expandedAnimalId, setExpandedAnimalId] = useState<string | null>(null);
+  const [showModalVisible, setShowModalVisible] = useState(false);
+  type AnimalTab = 'herd' | 'results';
+  const [animalTab, setAnimalTab] = useState<AnimalTab>('herd');
 
   return (
     <View style={styles.container}>
       <ScreenHeader title="Animals" />
 
+      {/* County Show banner */}
+      {showWindowOpen && (
+        <TouchableOpacity
+          style={showStyles.banner}
+          onPress={() => setShowModalVisible(true)}
+          activeOpacity={0.85}
+        >
+          <Text style={showStyles.bannerText}>🏆 County Show entries open — deadline in {90 - ((day - 1) % 90)} days</Text>
+          <Text style={showStyles.bannerCta}>Enter Show →</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Herd / Results tab bar */}
+      <View style={showStyles.tabBar}>
+        {(['herd', 'results'] as AnimalTab[]).map(t => (
+          <TouchableOpacity
+            key={t}
+            style={[showStyles.tabBtn, animalTab === t && showStyles.tabBtnActive]}
+            onPress={() => setAnimalTab(t)}
+          >
+            <Text style={[showStyles.tabText, animalTab === t && showStyles.tabTextActive]}>
+              {t === 'herd' ? 'My Herd' : `Show Results${(showResults ?? []).length ? ` (${(showResults ?? []).length})` : ''}`}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {animalTab === 'herd' && <>
       {/* Farm Fair banner */}
       {activeFair && (
         <View style={styles.fairBanner}>
@@ -455,9 +488,60 @@ export default function AnimalesScreen() {
           );
         }}
       />
+      </>}
+
+      {animalTab === 'results' && (
+        <ScrollView style={{ flex: 1 }}>
+          {(showResults ?? []).length === 0 ? (
+            <Text style={showStyles.emptyResults}>No show results yet. Enter the next County Show!</Text>
+          ) : (
+            [...(showResults ?? [])].reverse().map(result => {
+              const placementLabel = result.placement === 1 ? '🥇 1st' : result.placement === 2 ? '🥈 2nd' : result.placement === 3 ? '🥉 3rd' : 'No placement';
+              const placementColor = result.placement === 1 ? '#ffd700' : result.placement === 2 ? '#c0c0c0' : result.placement === 3 ? '#cd7f32' : '#555';
+              const animalType = ANIMAL_TYPES.find(t => t.id === result.animalTypeId);
+              return (
+                <View key={result.id} style={showStyles.resultCard}>
+                  <View style={showStyles.resultHeader}>
+                    <Text style={showStyles.resultSeason}>{result.seasonLabel}</Text>
+                    <Text style={[showStyles.resultPlacement, { color: placementColor }]}>{placementLabel}</Text>
+                  </View>
+                  <Text style={showStyles.resultAnimal}>{animalType?.name ?? result.animalTypeId}</Text>
+                  <Text style={showStyles.resultScore}>Your score: {result.playerScore.toFixed(3)}</Text>
+                  <Text style={showStyles.resultNpc}>NPC scores: {result.npcScores.map(s => s.toFixed(2)).join(' · ')}</Text>
+                  {result.prize > 0 && (
+                    <Text style={showStyles.resultPrize}>Prize: +${result.prize.toLocaleString()}</Text>
+                  )}
+                </View>
+              );
+            })
+          )}
+        </ScrollView>
+      )}
+
+      <AnimalShowModal visible={showModalVisible} onClose={() => setShowModalVisible(false)} />
     </View>
   );
 }
+
+const showStyles = StyleSheet.create({
+  banner:          { backgroundColor: '#3a2800', borderBottomWidth: 1, borderBottomColor: '#7a5c00', paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  bannerText:      { color: '#ffd700', fontSize: 12, flex: 1 },
+  bannerCta:       { color: '#ffb74d', fontSize: 12, fontWeight: 'bold' },
+  tabBar:          { flexDirection: 'row', backgroundColor: '#0f1e0f', borderBottomWidth: 1, borderBottomColor: '#1e3a1e' },
+  tabBtn:          { flex: 1, paddingVertical: 10, alignItems: 'center' },
+  tabBtnActive:    { borderBottomWidth: 2, borderBottomColor: '#ffd700' },
+  tabText:         { color: '#555', fontSize: 13 },
+  tabTextActive:   { color: '#ffd700', fontWeight: 'bold' },
+  emptyResults:    { color: '#555', textAlign: 'center', marginTop: 40, fontSize: 13 },
+  resultCard:      { margin: 10, backgroundColor: '#1a2a1a', borderRadius: 8, padding: 12 },
+  resultHeader:    { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  resultSeason:    { color: '#888', fontSize: 11 },
+  resultPlacement: { fontSize: 13, fontWeight: 'bold' },
+  resultAnimal:    { color: '#e8d5a3', fontSize: 13, marginBottom: 2 },
+  resultScore:     { color: '#aaa', fontSize: 11 },
+  resultNpc:       { color: '#555', fontSize: 10, marginTop: 1 },
+  resultPrize:     { color: '#4caf50', fontSize: 12, fontWeight: 'bold', marginTop: 4 },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a2e' },
