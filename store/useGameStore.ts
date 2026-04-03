@@ -3532,13 +3532,15 @@ export const useGameStore = create<GameState>()(
         // TODO: implement in auction-house feature
       },
 
-      placeBid: (lotId, amount) => {
+      placeBid: (listingId, amount) => {
         const state = get();
-        const lot = state.auctionLots.find(l => l.id === lotId);
-        if (!lot || lot.resolved) return;
-        if (amount <= lot.currentBid) return;
+        const listing = (state.listings ?? []).find(l => l.id === listingId && !l.resolved);
+        if (!listing) return;
+        const minBid = Math.ceil(listing.currentBid * 1.05);
+        if (amount < minBid) return;
+        if (state.money < amount) return;
         set({
-          auctionLots: state.auctionLots.map(l => l.id === lotId ? {
+          listings: (state.listings ?? []).map(l => l.id === listingId ? {
             ...l,
             playerBid: amount,
             currentBid: amount,
