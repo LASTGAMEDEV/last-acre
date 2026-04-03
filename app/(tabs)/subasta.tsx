@@ -6,6 +6,7 @@ import HintCard from '../../components/HintCard';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { geneScore } from '../../engine/animals';
 import { OwnedAnimal } from '../../engine/animals';
+import { CROP_TYPES } from '../../data/cropTypes';
 
 type AuctionView = 'hub' | AuctionCategory;
 
