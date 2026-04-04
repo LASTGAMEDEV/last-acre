@@ -1,19 +1,34 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { MapField } from '../../types/worldMap';
 import { LandParcel } from '../../store/useGameStore';
 import { CROP_TYPES } from '../../data/cropTypes';
+import { NPC_FARM_GROUP, RIVAL_GROUP_NAME } from '../../data/npcFarmGroups';
+
+interface NPCFarmLike {
+  id: string;
+  wealth: number;
+  nextSellDay: number;
+}
+
+interface MapFieldLike {
+  owner: string;
+  approximateHa?: number;
+}
 
 interface Props {
   field: MapField | null;
   parcel?: LandParcel;
   day: number;
   money: number;
+  npcFarms: NPCFarmLike[];
+  mapFields: MapFieldLike[];
   onClose: () => void;
   onBuy: (id: string) => void;
   onScout: (id: string) => void;
   onManage: (parcelId: string) => void;
+  onViewRivalProfile: (group: 'rivalA' | 'rivalB') => void;
 }
 
 function getStatusText(field: MapField, parcel?: LandParcel, day?: number): string {
@@ -29,11 +44,11 @@ function getStatusText(field: MapField, parcel?: LandParcel, day?: number): stri
   return `${crop.name} — ${readyDay - (day ?? 0)}d remaining`;
 }
 
-export default function FieldPanel({ field, parcel, day, money, onClose, onBuy, onScout, onManage }: Props) {
+export default function FieldPanel({ field, parcel, day, money, npcFarms, mapFields, onClose, onBuy, onScout, onManage, onViewRivalProfile }: Props) {
   const { width } = useWindowDimensions();
   const translateY = useSharedValue(300);
 
-  useEffect(() => {
+  React.useEffect(() => {
     translateY.value = withTiming(field ? 0 : 300, { duration: 260 });
   }, [field]);
 
@@ -47,6 +62,15 @@ export default function FieldPanel({ field, parcel, day, money, onClose, onBuy, 
   const canAffordBuy = field.owner === 'forsale' && money >= (field.askingPrice ?? 0);
   const canAffordScout = money >= 500;
 
+  // Rival group stats
+  const rivalGroup = (field.owner === 'rivalA' || field.owner === 'rivalB') ? field.owner : null;
+  const groupFarms = rivalGroup ? npcFarms.filter(f => NPC_FARM_GROUP[f.id] === rivalGroup) : [];
+  const groupWealth = groupFarms.reduce((s, f) => s + f.wealth, 0);
+  const groupFieldCount = mapFields.filter(f => f.owner === rivalGroup).length;
+  const nextDumpIn = groupFarms.length > 0
+    ? Math.max(0, Math.min(...groupFarms.map(f => f.nextSellDay - day)))
+    : null;
+
   return (
     <Animated.View style={[styles.panel, { width: Math.min(340, width - 20) }, animStyle]}>
       <View style={styles.header}>
@@ -59,7 +83,7 @@ export default function FieldPanel({ field, parcel, day, money, onClose, onBuy, 
       <View style={styles.row}>
         <Text style={styles.lbl}>Owner</Text>
         <Text style={[styles.val, field.owner === 'player' ? styles.green : field.owner === 'forsale' ? styles.amber : styles.red]}>
-          {field.owner === 'player' ? 'You' : field.owner === 'forsale' ? 'For Sale' : field.owner === 'rivalA' ? 'Hacienda Rivera' : field.owner === 'rivalB' ? 'Granja del Norte' : 'Unowned'}
+          {field.owner === 'player' ? 'You' : field.owner === 'forsale' ? 'For Sale' : rivalGroup ? RIVAL_GROUP_NAME[rivalGroup] : 'Unowned'}
         </Text>
       </View>
       <View style={styles.row}>
@@ -83,6 +107,28 @@ export default function FieldPanel({ field, parcel, day, money, onClose, onBuy, 
         </View>
       )}
 
+      {/* Rival group stats */}
+      {rivalGroup && (
+        <>
+          <View style={styles.row}>
+            <Text style={styles.lbl}>Combined wealth</Text>
+            <Text style={styles.val}>${groupWealth >= 1000 ? `${(groupWealth / 1000).toFixed(1)}k` : Math.round(groupWealth).toLocaleString()}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.lbl}>Fields owned</Text>
+            <Text style={styles.val}>{groupFieldCount}</Text>
+          </View>
+          {nextDumpIn !== null && (
+            <View style={styles.row}>
+              <Text style={styles.lbl}>Next market dump</Text>
+              <Text style={[styles.val, nextDumpIn <= 3 ? styles.red : styles.val]}>
+                {nextDumpIn === 0 ? 'Today' : `in ${nextDumpIn}d`}
+              </Text>
+            </View>
+          )}
+        </>
+      )}
+
       <View style={styles.divider}/>
 
       {field.owner === 'forsale' && (
@@ -101,13 +147,21 @@ export default function FieldPanel({ field, parcel, day, money, onClose, onBuy, 
           </Text>
         </TouchableOpacity>
       )}
-      {(field.owner === 'rivalA' || field.owner === 'rivalB') && !field.scouted && (
+      {rivalGroup && !field.scouted && (
         <TouchableOpacity
           style={[styles.btn, canAffordScout ? styles.btnScout : styles.btnDisabled]}
           onPress={() => canAffordScout && onScout(field.id)}
           disabled={!canAffordScout}
         >
           <Text style={styles.btnText}>Buy Scout Report ($500)</Text>
+        </TouchableOpacity>
+      )}
+      {rivalGroup && (
+        <TouchableOpacity
+          style={[styles.btn, styles.btnProfile]}
+          onPress={() => onViewRivalProfile(rivalGroup)}
+        >
+          <Text style={styles.btnText}>View Rival Profile →</Text>
         </TouchableOpacity>
       )}
     </Animated.View>
@@ -134,9 +188,10 @@ const styles = StyleSheet.create({
   red:      { color: '#b84040' },
   divider:  { borderTopWidth: 1, borderTopColor: '#121c28', marginVertical: 8 },
   btn:      { paddingVertical: 9, paddingHorizontal: 12, borderRadius: 6, marginTop: 4, alignItems: 'center' },
-  btnText:  { fontSize: 12, fontWeight: '700' },
+  btnText:  { fontSize: 12, fontWeight: '700', color: '#e8d5a3' },
   btnBuy:   { backgroundColor: '#1a1200', borderWidth: 1, borderColor: '#6a4400' },
   btnManage:{ backgroundColor: '#0e2014', borderWidth: 1, borderColor: '#225020' },
   btnScout: { backgroundColor: '#120c22', borderWidth: 1, borderColor: '#301860' },
+  btnProfile: { backgroundColor: '#0d1c30', borderWidth: 1, borderColor: '#1e4070' },
   btnDisabled: { backgroundColor: '#181818', borderWidth: 1, borderColor: '#2a2a2a' },
 });

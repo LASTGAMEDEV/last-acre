@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -9,6 +9,7 @@ import FieldPanel from './FieldPanel';
 import MiniMap from './MiniMap';
 import { useMapGestures, MIN_ZOOM, MAX_ZOOM, centreOnPoint } from './useMapGestures';
 import MapLegend from './MapLegend';
+import RivalDetailModal from '../RivalDetailModal';
 
 // Center of player's starting fields (nc6 + nc7)
 const PLAYER_START_X = 691;
@@ -19,21 +20,17 @@ export default function WorldMap() {
   const router = useRouter();
 
   const {
-    mapFields, parcels, day, money,
+    mapFields, parcels, npcFarms, day, money,
     selectedMapFieldId, mapPanX, mapPanY, mapZoom,
     selectMapField, buyMapField, scoutMapField, savePanZoom,
   } = useGameStore();
 
-  // mapZoom === 0 is the first-open sentinel — compute a fit-to-screen position
-  // centred on the player's starting fields (nc6 + nc7).
-  // Scale is applied around the canvas element centre (CANVAS_W/2, CANVAS_H/2),
-  // so we use centreOnPoint() which accounts for that transform origin.
+  const [rivalDetailGroup, setRivalDetailGroup] = useState<'rivalA' | 'rivalB' | null>(null);
+
   const isFirstOpen = mapZoom === 0;
-  // Use Math.max so the canvas fills the screen edge-to-edge (no black bars).
-  // The other dimension will extend beyond the viewport — player can pan to it.
   const fitZoom = Math.min(
     Math.max(Math.max(W / CANVAS_W, H / CANVAS_H), MIN_ZOOM),
-    1.5, // cap so very wide screens don't start too zoomed-in
+    1.5,
   );
   const firstOpen = isFirstOpen
     ? centreOnPoint(PLAYER_START_X, PLAYER_START_Y, fitZoom, W, H)
@@ -78,6 +75,10 @@ export default function WorldMap() {
     jumpTo(canvasX, canvasY);
   }, [jumpTo]);
 
+  const handleViewRivalProfile = useCallback((group: 'rivalA' | 'rivalB') => {
+    setRivalDetailGroup(group);
+  }, []);
+
   return (
     <View style={styles.container}>
       <GestureDetector gesture={composed}>
@@ -118,10 +119,19 @@ export default function WorldMap() {
         parcel={selectedParcel}
         day={day}
         money={money}
+        npcFarms={npcFarms ?? []}
+        mapFields={mapFields}
         onClose={() => selectMapField(null)}
         onBuy={handleBuy}
         onScout={scoutMapField}
         onManage={handleManage}
+        onViewRivalProfile={handleViewRivalProfile}
+      />
+
+      {/* Rival profile modal */}
+      <RivalDetailModal
+        group={rivalDetailGroup}
+        onClose={() => setRivalDetailGroup(null)}
       />
     </View>
   );
