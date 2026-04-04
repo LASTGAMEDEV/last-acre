@@ -11,6 +11,7 @@ import { sellRevenue, computeSellPressureModifier, sellPressureDuration } from '
 import { getSeason } from '../../engine/climate';
 import HelpSheet from '../../components/HelpSheet';
 import HintCard from '../../components/HintCard';
+import RevenueChart, { RevenueChartDataPoint } from '../../components/RevenueChart';
 
 const TIER_COLORS: Record<CropTier, string> = {
   D: '#9e9e9e', C: '#4caf50', B: '#2196f3', A: '#9c27b0', S: '#ff9800',
@@ -205,6 +206,23 @@ export default function EconomiaScreen() {
   const rev7 = salesLog.filter(s => s.day >= day - 7).reduce((a, s) => a + s.amount, 0);
   const rev30 = salesLog.filter(s => s.day >= day - 30).reduce((a, s) => a + s.amount, 0);
   const rev90 = salesLog.filter(s => s.day >= day - 90).reduce((a, s) => a + s.amount, 0);
+
+  // Revenue chart: group salesLog by day for the last 30 days
+  const chartData: RevenueChartDataPoint[] = (() => {
+    const fromDay = day - 29;
+    const byDay: Record<number, number> = {};
+    for (const s of salesLog) {
+      if (s.day >= fromDay && s.day <= day) {
+        byDay[s.day] = (byDay[s.day] ?? 0) + s.amount;
+      }
+    }
+    const result: RevenueChartDataPoint[] = [];
+    for (let d = fromDay; d <= day; d++) {
+      result.push({ day: d, revenue: byDay[d] ?? 0 });
+    }
+    return result;
+  })();
+
   const catRevenue = { crops: 0, animals: 0, processed: 0, contracts: 0 };
   for (const s of salesLog) {
     if (s.category === 'crops') catRevenue.crops += s.amount;
@@ -291,6 +309,12 @@ export default function EconomiaScreen() {
       {/* STATS TAB */}
       {ecoTab === 'stats' && (
         <ScrollView style={styles.statsScroll} showsVerticalScrollIndicator={false}>
+          {/* Revenue chart */}
+          <View style={styles.statsCard}>
+            <Text style={styles.statsCardTitle}>📈 Revenue — last 30 days</Text>
+            <RevenueChart data={chartData} />
+          </View>
+
           <View style={styles.prestigeCard}>
             <Text style={styles.prestigeTitle}>⭐ Prestige {prestige ?? 0}</Text>
             {(prestige ?? 0) > 0
