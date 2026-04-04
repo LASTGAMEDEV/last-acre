@@ -51,7 +51,7 @@ export default function TierrasScreen() {
     clearWeeds, fertilizeCrop, installGreenhouse, removeGreenhouse, installIrrigation,
     seedVault, selectSeedForParcel,
     tractorJobs, harvestJobs, assignJob, assignHarvestJob, hireContractor,
-    cureDisease, plantCropBatch,
+    cureDisease, plantCropBatch, hapticEnabled,
   } = useGameStore();
   const [batchCropId, setBatchCropId] = useState<string | null>(null);
   const [batchModal, setBatchModal] = useState(false);
@@ -330,7 +330,7 @@ export default function TierrasScreen() {
                   if (ownedCombines.length > 0) {
                     harvestCrop(parcel.id);
                     playSound('harvest');
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   } else {
                     setContractorModal({ visible: true, operation: 'harvest', parcelIds: [parcel.id], totalHa: parcel.hectares, totalCost: harvestCostVal });
                   }
@@ -544,7 +544,7 @@ export default function TierrasScreen() {
                   ) : ready ? (
                     <TouchableOpacity
                       style={[styles.mapActionBtn, styles.mapActionHarvest, storageFull && styles.mapActionDisabled]}
-                      onPress={() => { harvestCrop(p.id); setMapSelected(null); playSound('harvest'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+                      onPress={() => { harvestCrop(p.id); setMapSelected(null); playSound('harvest'); if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
                       disabled={storageFull}
                     >
                       <Text style={styles.mapActionText}>
@@ -598,7 +598,7 @@ export default function TierrasScreen() {
           {(() => {
             const readyCount = owned.filter(p => isReady(p)).length;
             return readyCount > 0 ? (
-              <TouchableOpacity style={styles.batchHarvestBtn} onPress={() => { harvestAllReady(); playSound('harvest'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); }}>
+              <TouchableOpacity style={styles.batchHarvestBtn} onPress={() => { harvestAllReady(); playSound('harvest'); if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); }}>
                 <Text style={styles.batchHarvestText}>🌾 Harvest All Ready ({readyCount})</Text>
               </TouchableOpacity>
             ) : null;
