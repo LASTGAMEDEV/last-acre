@@ -10,6 +10,7 @@ import { MILESTONES } from '../../data/milestones';
 import { LOAN_TIERS, computeCreditScore, creditRating, calculateRate,
          loanTotalOwed, checkEligibility, rollingIncome, timeDepositPayout, timeDepositMatured } from '../../engine/banking';
 import HelpSheet from '../../components/HelpSheet';
+import { NPC_FARM_GROUP, RIVAL_GROUP_NAME } from '../../data/npcFarmGroups';
 
 const TERM_OPTIONS = [
   { days: 30,  label: '30d' },
@@ -1006,10 +1007,7 @@ function CompetitorsSection() {
   const { npcFarms = [], sellPressures = [], mapFields = [], day, rivalNews = [] } = useGameStore();
   const [expandedFarmId, setExpandedFarmId] = React.useState<string | null>(null);
 
-  const NPC_MAP_OWNER: Record<string, string> = {
-    'npc_rivera': 'rivalA', 'npc_verde': 'rivalA', 'npc_sierra': 'rivalA',
-    'npc_golden': 'rivalB', 'npc_altavista': 'rivalB',
-  };
+  const NPC_MAP_OWNER = NPC_FARM_GROUP;
 
   function wealthColor(wealth: number): string {
     if (wealth < 10000) return '#66bb6a';

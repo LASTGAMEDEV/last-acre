@@ -25,6 +25,7 @@ import { ContractorOperation, calcJobDays, canAssignJob, getTransportCapacityKg 
 import { MapField, MapOwner } from '../types/worldMap';
 import { INITIAL_MAP_FIELDS } from '../data/mapFields';
 import { MarketId, MARKET_REGIONS } from '../data/marketRegions';
+import { NPC_FARM_GROUP } from '../data/npcFarmGroups';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
 function getDailyMaintenance(machines: OwnedMachine[], buildings: string[]): number {
@@ -1067,13 +1068,7 @@ export const useGameStore = create<GameState>()(
         // ── NPC competitor sells ─────────────────────────────────────────────
 
         // Map NPC farm IDs to map owner types
-        const NPC_MAP_OWNER: Record<string, MapOwner> = {
-          'npc_rivera':    'rivalA',
-          'npc_verde':     'rivalA',
-          'npc_sierra':    'rivalA',
-          'npc_golden':    'rivalB',
-          'npc_altavista': 'rivalB',
-        };
+        const NPC_MAP_OWNER = NPC_FARM_GROUP;
 
         let npcFarms: NPCFarm[] = [...(state.npcFarms ?? [])];
         let mapFields = [...state.mapFields];
