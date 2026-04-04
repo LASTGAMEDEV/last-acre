@@ -4,14 +4,14 @@ import { useGameStore } from '../store/useGameStore';
 import * as Haptics from 'expo-haptics';
 
 export default function MilestonePopup() {
-  const { milestonePopup, clearMilestonePopup } = useGameStore();
+  const { milestonePopup, clearMilestonePopup, hapticEnabled } = useGameStore();
   const translateY = useRef(new Animated.Value(-100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!milestonePopup) return;
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (hapticEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     Animated.sequence([
       Animated.parallel([

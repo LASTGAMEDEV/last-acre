@@ -151,7 +151,7 @@ function PriceChart({ history, basePrice }: { history: number[]; basePrice: numb
 type EcoTab = 'market' | 'autosell' | 'stats' | 'futures' | 'orders';
 
 export default function EconomiaScreen() {
-  const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture, priceAlerts, addPriceAlert, removePriceAlert, money, marketOrders, placeMarketOrder, cancelMarketOrder, selectedMarket, setSelectedMarket } = useGameStore();
+  const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture, priceAlerts, addPriceAlert, removePriceAlert, money, marketOrders, placeMarketOrder, cancelMarketOrder, selectedMarket, setSelectedMarket, hapticEnabled } = useGameStore();
   const [selectedCrop, setSelectedCrop] = useState<string>(CROP_TYPES[0].id);
   const [ecoTab, setEcoTab] = useState<EcoTab>('market');
   const [autoSellMinPrice, setAutoSellMinPrice] = useState<Record<string, string>>({});
@@ -842,7 +842,7 @@ export default function EconomiaScreen() {
             )}
             <TouchableOpacity
               style={[styles.sellBtn, inStock <= 0 && styles.sellBtnDisabled]}
-              onPress={() => { sellCrop(selectedCrop, inStock, selectedMarket ?? 'local'); playSound(regionalRevenue >= 5000 ? 'bigSale' : 'sell'); if (regionalRevenue >= 1000) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
+              onPress={() => { sellCrop(selectedCrop, inStock, selectedMarket ?? 'local'); playSound(regionalRevenue >= 5000 ? 'bigSale' : 'sell'); if (hapticEnabled && regionalRevenue >= 1000) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
               disabled={inStock <= 0}
             >
               <Text style={styles.sellBtnText}>
