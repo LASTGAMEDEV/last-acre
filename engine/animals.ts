@@ -1,5 +1,7 @@
 import { AnimalType } from '../data/animalTypes';
 
+export const GRAIN_CROP_IDS = ['wheat', 'corn', 'barley', 'oats', 'sorghum'];
+
 export type AnimalTrait = 'productive' | 'hardy' | 'beefy' | 'fast_maturing';
 
 export const TRAIT_LABELS: Record<AnimalTrait, string> = {
@@ -79,6 +81,7 @@ export interface OwnedAnimal {
   genes?: AnimalGenes;    // undefined on old saves → use 1.0 defaults
   parentIds?: [string, string];                      // [motherId, fatherId]
   grandparentIds?: [string, string, string, string]; // [MM, MF, FM, FF]
+  lactationStartDay?: number;  // day she last gave birth (cows & goats only)
 }
 
 /** Effective maturity days accounting for fast_maturing trait and growth gene. */
@@ -126,15 +129,76 @@ export function collectProduction(
   return { units: daysPassed * animalType.productionRate * ageMod * productiveMod * geneProdMod, nextDay: currentDay };
 }
 
-export function canBreed(animal: OwnedAnimal, animalType: AnimalType, currentDay: number): boolean {
-  if (!isMature(animal, animalType, currentDay)) return false;
-  if (animalType.breedingDays === 0) return false;
-  return currentDay - animal.lastBreedDay >= animalType.breedingDays;
-}
-
 /** Pick one random trait from a parent, or null if the parent has no traits. */
 export function inheritTrait(parent: OwnedAnimal): AnimalTrait | null {
   const traits = parent.traits ?? [];
   if (traits.length === 0) return null;
   return traits[Math.floor(Math.random() * traits.length)];
+}
+
+// ─── Lactation ─────────────────────────────────────────────────────────────
+
+export const LACTATION_PARAMS: Record<string, { lactatingDays: number; dryDays: number; breedAfterDryDay: number }> = {
+  vaca:  { lactatingDays: 305, dryDays: 60,  breedAfterDryDay: 30 },
+  cabra: { lactatingDays: 200, dryDays: 45,  breedAfterDryDay: 20 },
+};
+
+/** Returns 'lactating', 'dry', or 'none' (non-dairy species). */
+export function getLactationState(
+  animal: OwnedAnimal,
+  typeId: string,
+  currentDay: number,
+): 'lactating' | 'dry' | 'none' {
+  const params = LACTATION_PARAMS[typeId];
+  if (!params) return 'none';
+  if (!animal.lactationStartDay) return 'dry'; // never freshened
+  const daysSince = currentDay - animal.lactationStartDay;
+  if (daysSince < params.lactatingDays) return 'lactating';
+  return 'dry';
+}
+
+/** Days remaining in current lactation window (0 if dry or non-dairy). */
+export function lactationDaysRemaining(
+  animal: OwnedAnimal,
+  typeId: string,
+  currentDay: number,
+): number {
+  const params = LACTATION_PARAMS[typeId];
+  if (!params || !animal.lactationStartDay) return 0;
+  const daysSince = currentDay - animal.lactationStartDay;
+  return Math.max(0, params.lactatingDays - daysSince);
+}
+
+/** Days remaining in current dry period (0 if lactating or non-dairy). */
+export function dryDaysRemaining(
+  animal: OwnedAnimal,
+  typeId: string,
+  currentDay: number,
+): number {
+  const params = LACTATION_PARAMS[typeId];
+  if (!params || !animal.lactationStartDay) return 0;
+  const daysSince = currentDay - animal.lactationStartDay;
+  if (daysSince < params.lactatingDays) return 0;
+  const dryDaysSoFar = daysSince - params.lactatingDays;
+  return Math.max(0, params.dryDays - dryDaysSoFar);
+}
+
+export function canBreed(animal: OwnedAnimal, animalType: AnimalType, currentDay: number): boolean {
+  if (!isMature(animal, animalType, currentDay)) return false;
+  if (animalType.breedingDays === 0) return false;
+
+  const params = LACTATION_PARAMS[animalType.id];
+  if (params) {
+    // Dairy animals: can only breed during dry period, after min dry days
+    if (!animal.lactationStartDay) {
+      // Never freshened — allow first breed using existing breedingDays cooldown
+      return currentDay - animal.lastBreedDay >= animalType.breedingDays;
+    }
+    const daysSince = currentDay - animal.lactationStartDay;
+    const dryDaysPassed = daysSince - params.lactatingDays;
+    return dryDaysPassed >= params.breedAfterDryDay;
+  }
+
+  // Non-dairy: original logic
+  return currentDay - animal.lastBreedDay >= animalType.breedingDays;
 }
