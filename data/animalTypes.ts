@@ -2,12 +2,12 @@ export interface AnimalType {
   id: string;
   name: string;
   buyCost: number;
-  maturityDays: number;
-  maxPriceAge: number;
+  maturityDays: number;      // days until productive
+  maxPriceAge: number;       // days until max sell price
   maxSellPrice: number;
   productionType: 'eggs' | 'milk' | 'wool' | 'meat' | 'honey' | null;
-  productionRate: number;
-  breedingDays: number;
+  productionRate: number;    // units per day when mature
+  breedingDays: number;      // days between offspring
   enclosureType: string;
   feedType: 'grain' | 'hay' | null;   // null = self-sufficient (bees)
   feedKgPerDay: number;               // daily consumption at full maturity
