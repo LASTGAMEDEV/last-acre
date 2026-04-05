@@ -382,6 +382,13 @@ export interface PriceAlert {
   direction: 'above' | 'below';
 }
 
+export interface HenilBatch {
+  batchId: string;
+  wetGrassKg: number;
+  startDay: number;
+  readyDay: number;  // startDay + 3
+}
+
 export interface GameState {
   day: number;
   money: number;
@@ -458,6 +465,12 @@ export interface GameState {
   seedVault: SeedEntry[];
   hybridJobs: HybridJob[];
   cropQualityMap: Record<string, number>; // cropId → quality gene from last harvested seed
+
+  // Animal feed tracking
+  henilQueue: HenilBatch[];
+  grainMissedDays: number;   // 0–7 rolling: how many of last 7 days grain was short
+  hayMissedDays: number;     // 0–7 rolling: how many of last 7 days hay was short
+  animalsManuallyFed: boolean; // true if player tapped Feed All this day (no-worker path)
 
   // Settings
   soundEnabled: boolean;
@@ -762,6 +775,10 @@ function makeInitialState() {
     mapPanY: 0,
     mapZoom: 0, // 0 = sentinel: first open, compute fit-to-screen in WorldMap component
     selectedMapFieldId: null,
+    henilQueue: [],
+    grainMissedDays: 0,
+    hayMissedDays: 0,
+    animalsManuallyFed: false,
     soundEnabled: true,
     hapticEnabled: true,
     musicEnabled: true,
