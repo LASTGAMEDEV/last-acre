@@ -20,7 +20,7 @@ export interface CropType {
 
 export const CROP_TYPES: CropType[] = [
   // ── Tier D — Common forage & feed grains ────────────────────────────────────────────────────────────────────────────────────────────────────────
-  { id: 'grass',     name: 'Grass',      tier: 'D', growthDays: 20,  basePrice: 5,   seedCost: 60,   waterNeed: 2, fertilizerBonus: 1.3, unit: 'kg', baseYield: 350,  seasons: ['spring','summer','autumn','winter'], peakSeason: 'summer',  fertilityDrain: 0 },
+  { id: 'grass',     name: 'Grass / Hierba', tier: 'D', growthDays: 7,  basePrice: 0.10, seedCost: 60,   waterNeed: 2, fertilizerBonus: 1.3, unit: 'kg', baseYield: 350,  seasons: ['spring', 'summer', 'autumn'], peakSeason: 'summer',  fertilityDrain: 0 },
   { id: 'alfalfa',   name: 'Alfalfa',    tier: 'D', growthDays: 30,  basePrice: 6,   seedCost: 90,   waterNeed: 3, fertilizerBonus: 1.3, unit: 'kg', baseYield: 400,  seasons: ['spring','summer','autumn'],         peakSeason: 'summer',  fertilityDrain: 0 },
   { id: 'barley',    name: 'Barley',     tier: 'D', growthDays: 65,  basePrice: 9,   seedCost: 140,  waterNeed: 2, fertilizerBonus: 1.3, unit: 'kg', baseYield: 500,  seasons: ['spring','autumn'],                  peakSeason: 'spring',  fertilityDrain: 1 },
   { id: 'oats',      name: 'Oats',       tier: 'D', growthDays: 70,  basePrice: 9,   seedCost: 140,  waterNeed: 2, fertilizerBonus: 1.3, unit: 'kg', baseYield: 480,  seasons: ['spring','autumn'],                  peakSeason: 'spring',  fertilityDrain: 1 },

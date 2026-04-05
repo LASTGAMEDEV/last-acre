@@ -481,6 +481,16 @@ export const BUILDING_TYPES: BuildingType[] = [
     capacity: 2000,
     effectLabel: '+2000 L fuel capacity for tractors and combines',
   },
+  // ── Henil (Hay Drying Barn) ──────────────────────────────────────────────
+  {
+    id: 'bld_henil',
+    name: 'Henil (Hay Barn)',
+    category: 'animal' as BuildingCategory,
+    cost: 1200,
+    maintenancePerDay: 1,
+    capacity: 700,      // max kg wet grass per batch
+    effectLabel: 'Converts wet grass → hay · 3-day drying · up to 2 active batches',
+  },
 ];
 
 export const BUILDING_CATEGORY_LABELS: Record<BuildingCategory, string> = {
