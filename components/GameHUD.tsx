@@ -3,15 +3,42 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useGameStore } from '../store/useGameStore';
 import { getSeason } from '../engine/climate';
 import { SEASON_THEME, C } from '../constants/theme';
+import { WORKER_TYPES } from '../data/workerTypes';
+import { MACHINE_TYPES } from '../data/machineTypes';
+import { BUILDING_TYPES } from '../data/buildingTypes';
 
 const WARN_DAYS = 7;
 
+const SEASON_DAYS = 90;
+
+const EVENT_ICONS: Record<string, string> = { heat_wave: '🌡️', flood: '🌊', frost: '❄️' };
+const EVENT_NAMES: Record<string, string> = { heat_wave: 'Heat Wave', flood: 'Flood', frost: 'Frost' };
+const EVENT_COLORS: Record<string, string> = { heat_wave: '#5a1a00', flood: '#001a3a', frost: '#001a3a' };
+const EVENT_TEXT_COLORS: Record<string, string> = { heat_wave: '#ffb74d', flood: '#64b5f6', frost: '#b3e5fc' };
+
 export default function GameHUD() {
-  const { money, day, savings, loans, contracts } = useGameStore();
+  const { money, day, savings, loans, contracts, seasonalEvent, farmName, workers, machines, buildings } = useGameStore();
+
+  const dailyWages = (workers ?? []).reduce((sum, w) => {
+    const def = WORKER_TYPES.find(t => t.id === w.typeId);
+    return sum + (def?.dailyWage ?? 0);
+  }, 0);
+  const hasTaller = (buildings ?? []).includes('bld_taller');
+  const machineMaint = (machines ?? []).reduce((s, m) => {
+    const t = MACHINE_TYPES.find(mt => mt.id === m.typeId);
+    return s + (t?.maintenancePerDay ?? 0);
+  }, 0) * (hasTaller ? 0.75 : 1.0);
+  const buildingMaint = (buildings ?? []).reduce((s, bId) => {
+    const t = BUILDING_TYPES.find(bt => bt.id === bId);
+    return s + (t?.maintenancePerDay ?? 0);
+  }, 0);
+  const dailyBurn = Math.round(dailyWages + machineMaint + buildingMaint);
   const urgentLoan = loans.find(l => !l.paid && !l.defaulted && l.payoffDay - day <= WARN_DAYS && l.payoffDay >= day);
   const urgentContract = contracts.find(c => !c.completed && !c.failed && c.deadlineDay - day <= WARN_DAYS && c.deadlineDay >= day);
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
+  const daysIntoSeason = (day % (SEASON_DAYS * 4)) % SEASON_DAYS;
+  const daysLeftInSeason = SEASON_DAYS - daysIntoSeason;
 
   // Animate money delta when it changes
   const prevMoney = useRef(money);
@@ -41,6 +68,14 @@ export default function GameHUD() {
   return (
     <>
     <View style={[styles.hud, { backgroundColor: theme.tabBar, borderBottomColor: theme.accent + '44' }]}>
+      {/* Farm name */}
+      <View style={styles.hudCell}>
+        <Text style={styles.hudLabel}>FARM</Text>
+        <Text style={[styles.hudValue, { fontSize: 10 }]} numberOfLines={1}>{farmName ?? 'My Farm'}</Text>
+      </View>
+
+      <View style={styles.divider} />
+
       {/* Money */}
       <View style={styles.hudCell}>
         <Text style={styles.hudLabel}>CASH</Text>
@@ -52,6 +87,9 @@ export default function GameHUD() {
             </Animated.Text>
           )}
         </View>
+        {dailyBurn > 0 && (
+          <Text style={styles.burnRate}>−${dailyBurn.toLocaleString()}/d</Text>
+        )}
       </View>
 
       <View style={styles.divider} />
@@ -72,6 +110,9 @@ export default function GameHUD() {
           <Text style={[styles.seasonText, { color: theme.badgeText }]}>
             {season.charAt(0).toUpperCase() + season.slice(1)}
           </Text>
+          <Text style={[styles.seasonDays, { color: theme.badgeText }]}>
+            {daysLeftInSeason}d left
+          </Text>
         </View>
       </View>
 
@@ -83,6 +124,15 @@ export default function GameHUD() {
         <Text style={[styles.hudValue, { color: C.greenSoft }]}>${Math.round(savings.balance).toLocaleString()}</Text>
       </View>
     </View>
+
+    {/* Seasonal event banner */}
+    {seasonalEvent && (
+      <View style={[styles.warnStrip, { backgroundColor: EVENT_COLORS[seasonalEvent.type] ?? '#1a1a00' }]}>
+        <Text style={[styles.warnText, { color: EVENT_TEXT_COLORS[seasonalEvent.type] ?? '#ffb74d' }]}>
+          {EVENT_ICONS[seasonalEvent.type]} {EVENT_NAMES[seasonalEvent.type]} · {Math.max(0, seasonalEvent.endsDay - day)}d remaining
+        </Text>
+      </View>
+    )}
 
     {/* Deadline warnings */}
     {(urgentLoan || urgentContract) && (
@@ -154,6 +204,8 @@ const styles = StyleSheet.create({
   },
   seasonIcon: { fontSize: 10 },
   seasonText: { fontSize: 10, fontWeight: 'bold' },
+  seasonDays: { fontSize: 8, opacity: 0.75, marginTop: 1 },
+  burnRate:  { color: C.red, fontSize: 8, opacity: 0.75, marginTop: 1 },
   warnStrip: { backgroundColor: '#3a1a00', paddingHorizontal: 12, paddingVertical: 4, gap: 2 },
   warnText:  { color: '#ffb74d', fontSize: 10, fontWeight: 'bold' },
 });

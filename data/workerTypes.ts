@@ -4,6 +4,7 @@ export type WorkerTier = 'basic' | 'specialist' | 'standalone';
 export type WorkerRole =
   | 'field_worker'
   | 'agronomist'
+  | 'botanist'
   | 'animal_keeper'
   | 'zootechnician'
   | 'mechanic'
@@ -46,6 +47,17 @@ export const WORKER_TYPES: WorkerType[] = [
     tier: 'specialist',
     requiresBasicId: 'field_worker',
     description: '+15% crop yield · crops grow 1 day faster',
+  },
+  {
+    id: 'botanist',
+    name: 'Botanist',
+    icon: '🌿',
+    dailyWage: 110,
+    maxCount: 2,
+    department: 'fields',
+    tier: 'specialist',
+    requiresBasicId: 'field_worker',
+    description: '−50% fertility drain · fallow fields recover 2× faster',
   },
 
   // ── Animals ─────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 # Workers Redesign Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Expand Workers from 3 auto-action roles to 9 roles (8 tiered + vet standalone) across 4 departments, each with meaningful passive bonuses.
 
@@ -25,7 +25,7 @@
 **Files:**
 - Modify: `data/workerTypes.ts`
 
-- [ ] **Step 1: Replace the entire file with the new roster**
+- [x] **Step 1: Replace the entire file with the new roster**
 
 ```typescript
 export type WorkerDepartment = 'fields' | 'animals' | 'machinery' | 'processing';
@@ -161,7 +161,7 @@ export const WORKER_TYPES: WorkerType[] = [
 ];
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add data/workerTypes.ts
@@ -175,7 +175,7 @@ git commit -m "feat(workers): rewrite worker types with 9 roles, departments, an
 **Files:**
 - Modify: `store/useGameStore.ts` (lines ~124–128 for type, ~2069–2084 for actions)
 
-- [ ] **Step 1: Update `OwnedWorker` type and `hireWorker` signature (around lines 124 and 301)**
+- [x] **Step 1: Update `OwnedWorker` type and `hireWorker` signature (around lines 124 and 301)**
 
 Find:
 ```typescript
@@ -210,7 +210,7 @@ import { WorkerRole } from '../data/workerTypes';
 ```
 If there's no existing import for workerTypes, add it near the other data imports. If `WorkerRole` is already imported via a `require()` inside functions, add it as a top-level import instead.
 
-- [ ] **Step 2: Update `hireWorker` action (around line 2069)**
+- [x] **Step 2: Update `hireWorker` action (around line 2069)**
 
 Find the `hireWorker` action and replace its body:
 
@@ -236,7 +236,7 @@ hireWorker: (typeId) => {
 },
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add store/useGameStore.ts
@@ -250,7 +250,7 @@ git commit -m "feat(workers): expand OwnedWorker type and add specialist unlock 
 **Files:**
 - Modify: `store/useGameStore.ts` — add helper function before the `create()` call
 
-- [ ] **Step 1: Add the helper function**
+- [x] **Step 1: Add the helper function**
 
 Find the section of top-level helper functions (near `getDailyMaintenance`, `getMachineYieldBonus`, etc.) and add this function:
 
@@ -282,7 +282,7 @@ function getWorkerBonuses(workers: OwnedWorker[]) {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add store/useGameStore.ts
@@ -296,7 +296,7 @@ git commit -m "feat(workers): add getWorkerBonuses helper"
 **Files:**
 - Modify: `store/useGameStore.ts` — multiple points inside `advanceDay()`
 
-- [ ] **Step 1: Compute bonuses at the top of `advanceDay()`**
+- [x] **Step 1: Compute bonuses at the top of `advanceDay()`**
 
 At the top of the `advanceDay` action body (right after `const state = get();` or after `const newDay = state.day + 1;`), add:
 
@@ -304,7 +304,7 @@ At the top of the `advanceDay` action body (right after `const state = get();` o
 const workerBonuses = getWorkerBonuses(state.workers ?? []);
 ```
 
-- [ ] **Step 2: Apply maintenance multiplier (around line 583)**
+- [x] **Step 2: Apply maintenance multiplier (around line 583)**
 
 Find:
 ```typescript
@@ -316,7 +316,7 @@ Replace with:
 const maintenanceCost = Math.round(getDailyMaintenance(state.machines, state.buildings) * workerBonuses.maintenanceMult);
 ```
 
-- [ ] **Step 3: Apply sickness reduction (around line 924)**
+- [x] **Step 3: Apply sickness reduction (around line 924)**
 
 Find:
 ```typescript
@@ -329,7 +329,7 @@ const baseSickChance = (a.traits ?? []).includes('hardy') ? 0.006 : 0.015;
 const sickChance = baseSickChance * (1 - workerBonuses.sicknessBonusReduction);
 ```
 
-- [ ] **Step 4: Apply animal production multiplier (around line 1165–1168)**
+- [x] **Step 4: Apply animal production multiplier (around line 1165–1168)**
 
 Find:
 ```typescript
@@ -347,7 +347,7 @@ const key = animalType.productionType;
 return { ...a, lastProductionDay: nextDay, _autoCollect: { key, units: Math.round(units * graneroBonus * workerBonuses.animalProductionMult) } };
 ```
 
-- [ ] **Step 5: Apply crop yield multiplier and growth reduction in field worker harvest (around line 1194–1205)**
+- [x] **Step 5: Apply crop yield multiplier and growth reduction in field worker harvest (around line 1194–1205)**
 
 Find the growth check line inside the field worker harvest block:
 ```typescript
@@ -372,7 +372,7 @@ const rawUnits = harvestAmt(p.plantedCrop, cropType, p.fertility, climateModifie
 const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * irrigationBonus * rotationMod * soilMod * workerBonuses.cropYieldMultiplier), siloCapacity - siloTotal);
 ```
 
-- [ ] **Step 6: Add supervisor auto-process logic**
+- [x] **Step 6: Add supervisor auto-process logic**
 
 After the field worker harvest block (around line 1215, after the `__workerInventory` side effect), add a new block for supervisor auto-processing:
 
@@ -445,7 +445,7 @@ And in the `set({...})` object, use `processedInventory: processedInventoryForSe
 
 > **Note:** Search for `processedInventory` in the `set({` call at the end of `advanceDay()`. If it's not currently being set there (it may not be, since processing is done via a separate action), just add `processedInventory: processedInventoryForSet` to the set object.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add store/useGameStore.ts
@@ -459,7 +459,7 @@ git commit -m "feat(workers): apply worker passive bonuses in advanceDay (yield,
 **Files:**
 - Modify: `store/useGameStore.ts` — `processProduct` action (~line 1803)
 
-- [ ] **Step 1: Read worker bonuses inside `processProduct` and apply multiplier**
+- [x] **Step 1: Read worker bonuses inside `processProduct` and apply multiplier**
 
 Find the `processProduct` action. Inside it, after `const state = get();`, add:
 
@@ -478,7 +478,7 @@ Replace with:
 
 Do the same for the animal-input branch (same pattern, same replacement).
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add store/useGameStore.ts
@@ -492,7 +492,7 @@ git commit -m "feat(workers): apply processing output multiplier in processProdu
 **Files:**
 - Modify: `app/(tabs)/trabajadores.tsx`
 
-- [ ] **Step 1: Replace the entire file**
+- [x] **Step 1: Replace the entire file**
 
 ```typescript
 import React from 'react';
@@ -670,7 +670,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add "app/(tabs)/trabajadores.tsx"
@@ -681,7 +681,7 @@ git commit -m "feat(workers): rewrite workers UI with department sections and ti
 
 ## Task 7: Manual verification
 
-- [ ] **Start the dev server**
+- [x] **Start the dev server**
 
 ```bash
 CI=1 npx expo start --web
@@ -689,19 +689,19 @@ CI=1 npx expo start --web
 
 Open `http://localhost:8081/(tabs)/trabajadores` (or navigate to the Staff tab).
 
-- [ ] **Check: department layout renders** — 4 department sections (Fields, Animals, Machinery, Processing) + 1 Veterinary section, each with 2 cards side by side (except Vet which has 1).
+- [x] **Check: department layout renders** — 4 department sections (Fields, Animals, Machinery, Processing) + 1 Veterinary section, each with 2 cards side by side (except Vet which has 1).
 
-- [ ] **Check: specialist cards are locked initially** — Agronomist, Zootechnician, Engineer, Supervisor should show 55% opacity and "Locked" hire button.
+- [x] **Check: specialist cards are locked initially** — Agronomist, Zootechnician, Engineer, Supervisor should show 55% opacity and "Locked" hire button.
 
-- [ ] **Check: hire a Field Worker** — Hire 1 Field Worker. Agronomist card should become active (full opacity, hire button enabled). Wage banner updates.
+- [x] **Check: hire a Field Worker** — Hire 1 Field Worker. Agronomist card should become active (full opacity, hire button enabled). Wage banner updates.
 
-- [ ] **Check: fire the Field Worker** — Agronomist card locks again. The hired Agronomist (if any) remains hired but the hire button locks.
+- [x] **Check: fire the Field Worker** — Agronomist card locks again. The hired Agronomist (if any) remains hired but the hire button locks.
 
-- [ ] **Check: advance a day** — Verify in Day Summary modal that maintenance costs reflect any mechanic discount. If you have animals and hired Zootechnician, verify no unusual crashes.
+- [x] **Check: advance a day** — Verify in Day Summary modal that maintenance costs reflect any mechanic discount. If you have animals and hired Zootechnician, verify no unusual crashes.
 
-- [ ] **Check: processing output** — Hire a Processor. Process a recipe. Output should be 10% higher than the base `outputAmount`.
+- [x] **Check: processing output** — Hire a Processor. Process a recipe. Output should be 10% higher than the base `outputAmount`.
 
-- [ ] **Commit final verification note**
+- [x] **Commit final verification note**
 
 ```bash
 git commit --allow-empty -m "chore: workers redesign verified manually"

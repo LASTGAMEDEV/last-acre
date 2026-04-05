@@ -4,6 +4,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import { useGameStore } from '../../store/useGameStore';
 import { getSeason } from '../../engine/climate';
 import { SEASON_THEME, C } from '../../constants/theme';
+import { playSound, startSeasonMusic, stopSeasonMusic } from '../../engine/sounds';
+import { CROP_TYPES } from '../../data/cropTypes';
 import DaySummaryModal from '../../components/DaySummaryModal';
 import TutorialModal from '../../components/TutorialModal';
 import YearEndModal from '../../components/YearEndModal';
@@ -14,8 +16,32 @@ import MilestonePopup from '../../components/MilestonePopup';
 import FirstMission from '../../components/FirstMission';
 
 export default function TabLayout() {
-  const { day, advanceDay, advanceDays } = useGameStore();
+  const { day, advanceDay, advanceDays, parcels, loans, contracts, seasonGoals, musicEnabled, soundEnabled } = useGameStore();
   const season = getSeason(day);
+
+  // Start/stop season music when season or music settings change
+  useEffect(() => {
+    if (soundEnabled && musicEnabled) {
+      startSeasonMusic(season as any);
+    } else {
+      stopSeasonMusic();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [season, soundEnabled, musicEnabled]);
+
+  // Badge counts
+  const cropsReady = parcels.filter(p => {
+    if (!p.owned || !p.plantedCrop) return false;
+    const ct = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
+    return ct && day >= p.plantedCrop.plantedDay + ct.growthDays;
+  }).length;
+
+  const urgentLoans = loans.filter(l => !l.paid && !l.defaulted && l.payoffDay - day <= 7 && l.payoffDay >= day).length;
+  const urgentContracts = contracts.filter(c => !c.completed && !c.failed && c.deadlineDay - day <= 7 && c.deadlineDay >= day).length;
+  const urgentOffice = urgentLoans + urgentContracts;
+
+  const farmBadge = cropsReady > 0 ? cropsReady : undefined;
+  const officeBadge = urgentOffice > 0 ? urgentOffice : undefined;
   const theme = SEASON_THEME[season];
 
   // Subtle pulse on the Advance button
@@ -50,10 +76,10 @@ export default function TabLayout() {
         }}
       >
         {/* ── 5 visible combined tabs ── */}
-        <Tabs.Screen name="granja"   options={{ title: 'Farm',       tabBarLabel: '🌾 Farm' }} />
+        <Tabs.Screen name="granja"   options={{ title: 'Farm',       tabBarLabel: '🌾 Farm',       tabBarBadge: farmBadge }} />
         <Tabs.Screen name="mercado"  options={{ title: 'Market',     tabBarLabel: '💰 Market' }} />
         <Tabs.Screen name="fabrica"  options={{ title: 'Processing', tabBarLabel: '🏭 Processing' }} />
-        <Tabs.Screen name="gestion"  options={{ title: 'Office',     tabBarLabel: '📋 Office' }} />
+        <Tabs.Screen name="gestion"  options={{ title: 'Office',     tabBarLabel: '📋 Office',     tabBarBadge: officeBadge }} />
         <Tabs.Screen name="clima"    options={{ title: 'Weather',    tabBarLabel: '☀️ Weather' }} />
 
         {/* ── Hidden legacy screens (content accessed via combined tabs) ── */}
@@ -75,7 +101,7 @@ export default function TabLayout() {
       <Animated.View style={[styles.advanceBtnWrap, { transform: [{ scale: pulse }] }]}>
         <TouchableOpacity
           style={[styles.advanceBtn, { backgroundColor: theme.accent, shadowColor: theme.accent }]}
-          onPress={advanceDay}
+          onPress={() => { playSound('dayAdvance'); advanceDay(); }}
         >
           <Text style={styles.advanceDay}>Day {day}</Text>
           <Text style={styles.advanceLabel}>▶ Advance</Text>
@@ -85,7 +111,7 @@ export default function TabLayout() {
             <TouchableOpacity
               key={n}
               style={[styles.skipBtn, { borderColor: theme.accent }]}
-              onPress={() => advanceDays(n)}
+              onPress={() => { playSound('dayAdvance'); advanceDays(n); }}
             >
               <Text style={[styles.skipLabel, { color: theme.accent }]}>+{n}</Text>
             </TouchableOpacity>

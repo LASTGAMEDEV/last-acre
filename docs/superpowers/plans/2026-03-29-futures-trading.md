@@ -1,6 +1,6 @@
 # Futures Trading UI Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a Futures tab to the Economy screen so players can lock in crop prices for future delivery.
 
@@ -31,7 +31,7 @@ No new files. No store changes.
 **Files:**
 - Modify: `app/(tabs)/economia.tsx`
 
-- [ ] **Step 1: Add `'futures'` to EcoTab and pull store data**
+- [x] **Step 1: Add `'futures'` to EcoTab and pull store data**
 
 Find:
 ```typescript
@@ -51,7 +51,7 @@ Replace with:
 const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture } = useGameStore();
 ```
 
-- [ ] **Step 2: Add futures-specific local state**
+- [x] **Step 2: Add futures-specific local state**
 
 After the existing `useState` declarations (around line 136), add:
 ```typescript
@@ -61,7 +61,7 @@ const [futuresTerm, setFuturesTerm] = useState<30 | 60 | 90>(30);
 const [futuresFlash, setFuturesFlash] = useState(false);
 ```
 
-- [ ] **Step 3: Add tab button to the tab bar**
+- [x] **Step 3: Add tab button to the tab bar**
 
 Find the tab bar map — it currently renders `['market', 'autosell', 'stats']`. Replace with:
 ```typescript
@@ -74,7 +74,7 @@ Find the tab bar map — it currently renders `['market', 'autosell', 'stats']`.
 ))}
 ```
 
-- [ ] **Step 4: Add empty futures tab placeholder**
+- [x] **Step 4: Add empty futures tab placeholder**
 
 Just before the closing `</View>` of the screen (after the `{ecoTab === 'market' && <>...</>}` block), add:
 ```typescript
@@ -90,7 +90,7 @@ Add the style at the bottom of `StyleSheet.create`:
 futuresScroll: { flex: 1, paddingHorizontal: 12 },
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add "app/(tabs)/economia.tsx"
@@ -106,7 +106,7 @@ git commit -m "feat(futures): add Futures tab scaffold to Economy screen"
 
 This task replaces the `{/* content in Task 2 */}` comment with the full Futures tab body, and adds all required styles.
 
-- [ ] **Step 1: Replace the futures tab placeholder with full content**
+- [x] **Step 1: Replace the futures tab placeholder with full content**
 
 Replace:
 ```typescript
@@ -280,7 +280,7 @@ With:
 })()}
 ```
 
-- [ ] **Step 2: Add all styles**
+- [x] **Step 2: Add all styles**
 
 In `StyleSheet.create({...})`, add after the last existing style:
 
@@ -325,7 +325,7 @@ futuresPosDay:       { color: '#555', fontSize: 10, marginTop: 2 },
 futuresSettledBadge: { color: '#66bb6a', fontSize: 12, fontWeight: 'bold' },
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add "app/(tabs)/economia.tsx"
@@ -336,7 +336,7 @@ git commit -m "feat(futures): implement futures tab with contract form, open pos
 
 ## Task 3: Manual verification
 
-- [ ] **Start the dev server (if not running)**
+- [x] **Start the dev server (if not running)**
 
 ```bash
 CI=1 npx expo start --web
@@ -344,16 +344,16 @@ CI=1 npx expo start --web
 
 Open `http://localhost:8081/(tabs)/economia`
 
-- [ ] **Check: 4 tabs render** — `📈 Market | 🤖 Auto-Sell | 📊 Stats | 📉 Futures`
+- [x] **Check: 4 tabs render** — `📈 Market | 🤖 Auto-Sell | 📊 Stats | 📉 Futures`
 
-- [ ] **Check: Futures tab opens** — tap `📉 Futures`, ScrollView renders with crop picker, form, and two empty sections
+- [x] **Check: Futures tab opens** — tap `📉 Futures`, ScrollView renders with crop picker, form, and two empty sections
 
-- [ ] **Check: Crop picker** — scroll horizontally, tap a crop, meta line updates with price and stock
+- [x] **Check: Crop picker** — scroll horizontally, tap a crop, meta line updates with price and stock
 
-- [ ] **Check: Contract form** — enter a quantity, pick 60d, preview line shows lock price and delivery day, button label updates
+- [x] **Check: Contract form** — enter a quantity, pick 60d, preview line shows lock price and delivery day, button label updates
 
-- [ ] **Check: Open contract** — tap Open Contract, flash message appears, open positions section shows the new contract with stock status
+- [x] **Check: Open contract** — tap Open Contract, flash message appears, open positions section shows the new contract with stock status
 
-- [ ] **Check: Advance a day** — advance past delivery day, contract moves to settled section
+- [x] **Check: Advance a day** — advance past delivery day, contract moves to settled section
 
-- [ ] **Check: Other tabs unaffected** — switch to Market, Auto-Sell, Stats — all still work normally
+- [x] **Check: Other tabs unaffected** — switch to Market, Auto-Sell, Stats — all still work normally

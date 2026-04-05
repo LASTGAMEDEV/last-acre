@@ -28,6 +28,36 @@ export const MILESTONES: MilestoneDef[] = [
   { id: 'savings_5k',      icon: '🏦', title: 'Saver',             description: 'Keep $5,000+ in savings' },
   { id: 'day_100',         icon: '📅', title: 'Veteran',           description: 'Survive 100 days' },
   { id: 'day_365',         icon: '🗓️', title: 'One Full Year',     description: 'Survive a full year (365 days)' },
+  // Revenue chains
+  { id: 'cash_500k',      icon: '💎', title: 'Half a Million',     description: 'Reach $500,000 cash' },
+  { id: 'cash_1m',        icon: '🏦', title: 'Millionaire',        description: 'Reach $1,000,000 cash' },
+  // Land chains
+  { id: 'thirty_ha',      icon: '🌍', title: 'Estate Owner',       description: 'Own 30+ ha of farmland' },
+  { id: 'fifty_ha',       icon: '🏰', title: 'Agricultural Empire', description: 'Own 50+ ha of farmland' },
+  // Animal chains
+  { id: 'twenty_animals', icon: '🐄', title: 'Rancher',            description: 'Own 20 or more animals' },
+  { id: 'fifty_animals',  icon: '🐑', title: 'Ranch Empire',       description: 'Own 50 or more animals' },
+  // Machine chains
+  { id: 'five_machines',  icon: '🔩', title: 'Fully Equipped',     description: 'Own 5 or more machines' },
+  { id: 'ten_machines',   icon: '🏗️', title: 'Industrial Farm',    description: 'Own 10 or more machines' },
+  // Contract chains
+  { id: 'five_contracts',    icon: '📑', title: 'Reliable Supplier',  description: 'Complete 5 delivery contracts' },
+  { id: 'twenty_contracts',  icon: '🤝', title: 'Contract Magnate',   description: 'Complete 20 delivery contracts' },
+  // Savings chains
+  { id: 'savings_50k',    icon: '🏦', title: 'Big Saver',          description: 'Keep $50,000+ in savings' },
+  // Time chains
+  { id: 'day_730',        icon: '📆', title: 'Two Full Years',     description: 'Survive 730 days' },
+  // Prestige
+  { id: 'first_prestige', icon: '⚡', title: 'Legend Begins',      description: 'Complete a full year and earn first prestige' },
+  // Processing
+  { id: 'first_processed', icon: '🏭', title: 'Value Added',       description: 'Sell your first processed product' },
+  // Rare achievements
+  { id: 'gen5_seed',         icon: '🧬', title: 'Gene Pioneer',       description: 'Develop a generation 5+ seed in the Seed Lab' },
+  { id: 'perfect_animal',    icon: '⭐', title: 'Perfect Specimen',    description: 'Own an animal with all genes rated A or higher (≥1.2)' },
+  { id: 'thirty_contracts',  icon: '🏆', title: 'Contract Legend',     description: 'Complete 30 delivery contracts' },
+  { id: 'no_default_10',     icon: '🤝', title: 'Trustworthy',         description: 'Complete 10 contracts in a row without defaulting' },
+  { id: 'cash_2m',           icon: '💫', title: 'Agricultural Mogul',  description: 'Accumulate $2,000,000 cash' },
+  { id: 'full_workforce',    icon: '👥', title: 'Full Staff',          description: 'Have at least 6 workers employed at once' },
 ];
 
 export const MILESTONE_REWARDS: Record<string, number> = {
@@ -51,6 +81,26 @@ export const MILESTONE_REWARDS: Record<string, number> = {
   savings_5k:    1_000,
   day_100:       2_000,
   day_365:      10_000,
+  cash_500k:      25_000,
+  cash_1m:        50_000,
+  thirty_ha:      15_000,
+  fifty_ha:       30_000,
+  twenty_animals: 5_000,
+  fifty_animals:  15_000,
+  five_machines:  8_000,
+  ten_machines:   20_000,
+  five_contracts: 5_000,
+  twenty_contracts: 15_000,
+  savings_50k:    5_000,
+  day_730:        25_000,
+  first_prestige: 20_000,
+  first_processed: 3_000,
+  gen5_seed:        20_000,
+  perfect_animal:   15_000,
+  thirty_contracts: 25_000,
+  no_default_10:    10_000,
+  cash_2m:         100_000,
+  full_workforce:   12_000,
 };
 
 export function checkNewMilestones(
@@ -58,12 +108,14 @@ export function checkNewMilestones(
     day: number;
     money: number;
     parcels: { owned: boolean; hectares: number }[];
-    animals: { id: string }[];
+    animals: { id: string; genes?: { production: number; hardiness: number; growth: number; value: number } }[];
     machines: { id: string }[];
-    contracts: { completed?: boolean }[];
+    contracts: { completed?: boolean; failed?: boolean }[];
     insurances: { id: string }[];
     savings: { balance: number };
     harvestedCropIds: string[];
+    seedVault?: { generation: number }[];
+    workers?: { id: string }[];
   },
   completedMilestones: string[]
 ): string[] {
@@ -100,6 +152,29 @@ export function checkNewMilestones(
   check('savings_5k',      state.savings.balance >= 5_000);
   check('day_100',         state.day >= 100);
   check('day_365',         state.day >= 365);
+  check('cash_500k',        state.money >= 500_000);
+  check('cash_1m',          state.money >= 1_000_000);
+  check('thirty_ha',        ownedHa >= 30);
+  check('fifty_ha',         ownedHa >= 50);
+  check('twenty_animals',   state.animals.length >= 20);
+  check('fifty_animals',    state.animals.length >= 50);
+  check('five_machines',    state.machines.length >= 5);
+  check('ten_machines',     state.machines.length >= 10);
+  check('five_contracts',   state.contracts.filter(c => c.completed).length >= 5);
+  check('twenty_contracts', state.contracts.filter(c => c.completed).length >= 20);
+  check('savings_50k',      state.savings.balance >= 50_000);
+  check('day_730',          state.day >= 730);
+  check('first_prestige',   (state as any).prestige >= 1);
+
+  check('gen5_seed',        (state.seedVault ?? []).some(s => s.generation >= 5));
+  check('perfect_animal',   state.animals.some(a => {
+    const g = a.genes;
+    return g && g.production >= 1.2 && g.hardiness >= 1.2 && g.growth >= 1.2 && g.value >= 1.2;
+  }));
+  check('thirty_contracts', state.contracts.filter(c => c.completed).length >= 30);
+  check('no_default_10',    state.contracts.filter(c => c.completed).length >= 10 && !state.contracts.some(c => c.failed));
+  check('cash_2m',          state.money >= 2_000_000);
+  check('full_workforce',   (state.workers ?? []).length >= 6);
 
   return newly;
 }

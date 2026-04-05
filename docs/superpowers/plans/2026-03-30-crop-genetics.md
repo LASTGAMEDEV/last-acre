@@ -1,6 +1,6 @@
 # Crop Genetics (Seed Lab) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a Seed Lab building where players hybridize crop seeds across generations, with 4 genes (yield, drought, growth, quality) that modify harvest output and processing.
 
@@ -26,7 +26,7 @@
 - Modify: `data/buildingTypes.ts`
 - Modify: `store/useGameStore.ts`
 
-- [ ] **Step 1: Add `'lab'` to `BuildingCategory` in `data/buildingTypes.ts`**
+- [x] **Step 1: Add `'lab'` to `BuildingCategory` in `data/buildingTypes.ts`**
 
 Find:
 ```typescript
@@ -37,7 +37,7 @@ Replace with:
 export type BuildingCategory = 'animal' | 'silo' | 'industrial' | 'lab';
 ```
 
-- [ ] **Step 2: Add Seed Lab buildings to `BUILDING_TYPES` array**
+- [x] **Step 2: Add Seed Lab buildings to `BUILDING_TYPES` array**
 
 At the end of the `BUILDING_TYPES` array, add:
 ```typescript
@@ -68,7 +68,7 @@ At the end of the `BUILDING_TYPES` array, add:
 },
 ```
 
-- [ ] **Step 3: Add `SeedGenes`, `SeedEntry`, `HybridJob` interfaces to `store/useGameStore.ts`**
+- [x] **Step 3: Add `SeedGenes`, `SeedEntry`, `HybridJob` interfaces to `store/useGameStore.ts`**
 
 After the `FuturesPosition` interface (around line 131), add:
 
@@ -100,14 +100,14 @@ export interface HybridJob {
 }
 ```
 
-- [ ] **Step 4: Add `seedEntryId` to `LandParcel`**
+- [x] **Step 4: Add `seedEntryId` to `LandParcel`**
 
 Find the `LandParcel` interface. Add after `irrigated: boolean`:
 ```typescript
 seedEntryId?: string; // SeedEntry id used when this parcel was planted
 ```
 
-- [ ] **Step 5: Verify TypeScript**
+- [x] **Step 5: Verify TypeScript**
 
 ```bash
 cd "C:\Users\SanGi\.antigravity\FArM TYCOON\granja-tycoon" && npx tsc --noEmit
@@ -115,7 +115,7 @@ cd "C:\Users\SanGi\.antigravity\FArM TYCOON\granja-tycoon" && npx tsc --noEmit
 
 Expected: same 4 pre-existing errors, no new ones.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add "data/buildingTypes.ts" "store/useGameStore.ts"
@@ -129,7 +129,7 @@ git commit -m "feat(crop-genetics): add SeedGenes types and Seed Lab buildings"
 **Files:**
 - Modify: `store/useGameStore.ts`
 
-- [ ] **Step 1: Add new state fields to `GameState` interface**
+- [x] **Step 1: Add new state fields to `GameState` interface**
 
 In the `GameState` interface, add:
 ```typescript
@@ -138,7 +138,7 @@ hybridJobs: HybridJob[];
 cropQualityMap: Record<string, number>; // cropId → quality gene from last harvested seed
 ```
 
-- [ ] **Step 2: Add initial values**
+- [x] **Step 2: Add initial values**
 
 In the initial state object (near `processedInventory: {}` etc.), add:
 ```typescript
@@ -147,14 +147,14 @@ hybridJobs: [],
 cropQualityMap: {},
 ```
 
-- [ ] **Step 3: Add action signatures to `GameState` interface**
+- [x] **Step 3: Add action signatures to `GameState` interface**
 
 ```typescript
 startHybridization: (cropId: string, parentAId: string, parentBId: string) => void;
 selectSeedForParcel: (parcelId: string, seedEntryId: string | null) => void;
 ```
 
-- [ ] **Step 4: Implement `startHybridization`**
+- [x] **Step 4: Implement `startHybridization`**
 
 Add in the store's `create(...)` block (near other crop actions):
 
@@ -209,7 +209,7 @@ startHybridization: (cropId, parentAId, parentBId) => {
 },
 ```
 
-- [ ] **Step 5: Implement `selectSeedForParcel`**
+- [x] **Step 5: Implement `selectSeedForParcel`**
 
 ```typescript
 selectSeedForParcel: (parcelId, seedEntryId) => {
@@ -221,13 +221,13 @@ selectSeedForParcel: (parcelId, seedEntryId) => {
 },
 ```
 
-- [ ] **Step 6: Verify TypeScript**
+- [x] **Step 6: Verify TypeScript**
 
 ```bash
 npx tsc --noEmit
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add "store/useGameStore.ts"
@@ -241,7 +241,7 @@ git commit -m "feat(crop-genetics): add seedVault, hybridJobs state and startHyb
 **Files:**
 - Modify: `store/useGameStore.ts`
 
-- [ ] **Step 1: Settle completed hybrid jobs in `advanceDay()`**
+- [x] **Step 1: Settle completed hybrid jobs in `advanceDay()`**
 
 In `advanceDay()`, near where futures are settled (search for `futures.map`), add seed job settlement. After the futures settlement block:
 
@@ -285,7 +285,7 @@ const nextHybridJobs = state.hybridJobs.filter(j => newDay < j.readyDay);
 
 Then include `seedVault: nextSeedVault, hybridJobs: nextHybridJobs` in the final `set({...})` call at the end of `advanceDay`.
 
-- [ ] **Step 2: Apply seed genes in `harvestCrop()`**
+- [x] **Step 2: Apply seed genes in `harvestCrop()`**
 
 In `harvestCrop()`, after the `const parcel = ...` and `const cropType = ...` lookups, add:
 
@@ -350,7 +350,7 @@ parcels: state.parcels.map(p => p.id === parcelId
 ),
 ```
 
-- [ ] **Step 3: Apply quality gene in `processProduct()`**
+- [x] **Step 3: Apply quality gene in `processProduct()`**
 
 In `processProduct()`, in the `crop` branch, find:
 ```typescript
@@ -361,13 +361,13 @@ Replace with:
 [recipe.outputProductId]: (state.processedInventory[recipe.outputProductId] ?? 0) + Math.round(recipe.outputAmount * batches * wBonuses.processingOutputMult * (state.cropQualityMap[recipe.input.itemId] ?? 1.0)),
 ```
 
-- [ ] **Step 4: Verify TypeScript**
+- [x] **Step 4: Verify TypeScript**
 
 ```bash
 npx tsc --noEmit
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add "store/useGameStore.ts"
@@ -381,7 +381,7 @@ git commit -m "feat(crop-genetics): apply seed genes to harvest (yield, drought,
 **Files:**
 - Modify: `app/(tabs)/granja.tsx`
 
-- [ ] **Step 1: Add `'seedlab'` to the tab type and TABS array**
+- [x] **Step 1: Add `'seedlab'` to the tab type and TABS array**
 
 Find:
 ```typescript
@@ -407,7 +407,7 @@ const TABS: { id: FarmTab; label: string }[] = [
 ];
 ```
 
-- [ ] **Step 2: Add imports**
+- [x] **Step 2: Add imports**
 
 Add to the top of `granja.tsx`:
 ```typescript
@@ -419,7 +419,7 @@ import ScreenHeader from '../../components/ScreenHeader';
 
 Note: `granja.tsx` currently only imports `React`, `useState`, `View`, `Text`, `TouchableOpacity`, `StyleSheet` and the 4 sub-screens. Keep those and add the new imports.
 
-- [ ] **Step 3: Add `SeedLabScreen` component**
+- [x] **Step 3: Add `SeedLabScreen` component**
 
 Add this component above the `GranjaScreen` function:
 
@@ -673,7 +673,7 @@ const slStyles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 4: Render `SeedLabScreen` in `GranjaScreen`**
+- [x] **Step 4: Render `SeedLabScreen` in `GranjaScreen`**
 
 In `GranjaScreen`'s return JSX, after the `{tab === 'workers' && <TrabajadoresScreen />}` line, add:
 
@@ -681,13 +681,13 @@ In `GranjaScreen`'s return JSX, after the `{tab === 'workers' && <TrabajadoresSc
 {tab === 'seedlab'   && <SeedLabScreen />}
 ```
 
-- [ ] **Step 5: Verify TypeScript**
+- [x] **Step 5: Verify TypeScript**
 
 ```bash
 npx tsc --noEmit
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add "app/(tabs)/granja.tsx"
@@ -701,7 +701,7 @@ git commit -m "feat(crop-genetics): add Seed Lab UI with hybridization form, job
 **Files:**
 - Modify: `app/(tabs)/tierras.tsx`
 
-- [ ] **Step 1: Pull seed data and action from store**
+- [x] **Step 1: Pull seed data and action from store**
 
 Find the `useGameStore` destructure in `TierrasScreen`. Add:
 
@@ -709,14 +709,14 @@ Find the `useGameStore` destructure in `TierrasScreen`. Add:
 const { ..., seedVault, selectSeedForParcel } = useGameStore();
 ```
 
-- [ ] **Step 2: Add `selectedSeedId` state**
+- [x] **Step 2: Add `selectedSeedId` state**
 
 Near the existing `useState` calls:
 ```typescript
 const [selectedSeedId, setSelectedSeedId] = useState<string | null>(null);
 ```
 
-- [ ] **Step 3: Add seed picker section to the planting modal**
+- [x] **Step 3: Add seed picker section to the planting modal**
 
 The planting modal is the `Modal` component shown when `plantingParcel !== null`. Inside the modal body, after the crop selection list and before the "Plant" button, add:
 
@@ -752,7 +752,7 @@ The planting modal is the `Modal` component shown when `plantingParcel !== null`
 
 Note: Find the correct variable name for the selected crop in the planting modal. In `tierras.tsx` there is a `plantingParcel` state. The modal likely shows crops to plant on it. Read the file to find the exact variable names and insert the seed picker in the right place.
 
-- [ ] **Step 4: Call `selectSeedForParcel` when planting**
+- [x] **Step 4: Call `selectSeedForParcel` when planting**
 
 Find the "Plant" / "Confirm plant" button's `onPress` handler in the planting modal. After `plantCrop(...)` is called, add:
 
@@ -765,7 +765,7 @@ setSelectedSeedId(null);
 
 Also reset `selectedSeedId` when the modal is closed/cancelled.
 
-- [ ] **Step 5: Add `geneGrade` helper to tierras.tsx**
+- [x] **Step 5: Add `geneGrade` helper to tierras.tsx**
 
 The file doesn't have `geneGrade`. Add at the top (after imports):
 ```typescript
@@ -778,13 +778,13 @@ function geneGrade(v: number): string {
 }
 ```
 
-- [ ] **Step 6: Verify TypeScript**
+- [x] **Step 6: Verify TypeScript**
 
 ```bash
 npx tsc --noEmit
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add "app/(tabs)/tierras.tsx"

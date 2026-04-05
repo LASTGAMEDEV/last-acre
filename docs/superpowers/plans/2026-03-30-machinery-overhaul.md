@@ -1,6 +1,6 @@
 # Machinery Overhaul Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace passive machine yield/speed bonuses with a functional machine-gating system where tractors+attachments are required to till/plant/spray, combines to harvest, and trucks to transport — otherwise hire a contractor for a flat $/ha fee.
 
@@ -30,7 +30,7 @@
 **Files:**
 - Create: `data/attachmentTypes.ts`
 
-- [ ] **Step 1: Create the file**
+- [x] **Step 1: Create the file**
 
 ```typescript
 export interface AttachmentType {
@@ -59,7 +59,7 @@ export const ATTACHMENT_TYPES: AttachmentType[] = [
 ];
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add data/attachmentTypes.ts
@@ -73,11 +73,11 @@ git commit -m "feat: add attachment types catalog (cultivator/planter/sprayer in
 **Files:**
 - Modify: `data/machineTypes.ts`
 
-- [ ] **Step 1: Read the current file**
+- [x] **Step 1: Read the current file**
 
 Read `data/machineTypes.ts` fully before editing.
 
-- [ ] **Step 2: Replace the entire file contents**
+- [x] **Step 2: Replace the entire file contents**
 
 Replace with:
 
@@ -120,7 +120,7 @@ export const MACHINE_TYPES: MachineType[] = [
 ];
 ```
 
-- [ ] **Step 3: Verify TypeScript compiles**
+- [x] **Step 3: Verify TypeScript compiles**
 
 ```bash
 npx tsc --noEmit 2>&1 | head -40
@@ -128,7 +128,7 @@ npx tsc --noEmit 2>&1 | head -40
 
 Expected: errors only from store (it still references old fields like `yieldBonus`) — that's fine for now. No errors in `data/machineTypes.ts` itself.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add data/machineTypes.ts
@@ -142,7 +142,7 @@ git commit -m "feat: overhaul machine types — remove passive bonuses, add size
 **Files:**
 - Create: `engine/machinery.ts`
 
-- [ ] **Step 1: Create the file**
+- [x] **Step 1: Create the file**
 
 ```typescript
 import { MachineType } from '../data/machineTypes';
@@ -259,7 +259,7 @@ export function getTransportCapacityKg(
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add engine/machinery.ts
@@ -273,11 +273,11 @@ git commit -m "feat: add engine/machinery.ts with pure job/contractor/transport 
 **Files:**
 - Modify: `store/useGameStore.ts`
 
-- [ ] **Step 1: Read the top of the store file (lines 1–380)**
+- [x] **Step 1: Read the top of the store file (lines 1–380)**
 
 Read `store/useGameStore.ts` lines 1–380 to see current imports, interfaces, and GameState.
 
-- [ ] **Step 2: Add import for new data/engine files**
+- [x] **Step 2: Add import for new data/engine files**
 
 In the imports block at the top (after the existing imports), add:
 
@@ -286,7 +286,7 @@ import { ATTACHMENT_TYPES, AttachmentType } from '../data/attachmentTypes';
 import { ContractorOperation, calcJobDays, canAssignJob, getTransportCapacityKg } from '../engine/machinery';
 ```
 
-- [ ] **Step 3: Add new interfaces after the OwnedMachine interface (around line 208)**
+- [x] **Step 3: Add new interfaces after the OwnedMachine interface (around line 208)**
 
 After the `OwnedMachine` interface block, insert:
 
@@ -327,7 +327,7 @@ export interface HarvestJob {
 }
 ```
 
-- [ ] **Step 4: Add `tilled` field to LandParcel interface**
+- [x] **Step 4: Add `tilled` field to LandParcel interface**
 
 Find the `LandParcel` interface (around line 118). After the `irrigated: boolean;` line add:
 
@@ -335,7 +335,7 @@ Find the `LandParcel` interface (around line 118). After the `irrigated: boolean
   tilled: boolean;
 ```
 
-- [ ] **Step 5: Add new state fields to GameState interface**
+- [x] **Step 5: Add new state fields to GameState interface**
 
 In the `GameState` interface, after the `machineRepairs: MachineRepair[];` line, add:
 
@@ -346,7 +346,7 @@ In the `GameState` interface, after the `machineRepairs: MachineRepair[];` line,
   harvestJobs: HarvestJob[];
 ```
 
-- [ ] **Step 6: Add new action signatures to GameState interface**
+- [x] **Step 6: Add new action signatures to GameState interface**
 
 After the `startRepair: (machineId: string) => void;` line (end of existing actions), add:
 
@@ -359,7 +359,7 @@ After the `startRepair: (machineId: string) => void;` line (end of existing acti
   hireContractor: (operation: ContractorOperation, parcelIds: string[], cropId?: string) => void;
 ```
 
-- [ ] **Step 7: Add new fields to the initial state**
+- [x] **Step 7: Add new fields to the initial state**
 
 Find the initial state object (where `machines: [] as OwnedMachine[]` appears). Add after `machines: [] as OwnedMachine[],`:
 
@@ -374,7 +374,7 @@ Also find where `parcels` are initialized and ensure new parcels get `tilled: fa
 
 To find the parcel generation, search for `pricePerHa` in the store — there's a loop creating parcel objects. Add `tilled: false` to that object.
 
-- [ ] **Step 8: Bump the save key**
+- [x] **Step 8: Bump the save key**
 
 Find line 2734 (or search for `granja-tycoon-save-v6`) and change:
 
@@ -388,7 +388,7 @@ to:
       name: 'granja-tycoon-save-v7',
 ```
 
-- [ ] **Step 9: Verify TypeScript compiles**
+- [x] **Step 9: Verify TypeScript compiles**
 
 ```bash
 npx tsc --noEmit 2>&1 | head -50
@@ -396,7 +396,7 @@ npx tsc --noEmit 2>&1 | head -50
 
 Expected: errors about unimplemented actions (buyAttachment etc.) — those are added in later tasks. No errors in interface definitions.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add store/useGameStore.ts
@@ -410,11 +410,11 @@ git commit -m "feat: add OwnedAttachment/OwnedTrailer/TractorJob/HarvestJob inte
 **Files:**
 - Modify: `store/useGameStore.ts`
 
-- [ ] **Step 1: Read buyMachine action in the store**
+- [x] **Step 1: Read buyMachine action in the store**
 
 Search for `buyMachine:` in the store to understand the pattern. It's around line 2155.
 
-- [ ] **Step 2: Add the three new buy/hitch actions after the buyMachine action**
+- [x] **Step 2: Add the three new buy/hitch actions after the buyMachine action**
 
 Find the `buyMachine` action implementation and insert after it:
 
@@ -450,7 +450,7 @@ Find the `buyMachine` action implementation and insert after it:
       },
 ```
 
-- [ ] **Step 3: Verify TypeScript compiles**
+- [x] **Step 3: Verify TypeScript compiles**
 
 ```bash
 npx tsc --noEmit 2>&1 | grep "buyAttachment\|buyTrailer\|hitchTrailer" | head -20
@@ -458,7 +458,7 @@ npx tsc --noEmit 2>&1 | grep "buyAttachment\|buyTrailer\|hitchTrailer" | head -2
 
 Expected: no errors for these three actions.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add store/useGameStore.ts
@@ -472,11 +472,11 @@ git commit -m "feat: add buyAttachment, buyTrailer, hitchTrailer store actions"
 **Files:**
 - Modify: `store/useGameStore.ts`
 
-- [ ] **Step 1: Read the engine/machinery.ts file**
+- [x] **Step 1: Read the engine/machinery.ts file**
 
 Read `engine/machinery.ts` fully to confirm the `canAssignJob` and `calcJobDays` signatures before using them.
 
-- [ ] **Step 2: Add assignJob action after the hitchTrailer action**
+- [x] **Step 2: Add assignJob action after the hitchTrailer action**
 
 ```typescript
       assignJob: (tractorId, attachmentId, operation, parcelIds, cropId) => {
@@ -568,13 +568,13 @@ Read `engine/machinery.ts` fully to confirm the `canAssignJob` and `calcJobDays`
       },
 ```
 
-- [ ] **Step 3: Verify TypeScript compiles (no new errors)**
+- [x] **Step 3: Verify TypeScript compiles (no new errors)**
 
 ```bash
 npx tsc --noEmit 2>&1 | grep "assignJob\|assignHarvestJob" | head -20
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add store/useGameStore.ts
@@ -588,7 +588,7 @@ git commit -m "feat: add assignJob and assignHarvestJob store actions"
 **Files:**
 - Modify: `store/useGameStore.ts`
 
-- [ ] **Step 1: Add hireContractor action after assignHarvestJob**
+- [x] **Step 1: Add hireContractor action after assignHarvestJob**
 
 ```typescript
       hireContractor: (operation, parcelIds, cropId) => {
@@ -671,13 +671,13 @@ git commit -m "feat: add assignJob and assignHarvestJob store actions"
       },
 ```
 
-- [ ] **Step 2: Verify TypeScript compiles**
+- [x] **Step 2: Verify TypeScript compiles**
 
 ```bash
 npx tsc --noEmit 2>&1 | grep "hireContractor" | head -20
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add store/useGameStore.ts
@@ -691,11 +691,11 @@ git commit -m "feat: add hireContractor store action (instant operations for all
 **Files:**
 - Modify: `store/useGameStore.ts`
 
-- [ ] **Step 1: Read plantCrop (around line 1760)**
+- [x] **Step 1: Read plantCrop (around line 1760)**
 
 Read `store/useGameStore.ts` lines 1755–1785 to see current `plantCrop`.
 
-- [ ] **Step 2: Add tilled guard to plantCrop**
+- [x] **Step 2: Add tilled guard to plantCrop**
 
 In `plantCrop`, after the line `if (!parcel || !parcel.owned || parcel.plantedCrop) return;`, add:
 
@@ -703,11 +703,11 @@ In `plantCrop`, after the line `if (!parcel || !parcel.owned || parcel.plantedCr
         if (!parcel.tilled) return; // must till first
 ```
 
-- [ ] **Step 3: Read harvestCrop (around line 1782–1852)**
+- [x] **Step 3: Read harvestCrop (around line 1782–1852)**
 
 Read `store/useGameStore.ts` lines 1782–1855.
 
-- [ ] **Step 4: Update harvestCrop — remove passive machine bonuses, add combine requirement**
+- [x] **Step 4: Update harvestCrop — remove passive machine bonuses, add combine requirement**
 
 a) Replace the speed-bonus effectiveGrowthDays block:
 
@@ -742,13 +742,13 @@ With:
         const rawUnits = harvestAmount(crop, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, 1.0);
 ```
 
-- [ ] **Step 5: Update harvestAllReady similarly**
+- [x] **Step 5: Update harvestAllReady similarly**
 
 Search for `getMachineSpeedBonus` and `getMachineYieldBonus` in `harvestAllReady` (around line 2548–2600). Apply the same replacements:
 - Remove `const speedBonus = getMachineSpeedBonus(state.machines);` and the `speedBonus` usage in `effectiveGrowthDays`
 - Remove the `repairingIds` block and `yieldBonus` call, pass `1.0` to `harvestAmount`
 
-- [ ] **Step 6: Remove getMachineYieldBonus and getMachineSpeedBonus helper functions**
+- [x] **Step 6: Remove getMachineYieldBonus and getMachineSpeedBonus helper functions**
 
 Find the two helper functions at the top of the store (lines 25–42). Delete them entirely:
 
@@ -762,7 +762,7 @@ function getMachineSpeedBonus(machines: OwnedMachine[]): number {
 }
 ```
 
-- [ ] **Step 7: Verify no remaining references to removed functions**
+- [x] **Step 7: Verify no remaining references to removed functions**
 
 ```bash
 grep -n "getMachineYieldBonus\|getMachineSpeedBonus" store/useGameStore.ts
@@ -770,13 +770,13 @@ grep -n "getMachineYieldBonus\|getMachineSpeedBonus" store/useGameStore.ts
 
 Expected: no output (zero matches).
 
-- [ ] **Step 8: Verify TypeScript compiles**
+- [x] **Step 8: Verify TypeScript compiles**
 
 ```bash
 npx tsc --noEmit 2>&1 | head -40
 ```
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add store/useGameStore.ts
@@ -790,11 +790,11 @@ git commit -m "feat: gate plantCrop on tilled=true; remove passive machine yield
 **Files:**
 - Modify: `store/useGameStore.ts`
 
-- [ ] **Step 1: Read the advanceDay function**
+- [x] **Step 1: Read the advanceDay function**
 
 Search for `advanceDay:` in the store. Read roughly 200 lines from there to understand the structure. Look especially for the auto-harvest worker block that calls `getMachineSpeedBonus`/`getMachineYieldBonus` (around line 1538–1548).
 
-- [ ] **Step 2: Fix the auto-harvest worker block**
+- [x] **Step 2: Fix the auto-harvest worker block**
 
 In the advanceDay worker auto-harvest block (which references `speedBonusW` and `yieldBonusW`), replace:
 
@@ -822,7 +822,7 @@ With:
 Math.round(cropType.growthDays / seedGenes.growth)
 ```
 
-- [ ] **Step 3: Add TractorJob processing block in advanceDay**
+- [x] **Step 3: Add TractorJob processing block in advanceDay**
 
 Find the section near the end of `advanceDay` where the `set({...})` call with `newDay` is made (the big state update). Before that `set()` call, add job processing logic.
 
@@ -861,7 +861,7 @@ Find the variable `let summaryEvents: DaySummaryEvent[] = [];` (or however summa
 
 > **Important:** The variable name `tractorJobParcels` must be the same parcel variable you pass to the final `set()`. If `advanceDay` already uses a variable like `updatedParcels` for parcel state, use that name instead. Read the actual code to find the correct variable name.
 
-- [ ] **Step 4: Add HarvestJob processing block**
+- [x] **Step 4: Add HarvestJob processing block**
 
 Immediately after the TractorJob block, add:
 
@@ -909,7 +909,7 @@ Immediately after the TractorJob block, add:
 
 > **Note:** `newInventory` must refer to whatever inventory accumulator variable is used in `advanceDay`. Read the actual code to align variable names. If `advanceDay` doesn't have a `newInventory` accumulator before this point, initialize one: `let newInventory = { ...state.inventory };` before these blocks.
 
-- [ ] **Step 5: Include new state in the final set() call**
+- [x] **Step 5: Include new state in the final set() call**
 
 Find the final `set({...})` call inside `advanceDay` and ensure these are included:
 
@@ -922,7 +922,7 @@ Find the final `set({...})` call inside `advanceDay` and ensure these are includ
 
 Merge these with the existing fields already being set — do not duplicate keys.
 
-- [ ] **Step 6: Verify TypeScript compiles**
+- [x] **Step 6: Verify TypeScript compiles**
 
 ```bash
 npx tsc --noEmit 2>&1 | head -60
@@ -930,7 +930,7 @@ npx tsc --noEmit 2>&1 | head -60
 
 Fix any type errors before continuing.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add store/useGameStore.ts
@@ -944,11 +944,11 @@ git commit -m "feat: advanceDay processes TractorJobs and HarvestJobs to complet
 **Files:**
 - Modify: `store/useGameStore.ts`
 
-- [ ] **Step 1: Find the partialize function (around line 2742)**
+- [x] **Step 1: Find the partialize function (around line 2742)**
 
 Read lines 2742–2770 of `store/useGameStore.ts`.
 
-- [ ] **Step 2: Add new state fields to persisted state**
+- [x] **Step 2: Add new state fields to persisted state**
 
 The `partialize` function destructures actions to EXCLUDE them, keeping only `...dataState`. The `attachments`, `trailers`, `tractorJobs`, `harvestJobs` are data — they're included automatically via `...dataState`. No change needed for data fields.
 
@@ -965,7 +965,7 @@ Change to:
           buyAttachment, buyTrailer, hitchTrailer, assignJob, assignHarvestJob, hireContractor,
 ```
 
-- [ ] **Step 3: Verify TypeScript compiles cleanly**
+- [x] **Step 3: Verify TypeScript compiles cleanly**
 
 ```bash
 npx tsc --noEmit 2>&1 | head -40
@@ -973,7 +973,7 @@ npx tsc --noEmit 2>&1 | head -40
 
 Expected: zero errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add store/useGameStore.ts
@@ -987,7 +987,7 @@ git commit -m "feat: exclude new machinery actions from persisted state"
 **Files:**
 - Create: `components/ContractorModal.tsx`
 
-- [ ] **Step 1: Create the component**
+- [x] **Step 1: Create the component**
 
 ```typescript
 import React from 'react';
@@ -1096,13 +1096,13 @@ const s = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Verify TypeScript compiles**
+- [x] **Step 2: Verify TypeScript compiles**
 
 ```bash
 npx tsc --noEmit 2>&1 | grep "ContractorModal" | head -10
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add components/ContractorModal.tsx
@@ -1116,11 +1116,11 @@ git commit -m "feat: add ContractorModal component with cost breakdown and confi
 **Files:**
 - Modify: `app/(tabs)/tienda.tsx`
 
-- [ ] **Step 1: Read tienda.tsx fully**
+- [x] **Step 1: Read tienda.tsx fully**
 
 Read `app/(tabs)/tienda.tsx` completely.
 
-- [ ] **Step 2: Add imports for new data**
+- [x] **Step 2: Add imports for new data**
 
 At the top, add:
 
@@ -1135,7 +1135,7 @@ And expand the store import to include:
 const { money, buyMachine, buyAttachment, buyTrailer, machines, attachments, trailers } = useGameStore();
 ```
 
-- [ ] **Step 3: Change ShopTab type to include 'machinery'**
+- [x] **Step 3: Change ShopTab type to include 'machinery'**
 
 Find:
 ```typescript
@@ -1147,7 +1147,7 @@ Change to:
 type ShopTab = 'seeds' | 'products' | 'buildings' | 'machinery';
 ```
 
-- [ ] **Step 4: Create MachineryTab component**
+- [x] **Step 4: Create MachineryTab component**
 
 Add a new `MachineryTab` function component before the main `TiendaScreen`:
 
@@ -1290,7 +1290,7 @@ const mStyles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 5: Add 'Machinery' tab button to the tab bar**
+- [x] **Step 5: Add 'Machinery' tab button to the tab bar**
 
 In `TiendaScreen`, find where the `ShopTab` buttons are rendered (the row with 'Seeds', 'Products', 'Buildings'). Add a Machinery button:
 
@@ -1303,7 +1303,7 @@ In `TiendaScreen`, find where the `ShopTab` buttons are rendered (the row with '
           </TouchableOpacity>
 ```
 
-- [ ] **Step 6: Add machinery case to the tab render block**
+- [x] **Step 6: Add machinery case to the tab render block**
 
 In the section that renders content based on `tab`, add:
 
@@ -1311,13 +1311,13 @@ In the section that renders content based on `tab`, add:
         {tab === 'machinery' && <MachineryTab />}
 ```
 
-- [ ] **Step 7: Verify TypeScript compiles**
+- [x] **Step 7: Verify TypeScript compiles**
 
 ```bash
 npx tsc --noEmit 2>&1 | grep "tienda" | head -20
 ```
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/(tabs)/tienda.tsx
@@ -1331,11 +1331,11 @@ git commit -m "feat: add Machinery sub-tab to tienda (tractors, combines, trucks
 **Files:**
 - Modify: `app/(tabs)/maquinaria.tsx`
 
-- [ ] **Step 1: Read maquinaria.tsx fully**
+- [x] **Step 1: Read maquinaria.tsx fully**
 
 Read `app/(tabs)/maquinaria.tsx` completely before editing.
 
-- [ ] **Step 2: Replace the file contents**
+- [x] **Step 2: Replace the file contents**
 
 The file should become:
 
@@ -1612,13 +1612,13 @@ const s = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 3: Verify TypeScript compiles**
+- [x] **Step 3: Verify TypeScript compiles**
 
 ```bash
 npx tsc --noEmit 2>&1 | grep "maquinaria" | head -20
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/(tabs)/maquinaria.tsx
@@ -1632,11 +1632,11 @@ git commit -m "feat: redesign maquinaria with Fleet/Attachments/Jobs tabs and hi
 **Files:**
 - Modify: `app/(tabs)/tierras.tsx`
 
-- [ ] **Step 1: Read tierras.tsx fully**
+- [x] **Step 1: Read tierras.tsx fully**
 
 Read `app/(tabs)/tierras.tsx` completely.
 
-- [ ] **Step 2: Add imports**
+- [x] **Step 2: Add imports**
 
 At the top, add:
 
@@ -1646,7 +1646,7 @@ import { MACHINE_TYPES } from '../../data/machineTypes';
 import { getContractorCost } from '../../engine/machinery';
 ```
 
-- [ ] **Step 3: Expand store destructure in the component**
+- [x] **Step 3: Expand store destructure in the component**
 
 In the component that renders parcel cards, expand the `useGameStore()` destructure to include:
 
@@ -1658,7 +1658,7 @@ const {
 } = useGameStore();
 ```
 
-- [ ] **Step 4: Add ContractorModal state**
+- [x] **Step 4: Add ContractorModal state**
 
 Inside the main screen component (or the parcel card component), add:
 
@@ -1673,7 +1673,7 @@ const [contractorModal, setContractorModal] = useState<{
 } | null>(null);
 ```
 
-- [ ] **Step 5: Add helper functions for machine checks**
+- [x] **Step 5: Add helper functions for machine checks**
 
 Add these helper functions inside the component (before the return):
 
@@ -1691,7 +1691,7 @@ const getHarvestJob = (parcelId: string) =>
   (harvestJobs ?? []).find((j: HarvestJob) => j.parcelIds.includes(parcelId));
 ```
 
-- [ ] **Step 6: Update the parcel card's action button rendering**
+- [x] **Step 6: Update the parcel card's action button rendering**
 
 Find the section in each parcel card that renders the current action buttons (buy/plant/harvest etc.). Replace it with context-sensitive logic.
 
@@ -1797,7 +1797,7 @@ The button logic for each owned parcel should follow this pattern (add after the
 
 For the harvest button, since `tierras.tsx` is a component (not inside the store), call `harvestCrop(parcel.id)` from the destructured store actions.
 
-- [ ] **Step 7: Add ContractorModal to the component JSX**
+- [x] **Step 7: Add ContractorModal to the component JSX**
 
 At the end of the main component return, inside the outer View, add:
 
@@ -1819,7 +1819,7 @@ At the end of the main component return, inside the outer View, add:
       )}
 ```
 
-- [ ] **Step 8: Add missing StyleSheet entries**
+- [x] **Step 8: Add missing StyleSheet entries**
 
 Add these styles to the existing `StyleSheet.create({...})` call in tierras.tsx:
 
@@ -1836,7 +1836,7 @@ Add these styles to the existing `StyleSheet.create({...})` call in tierras.tsx:
 
 If the styles object is named differently (like `styles`), use that name instead of `opStyles`.
 
-- [ ] **Step 9: Verify TypeScript compiles**
+- [x] **Step 9: Verify TypeScript compiles**
 
 ```bash
 npx tsc --noEmit 2>&1 | grep "tierras" | head -20
@@ -1844,7 +1844,7 @@ npx tsc --noEmit 2>&1 | grep "tierras" | head -20
 
 Fix any type errors.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add app/(tabs)/tierras.tsx
@@ -1858,7 +1858,7 @@ git commit -m "feat: add context-sensitive operation buttons to parcel cards (ti
 **Files:**
 - Modify: `store/useGameStore.ts` (if any remaining yieldBonus references exist)
 
-- [ ] **Step 1: Search for any remaining references to removed fields**
+- [x] **Step 1: Search for any remaining references to removed fields**
 
 ```bash
 grep -n "yieldBonus\|speedBonus\|getMachineYieldBonus\|getMachineSpeedBonus" store/useGameStore.ts data/machineTypes.ts
@@ -1866,7 +1866,7 @@ grep -n "yieldBonus\|speedBonus\|getMachineYieldBonus\|getMachineSpeedBonus" sto
 
 Expected: zero matches. Fix any found.
 
-- [ ] **Step 2: Verify all store state fields have tilled: false in parcel initialization**
+- [x] **Step 2: Verify all store state fields have tilled: false in parcel initialization**
 
 ```bash
 grep -n "tilled" store/useGameStore.ts | head -20
@@ -1874,7 +1874,7 @@ grep -n "tilled" store/useGameStore.ts | head -20
 
 Confirm `tilled: false` appears in the initial parcel object generation.
 
-- [ ] **Step 3: Full TypeScript compile check**
+- [x] **Step 3: Full TypeScript compile check**
 
 ```bash
 npx tsc --noEmit 2>&1
@@ -1882,7 +1882,7 @@ npx tsc --noEmit 2>&1
 
 Expected: zero errors. Fix any remaining type errors before committing.
 
-- [ ] **Step 4: Verify save key is v7**
+- [x] **Step 4: Verify save key is v7**
 
 ```bash
 grep "granja-tycoon-save" store/useGameStore.ts
@@ -1890,7 +1890,7 @@ grep "granja-tycoon-save" store/useGameStore.ts
 
 Expected: `granja-tycoon-save-v7`
 
-- [ ] **Step 5: Final commit**
+- [x] **Step 5: Final commit**
 
 ```bash
 git add -A

@@ -1,6 +1,6 @@
 # Animal Genetics UI Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Expose the existing `AnimalGenes` engine in the UI — gene bars, breeding pair selection, and 3-generation lineage tree on each animal card.
 
@@ -23,7 +23,7 @@
 **Files:**
 - Modify: `store/useGameStore.ts`
 
-- [ ] **Step 1: Add `parentIds` and `grandparentIds` to `OwnedAnimal`**
+- [x] **Step 1: Add `parentIds` and `grandparentIds` to `OwnedAnimal`**
 
 Find the `OwnedAnimal` interface (exported from `store/useGameStore.ts`, currently ends with `genes?: AnimalGenes`). Add two optional fields:
 
@@ -44,7 +44,7 @@ export interface OwnedAnimal {
 }
 ```
 
-- [ ] **Step 2: Add `breedingPairs` to `GameState`**
+- [x] **Step 2: Add `breedingPairs` to `GameState`**
 
 Find the `GameState` interface. Add after the `workers` field (or wherever the last field is):
 
@@ -57,7 +57,7 @@ Also add to the initial state in `useGameStore` (search for `workers: []` and ad
 breedingPairs: {},
 ```
 
-- [ ] **Step 3: Add `setBreedingPair` and `clearBreedingPair` to `GameState` interface**
+- [x] **Step 3: Add `setBreedingPair` and `clearBreedingPair` to `GameState` interface**
 
 In the `GameState` interface, add:
 ```typescript
@@ -65,7 +65,7 @@ setBreedingPair: (femaleId: string, maleId: string) => void;
 clearBreedingPair: (femaleId: string) => void;
 ```
 
-- [ ] **Step 4: Implement `setBreedingPair` and `clearBreedingPair` actions**
+- [x] **Step 4: Implement `setBreedingPair` and `clearBreedingPair` actions**
 
 In the store's `create(...)` block, add these two actions (near `breedAnimal`):
 
@@ -85,7 +85,7 @@ clearBreedingPair: (femaleId) => {
 },
 ```
 
-- [ ] **Step 5: Update `breedAnimal` to use preferred pair and record lineage**
+- [x] **Step 5: Update `breedAnimal` to use preferred pair and record lineage**
 
 Find the `breedAnimal` action. It currently picks the first available mature male with `.find(...)`. Change it to:
 
@@ -160,7 +160,7 @@ breedAnimal: (animalId) => {
 },
 ```
 
-- [ ] **Step 6: Verify TypeScript**
+- [x] **Step 6: Verify TypeScript**
 
 ```bash
 cd "C:\Users\SanGi\.antigravity\FArM TYCOON\granja-tycoon" && npx tsc --noEmit
@@ -168,7 +168,7 @@ cd "C:\Users\SanGi\.antigravity\FArM TYCOON\granja-tycoon" && npx tsc --noEmit
 
 Expected: same 4 pre-existing errors, no new ones.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add "store/useGameStore.ts"
@@ -184,7 +184,7 @@ git commit -m "feat(genetics): add breedingPairs, lineage fields, and preferred-
 
 The file already imports `geneGrade`, `gradeColor`, `TRAIT_ICONS`, `TRAIT_DESC`, `AnimalGenes` from `engine/animals`. The gene grade helpers (`geneGrade`, `gradeColor`) already exist as local functions at the top of the file.
 
-- [ ] **Step 1: Add expanded-card state**
+- [x] **Step 1: Add expanded-card state**
 
 Find the `useState` declarations near the top of `AnimalesScreen`. Add:
 
@@ -192,7 +192,7 @@ Find the `useState` declarations near the top of `AnimalesScreen`. Add:
 const [expandedAnimalId, setExpandedAnimalId] = useState<string | null>(null);
 ```
 
-- [ ] **Step 2: Add a `GeneBar` helper component**
+- [x] **Step 2: Add a `GeneBar` helper component**
 
 Add this component before the `AnimalesScreen` function (or at the bottom of the file above styles):
 
@@ -221,7 +221,7 @@ const gbStyles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 3: Render gene panel inside animal cards**
+- [x] **Step 3: Render gene panel inside animal cards**
 
 Find where each animal card is rendered (the FlatList `renderItem` or the mapped list). After the existing animal info row (name, sex, traits etc.) and before the action buttons, add:
 
@@ -265,13 +265,13 @@ const genStyles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 4: Verify TypeScript**
+- [x] **Step 4: Verify TypeScript**
 
 ```bash
 npx tsc --noEmit
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add "app/(tabs)/animales.tsx"
@@ -285,7 +285,7 @@ git commit -m "feat(genetics): add gene bars and grade badge to animal cards"
 **Files:**
 - Modify: `app/(tabs)/animales.tsx`
 
-- [ ] **Step 1: Pull `breedingPairs`, `setBreedingPair`, `clearBreedingPair` from store**
+- [x] **Step 1: Pull `breedingPairs`, `setBreedingPair`, `clearBreedingPair` from store**
 
 Find the `useGameStore` destructure in `AnimalesScreen`. Add:
 
@@ -293,7 +293,7 @@ Find the `useGameStore` destructure in `AnimalesScreen`. Add:
 const { ..., breedingPairs, setBreedingPair, clearBreedingPair } = useGameStore();
 ```
 
-- [ ] **Step 2: Add breeding pair selector inside the expanded gene panel (females only)**
+- [x] **Step 2: Add breeding pair selector inside the expanded gene panel (females only)**
 
 Inside the IIFE in `expandedAnimalId === animal.id` block, after the `GeneBar` rows, add:
 
@@ -376,13 +376,13 @@ const bpStyles = StyleSheet.create({
 
 Note: `OwnedAnimal` needs to be imported in animales.tsx for the filter type. Check if it's already imported from the store; if not, add it to the import line.
 
-- [ ] **Step 3: Verify TypeScript**
+- [x] **Step 3: Verify TypeScript**
 
 ```bash
 npx tsc --noEmit
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add "app/(tabs)/animales.tsx"
@@ -396,7 +396,7 @@ git commit -m "feat(genetics): add breeding pair selector with offspring predict
 **Files:**
 - Modify: `app/(tabs)/animales.tsx`
 
-- [ ] **Step 1: Add lineage tree inside the expanded genetics panel**
+- [x] **Step 1: Add lineage tree inside the expanded genetics panel**
 
 After the breeding pair selector block (still inside `expandedAnimalId === animal.id`), add:
 
@@ -475,13 +475,13 @@ const ltStyles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Verify TypeScript**
+- [x] **Step 2: Verify TypeScript**
 
 ```bash
 npx tsc --noEmit
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add "app/(tabs)/animales.tsx"
