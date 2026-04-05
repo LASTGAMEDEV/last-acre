@@ -222,9 +222,9 @@ export function computeFeedNeeded(
   animals: OwnedAnimal[],
   animalTypes: AnimalType[],
   currentDay: number,
-  isWinter: boolean,
 ): { grainKg: number; hayKg: number; pigGrainKg: number } {
-  const winterMult = isWinter ? 1.15 : 1.0;
+  const dayOfYear = (currentDay - 1) % 365;
+  const winterMult = dayOfYear >= 270 ? 1.15 : 1.0;
   let grainKg = 0;
   let hayKg = 0;
   let pigGrainKg = 0;
@@ -265,7 +265,7 @@ export function collectProduction(
   // Lactation gate: dairy animals produce zero milk outside lactation window
   if (animalType.productionType === 'milk') {
     const lactState = getLactationState(animal, animalType.id, currentDay);
-    if (lactState !== 'lactating') return { units: 0, nextDay: currentDay };
+    if (lactState !== 'lactating') return { units: 0, nextDay: animal.lastProductionDay };
   }
 
   const daysPassed = currentDay - animal.lastProductionDay;
