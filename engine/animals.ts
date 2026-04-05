@@ -139,8 +139,9 @@ export function inheritTrait(parent: OwnedAnimal): AnimalTrait | null {
 // ─── Lactation ─────────────────────────────────────────────────────────────
 
 export const LACTATION_PARAMS: Record<string, { lactatingDays: number; dryDays: number; breedAfterDryDay: number }> = {
-  vaca:  { lactatingDays: 305, dryDays: 60,  breedAfterDryDay: 30 },
-  cabra: { lactatingDays: 200, dryDays: 45,  breedAfterDryDay: 20 },
+  vaca:   { lactatingDays: 305, dryDays: 60,  breedAfterDryDay: 30 },
+  cabra:  { lactatingDays: 200, dryDays: 45,  breedAfterDryDay: 20 },
+  bufalo: { lactatingDays: 270, dryDays: 60,  breedAfterDryDay: 30 },
 };
 
 /** Returns 'lactating', 'dry', or 'none' (non-dairy species). */
@@ -195,6 +196,7 @@ export function canBreed(animal: OwnedAnimal, animalType: AnimalType, currentDay
       return currentDay - animal.lastBreedDay >= animalType.breedingDays;
     }
     const daysSince = currentDay - animal.lactationStartDay;
+    if (daysSince < params.lactatingDays) return false; // still lactating
     const dryDaysPassed = daysSince - params.lactatingDays;
     return dryDaysPassed >= params.breedAfterDryDay;
   }
