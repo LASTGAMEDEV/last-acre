@@ -1517,6 +1517,7 @@ export const useGameStore = create<GameState>()(
         }
         const totalInsurancePayoutAll = totalInsurancePayout + plagaPayout;
 
+        // TODO: apply doubled sick chance for underfed animals using state.grainMissedDays / state.hayMissedDays
         // Veterinary events: 1.5% chance per animal to get sick; untreated for 14d → death
         let animals = state.animals;
         const newSickIds: string[] = [];
@@ -2536,23 +2537,23 @@ export const useGameStore = create<GameState>()(
 
         // ── Feed deduction ────────────────────────────────────────────────────
         {
-          const { computeFeedNeeded: _computeFeedNeeded, GRAIN_CROP_IDS: GRAIN_IDS } = require('../engine/animals');
+          const { computeFeedNeeded, GRAIN_CROP_IDS: GRAIN_IDS } = require('../engine/animals');
           const { ANIMAL_TYPES: AT_FEED } = require('../data/animalTypes');
           const hasAnimalWorker = (state.workers ?? []).some(
             (w: OwnedWorker) => w.typeId === 'animal_keeper' || w.typeId === 'zootechnician'
           );
-          const { grainKg, hayKg, pigGrainKg } = _computeFeedNeeded(animals, AT_FEED, newDay);
+          const { grainKg, hayKg, pigGrainKg } = computeFeedNeeded(animals, AT_FEED, newDay);
           const shouldFeed = hasAnimalWorker || state.animalsManuallyFed;
 
           if (shouldFeed && (grainKg > 0 || hayKg > 0)) {
             // ── Grain deduction ──
             if (grainKg > 0) {
-              const grainAvail = (GRAIN_IDS as string[]).reduce(
+              const grainAvail = GRAIN_IDS.reduce(
                 (s: number, id: string) => s + (harvestInventory[id] ?? 0), 0
               );
               if (grainAvail >= grainKg) {
                 let remaining = grainKg;
-                for (const id of GRAIN_IDS as string[]) {
+                for (const id of GRAIN_IDS) {
                   if (remaining <= 0) break;
                   const avail = harvestInventory[id] ?? 0;
                   const take = Math.min(avail, remaining);
@@ -2562,7 +2563,7 @@ export const useGameStore = create<GameState>()(
                 newGrainMissed = Math.max(0, newGrainMissed - 1);
               } else {
                 // Consume all available grain first
-                for (const id of GRAIN_IDS as string[]) {
+                for (const id of GRAIN_IDS) {
                   if ((harvestInventory[id] ?? 0) > 0) {
                     harvestInventory = { ...harvestInventory, [id]: 0 };
                   }
@@ -2572,7 +2573,7 @@ export const useGameStore = create<GameState>()(
                   // Pigs can cover their portion from any non-grain, non-grass crops
                   let pigRemaining = shortfall;
                   const fallbackIds = Object.keys(harvestInventory).filter(
-                    (id: string) => !(GRAIN_IDS as string[]).includes(id) && id !== 'grass' && (harvestInventory[id] ?? 0) > 0
+                    (id: string) => !GRAIN_IDS.includes(id) && id !== 'grass' && (harvestInventory[id] ?? 0) > 0
                   );
                   for (const id of fallbackIds) {
                     if (pigRemaining <= 0) break;
