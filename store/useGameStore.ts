@@ -532,6 +532,8 @@ export interface GameState {
   harvestCrop: (parcelId: string) => void;
   sellCrop: (cropId: string, units: number, marketId?: MarketId) => void;
   buyAnimal: (typeId: string, sex: 'male' | 'female') => void;
+  addToHenil: () => void;
+  feedAnimals: () => void;
   sellAnimal: (animalId: string) => void;
   collectAnimalProduction: (animalId: string) => void;
   sellAnimalProduct: (productType: string, units: number) => void;
@@ -2862,6 +2864,37 @@ export const useGameStore = create<GameState>()(
           genes: randomGenes(),
         };
         set({ money: state.money - cost, animals: [...state.animals, newAnimal] });
+      },
+
+      addToHenil: () => {
+        const state = get();
+        if (!state.buildings.includes('bld_henil')) return;
+        const activeCount = (state.henilQueue ?? []).filter(b => b.readyDay > state.day).length;
+        if (activeCount >= 2) return; // max 2 concurrent batches
+        const grassAvailable = state.inventory['grass'] ?? 0;
+        if (grassAvailable <= 0) return;
+        const batchKg = Math.min(grassAvailable, 700); // 700 kg batch cap
+        const batch: HenilBatch = {
+          batchId: `henil_${Date.now()}`,
+          wetGrassKg: batchKg,
+          startDay: state.day,
+          readyDay: state.day + 3,
+        };
+        set({
+          henilQueue: [...(state.henilQueue ?? []), batch],
+          inventory: { ...state.inventory, grass: grassAvailable - batchKg },
+        });
+      },
+
+      feedAnimals: () => {
+        // Manual feeding button — only available when no animal worker.
+        // Sets flag so advanceDay knows animals were fed today.
+        const state = get();
+        const hasAnimalWorker = (state.workers ?? []).some(
+          (w: any) => w.typeId === 'animal_keeper' || w.typeId === 'zootechnician'
+        );
+        if (hasAnimalWorker) return; // worker handles it automatically
+        set({ animalsManuallyFed: true });
       },
 
       sellAnimal: (animalId) => {
