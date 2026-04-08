@@ -2318,6 +2318,9 @@ export const useGameStore = create<GameState>()(
         const workerAnimalInventory: Record<string, number> | undefined = (animals as any).__newAnimalInventory;
         const inventoryForSet = workerInventoryOverride ?? autoSellFinalInventory;
         const animalInventoryForSet = workerAnimalInventory ?? state.animalInventory;
+        let animalInventory = { ...animalInventoryForSet };
+        let newGrainMissed = state.grainMissedDays ?? 0;
+        let newHayMissed = state.hayMissedDays ?? 0;
         const harvestedCropIdsForSet = workerHarvestedIds ?? state.harvestedCropIds;
 
         // ── Fuel tracking for job day ────────────────────────────────────────
@@ -2531,6 +2534,122 @@ export const useGameStore = create<GameState>()(
 
         const declinedTemplates = newDay % 180 === 0 ? [] : state.declinedTemplates;
 
+        // ── Feed deduction ────────────────────────────────────────────────────
+        {
+          const { computeFeedNeeded: _computeFeedNeeded, GRAIN_CROP_IDS: GRAIN_IDS } = require('../engine/animals');
+          const { ANIMAL_TYPES: AT_FEED } = require('../data/animalTypes');
+          const hasAnimalWorker = (state.workers ?? []).some(
+            (w: OwnedWorker) => w.typeId === 'animal_keeper' || w.typeId === 'zootechnician'
+          );
+          const { grainKg, hayKg, pigGrainKg } = _computeFeedNeeded(animals, AT_FEED, newDay);
+          const shouldFeed = hasAnimalWorker || state.animalsManuallyFed;
+
+          if (shouldFeed && (grainKg > 0 || hayKg > 0)) {
+            // ── Grain deduction ──
+            if (grainKg > 0) {
+              const grainAvail = (GRAIN_IDS as string[]).reduce(
+                (s: number, id: string) => s + (harvestInventory[id] ?? 0), 0
+              );
+              if (grainAvail >= grainKg) {
+                let remaining = grainKg;
+                for (const id of GRAIN_IDS as string[]) {
+                  if (remaining <= 0) break;
+                  const avail = harvestInventory[id] ?? 0;
+                  const take = Math.min(avail, remaining);
+                  harvestInventory = { ...harvestInventory, [id]: avail - take };
+                  remaining -= take;
+                }
+                newGrainMissed = Math.max(0, newGrainMissed - 1);
+              } else {
+                // Consume all available grain first
+                for (const id of GRAIN_IDS as string[]) {
+                  if ((harvestInventory[id] ?? 0) > 0) {
+                    harvestInventory = { ...harvestInventory, [id]: 0 };
+                  }
+                }
+                const shortfall = grainKg - grainAvail;
+                if (shortfall <= pigGrainKg) {
+                  // Pigs can cover their portion from any non-grain, non-grass crops
+                  let pigRemaining = shortfall;
+                  const fallbackIds = Object.keys(harvestInventory).filter(
+                    (id: string) => !(GRAIN_IDS as string[]).includes(id) && id !== 'grass' && (harvestInventory[id] ?? 0) > 0
+                  );
+                  for (const id of fallbackIds) {
+                    if (pigRemaining <= 0) break;
+                    const avail = harvestInventory[id] ?? 0;
+                    const take = Math.min(avail, pigRemaining);
+                    harvestInventory = { ...harvestInventory, [id]: avail - take };
+                    pigRemaining -= take;
+                  }
+                  if (pigRemaining <= 0) {
+                    newGrainMissed = Math.max(0, newGrainMissed - 1);
+                  } else {
+                    newGrainMissed = Math.min(7, newGrainMissed + 1);
+                  }
+                } else {
+                  newGrainMissed = Math.min(7, newGrainMissed + 1);
+                }
+              }
+            } else {
+              newGrainMissed = Math.max(0, newGrainMissed - 1);
+            }
+
+            // ── Hay deduction ──
+            if (hayKg > 0) {
+              const hayAvail = animalInventory['hay'] ?? 0;
+              if (hayAvail >= hayKg) {
+                animalInventory = { ...animalInventory, hay: Math.round((hayAvail - hayKg) * 10) / 10 };
+                newHayMissed = Math.max(0, newHayMissed - 1);
+              } else {
+                animalInventory = { ...animalInventory, hay: 0 };
+                newHayMissed = Math.min(7, newHayMissed + 1);
+                summary.push({
+                  id: 'feed_hay_empty',
+                  icon: '🌾',
+                  title: 'Hay stock depleted',
+                  detail: 'Hay-eating animals are underfed — grow grass and process it in the Henil',
+                  severity: 'warning',
+                });
+              }
+            } else {
+              newHayMissed = Math.max(0, newHayMissed - 1);
+            }
+          } else if (grainKg > 0 || hayKg > 0) {
+            // No worker and player didn't manually feed
+            newGrainMissed = Math.min(7, newGrainMissed + 1);
+            newHayMissed = Math.min(7, newHayMissed + 1);
+            if (!hasAnimalWorker) {
+              summary.push({
+                id: 'feed_not_fed',
+                icon: '🐄',
+                title: 'Animals not fed today',
+                detail: 'Tap "Feed Animals" before advancing day, or hire an animal keeper',
+                severity: 'warning',
+              });
+            }
+          }
+        }
+
+        // ── Henil: process ready batches ──────────────────────────────────────
+        const readyBatches = (state.henilQueue ?? []).filter((b: HenilBatch) => b.readyDay <= newDay);
+        if (readyBatches.length > 0) {
+          const hayProduced = readyBatches.reduce(
+            (sum: number, b: HenilBatch) => sum + Math.floor(b.wetGrassKg * 0.625), 0
+          );
+          animalInventory = {
+            ...animalInventory,
+            hay: (animalInventory['hay'] ?? 0) + hayProduced,
+          };
+          summary.push({
+            id: `henil_ready_${newDay}`,
+            icon: '🌿',
+            title: `Henil: ${hayProduced.toLocaleString()} kg hay ready`,
+            detail: `${readyBatches.length} batch${readyBatches.length > 1 ? 'es' : ''} dried`,
+            severity: 'good',
+          });
+        }
+        const updatedHenilQueue = (state.henilQueue ?? []).filter((b: HenilBatch) => b.readyDay > newDay);
+
         // Milestone checks
         const newlyUnlocked = checkNewMilestones(
           {
@@ -2627,7 +2746,11 @@ export const useGameStore = create<GameState>()(
               k, Math.max(0, (harvestInventory[k] ?? 0) + (auctionInventoryDelta[k] ?? 0)),
             ])
           ),
-          animalInventory: animalInventoryForSet,
+          animalInventory,
+          grainMissedDays: newGrainMissed,
+          hayMissedDays: newHayMissed,
+          animalsManuallyFed: false,
+          henilQueue: updatedHenilQueue,
           harvestedCropIds: harvestedCropIdsForSet,
           reputation,
           bankrupt: isBankrupt || state.bankrupt,
