@@ -585,14 +585,83 @@ const smk = StyleSheet.create({
   sellBtnSub:    { color: '#4caf50', fontSize: 10 },
 });
 
+// ── Henil ─────────────────────────────────────────────────────────────────────
+function HenilSection() {
+  const {
+    henilQueue, addToHenil, day, inventory, buildings,
+  } = useGameStore();
+
+  const hasHenil = (buildings ?? []).includes('bld_henil');
+  const grassInStock = inventory['grass'] ?? 0;
+  const activeBatches = (henilQueue ?? []).filter((b: any) => b.readyDay > day);
+  const canStartBatch = hasHenil && grassInStock > 0 && activeBatches.length < 2;
+
+  return (
+    <ScrollView contentContainerStyle={{ padding: 12, gap: 10 }} showsVerticalScrollIndicator={false}>
+          {/* Henil (Hay Drying Barn) */}
+          {hasHenil && (
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>🌿 Henil</Text>
+              <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 8 }}>
+                Wet grass → hay · 3-day drying · 62.5% yield
+              </Text>
+
+              {activeBatches.length === 0 && (
+                <Text style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>No active batches.</Text>
+              )}
+              {activeBatches.map((batch: any) => {
+                const daysLeft = batch.readyDay - day;
+                const hayYield = Math.floor(batch.wetGrassKg * 0.625);
+                return (
+                  <View key={batch.batchId} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1a2a1a' }}>
+                    <Text style={{ color: '#ccc', fontSize: 12 }}>
+                      {batch.wetGrassKg.toLocaleString()} kg grass
+                    </Text>
+                    <Text style={{ color: '#66bb6a', fontSize: 12 }}>
+                      → {hayYield.toLocaleString()} kg hay
+                    </Text>
+                    <Text style={{ color: daysLeft <= 1 ? '#66bb6a' : '#888', fontSize: 12 }}>
+                      {daysLeft === 0 ? 'Ready!' : `${daysLeft}d left`}
+                    </Text>
+                  </View>
+                );
+              })}
+
+              <TouchableOpacity
+                style={{
+                  marginTop: 10,
+                  backgroundColor: canStartBatch ? '#1b5e20' : '#1a1a2e',
+                  borderRadius: 6, padding: 10, alignItems: 'center',
+                  opacity: canStartBatch ? 1 : 0.5,
+                }}
+                onPress={canStartBatch ? addToHenil : undefined}
+                disabled={!canStartBatch}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                  {activeBatches.length >= 2 ? 'Queue Full (2/2)' : grassInStock <= 0 ? 'No Grass in Stock' : `Start Batch (${Math.floor(grassInStock)} kg grass)`}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {!hasHenil && (
+            <View style={[styles.sectionCard, { opacity: 0.6 }]}>
+              <Text style={styles.sectionTitle}>🌿 Henil</Text>
+              <Text style={{ color: '#666', fontSize: 12 }}>Build a Henil to convert grass into hay for your animals.</Text>
+            </View>
+          )}
+    </ScrollView>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
-type OfficeTab = 'dashboard' | 'office' | 'calendar' | 'settings' | 'guide' | 'seeds';
+type OfficeTab = 'dashboard' | 'office' | 'calendar' | 'settings' | 'guide' | 'seeds' | 'henil';
 
 const TABS: { id: OfficeTab; label: string }[] = [
   { id: 'dashboard', label: '🏠 Home' },
   { id: 'office',    label: '📋 Office' },
   { id: 'calendar',  label: '📅 Calendar' },
   { id: 'seeds',     label: '🌱 Seeds' },
+  { id: 'henil',     label: '🌿 Henil' },
   { id: 'settings',  label: '⚙️ Settings' },
   { id: 'guide',     label: '📖 Guide' },
 ];
@@ -620,6 +689,7 @@ export default function GestionScreen() {
       {tab === 'office'    && <OficinaScreen />}
       {tab === 'calendar'  && <CalendarioScreen />}
       {tab === 'seeds'     && <SeedMarketSection />}
+      {tab === 'henil'     && <HenilSection />}
       {tab === 'settings'  && <SettingsSection />}
       {tab === 'guide'     && <Encyclopedia />}
     </View>
@@ -633,4 +703,6 @@ const styles = StyleSheet.create({
   tabBtnActive:     { backgroundColor: '#0f3460' },
   tabBtnText:       { color: '#888', fontSize: 10, fontWeight: 'bold' },
   tabBtnTextActive: { color: '#e8d5a3' },
+  sectionCard:      { backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
+  sectionTitle:     { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold', marginBottom: 8 },
 });
