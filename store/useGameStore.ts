@@ -2853,15 +2853,24 @@ export const useGameStore = create<GameState>()(
         const sexMult = sex === 'male' ? 0.7 : 1.0;
         const cost = Math.round(animalType.buyCost * fairMult * sexMult);
         if (state.money < cost) return;
+        // Dairy animals (cows & goats) arrive already freshened — mid-lactation adult
+        const isDairy = typeId === 'vaca' || typeId === 'cabra' || typeId === 'bufalo';
+        const freshenOffset = isDairy ? Math.floor(Math.random() * 120 + 30) : 0;
+        // born far enough in the past to be mature + freshened
+        const newBornDay = isDairy
+          ? state.day - animalType.maturityDays - freshenOffset - 10
+          : state.day;
+
         const newAnimal: OwnedAnimal = {
           id: `animal_${Date.now()}`,
           typeId,
           sex,
-          bornDay: state.day,
+          bornDay: newBornDay,
           lastProductionDay: state.day,
           lastBreedDay: state.day,
           sick: false,
           genes: randomGenes(),
+          ...(isDairy && sex === 'female' ? { lactationStartDay: state.day - freshenOffset } : {}),
         };
         set({ money: state.money - cost, animals: [...state.animals, newAnimal] });
       },
@@ -2976,10 +2985,19 @@ export const useGameStore = create<GameState>()(
         const nextPairs = { ...state.breedingPairs };
         delete nextPairs[animalId];
 
+        const isDairy = animal.typeId === 'vaca' || animal.typeId === 'cabra' || animal.typeId === 'bufalo';
         set({
           breedingPairs: nextPairs,
           animals: [
-            ...state.animals.map((a: OwnedAnimal) => a.id === animalId ? { ...a, lastBreedDay: state.day } : a),
+            ...state.animals.map((a: OwnedAnimal) => {
+              if (a.id !== animalId) return a;
+              return {
+                ...a,
+                lastBreedDay: state.day,
+                // Reset lactation: giving birth starts a new lactation window
+                ...(isDairy ? { lactationStartDay: state.day } : {}),
+              };
+            }),
             offspring,
           ],
         });
@@ -3111,7 +3129,13 @@ export const useGameStore = create<GameState>()(
         const { ANIMAL_TYPES } = require('../data/animalTypes');
         const animalType = ANIMAL_TYPES.find((a: any) => a.id === animal.typeId);
         const { collectProduction } = require('../engine/animals');
-        const { units, nextDay } = collectProduction(animal, animalType, state.day);
+        const { units, nextDay } = collectProduction(
+          animal,
+          animalType,
+          state.day,
+          state.grainMissedDays ?? 0,
+          state.hayMissedDays ?? 0,
+        );
         if (units <= 0 || !animalType.productionType) return;
         // Granero: +20% animal production (improved feeding and shelter)
         const graneroBonus = hasGranero(state.buildings) ? 1.2 : 1.0;
