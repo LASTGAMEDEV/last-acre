@@ -71,7 +71,7 @@ export default function AnimalesScreen() {
     breedingPairs, setBreedingPair, clearBreedingPair,
     animalPrices, upgradeAnimalGene,
     showWindowOpen, showResults,
-    workers, grainMissedDays, hayMissedDays, feedAnimals, inventory,
+    workers, grainMissedDays, hayMissedDays, feedAnimals, inventory, animalsManuallyFed,
   } = useGameStore();
   const fairMult = activeFair ? (1 - activeFair.discount) : 1.0;
   const hasAnimalWorker = (workers ?? []).some(
@@ -81,6 +81,9 @@ export default function AnimalesScreen() {
     (sum: number, id: string) => sum + (inventory[id] ?? 0), 0
   );
   const hayStock = animalInventory['hay'] ?? 0;
+  const hasFeedAnimals = animals.some(
+    a => ANIMAL_TYPES.find(t => t.id === a.typeId)?.feedType != null
+  );
   const [expandedAnimalId, setExpandedAnimalId] = useState<string | null>(null);
   const [showModalVisible, setShowModalVisible] = useState(false);
   type AnimalTab = 'herd' | 'results';
@@ -131,7 +134,7 @@ export default function AnimalesScreen() {
       )}
 
       {/* Feed Stock */}
-      <View style={{ backgroundColor: '#16213e', borderRadius: 10, marginHorizontal: 8, marginBottom: 8, padding: 12 }}>
+      {hasFeedAnimals && <View style={{ backgroundColor: '#16213e', borderRadius: 10, marginHorizontal: 8, marginBottom: 8, padding: 12 }}>
         <Text style={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 8 }}>Feed Stock</Text>
         <View style={{ flexDirection: 'row', gap: 16, marginBottom: 8 }}>
           <View style={{ flex: 1 }}>
@@ -155,17 +158,18 @@ export default function AnimalesScreen() {
         </View>
         {!hasAnimalWorker && (
           <TouchableOpacity
-            style={{ backgroundColor: '#1b5e20', borderRadius: 6, padding: 10, alignItems: 'center' }}
+            style={{ backgroundColor: animalsManuallyFed ? '#2e7d32' : '#1b5e20', borderRadius: 6, padding: 10, alignItems: 'center', opacity: animalsManuallyFed ? 0.7 : 1 }}
             onPress={feedAnimals}
+            disabled={animalsManuallyFed}
           >
-            <Text style={{ color: '#fff', fontWeight: 'bold' }}>Feed Animals Today</Text>
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>{animalsManuallyFed ? '✓ Fed for today' : 'Feed Animals Today'}</Text>
             <Text style={{ color: '#a5d6a7', fontSize: 11 }}>Hire an animal keeper to automate this</Text>
           </TouchableOpacity>
         )}
         {hasAnimalWorker && (
           <Text style={{ color: '#66bb6a', fontSize: 11 }}>✓ Animal worker feeds automatically</Text>
         )}
-      </View>
+      </View>}
 
       {/* Animal product inventory */}
       {Object.keys(animalInventory).length > 0 && (
@@ -259,7 +263,7 @@ export default function AnimalesScreen() {
                 </View>
               )}
               {/* Lactation bar (dairy animals only) */}
-                {(item.typeId === 'vaca' || item.typeId === 'cabra' || item.typeId === 'bufalo') && (() => {
+              {(item.typeId === 'vaca' || item.typeId === 'cabra' || item.typeId === 'bufalo') && (() => {
                   const params = LACTATION_PARAMS[item.typeId];
                   if (!params) return null;
                   const lactState = getLactationState(item, item.typeId, day);
@@ -291,7 +295,7 @@ export default function AnimalesScreen() {
                   }
                 })()}
               {/* Seasonal multiplier */}
-                {(() => {
+              {(() => {
                   const mod = getSeasonMultiplier(item.typeId, day);
                   if (mod === 1.0) return null;
                   const label = mod > 1.0
