@@ -7,7 +7,7 @@ import ScreenHeader from '../../components/ScreenHeader';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
-import { sellValue, isMature, canBreed, TRAIT_ICONS, TRAIT_DESC, AnimalGenes, OwnedAnimal } from '../../engine/animals';
+import { sellValue, isMature, canBreed, TRAIT_ICONS, TRAIT_DESC, AnimalGenes, OwnedAnimal, getLactationState, lactationDaysRemaining, dryDaysRemaining, LACTATION_PARAMS, getSeasonMultiplier, GRAIN_CROP_IDS } from '../../engine/animals';
 import { ENCLOSURE_BUILDINGS } from '../../constants/enclosures';
 import HelpSheet from '../../components/HelpSheet';
 
@@ -71,8 +71,16 @@ export default function AnimalesScreen() {
     breedingPairs, setBreedingPair, clearBreedingPair,
     animalPrices, upgradeAnimalGene,
     showWindowOpen, showResults,
+    workers, grainMissedDays, hayMissedDays, feedAnimals, inventory,
   } = useGameStore();
   const fairMult = activeFair ? (1 - activeFair.discount) : 1.0;
+  const hasAnimalWorker = (workers ?? []).some(
+    (w: any) => w.typeId === 'animal_keeper' || w.typeId === 'zootechnician'
+  );
+  const grainStock = GRAIN_CROP_IDS.reduce(
+    (sum: number, id: string) => sum + (inventory[id] ?? 0), 0
+  );
+  const hayStock = animalInventory['hay'] ?? 0;
   const [expandedAnimalId, setExpandedAnimalId] = useState<string | null>(null);
   const [showModalVisible, setShowModalVisible] = useState(false);
   type AnimalTab = 'herd' | 'results';
@@ -121,6 +129,43 @@ export default function AnimalesScreen() {
           <Text style={styles.fairSub}>All animals {Math.round(activeFair.discount * 100)}% off!</Text>
         </View>
       )}
+
+      {/* Feed Stock */}
+      <View style={{ backgroundColor: '#16213e', borderRadius: 10, marginHorizontal: 8, marginBottom: 8, padding: 12 }}>
+        <Text style={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 8 }}>Feed Stock</Text>
+        <View style={{ flexDirection: 'row', gap: 16, marginBottom: 8 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#aaa', fontSize: 11 }}>🌾 Grain</Text>
+            <Text style={{ color: grainStock < 5 ? '#ef5350' : '#81c784', fontWeight: 'bold' }}>
+              {Math.floor(grainStock).toLocaleString()} kg
+            </Text>
+            {grainMissedDays > 0 && (
+              <Text style={{ color: '#ff9800', fontSize: 10 }}>⚠ {grainMissedDays}/7 days underfed</Text>
+            )}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#aaa', fontSize: 11 }}>🌿 Hay</Text>
+            <Text style={{ color: hayStock < 10 ? '#ef5350' : '#81c784', fontWeight: 'bold' }}>
+              {Math.floor(hayStock).toLocaleString()} kg
+            </Text>
+            {hayMissedDays > 0 && (
+              <Text style={{ color: '#ff9800', fontSize: 10 }}>⚠ {hayMissedDays}/7 days underfed</Text>
+            )}
+          </View>
+        </View>
+        {!hasAnimalWorker && (
+          <TouchableOpacity
+            style={{ backgroundColor: '#1b5e20', borderRadius: 6, padding: 10, alignItems: 'center' }}
+            onPress={feedAnimals}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>Feed Animals Today</Text>
+            <Text style={{ color: '#a5d6a7', fontSize: 11 }}>Hire an animal keeper to automate this</Text>
+          </TouchableOpacity>
+        )}
+        {hasAnimalWorker && (
+          <Text style={{ color: '#66bb6a', fontSize: 11 }}>✓ Animal worker feeds automatically</Text>
+        )}
+      </View>
 
       {/* Animal product inventory */}
       {Object.keys(animalInventory).length > 0 && (
@@ -213,6 +258,48 @@ export default function AnimalesScreen() {
                   ))}
                 </View>
               )}
+              {/* Lactation bar (dairy animals only) */}
+                {(item.typeId === 'vaca' || item.typeId === 'cabra' || item.typeId === 'bufalo') && (() => {
+                  const params = LACTATION_PARAMS[item.typeId];
+                  if (!params) return null;
+                  const lactState = getLactationState(item, item.typeId, day);
+                  if (lactState === 'lactating') {
+                    const daysLeft = lactationDaysRemaining(item, item.typeId, day);
+                    const pct = Math.round((1 - daysLeft / params.lactatingDays) * 100);
+                    return (
+                      <View style={{ marginTop: 4 }}>
+                        <Text style={{ color: '#aaa', fontSize: 10 }}>
+                          🥛 Lactating — {daysLeft}d remaining
+                        </Text>
+                        <View style={{ height: 4, backgroundColor: '#1a2a1a', borderRadius: 2, marginTop: 2 }}>
+                          <View style={{ height: 4, borderRadius: 2, backgroundColor: '#66bb6a', width: `${pct}%` as any }} />
+                        </View>
+                      </View>
+                    );
+                  } else {
+                    const daysLeft = dryDaysRemaining(item, item.typeId, day);
+                    return (
+                      <View style={{ marginTop: 4 }}>
+                        <Text style={{ color: '#ff9800', fontSize: 10 }}>
+                          🌾 Dry period — {daysLeft > 0 ? `${daysLeft}d left` : 'ready to breed'}
+                        </Text>
+                        <View style={{ height: 4, backgroundColor: '#1a2a1a', borderRadius: 2, marginTop: 2 }}>
+                          <View style={{ height: 4, borderRadius: 2, backgroundColor: '#ff9800', width: `${Math.round((1 - daysLeft / params.dryDays) * 100)}%` as any }} />
+                        </View>
+                      </View>
+                    );
+                  }
+                })()}
+              {/* Seasonal multiplier */}
+                {(() => {
+                  const mod = getSeasonMultiplier(item.typeId, day);
+                  if (mod === 1.0) return null;
+                  const label = mod > 1.0
+                    ? `+${Math.round((mod - 1) * 100)}% seasonal bonus`
+                    : `-${Math.round((1 - mod) * 100)}% seasonal penalty`;
+                  const color = mod > 1.0 ? '#66bb6a' : '#ef5350';
+                  return <Text style={{ color, fontSize: 10, marginTop: 2 }}>🌤 {label}</Text>;
+                })()}
               {/* Expandable genetics panel */}
               <TouchableOpacity onPress={() => setExpandedAnimalId(expandedAnimalId === item.id ? null : item.id)} style={genStyles.toggleBtn}>
                 <Text style={genStyles.toggleBtnText}>{expandedAnimalId === item.id ? '▲ Hide Genetics' : '▼ Genetics'}</Text>
