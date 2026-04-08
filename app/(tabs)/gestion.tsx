@@ -7,7 +7,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import OficinaScreen from './oficina';
 import CalendarioScreen from './calendario';
 import Encyclopedia from '../../components/Encyclopedia';
-import { useGameStore } from '../../store/useGameStore';
+import { useGameStore, HenilBatch } from '../../store/useGameStore';
 import { getSeason } from '../../engine/climate';
 import { SEASON_THEME, C } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
@@ -593,7 +593,7 @@ function HenilSection() {
 
   const hasHenil = (buildings ?? []).includes('bld_henil');
   const grassInStock = inventory['grass'] ?? 0;
-  const activeBatches = (henilQueue ?? []).filter((b: any) => b.readyDay > day);
+  const activeBatches = (henilQueue ?? []).filter((b: HenilBatch) => b.readyDay >= day);
   const canStartBatch = hasHenil && grassInStock > 0 && activeBatches.length < 2;
 
   return (
@@ -609,7 +609,7 @@ function HenilSection() {
               {activeBatches.length === 0 && (
                 <Text style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>No active batches.</Text>
               )}
-              {activeBatches.map((batch: any) => {
+              {activeBatches.map((batch: HenilBatch) => {
                 const daysLeft = batch.readyDay - day;
                 const hayYield = Math.floor(batch.wetGrassKg * 0.625);
                 return (
@@ -638,7 +638,7 @@ function HenilSection() {
                 disabled={!canStartBatch}
               >
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>
-                  {activeBatches.length >= 2 ? 'Queue Full (2/2)' : grassInStock <= 0 ? 'No Grass in Stock' : `Start Batch (${Math.floor(grassInStock)} kg grass)`}
+                  {activeBatches.length >= 2 ? 'Queue Full (2/2)' : grassInStock <= 0 ? 'No Grass in Stock' : `Start Batch (${Math.min(Math.floor(grassInStock), 700)} kg grass)`}
                 </Text>
               </TouchableOpacity>
             </View>
