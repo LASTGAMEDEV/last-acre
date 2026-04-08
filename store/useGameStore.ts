@@ -2891,7 +2891,7 @@ export const useGameStore = create<GameState>()(
         // Sets flag so advanceDay knows animals were fed today.
         const state = get();
         const hasAnimalWorker = (state.workers ?? []).some(
-          (w: any) => w.typeId === 'animal_keeper' || w.typeId === 'zootechnician'
+          (w: OwnedWorker) => w.typeId === 'animal_keeper' || w.typeId === 'zootechnician'
         );
         if (hasAnimalWorker) return; // worker handles it automatically
         set({ animalsManuallyFed: true });
