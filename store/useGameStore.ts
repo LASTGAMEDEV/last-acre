@@ -297,6 +297,22 @@ export interface AuctionPickup {
   pickedUpDay: number | null;
 }
 
+export interface ProductionBuildingState {
+  id: string;                    // unique instance id e.g. 'pb_1711234567'
+  buildingTypeId: string;        // e.g. 'bld_milking_parlour_s'
+  animalTypeId: string;          // e.g. 'vaca'
+  hygiene: number;               // 0–100
+  capacity: number;              // daily throughput (animals/day) — copied from BuildingType.dailyCapacity at purchase time
+  certificationTier: 'basic' | 'certified' | 'organic';
+  certDaysAtThreshold: number;   // consecutive days meeting cert hygiene requirement
+  certInspectionsPassed: number; // inspections passed at current tier level
+  equipmentSlots: string[];      // installed equipment item ids (max = equipmentSlotCount)
+  assignedWorkerIds: string[];   // worker ids assigned to this building
+  lastDeepCleanSeason: string;   // season key of last deep clean e.g. 'spring_1'
+}
+
+// Note: state.cooperative?.member already exists in GameState (used by sellCrop) — no new field needed.
+
 export interface TractorJob {
   id: string;
   tractorId: string;
@@ -490,6 +506,13 @@ export interface GameState {
   trailers: OwnedTrailer[];
   tractorJobs: TractorJob[];
   deliveryJobs: DeliveryJob[];
+
+  // Production buildings
+  productionBuildings: ProductionBuildingState[];
+  animalWelfareScores: Record<string, number>;   // animalTypeId → 0–100
+  milkGrades: Record<string, 'A' | 'B' | 'C'>;  // animalTypeId → grade (dairy species only)
+  lastSyntheticInputDay: number;                  // day last pesticide/chemical fertilizer was used
+
   harvestJobs: HarvestJob[];
   npcFarms: NPCFarm[];
   rivalNews: RivalNewsItem[];
@@ -546,6 +569,11 @@ export interface GameState {
   selectedMarket: MarketId;
 
   // Actions
+  purchaseProductionBuilding: (buildingTypeId: string) => void;
+  assignWorkerToBuilding: (buildingId: string, workerId: string) => void;
+  unassignWorkerFromBuilding: (buildingId: string, workerId: string) => void;
+  installEquipment: (buildingId: string, equipmentItemId: string) => void;
+  performDeepClean: (buildingId: string, useContractor: boolean) => void;
   setSoundEnabled: (enabled: boolean) => void;
   setHapticEnabled: (enabled: boolean) => void;
   setMusicEnabled: (enabled: boolean) => void;
@@ -877,6 +905,10 @@ function makeInitialState() {
     fuel: 200,
     fuelPrice: 1.20,
     deliveryJobs: [],
+    productionBuildings: [],
+    animalWelfareScores: {},
+    milkGrades: {},
+    lastSyntheticInputDay: -999,
     pendingPickup: [],
     priceAlerts: [] as PriceAlert[],
     showEntries: [] as ShowEntry[],
@@ -4402,6 +4434,12 @@ export const useGameStore = create<GameState>()(
       clearMilestonePopup: () => {
         set({ milestonePopup: null });
       },
+
+      purchaseProductionBuilding: (_buildingTypeId) => {},
+      assignWorkerToBuilding: (_buildingId, _workerId) => {},
+      unassignWorkerFromBuilding: (_buildingId, _workerId) => {},
+      installEquipment: (_buildingId, _equipmentItemId) => {},
+      performDeepClean: (_buildingId, _useContractor) => {},
 
       setSoundEnabled: (enabled: boolean) => set({ soundEnabled: enabled }),
       setHapticEnabled: (enabled: boolean) => set({ hapticEnabled: enabled }),
