@@ -308,10 +308,8 @@ export interface ProductionBuildingState {
   certInspectionsPassed: number; // inspections passed at current tier level
   equipmentSlots: string[];      // installed equipment item ids (max = equipmentSlotCount)
   assignedWorkerIds: string[];   // worker ids assigned to this building
-  lastDeepCleanSeason: string;   // season key of last deep clean e.g. 'spring_1'
+  lastDeepCleanSeason: string | null;   // season key of last deep clean e.g. 'spring_1'; null = never cleaned
 }
-
-// Note: state.cooperative?.member already exists in GameState (used by sellCrop) — no new field needed.
 
 export interface TractorJob {
   id: string;
@@ -511,6 +509,7 @@ export interface GameState {
   productionBuildings: ProductionBuildingState[];
   animalWelfareScores: Record<string, number>;   // animalTypeId → 0–100
   milkGrades: Record<string, 'A' | 'B' | 'C'>;  // animalTypeId → grade (dairy species only)
+  // Organic certification tracking (farm-wide)
   lastSyntheticInputDay: number;                  // day last pesticide/chemical fertilizer was used
 
   harvestJobs: HarvestJob[];
