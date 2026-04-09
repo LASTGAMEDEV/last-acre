@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import AnimalShowModal from '../../components/AnimalShowModal';
 import HintCard from '../../components/HintCard';
+import DispatchModal from '../../components/DispatchModal';
 import { useGameStore } from '../../store/useGameStore';
+import { DeliveryCargo, LIVESTOCK_TRAILER_IDS } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
@@ -72,6 +74,7 @@ export default function AnimalesScreen() {
     animalPrices, upgradeAnimalGene,
     showWindowOpen, showResults,
     workers, grainMissedDays, hayMissedDays, feedAnimals, inventory, animalsManuallyFed,
+    trailers, deliveryJobs,
   } = useGameStore();
   const fairMult = activeFair ? (1 - activeFair.discount) : 1.0;
   const hasAnimalWorker = (workers ?? []).some(
@@ -88,6 +91,26 @@ export default function AnimalesScreen() {
   const [showModalVisible, setShowModalVisible] = useState(false);
   type AnimalTab = 'herd' | 'results';
   const [animalTab, setAnimalTab] = useState<AnimalTab>('herd');
+  const [liveDispatchVisible, setLiveDispatchVisible] = useState(false);
+  const [liveDispatchCargo, setLiveDispatchCargo] = useState<DeliveryCargo[]>([]);
+
+  const hasLivestockTrailer = (trailers ?? []).some((tr: any) => {
+    const busy = (deliveryJobs ?? []).some((j: any) => j.trailerId === tr.id);
+    return LIVESTOCK_TRAILER_IDS.includes(tr.typeId) && !busy;
+  });
+
+  const handleLiveAnimalSell = (animalId: string, animalTypeId: string) => {
+    if (!hasLivestockTrailer) {
+      Alert.alert(
+        'Livestock Trailer Required',
+        'You need a livestock trailer hitched to a truck to sell live animals. Without one, you can only cull for meat.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    setLiveDispatchCargo([{ itemId: animalId, quantity: 1, category: 'animal' }]);
+    setLiveDispatchVisible(true);
+  };
 
   return (
     <View style={styles.container}>
@@ -505,6 +528,14 @@ export default function AnimalesScreen() {
               <TouchableOpacity style={styles.sellBtn} onPress={() => sellAnimal(item.id)}>
                 <Text style={styles.btnText}>Sell ${Math.round(value).toLocaleString()}</Text>
               </TouchableOpacity>
+              {mature && (
+                <TouchableOpacity
+                  style={[styles.sellBtn, { backgroundColor: '#1a3a20' }]}
+                  onPress={() => handleLiveAnimalSell(item.id, item.typeId)}
+                >
+                  <Text style={styles.btnText}>🐄 Sell Live</Text>
+                </TouchableOpacity>
+              )}
             </View>
           );
         }}
@@ -615,6 +646,13 @@ export default function AnimalesScreen() {
       )}
 
       <AnimalShowModal visible={showModalVisible} onClose={() => setShowModalVisible(false)} />
+      <DispatchModal
+        visible={liveDispatchVisible}
+        cargo={liveDispatchCargo}
+        marketId="city"
+        onClose={() => setLiveDispatchVisible(false)}
+        onContractor={() => setLiveDispatchVisible(false)}
+      />
     </View>
   );
 }
