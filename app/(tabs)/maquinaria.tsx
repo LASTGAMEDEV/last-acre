@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
-import { useGameStore, OwnedMachine, OwnedAttachment, OwnedTrailer, TractorJob, HarvestJob } from '../../store/useGameStore';
+import { useGameStore, OwnedMachine, OwnedAttachment, OwnedTrailer, TractorJob, HarvestJob, DeliveryJob } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { ATTACHMENT_TYPES } from '../../data/attachmentTypes';
 
-type MachineryTab = 'fleet' | 'attachments' | 'jobs';
+type MachineryTab = 'fleet' | 'attachments' | 'jobs' | 'deliveries';
 
 // ── Fleet Tab ────────────────────────────────────────────────────────────────
 function FleetTab() {
-  const { machines, trailers, tractorJobs, harvestJobs, machineRepairs, day, fuel, buyFuel, buildings, money, listings } = useGameStore();
+  const { machines, trailers, tractorJobs, harvestJobs, machineRepairs, day, fuel, buyFuel, buildings, money, listings, fuelPrice } = useGameStore();
   const fuelCapacity = (buildings ?? []).reduce((cap: number, id: string) => {
     if (id === 'bld_fuel_tank_s') return cap + 500;
     if (id === 'bld_fuel_tank_l') return cap + 2000;
@@ -17,7 +17,8 @@ function FleetTab() {
   }, 200);
   const fuelPct = Math.min(1, (fuel ?? 0) / fuelCapacity);
   const fuelColor = fuelPct > 0.5 ? '#66bb6a' : fuelPct > 0.2 ? '#ffa726' : '#ef5350';
-  const fillCost = Math.round(Math.max(0, fuelCapacity - (fuel ?? 0)) * 1.20);
+  const liveFuelPrice = fuelPrice ?? 1.20;
+  const fillCost = Math.round(Math.max(0, fuelCapacity - (fuel ?? 0)) * liveFuelPrice);
 
   const getJobForTractor = (tractorId: string): TractorJob | undefined =>
     (tractorJobs ?? []).find((j: TractorJob) => j.tractorId === tractorId);
@@ -86,12 +87,13 @@ function FleetTab() {
           <Text style={s.fuelTitle}>⛽ Fuel</Text>
           <Text style={s.fuelAmount}>{Math.round(fuel ?? 0).toLocaleString()} / {fuelCapacity.toLocaleString()} L</Text>
         </View>
+        <Text style={{ color: '#aaa', fontSize: 11 }}>⛽ ${liveFuelPrice.toFixed(2)}/L</Text>
         <View style={s.fuelGaugeBg}>
           <View style={[s.fuelGaugeFill, { width: `${Math.round(fuelPct * 100)}%` as `${number}%`, backgroundColor: fuelColor }]} />
         </View>
         <View style={s.fuelBuyRow}>
           {([50, 100, 200] as const).map(litres => {
-            const cost = Math.round(litres * 1.20);
+            const cost = Math.round(litres * liveFuelPrice);
             const canAfford = money >= cost;
             const hasRoom = (fuel ?? 0) + litres <= fuelCapacity;
             return (
@@ -276,6 +278,62 @@ function JobsTab() {
   );
 }
 
+// ── Deliveries Tab ───────────────────────────────────────────────────────────
+function DeliveriesTab() {
+  const { deliveryJobs, machines, day } = useGameStore();
+  const activeJobs = (deliveryJobs as DeliveryJob[] | undefined) ?? [];
+
+  if (activeJobs.length === 0) {
+    return (
+      <View style={{ padding: 24, alignItems: 'center' }}>
+        <Text style={{ color: '#555', fontSize: 14 }}>No active deliveries.</Text>
+        <Text style={{ color: '#444', fontSize: 12, marginTop: 4 }}>
+          Dispatch a truck from the sell screen.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView contentContainerStyle={{ padding: 12, gap: 10 }} showsVerticalScrollIndicator={false}>
+      {activeJobs.map((job: DeliveryJob) => {
+        const truck = (machines ?? []).find((m: OwnedMachine) => m.id === job.truckId);
+        const truckType = truck ? MACHINE_TYPES.find(t => t.id === truck.typeId) : null;
+        const daysLeft = Math.max(0, job.returnDay - day);
+        const cargoSummary = job.cargo.map((c: { quantity: number; itemId: string }) => `${c.quantity.toLocaleString()} ${c.itemId}`).join(', ');
+        return (
+          <View key={job.id} style={{ backgroundColor: '#16213e', borderRadius: 10, padding: 12 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={{ color: '#e8d5a3', fontWeight: 'bold' }}>
+                {truckType?.name ?? 'Truck'} → {job.marketId}
+              </Text>
+              <Text style={{ color: daysLeft === 0 ? '#66bb6a' : '#888', fontSize: 12 }}>
+                {daysLeft === 0 ? 'Arriving today' : `${daysLeft}d left`}
+              </Text>
+            </View>
+            <Text style={{ color: '#aaa', fontSize: 12 }}>{cargoSummary}</Text>
+            <Text style={{ color: '#66bb6a', fontSize: 12, marginTop: 2 }}>
+              Expected: ${job.expectedRevenue.toLocaleString()}
+            </Text>
+            {job.needsMaintenance && (
+              <Text style={{ color: '#ff9800', fontSize: 11, marginTop: 4 }}>
+                ⚠ Broke down — delayed by {job.breakdownDaysAdded}d
+              </Text>
+            )}
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+const MACHINERY_TABS: { id: MachineryTab; label: string }[] = [
+  { id: 'fleet',       label: 'Fleet'       },
+  { id: 'attachments', label: 'Attachments' },
+  { id: 'jobs',        label: 'Jobs'        },
+  { id: 'deliveries',  label: '🚛 Deliveries' },
+];
+
 // ── Main Screen ──────────────────────────────────────────────────────────────
 export default function MaquinariaScreen() {
   const [tab, setTab] = useState<MachineryTab>('fleet');
@@ -283,23 +341,24 @@ export default function MaquinariaScreen() {
   return (
     <View style={s.container}>
       <ScreenHeader title="Machinery" />
-      <View style={s.tabBar}>
-        {(['fleet', 'attachments', 'jobs'] as MachineryTab[]).map(t => (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabBar} contentContainerStyle={{ flexDirection: 'row' }}>
+        {MACHINERY_TABS.map(t => (
           <TouchableOpacity
-            key={t}
-            style={[s.tabBtn, tab === t && s.tabBtnActive]}
-            onPress={() => setTab(t)}
+            key={t.id}
+            style={[s.tabBtn, tab === t.id && s.tabBtnActive]}
+            onPress={() => setTab(t.id)}
           >
-            <Text style={[s.tabText, tab === t && s.tabTextActive]}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+            <Text style={[s.tabText, tab === t.id && s.tabTextActive]}>
+              {t.label}
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
       <View style={{ flex: 1 }}>
         {tab === 'fleet'       && <FleetTab />}
         {tab === 'attachments' && <AttachmentsTab />}
         {tab === 'jobs'        && <JobsTab />}
+        {tab === 'deliveries'  && <DeliveriesTab />}
       </View>
     </View>
   );
@@ -307,7 +366,7 @@ export default function MaquinariaScreen() {
 
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: '#0a0a1a' },
-  tabBar:       { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#333' },
+  tabBar:       { borderBottomWidth: 1, borderBottomColor: '#333' },
   tabBtn:       { flex: 1, padding: 12, alignItems: 'center' },
   tabBtnActive: { borderBottomWidth: 2, borderBottomColor: '#81c784' },
   tabText:      { color: '#aaa', fontSize: 13 },
