@@ -1,4 +1,4 @@
-export type WorkerDepartment = 'fields' | 'animals' | 'machinery' | 'processing';
+export type WorkerDepartment = 'fields' | 'animals' | 'machinery' | 'processing' | 'transport';
 export type WorkerTier = 'basic' | 'specialist' | 'standalone';
 
 export type WorkerRole =
@@ -11,7 +11,8 @@ export type WorkerRole =
   | 'engineer'
   | 'processor'
   | 'supervisor'
-  | 'vet';
+  | 'vet'
+  | 'truck_driver';
 
 export interface WorkerType {
   id: WorkerRole;
@@ -139,5 +140,17 @@ export const WORKER_TYPES: WorkerType[] = [
     department: null,
     tier: 'standalone',
     description: 'Auto-treats all sick animals each day',
+  },
+
+  // ── Transport ────────────────────────────────────────────────────────────
+  {
+    id: 'truck_driver' as WorkerRole,
+    name: 'Truck Driver',
+    icon: '🚛',
+    dailyWage: 55,
+    maxCount: 2,
+    description: 'Handles deliveries to local, city, and export markets. Required to self-dispatch — without one, deliveries go through a contractor at 12% fee.',
+    department: 'transport' as WorkerDepartment,
+    tier: 'basic' as WorkerTier,
   },
 ];
