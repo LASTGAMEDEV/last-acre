@@ -683,13 +683,13 @@ const FIELD_NAMES: string[] = [
   'Miller\'s Acre', 'Baker\'s Lea',   'Cooper\'s Field','Thatcher\'s Run', 'Smith\'s Ridge',
 ];
 
-const DELIVERY_DURATION: Record<'local' | 'city' | 'export', number> = {
+export const DELIVERY_DURATION: Record<'local' | 'city' | 'export', number> = {
   local: 1,
   city: 2,
   export: 3,
 };
 
-const TRUCK_FUEL_LITRES: Record<string, Record<'local' | 'city' | 'export', number>> = {
+export const TRUCK_FUEL_LITRES: Record<string, Record<'local' | 'city' | 'export', number>> = {
   'truck-pickup': { local: 20, city: 60, export: 140 },
   'truck-dump':   { local: 28, city: 80, export: 180 },
   'truck-semi':   { local: 35, city: 100, export: 220 },
