@@ -3691,6 +3691,10 @@ export const useGameStore = create<GameState>()(
         const truck = (state.machines ?? []).find((m: OwnedMachine) => m.id === truckId);
         if (!truck) return;
 
+        const truckType = MACHINE_TYPES.find(t => t.id === truck.typeId);
+        if (!truckType) return;
+
+        const region = MARKET_REGIONS.find(r => r.id === marketId) ?? MARKET_REGIONS[0];
         const duration = DELIVERY_DURATION[marketId];
         const fuelLitres = TRUCK_FUEL_LITRES[truck.typeId]?.[marketId] ?? 60;
         const fuelCost = Math.round(fuelLitres * (state.fuelPrice ?? 1.20) * 100) / 100;
@@ -3709,10 +3713,8 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // Lock in expected revenue
-        const MARKET_MULT: Record<string, number> = { local: 1.0, city: 1.2, export: 1.45 };
-        const mult = MARKET_MULT[marketId] ?? 1.0;
-        const secaderoBonus = (state.buildings ?? []).includes('bld_secadero') ? 1.05 : 1.0;
+        // Lock in expected revenue — matches sellCrop formula exactly
+        const secaderoBonus = hasSecadero(state.buildings) ? 1.05 : 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
         const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
         let expectedRevenue = 0;
@@ -3721,16 +3723,20 @@ export const useGameStore = create<GameState>()(
             c.category === 'crop'
               ? (state.prices.find(p => p.cropId === c.itemId)?.price ?? 1)
               : ((state.animalPrices ?? {})[c.itemId] ?? 1);
-          expectedRevenue += c.quantity * basePrice * mult * secaderoBonus * prestigeBonus * coopBonus;
+          const effectivePrice = basePrice * region.priceMultiplier;
+          const gross = c.quantity * effectivePrice * secaderoBonus * coopBonus * prestigeBonus;
+          const transport = c.quantity * region.transportCostPerUnit;
+          expectedRevenue += Math.max(0, gross - transport);
         }
         expectedRevenue = Math.round(expectedRevenue);
 
         // Deduct return order costs upfront
         let returnCost = 0;
         for (const r of returnOrders) {
-          returnCost += Math.round(r.quantity * r.costPerUnit);
+          returnCost += r.quantity * r.costPerUnit;
         }
-        if (state.money < returnCost) return;
+        returnCost = Math.round(returnCost);
+        if (state.money < returnCost + fuelCost) return;
 
         const job: DeliveryJob = {
           id: `dlv_${Date.now()}`,
@@ -3752,7 +3758,7 @@ export const useGameStore = create<GameState>()(
         set({
           deliveryJobs: [...(state.deliveryJobs ?? []), job],
           fuel: (state.fuel ?? 0) - fuelLitres,
-          money: state.money - returnCost,
+          money: state.money - returnCost - fuelCost,
           inventory: newInventory,
           animalInventory: newAnimalInventory,
           productInventory: newProductInventory,
