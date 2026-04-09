@@ -695,6 +695,14 @@ export const TRUCK_FUEL_LITRES: Record<string, Record<'local' | 'city' | 'export
   'truck-semi':   { local: 35, city: 100, export: 220 },
 };
 
+export const BREAKDOWN_CHANCE: Record<string, number> = { local: 0.01, city: 0.03, export: 0.05 };
+
+export const REPAIR_FEE: Record<string, number> = {
+  'truck-pickup': 200,
+  'truck-dump':   350,
+  'truck-semi':   600,
+};
+
 export const COLD_CARGO_IDS = new Set([
   'milk', 'cheese', 'butter', 'cream', 'eggs', 'meat', 'chicken_meat',
   'pork', 'lamb', 'beef', 'buffalo_meat', 'rabbit_meat', 'duck_meat',
@@ -2524,10 +2532,6 @@ export const useGameStore = create<GameState>()(
         updatedHarvestJobs = updatedHarvestJobs.filter((hj: HarvestJob) => hj.processedHa < hj.totalHa);
 
         // ── Delivery job processing ───────────────────────────────────────────
-        const BREAKDOWN_CHANCE: Record<string, number> = { local: 0.01, city: 0.03, export: 0.05 };
-        const REPAIR_FEE: Record<string, number> = {
-          'truck-pickup': 200, 'truck-dump': 350, 'truck-semi': 600,
-        };
         const hasMechanic = (state.workers ?? []).some(
           (w: OwnedWorker) => w.typeId === 'mechanic' || w.typeId === 'engineer'
         );
@@ -2535,8 +2539,9 @@ export const useGameStore = create<GameState>()(
         let deliveryRevenue = 0;
         let deliveryRepairCost = 0;
         let fuelFromReturnLoads = 0;
-        const deliveryEvents: string[] = [];
+        const deliveryEvents: Array<{ msg: string; jobId: string }> = [];
         const updatedDeliveryJobs: DeliveryJob[] = [];
+        const newPendingPickup = [...(state.pendingPickup ?? [])];
 
         for (const job of (state.deliveryJobs ?? [])) {
           // Still in transit: roll for breakdown
@@ -2551,9 +2556,10 @@ export const useGameStore = create<GameState>()(
                 needsMaintenance: true,
                 breakdownDaysAdded: job.breakdownDaysAdded + delay,
               });
-              deliveryEvents.push(
-                `🔧 Truck broke down on the way to ${job.marketId} — delayed ${delay}d`
-              );
+              deliveryEvents.push({
+                msg: `🔧 Truck broke down on the way to ${job.marketId} — delayed ${delay}d`,
+                jobId: job.id,
+              });
             } else {
               updatedDeliveryJobs.push(job);
             }
@@ -2573,6 +2579,12 @@ export const useGameStore = create<GameState>()(
           for (const r of job.returnOrders) {
             if (r.itemId === 'fuel') {
               fuelFromReturnLoads += r.quantity;
+            } else if (r.itemId.startsWith('animal_')) {
+              const animalTypeId = r.itemId.replace('animal_', '');
+              const pickup = newPendingPickup.find(
+                p => p.animalTypeId === animalTypeId && p.pickedUpDay === null
+              );
+              if (pickup) pickup.pickedUpDay = newDay;
             } else {
               harvestInventory = {
                 ...harvestInventory,
@@ -2581,17 +2593,18 @@ export const useGameStore = create<GameState>()(
             }
           }
 
-          deliveryEvents.push(
-            `🚛 Truck returned from ${job.marketId} — $${job.expectedRevenue.toLocaleString()}`
-          );
+          deliveryEvents.push({
+            msg: `🚛 Truck returned from ${job.marketId} — $${job.expectedRevenue.toLocaleString()}`,
+            jobId: job.id,
+          });
           // Completed job is NOT pushed to updatedDeliveryJobs (removed from queue)
         }
 
         // Push delivery events into day summary
-        for (const msg of deliveryEvents) {
+        for (const { msg, jobId } of deliveryEvents) {
           const isBreakdown = msg.startsWith('🔧');
           summary.push({
-            id: `delivery_${msg.slice(0, 30)}`,
+            id: `delivery_${jobId}`,
             icon: isBreakdown ? '🔧' : '🚛',
             title: msg,
             severity: isBreakdown ? 'warning' : 'good',
@@ -2863,6 +2876,9 @@ export const useGameStore = create<GameState>()(
           : state.processedInventory;
 
         const autoSellSalesEntries = autoSellLog.map(s => ({ day: newDay, amount: Math.round(s.revenue), category: 'crops' as const }));
+        const deliverySalesEntries = deliveryRevenue > 0
+          ? [{ day: newDay, amount: deliveryRevenue, category: 'crops' as const }]
+          : [];
         set({
           day: newDay,
           money: finalMoney + showPrizeMoney + deliveryRevenue - deliveryRepairCost,
@@ -2883,7 +2899,8 @@ export const useGameStore = create<GameState>()(
           savings,
           loans,
           loanHistory,
-          salesLog: [...salesLog, ...autoSellSalesEntries, ...alertSalesEntries],
+          salesLog: [...salesLog, ...autoSellSalesEntries, ...alertSalesEntries, ...deliverySalesEntries],
+          pendingPickup: newPendingPickup,
           priceAlerts,
           parcels: foreclosureParcels.length > 0
             ? [...finalParcels, ...foreclosureParcels]
