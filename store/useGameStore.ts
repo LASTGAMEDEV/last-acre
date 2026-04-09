@@ -9,7 +9,14 @@ import { Loan, SavingsAccount, TimeDeposit, SaleRecord, LoanRecord,
 import { Contract } from '../engine/contracts';
 import { CROP_TYPES } from '../data/cropTypes';
 import { MACHINE_TYPES, MachineType } from '../data/machineTypes';
-import { BUILDING_TYPES } from '../data/buildingTypes';
+import { BUILDING_TYPES, PRODUCTION_EQUIPMENT, EquipmentItem } from '../data/buildingTypes';
+import {
+  DAIRY_SPECIES,
+  effectiveCapacity,
+  isManned,
+  milkGrade,
+  seasonKey,
+} from '../engine/productionBuildings';
 import { INSURANCE_PLANS, InsuranceType } from '../data/insuranceTypes';
 import { PROCESSING_RECIPES, PROCESSED_PRODUCTS } from '../data/processingTypes';
 import { MILESTONES, checkNewMilestones, MILESTONE_REWARDS } from '../data/milestones';
@@ -4434,11 +4441,117 @@ export const useGameStore = create<GameState>()(
         set({ milestonePopup: null });
       },
 
-      purchaseProductionBuilding: (_buildingTypeId) => {},
-      assignWorkerToBuilding: (_buildingId, _workerId) => {},
-      unassignWorkerFromBuilding: (_buildingId, _workerId) => {},
-      installEquipment: (_buildingId, _equipmentItemId) => {},
-      performDeepClean: (_buildingId, _useContractor) => {},
+      purchaseProductionBuilding: (buildingTypeId) => {
+        const state = get();
+        const bt = BUILDING_TYPES.find(b => b.id === buildingTypeId);
+        if (!bt || bt.category !== 'production') return;
+        if (state.money < bt.cost) return;
+        // Only one production building per species
+        if (state.productionBuildings.some(pb => pb.animalTypeId === bt.animalTypeId)) return;
+        const newBuilding: ProductionBuildingState = {
+          id: `pb_${Date.now()}`,
+          buildingTypeId,
+          animalTypeId: bt.animalTypeId!,
+          hygiene: 100,
+          certificationTier: 'basic',
+          certDaysAtThreshold: 0,
+          certInspectionsPassed: 0,
+          equipmentSlots: [],
+          assignedWorkerIds: [],
+          lastDeepCleanSeason: seasonKey(state.day),
+          capacity: bt.dailyCapacity ?? 10,
+        };
+        set({
+          money: state.money - bt.cost,
+          productionBuildings: [...state.productionBuildings, newBuilding],
+        });
+      },
+
+      assignWorkerToBuilding: (buildingId, workerId) => {
+        const state = get();
+        const pb = state.productionBuildings.find(b => b.id === buildingId);
+        if (!pb) return;
+        if (pb.assignedWorkerIds.includes(workerId)) return;
+        // A worker can only be assigned to one production building
+        const alreadyAssigned = state.productionBuildings.some(b =>
+          b.id !== buildingId && b.assignedWorkerIds.includes(workerId)
+        );
+        if (alreadyAssigned) return;
+        set({
+          productionBuildings: state.productionBuildings.map(b =>
+            b.id === buildingId
+              ? { ...b, assignedWorkerIds: [...b.assignedWorkerIds, workerId] }
+              : b
+          ),
+        });
+      },
+
+      unassignWorkerFromBuilding: (buildingId, workerId) => {
+        set(state => ({
+          productionBuildings: state.productionBuildings.map(b =>
+            b.id === buildingId
+              ? { ...b, assignedWorkerIds: b.assignedWorkerIds.filter(id => id !== workerId) }
+              : b
+          ),
+        }));
+      },
+
+      installEquipment: (buildingId, equipmentItemId) => {
+        const state = get();
+        const pb = state.productionBuildings.find(b => b.id === buildingId);
+        if (!pb) return;
+        const bt = BUILDING_TYPES.find(b => b.id === pb.buildingTypeId);
+        if (!bt) return;
+        const maxSlots = bt.equipmentSlotCount ?? 2;
+        if (pb.equipmentSlots.length >= maxSlots) return;
+        if (pb.equipmentSlots.includes(equipmentItemId)) return;
+        const eq: EquipmentItem | undefined = PRODUCTION_EQUIPMENT.find(e => e.id === equipmentItemId);
+        if (!eq) return;
+        // Check this equipment fits this building type
+        const fits = eq.applicableBuildingPrefixes.some(prefix =>
+          pb.buildingTypeId.startsWith(prefix)
+        );
+        if (!fits) return;
+        if (state.money < eq.cost) return;
+        set({
+          money: state.money - eq.cost,
+          productionBuildings: state.productionBuildings.map(b =>
+            b.id === buildingId
+              ? { ...b, equipmentSlots: [...b.equipmentSlots, equipmentItemId] }
+              : b
+          ),
+        });
+      },
+
+      performDeepClean: (buildingId, useContractor) => {
+        const state = get();
+        const pb = state.productionBuildings.find(b => b.id === buildingId);
+        if (!pb) return;
+        const bt = BUILDING_TYPES.find(b => b.id === pb.buildingTypeId);
+        if (!bt) return;
+        const contractorCost = bt.buildingTier === 'large' ? 400
+          : bt.buildingTier === 'medium' ? 250 : 150;
+        if (useContractor) {
+          if (state.money < contractorCost) return;
+          set({
+            money: state.money - contractorCost,
+            productionBuildings: state.productionBuildings.map(b =>
+              b.id === buildingId
+                ? { ...b, hygiene: 85, lastDeepCleanSeason: seasonKey(state.day) }
+                : b
+            ),
+          });
+        } else {
+          // Worker deep clean
+          set({
+            productionBuildings: state.productionBuildings.map(b =>
+              b.id === buildingId
+                ? { ...b, hygiene: 95, lastDeepCleanSeason: seasonKey(state.day) }
+                : b
+            ),
+          });
+        }
+      },
 
       setSoundEnabled: (enabled: boolean) => set({ soundEnabled: enabled }),
       setHapticEnabled: (enabled: boolean) => set({ hapticEnabled: enabled }),
