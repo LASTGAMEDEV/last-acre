@@ -683,6 +683,36 @@ const FIELD_NAMES: string[] = [
   'Miller\'s Acre', 'Baker\'s Lea',   'Cooper\'s Field','Thatcher\'s Run', 'Smith\'s Ridge',
 ];
 
+const DELIVERY_DURATION: Record<'local' | 'city' | 'export', number> = {
+  local: 1,
+  city: 2,
+  export: 3,
+};
+
+const TRUCK_FUEL_LITRES: Record<string, Record<'local' | 'city' | 'export', number>> = {
+  'truck-pickup': { local: 20, city: 60, export: 140 },
+  'truck-dump':   { local: 28, city: 80, export: 180 },
+  'truck-semi':   { local: 35, city: 100, export: 220 },
+};
+
+export const COLD_CARGO_IDS = new Set([
+  'milk', 'cheese', 'butter', 'cream', 'eggs', 'meat', 'chicken_meat',
+  'pork', 'lamb', 'beef', 'buffalo_meat', 'rabbit_meat', 'duck_meat',
+  'turkey_meat', 'quail_meat',
+]);
+
+export const BULK_LIQUID_IDS = new Set(['milk_bulk', 'oil', 'juice']);
+
+export const REFRIGERATED_TRAILER_IDS = [
+  'trailer-refrigerated-s', 'trailer-refrigerated-l',
+];
+export const TANK_TRAILER_IDS = [
+  'trailer-tank-s', 'trailer-tank-l',
+];
+export const LIVESTOCK_TRAILER_IDS = [
+  'trailer-livestock-s', 'trailer-livestock-l',
+];
+
 const SOIL_DISTRIBUTION: SoilType[] = [
   'loamy','loamy','loamy','loamy','loamy','loamy','loamy', // 35%
   'sandy','sandy','sandy','sandy','sandy',                 // 25%
@@ -3574,8 +3604,78 @@ export const useGameStore = create<GameState>()(
         }
       },
 
-      dispatchDelivery: (_params) => {
-        // Implementation added in Task 4
+      dispatchDelivery: ({ truckId, trailerId, driverId, cargo, marketId, returnOrders }) => {
+        const state = get();
+
+        const truck = (state.machines ?? []).find((m: OwnedMachine) => m.id === truckId);
+        if (!truck) return;
+
+        const duration = DELIVERY_DURATION[marketId];
+        const fuelLitres = TRUCK_FUEL_LITRES[truck.typeId]?.[marketId] ?? 60;
+        const fuelCost = Math.round(fuelLitres * (state.fuelPrice ?? 1.20) * 100) / 100;
+
+        if ((state.fuel ?? 0) < fuelLitres) return;
+
+        // Deduct cargo from inventory
+        const newInventory = { ...state.inventory };
+        const newAnimalInventory = { ...state.animalInventory };
+        const newProductInventory = { ...(state.productInventory ?? {}) };
+        for (const c of cargo) {
+          if (c.category === 'crop') {
+            newInventory[c.itemId] = Math.max(0, (newInventory[c.itemId] ?? 0) - c.quantity);
+          } else if (c.category === 'animal_product') {
+            newAnimalInventory[c.itemId] = Math.max(0, (newAnimalInventory[c.itemId] ?? 0) - c.quantity);
+          }
+        }
+
+        // Lock in expected revenue
+        const MARKET_MULT: Record<string, number> = { local: 1.0, city: 1.2, export: 1.45 };
+        const mult = MARKET_MULT[marketId] ?? 1.0;
+        const secaderoBonus = (state.buildings ?? []).includes('bld_secadero') ? 1.05 : 1.0;
+        const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
+        const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
+        let expectedRevenue = 0;
+        for (const c of cargo) {
+          const basePrice =
+            c.category === 'crop'
+              ? (state.prices.find(p => p.cropId === c.itemId)?.price ?? 1)
+              : ((state.animalPrices ?? {})[c.itemId] ?? 1);
+          expectedRevenue += c.quantity * basePrice * mult * secaderoBonus * prestigeBonus * coopBonus;
+        }
+        expectedRevenue = Math.round(expectedRevenue);
+
+        // Deduct return order costs upfront
+        let returnCost = 0;
+        for (const r of returnOrders) {
+          returnCost += Math.round(r.quantity * r.costPerUnit);
+        }
+        if (state.money < returnCost) return;
+
+        const job: DeliveryJob = {
+          id: `dlv_${Date.now()}`,
+          truckId,
+          trailerId,
+          driverId,
+          cargo,
+          marketId,
+          departDay: state.day,
+          returnDay: state.day + duration,
+          expectedRevenue,
+          fuelCost,
+          returnOrders,
+          status: 'outbound',
+          breakdownDaysAdded: 0,
+          needsMaintenance: false,
+        };
+
+        set({
+          deliveryJobs: [...(state.deliveryJobs ?? []), job],
+          fuel: (state.fuel ?? 0) - fuelLitres,
+          money: state.money - returnCost,
+          inventory: newInventory,
+          animalInventory: newAnimalInventory,
+          productInventory: newProductInventory,
+        });
       },
 
       requestLoan: (principal, termDays, label) => {
