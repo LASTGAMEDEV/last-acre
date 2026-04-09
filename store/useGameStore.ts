@@ -918,6 +918,10 @@ export const useGameStore = create<GameState>()(
         const newDay = state.day + 1;
         const workerBonuses = getWorkerBonuses(state.workers ?? []);
         const season = getSeason(newDay);
+
+        // Fuel price fluctuation (±$0.04/day, clamped $0.90–$1.80)
+        const fuelDelta = (Math.random() - 0.5) * 0.08;
+        const newFuelPrice = Math.min(1.80, Math.max(0.90, (state.fuelPrice ?? 1.20) + fuelDelta));
         const prevSeason = getSeason(state.day);
         const summary: DaySummaryEvent[] = [];
 
@@ -2519,6 +2523,81 @@ export const useGameStore = create<GameState>()(
         }
         updatedHarvestJobs = updatedHarvestJobs.filter((hj: HarvestJob) => hj.processedHa < hj.totalHa);
 
+        // ── Delivery job processing ───────────────────────────────────────────
+        const BREAKDOWN_CHANCE: Record<string, number> = { local: 0.01, city: 0.03, export: 0.05 };
+        const REPAIR_FEE: Record<string, number> = {
+          'truck-pickup': 200, 'truck-dump': 350, 'truck-semi': 600,
+        };
+        const hasMechanic = (state.workers ?? []).some(
+          (w: OwnedWorker) => w.typeId === 'mechanic' || w.typeId === 'engineer'
+        );
+
+        let deliveryRevenue = 0;
+        let deliveryRepairCost = 0;
+        let fuelFromReturnLoads = 0;
+        const deliveryEvents: string[] = [];
+        const updatedDeliveryJobs: DeliveryJob[] = [];
+
+        for (const job of (state.deliveryJobs ?? [])) {
+          // Still in transit: roll for breakdown
+          if (newDay < job.returnDay) {
+            const baseChance = BREAKDOWN_CHANCE[job.marketId] ?? 0.03;
+            const chance = hasMechanic ? baseChance * 0.5 : baseChance;
+            if (Math.random() < chance && !job.needsMaintenance) {
+              const delay = Math.floor(Math.random() * 2) + 1;
+              updatedDeliveryJobs.push({
+                ...job,
+                returnDay: job.returnDay + delay,
+                needsMaintenance: true,
+                breakdownDaysAdded: job.breakdownDaysAdded + delay,
+              });
+              deliveryEvents.push(
+                `🔧 Truck broke down on the way to ${job.marketId} — delayed ${delay}d`
+              );
+            } else {
+              updatedDeliveryJobs.push(job);
+            }
+            continue;
+          }
+
+          // returnDay reached — process completion
+          deliveryRevenue += job.expectedRevenue;
+
+          if (job.needsMaintenance && !hasMechanic) {
+            const truck = (state.machines ?? []).find((m: OwnedMachine) => m.id === job.truckId);
+            const truckTypeId = truck?.typeId ?? '';
+            deliveryRepairCost += REPAIR_FEE[truckTypeId] ?? 350;
+          }
+
+          // Return orders: add items to inventory
+          for (const r of job.returnOrders) {
+            if (r.itemId === 'fuel') {
+              fuelFromReturnLoads += r.quantity;
+            } else {
+              harvestInventory = {
+                ...harvestInventory,
+                [r.itemId]: (harvestInventory[r.itemId] ?? 0) + r.quantity,
+              };
+            }
+          }
+
+          deliveryEvents.push(
+            `🚛 Truck returned from ${job.marketId} — $${job.expectedRevenue.toLocaleString()}`
+          );
+          // Completed job is NOT pushed to updatedDeliveryJobs (removed from queue)
+        }
+
+        // Push delivery events into day summary
+        for (const msg of deliveryEvents) {
+          const isBreakdown = msg.startsWith('🔧');
+          summary.push({
+            id: `delivery_${msg.slice(0, 30)}`,
+            icon: isBreakdown ? '🔧' : '🚛',
+            title: msg,
+            severity: isBreakdown ? 'warning' : 'good',
+          });
+        }
+
         if (fuelPausedNames.length > 0) {
           const uniqueNames = [...new Set(fuelPausedNames)];
           summary.push({
@@ -2786,7 +2865,7 @@ export const useGameStore = create<GameState>()(
         const autoSellSalesEntries = autoSellLog.map(s => ({ day: newDay, amount: Math.round(s.revenue), category: 'crops' as const }));
         set({
           day: newDay,
-          money: finalMoney + showPrizeMoney,
+          money: finalMoney + showPrizeMoney + deliveryRevenue - deliveryRepairCost,
           showWindowOpen,
           showEntries: season !== prevSeason
             ? (state.showEntries ?? []).filter(e => {
@@ -2849,9 +2928,11 @@ export const useGameStore = create<GameState>()(
           animalPrices,
           tractorJobs: remainingTractorJobs,
           harvestJobs: updatedHarvestJobs,
-          fuel: currentFuel,
+          deliveryJobs: updatedDeliveryJobs,
+          fuel: Math.min(getFuelCapacity(state.buildings), currentFuel + fuelFromReturnLoads),
+          fuelPrice: newFuelPrice,
           marketOrders: updatedMarketOrders,
-          totalRevenue: (state.totalRevenue ?? 0) + autoSellIncome + alertSellIncome + marketOrderIncome,
+          totalRevenue: (state.totalRevenue ?? 0) + autoSellIncome + alertSellIncome + marketOrderIncome + deliveryRevenue,
           personalRecords: {
             peakMoney: Math.max(state.personalRecords?.peakMoney ?? 0, finalMoney),
             totalHarvests: state.personalRecords?.totalHarvests ?? 0,
