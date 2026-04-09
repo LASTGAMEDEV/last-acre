@@ -4,6 +4,8 @@ import * as Haptics from 'expo-haptics';
 import { playSound } from '../../engine/sounds';
 import Svg, { Polyline, Line, Text as SvgText, Rect, G, Circle } from 'react-native-svg';
 import { useGameStore } from '../../store/useGameStore';
+import DispatchModal from '../../components/DispatchModal';
+import { DeliveryCargo, COLD_CARGO_IDS, BULK_LIQUID_IDS } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { MARKET_REGIONS, MarketId } from '../../data/marketRegions';
@@ -155,6 +157,11 @@ export default function EconomiaScreen() {
   const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture, priceAlerts, addPriceAlert, removePriceAlert, money, marketOrders, placeMarketOrder, cancelMarketOrder, selectedMarket, setSelectedMarket, hapticEnabled } = useGameStore();
   const [selectedCrop, setSelectedCrop] = useState<string>(CROP_TYPES[0].id);
   const [ecoTab, setEcoTab] = useState<EcoTab>('market');
+  const [dispatchVisible, setDispatchVisible] = useState(false);
+  const [dispatchCargo, setDispatchCargo] = useState<DeliveryCargo[]>([]);
+  const [dispatchMarket, setDispatchMarket] = useState<'local' | 'city' | 'export'>('local');
+  const [contractorCropId, setContractorCropId] = useState<string | null>(null);
+  const [contractorQty, setContractorQty] = useState(0);
   const [autoSellMinPrice, setAutoSellMinPrice] = useState<Record<string, string>>({});
   const [futuresCrop, setFuturesCrop] = useState<string>(CROP_TYPES[0].id);
   const [futuresQty, setFuturesQty] = useState<string>('');
@@ -187,6 +194,23 @@ export default function EconomiaScreen() {
   const regionalRevenue = Math.max(0, Math.round(sellRevenue(inStock, regionalEffectivePrice) - transportTotal));
   const pct = ((current - selected.basePrice) / selected.basePrice) * 100;
   const up = pct >= 0;
+
+  const needsDispatch = (cropOrProductId: string, market: 'local' | 'city' | 'export'): boolean => {
+    if (market === 'local') return false;
+    return COLD_CARGO_IDS.has(cropOrProductId) || BULK_LIQUID_IDS.has(cropOrProductId);
+  };
+
+  const handleSell = (cropId: string, qty: number, market: 'local' | 'city' | 'export') => {
+    if (needsDispatch(cropId, market)) {
+      setDispatchCargo([{ itemId: cropId, quantity: qty, category: 'crop' }]);
+      setDispatchMarket(market);
+      setContractorCropId(cropId);
+      setContractorQty(qty);
+      setDispatchVisible(true);
+    } else {
+      sellCrop(cropId, qty, market);
+    }
+  };
 
   const currentSeason = getSeason(day);
   const isPeakSeason = currentSeason === selected.peakSeason;
@@ -866,7 +890,7 @@ export default function EconomiaScreen() {
             )}
             <TouchableOpacity
               style={[styles.sellBtn, inStock <= 0 && styles.sellBtnDisabled]}
-              onPress={() => { sellCrop(selectedCrop, inStock, selectedMarket ?? 'local'); playSound(regionalRevenue >= 5000 ? 'bigSale' : 'sell'); if (hapticEnabled && regionalRevenue >= 1000) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
+              onPress={() => { handleSell(selectedCrop, inStock, selectedMarket ?? 'local'); playSound(regionalRevenue >= 5000 ? 'bigSale' : 'sell'); if (hapticEnabled && regionalRevenue >= 1000) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
               disabled={inStock <= 0}
             >
               <Text style={styles.sellBtnText}>
@@ -997,6 +1021,20 @@ export default function EconomiaScreen() {
         </ScrollView>
       </View>
       </>}
+      <DispatchModal
+        visible={dispatchVisible}
+        cargo={dispatchCargo}
+        marketId={dispatchMarket}
+        onClose={() => setDispatchVisible(false)}
+        onContractor={() => {
+          if (contractorCropId) {
+            // 5% spoilage + 12% contractor fee = sell 95% * 88% = 83.6% of qty
+            const effectiveQty = Math.floor(contractorQty * 0.95 * 0.88);
+            sellCrop(contractorCropId, effectiveQty, dispatchMarket);
+          }
+          setDispatchVisible(false);
+        }}
+      />
     </View>
   );
 }
