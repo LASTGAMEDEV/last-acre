@@ -209,6 +209,8 @@ export default function EconomiaScreen() {
       setDispatchVisible(true);
     } else {
       sellCrop(cropId, qty, market);
+      playSound('sell');
+      if (hapticEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   };
 
@@ -890,7 +892,7 @@ export default function EconomiaScreen() {
             )}
             <TouchableOpacity
               style={[styles.sellBtn, inStock <= 0 && styles.sellBtnDisabled]}
-              onPress={() => { handleSell(selectedCrop, inStock, selectedMarket ?? 'local'); playSound(regionalRevenue >= 5000 ? 'bigSale' : 'sell'); if (hapticEnabled && regionalRevenue >= 1000) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }}
+              onPress={() => { handleSell(selectedCrop, inStock, selectedMarket ?? 'local'); }}
               disabled={inStock <= 0}
             >
               <Text style={styles.sellBtnText}>

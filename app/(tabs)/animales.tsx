@@ -96,7 +96,7 @@ export default function AnimalesScreen() {
 
   const hasLivestockTrailer = (trailers ?? []).some((tr: any) => {
     const busy = (deliveryJobs ?? []).some((j: any) => j.trailerId === tr.id);
-    return LIVESTOCK_TRAILER_IDS.includes(tr.typeId) && !busy;
+    return LIVESTOCK_TRAILER_IDS.includes(tr.typeId) && !busy && tr.hitchedTo !== null;
   });
 
   const handleLiveAnimalSell = (animalId: string, animalTypeId: string) => {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import {
-  useGameStore, DeliveryCargo, ReturnOrder,
+  useGameStore, DeliveryCargo,
   REFRIGERATED_TRAILER_IDS, TANK_TRAILER_IDS, LIVESTOCK_TRAILER_IDS,
   DELIVERY_DURATION, TRUCK_FUEL_LITRES,
 } from '../store/useGameStore';
