@@ -19,31 +19,138 @@ export interface EquipmentItem {
   id: string;
   name: string;
   cost: number;
+  /** Building type id prefix this equipment fits — matches any tier (s/m/l). */
+  applicableBuildingPrefixes: string[];
   effectLabel: string;
-  applicableBuildingPrefixes: string[];  // e.g. ['milking_parlour'] matches any building whose typeId starts with 'milking_parlour'
+  slot: 1 | 2 | 3;
 }
 
 export const PRODUCTION_EQUIPMENT: EquipmentItem[] = [
-  // Dairy buildings
-  { id: 'eq_auto_cluster',       name: 'Automatic Cluster Milker',  cost: 4500,  effectLabel: '+20% milking capacity',           applicableBuildingPrefixes: ['milking_parlour', 'goat_milking', 'buffalo_dairy'] },
-  { id: 'eq_milk_analyser',      name: 'Milk Analyser',             cost: 3200,  effectLabel: '+10 hygiene for milk grade check', applicableBuildingPrefixes: ['milking_parlour', 'goat_milking', 'buffalo_dairy'] },
-  { id: 'eq_refrigerated_pipe',  name: 'Refrigerated Pipeline',     cost: 2800,  effectLabel: 'Reduces milk spoilage',            applicableBuildingPrefixes: ['milking_parlour', 'goat_milking', 'buffalo_dairy'] },
-  // Shearing
-  { id: 'eq_electric_shears',    name: 'Electric Shears',           cost: 1800,  effectLabel: '+25% shearing capacity',          applicableBuildingPrefixes: ['shearing_shed'] },
-  { id: 'eq_wool_press',         name: 'Wool Press',                cost: 2200,  effectLabel: '+10% wool yield per animal',      applicableBuildingPrefixes: ['shearing_shed'] },
-  { id: 'eq_lanolin_extractor',  name: 'Lanolin Extractor',         cost: 3500,  effectLabel: 'Enables lanolin by-product',      applicableBuildingPrefixes: ['shearing_shed'] },
-  // Poultry (egg)
-  { id: 'eq_auto_belt',          name: 'Automated Egg Belt',        cost: 2500,  effectLabel: '+30% egg collection capacity',    applicableBuildingPrefixes: ['egg_collection', 'duck_egg', 'quail_egg'] },
-  { id: 'eq_egg_grader',         name: 'Egg Grader',                cost: 1600,  effectLabel: 'Sorts by size/quality grade',     applicableBuildingPrefixes: ['egg_collection', 'duck_egg', 'quail_egg'] },
-  { id: 'eq_uv_sanitiser',       name: 'UV Sanitiser',              cost: 1200,  effectLabel: 'Slows hygiene decay by 30%',      applicableBuildingPrefixes: ['egg_collection', 'duck_egg', 'quail_egg', 'milking_parlour', 'goat_milking', 'buffalo_dairy', 'pig_butchery', 'rabbit_butchery'] },
-  // Butchery
-  { id: 'eq_vacuum_packer',      name: 'Vacuum Packer',             cost: 2000,  effectLabel: '+10% meat shelf life / value',    applicableBuildingPrefixes: ['pig_butchery', 'rabbit_butchery'] },
-  { id: 'eq_bone_saw',           name: 'Bone Saw',                  cost: 1400,  effectLabel: '+15% carcass yield',              applicableBuildingPrefixes: ['pig_butchery', 'rabbit_butchery'] },
-  { id: 'eq_smoke_unit',         name: 'Smoking Unit',              cost: 3000,  effectLabel: 'Enables smoked product variant',  applicableBuildingPrefixes: ['pig_butchery', 'rabbit_butchery'] },
-  // Honey
-  { id: 'eq_uncapping_machine',  name: 'Uncapping Machine',         cost: 1800,  effectLabel: '+20% honey extraction speed',     applicableBuildingPrefixes: ['honey_extraction'] },
-  { id: 'eq_centrifugal_extractor', name: 'Centrifugal Extractor',  cost: 2600,  effectLabel: '+15% honey yield per hive',       applicableBuildingPrefixes: ['honey_extraction'] },
-  { id: 'eq_wax_press',          name: 'Wax Press',                 cost: 1500,  effectLabel: 'Enables beeswax by-product',      applicableBuildingPrefixes: ['honey_extraction'] },
+  // ── Milking buildings (parlour, goat stand, buffalo dairy) ─────────────
+  {
+    id: 'eq_auto_cluster',
+    name: 'Automatic Cluster Unit',
+    cost: 8000,
+    applicableBuildingPrefixes: ['bld_milking_parlour', 'bld_goat_milking_stand', 'bld_buffalo_dairy'],
+    effectLabel: '+20% throughput · −1 worker required',
+    slot: 1,
+  },
+  {
+    id: 'eq_milk_analyser',
+    name: 'Inline Milk Analyser',
+    cost: 12000,
+    applicableBuildingPrefixes: ['bld_milking_parlour', 'bld_goat_milking_stand', 'bld_buffalo_dairy'],
+    effectLabel: 'Detects mastitis early · +10 effective hygiene for SCC',
+    slot: 2,
+  },
+  {
+    id: 'eq_refrigerated_pipe',
+    name: 'Refrigerated Pipe',
+    cost: 9000,
+    applicableBuildingPrefixes: ['bld_milking_parlour', 'bld_buffalo_dairy'],
+    effectLabel: 'Replaces need for a separate milk cooling tank',
+    slot: 3,
+  },
+  // ── Shearing shed ──────────────────────────────────────────────────────
+  {
+    id: 'eq_electric_shears',
+    name: 'Electric Shears',
+    cost: 5000,
+    applicableBuildingPrefixes: ['bld_shearing_shed'],
+    effectLabel: '2× shearing speed',
+    slot: 1,
+  },
+  {
+    id: 'eq_wool_press',
+    name: 'Wool Press',
+    cost: 7000,
+    applicableBuildingPrefixes: ['bld_shearing_shed'],
+    effectLabel: 'Bales wool — required to ship via export trailer',
+    slot: 2,
+  },
+  {
+    id: 'eq_lanolin_extractor',
+    name: 'Lanolin Extractor',
+    cost: 6000,
+    applicableBuildingPrefixes: ['bld_shearing_shed'],
+    effectLabel: 'Captures lanolin as a sellable byproduct',
+    slot: 3,
+  },
+  // ── Egg collection buildings ───────────────────────────────────────────
+  {
+    id: 'eq_auto_belt',
+    name: 'Automatic Belt Collector',
+    cost: 6000,
+    applicableBuildingPrefixes: ['bld_egg_collection_house', 'bld_duck_egg_house', 'bld_quail_egg_station'],
+    effectLabel: 'Faster collection · −1 worker required',
+    slot: 1,
+  },
+  {
+    id: 'eq_egg_grader',
+    name: 'Egg Grading Machine',
+    cost: 9000,
+    applicableBuildingPrefixes: ['bld_egg_collection_house', 'bld_duck_egg_house', 'bld_quail_egg_station'],
+    effectLabel: 'Identifies premium eggs at 1.3× price',
+    slot: 2,
+  },
+  {
+    id: 'eq_uv_sanitiser',
+    name: 'UV Sanitiser',
+    cost: 5000,
+    applicableBuildingPrefixes: ['bld_egg_collection_house'],
+    effectLabel: 'Reduces contamination events · −0.5 daily hygiene decay',
+    slot: 3,
+  },
+  // ── Butchery buildings ─────────────────────────────────────────────────
+  {
+    id: 'eq_vacuum_packer',
+    name: 'Vacuum Packer',
+    cost: 7000,
+    applicableBuildingPrefixes: ['bld_pig_butchery', 'bld_rabbit_butchery'],
+    effectLabel: '5-day shelf life on fresh meat — removes same-day sale pressure',
+    slot: 1,
+  },
+  {
+    id: 'eq_bone_saw',
+    name: 'Bone Saw',
+    cost: 5000,
+    applicableBuildingPrefixes: ['bld_pig_butchery', 'bld_rabbit_butchery'],
+    effectLabel: 'Unlocks bone meal byproduct per cull',
+    slot: 2,
+  },
+  {
+    id: 'eq_smoke_unit',
+    name: 'Smoke Unit',
+    cost: 12000,
+    applicableBuildingPrefixes: ['bld_pig_butchery'],
+    effectLabel: 'Smoked pork at 1.4× price',
+    slot: 3,
+  },
+  // ── Honey extraction suite ─────────────────────────────────────────────
+  {
+    id: 'eq_uncapping_machine',
+    name: 'Uncapping Machine',
+    cost: 8000,
+    applicableBuildingPrefixes: ['bld_honey_extraction_suite'],
+    effectLabel: 'Raises honey yield from 40% to 65%',
+    slot: 1,
+  },
+  {
+    id: 'eq_centrifugal_extractor',
+    name: 'Centrifugal Extractor',
+    cost: 12000,
+    applicableBuildingPrefixes: ['bld_honey_extraction_suite'],
+    effectLabel: 'Raises honey yield from 65% to 100%',
+    slot: 2,
+  },
+  {
+    id: 'eq_wax_press',
+    name: 'Wax Press',
+    cost: 6000,
+    applicableBuildingPrefixes: ['bld_honey_extraction_suite'],
+    effectLabel: 'Captures beeswax as a sellable byproduct',
+    slot: 3,
+  },
 ];
 
 export const BUILDING_TYPES: BuildingType[] = [
@@ -528,47 +635,57 @@ export const BUILDING_TYPES: BuildingType[] = [
     effectLabel: 'Converts wet grass → hay · 3-day drying · up to 2 active batches',
   },
 
-  // ── Production Buildings ─────────────────────────────────────────────────
-  // Milking Parlour (vaca / cow)
-  { id: 'milking_parlour_s', name: 'Milking Parlour S', category: 'production', cost: 15000,  maintenancePerDay: 5,  effectLabel: 'Milks up to 12 cows/day',  description: 'Small milking parlour — 12 cows/day', animalTypeId: 'vaca',  dailyCapacity: 12, buildingTier: 'small',  equipmentSlotCount: 2 },
-  { id: 'milking_parlour_m', name: 'Milking Parlour M', category: 'production', cost: 38000,  maintenancePerDay: 12, effectLabel: 'Milks up to 30 cows/day',  description: 'Medium milking parlour — 30 cows/day', animalTypeId: 'vaca',  dailyCapacity: 30, buildingTier: 'medium', equipmentSlotCount: 3 },
-  { id: 'milking_parlour_l', name: 'Milking Parlour L', category: 'production', cost: 85000,  maintenancePerDay: 25, effectLabel: 'Milks up to 60 cows/day',  description: 'Large milking parlour — 60 cows/day',  animalTypeId: 'vaca',  dailyCapacity: 60, buildingTier: 'large',  equipmentSlotCount: 3 },
-  // Goat Milking Stand (cabra / goat)
-  { id: 'goat_milking_s',    name: 'Goat Milking Stand S', category: 'production', cost: 10000, maintenancePerDay: 3,  effectLabel: 'Milks up to 18 goats/day',  description: 'Small goat milking stand — 18 goats/day', animalTypeId: 'cabra', dailyCapacity: 18, buildingTier: 'small',  equipmentSlotCount: 2 },
-  { id: 'goat_milking_m',    name: 'Goat Milking Stand M', category: 'production', cost: 25000, maintenancePerDay: 8,  effectLabel: 'Milks up to 45 goats/day',  description: 'Medium goat milking stand — 45 goats/day', animalTypeId: 'cabra', dailyCapacity: 45, buildingTier: 'medium', equipmentSlotCount: 3 },
-  { id: 'goat_milking_l',    name: 'Goat Milking Stand L', category: 'production', cost: 60000, maintenancePerDay: 18, effectLabel: 'Milks up to 90 goats/day',  description: 'Large goat milking stand — 90 goats/day',  animalTypeId: 'cabra', dailyCapacity: 90, buildingTier: 'large',  equipmentSlotCount: 3 },
-  // Buffalo Dairy (bufalo / buffalo)
-  { id: 'buffalo_dairy_s',   name: 'Buffalo Dairy S', category: 'production', cost: 18000,  maintenancePerDay: 6,  effectLabel: 'Milks up to 10 buffalo/day',  description: 'Small buffalo dairy — 10 buffalo/day', animalTypeId: 'bufalo', dailyCapacity: 10, buildingTier: 'small',  equipmentSlotCount: 2 },
-  { id: 'buffalo_dairy_m',   name: 'Buffalo Dairy M', category: 'production', cost: 45000,  maintenancePerDay: 15, effectLabel: 'Milks up to 25 buffalo/day',  description: 'Medium buffalo dairy — 25 buffalo/day', animalTypeId: 'bufalo', dailyCapacity: 25, buildingTier: 'medium', equipmentSlotCount: 3 },
-  { id: 'buffalo_dairy_l',   name: 'Buffalo Dairy L', category: 'production', cost: 110000, maintenancePerDay: 30, effectLabel: 'Milks up to 50 buffalo/day',  description: 'Large buffalo dairy — 50 buffalo/day',  animalTypeId: 'bufalo', dailyCapacity: 50, buildingTier: 'large',  equipmentSlotCount: 3 },
-  // Shearing Shed (oveja / sheep)
-  { id: 'shearing_shed_s',   name: 'Shearing Shed S', category: 'production', cost: 12000,  maintenancePerDay: 4,  effectLabel: 'Shears up to 15 sheep/day',  description: 'Small shearing shed — 15 sheep/day', animalTypeId: 'oveja', dailyCapacity: 15, buildingTier: 'small',  equipmentSlotCount: 2 },
-  { id: 'shearing_shed_m',   name: 'Shearing Shed M', category: 'production', cost: 30000,  maintenancePerDay: 10, effectLabel: 'Shears up to 38 sheep/day',  description: 'Medium shearing shed — 38 sheep/day', animalTypeId: 'oveja', dailyCapacity: 38, buildingTier: 'medium', equipmentSlotCount: 3 },
-  { id: 'shearing_shed_l',   name: 'Shearing Shed L', category: 'production', cost: 70000,  maintenancePerDay: 22, effectLabel: 'Shears up to 75 sheep/day',  description: 'Large shearing shed — 75 sheep/day',  animalTypeId: 'oveja', dailyCapacity: 75, buildingTier: 'large',  equipmentSlotCount: 3 },
-  // Egg Collection House (gallina / chicken)
-  { id: 'egg_collection_s',  name: 'Egg Collection House S', category: 'production', cost: 8000,   maintenancePerDay: 3,  effectLabel: 'Collects eggs from up to 80 chickens/day',  description: 'Small egg house — 80 chickens/day',  animalTypeId: 'gallina', dailyCapacity: 80,  buildingTier: 'small',  equipmentSlotCount: 2 },
-  { id: 'egg_collection_m',  name: 'Egg Collection House M', category: 'production', cost: 20000,  maintenancePerDay: 8,  effectLabel: 'Collects eggs from up to 200 chickens/day', description: 'Medium egg house — 200 chickens/day', animalTypeId: 'gallina', dailyCapacity: 200, buildingTier: 'medium', equipmentSlotCount: 3 },
-  { id: 'egg_collection_l',  name: 'Egg Collection House L', category: 'production', cost: 50000,  maintenancePerDay: 18, effectLabel: 'Collects eggs from up to 400 chickens/day', description: 'Large egg house — 400 chickens/day',  animalTypeId: 'gallina', dailyCapacity: 400, buildingTier: 'large',  equipmentSlotCount: 3 },
-  // Duck Egg House (pato / duck)
-  { id: 'duck_egg_s',        name: 'Duck Egg House S', category: 'production', cost: 8000,   maintenancePerDay: 3,  effectLabel: 'Collects eggs from up to 60 ducks/day',  description: 'Small duck egg house — 60 ducks/day',  animalTypeId: 'pato', dailyCapacity: 60,  buildingTier: 'small',  equipmentSlotCount: 2 },
-  { id: 'duck_egg_m',        name: 'Duck Egg House M', category: 'production', cost: 20000,  maintenancePerDay: 8,  effectLabel: 'Collects eggs from up to 150 ducks/day', description: 'Medium duck egg house — 150 ducks/day', animalTypeId: 'pato', dailyCapacity: 150, buildingTier: 'medium', equipmentSlotCount: 3 },
-  { id: 'duck_egg_l',        name: 'Duck Egg House L', category: 'production', cost: 50000,  maintenancePerDay: 18, effectLabel: 'Collects eggs from up to 300 ducks/day', description: 'Large duck egg house — 300 ducks/day',  animalTypeId: 'pato', dailyCapacity: 300, buildingTier: 'large',  equipmentSlotCount: 3 },
-  // Quail Egg Station (codorniz / quail)
-  { id: 'quail_egg_s',       name: 'Quail Egg Station S', category: 'production', cost: 8000,   maintenancePerDay: 3,  effectLabel: 'Collects eggs from up to 120 quail/day',  description: 'Small quail station — 120 quail/day',  animalTypeId: 'codorniz', dailyCapacity: 120, buildingTier: 'small',  equipmentSlotCount: 2 },
-  { id: 'quail_egg_m',       name: 'Quail Egg Station M', category: 'production', cost: 20000,  maintenancePerDay: 8,  effectLabel: 'Collects eggs from up to 300 quail/day', description: 'Medium quail station — 300 quail/day', animalTypeId: 'codorniz', dailyCapacity: 300, buildingTier: 'medium', equipmentSlotCount: 3 },
-  { id: 'quail_egg_l',       name: 'Quail Egg Station L', category: 'production', cost: 50000,  maintenancePerDay: 18, effectLabel: 'Collects eggs from up to 600 quail/day', description: 'Large quail station — 600 quail/day',  animalTypeId: 'codorniz', dailyCapacity: 600, buildingTier: 'large',  equipmentSlotCount: 3 },
-  // Pig Butchery (cerdo / pig)
-  { id: 'pig_butchery_s',    name: 'Pig Butchery S', category: 'production', cost: 14000,  maintenancePerDay: 5,  effectLabel: 'Processes up to 8 pigs/session',  description: 'Small pig butchery — 8/session',  animalTypeId: 'cerdo', dailyCapacity: 8,  buildingTier: 'small',  equipmentSlotCount: 2 },
-  { id: 'pig_butchery_m',    name: 'Pig Butchery M', category: 'production', cost: 35000,  maintenancePerDay: 12, effectLabel: 'Processes up to 20 pigs/session', description: 'Medium pig butchery — 20/session', animalTypeId: 'cerdo', dailyCapacity: 20, buildingTier: 'medium', equipmentSlotCount: 3 },
-  { id: 'pig_butchery_l',    name: 'Pig Butchery L', category: 'production', cost: 80000,  maintenancePerDay: 25, effectLabel: 'Processes up to 40 pigs/session', description: 'Large pig butchery — 40/session',  animalTypeId: 'cerdo', dailyCapacity: 40, buildingTier: 'large',  equipmentSlotCount: 3 },
-  // Rabbit Butchery (conejo / rabbit)
-  { id: 'rabbit_butchery_s', name: 'Rabbit Butchery S', category: 'production', cost: 10000, maintenancePerDay: 4,  effectLabel: 'Processes up to 12 rabbits/session', description: 'Small rabbit butchery — 12/session', animalTypeId: 'conejo', dailyCapacity: 12, buildingTier: 'small',  equipmentSlotCount: 2 },
-  { id: 'rabbit_butchery_m', name: 'Rabbit Butchery M', category: 'production', cost: 25000, maintenancePerDay: 10, effectLabel: 'Processes up to 30 rabbits/session', description: 'Medium rabbit butchery — 30/session', animalTypeId: 'conejo', dailyCapacity: 30, buildingTier: 'medium', equipmentSlotCount: 3 },
-  { id: 'rabbit_butchery_l', name: 'Rabbit Butchery L', category: 'production', cost: 60000, maintenancePerDay: 20, effectLabel: 'Processes up to 60 rabbits/session', description: 'Large rabbit butchery — 60/session',  animalTypeId: 'conejo', dailyCapacity: 60, buildingTier: 'large',  equipmentSlotCount: 3 },
-  // Honey Extraction Suite (abeja / bees)
-  { id: 'honey_extraction_s', name: 'Honey Extraction Suite S', category: 'production', cost: 12000, maintenancePerDay: 4,  effectLabel: 'Extracts honey from up to 5 hives/harvest',  description: 'Small extraction suite — 5 hives/harvest',  animalTypeId: 'abeja', dailyCapacity: 5,  buildingTier: 'small',  equipmentSlotCount: 2 },
-  { id: 'honey_extraction_m', name: 'Honey Extraction Suite M', category: 'production', cost: 30000, maintenancePerDay: 10, effectLabel: 'Extracts honey from up to 12 hives/harvest', description: 'Medium extraction suite — 12 hives/harvest', animalTypeId: 'abeja', dailyCapacity: 12, buildingTier: 'medium', equipmentSlotCount: 3 },
-  { id: 'honey_extraction_l', name: 'Honey Extraction Suite L', category: 'production', cost: 70000, maintenancePerDay: 22, effectLabel: 'Extracts honey from up to 25 hives/harvest', description: 'Large extraction suite — 25 hives/harvest',  animalTypeId: 'abeja', dailyCapacity: 25, buildingTier: 'large',  equipmentSlotCount: 3 },
+  // ── Production Buildings ───────────────────────────────────────────────
+
+  // Milking Parlour (cow)
+  { id: 'bld_milking_parlour_s', name: 'Small Milking Parlour', category: 'production', cost: 15000, maintenancePerDay: 5, animalTypeId: 'vaca', dailyCapacity: 12, buildingTier: 'small', equipmentSlotCount: 3, effectLabel: '12 cows/day · 4 stalls' },
+  { id: 'bld_milking_parlour_m', name: 'Medium Milking Parlour', category: 'production', cost: 38000, maintenancePerDay: 10, animalTypeId: 'vaca', dailyCapacity: 30, buildingTier: 'medium', equipmentSlotCount: 3, effectLabel: '30 cows/day · 10 stalls' },
+  { id: 'bld_milking_parlour_l', name: 'Large Milking Parlour', category: 'production', cost: 85000, maintenancePerDay: 20, animalTypeId: 'vaca', dailyCapacity: 60, buildingTier: 'large', equipmentSlotCount: 3, effectLabel: '60 cows/day · 20 stalls' },
+
+  // Goat Milking Stand (goat)
+  { id: 'bld_goat_milking_stand_s', name: 'Small Goat Milking Stand', category: 'production', cost: 10000, maintenancePerDay: 4, animalTypeId: 'cabra', dailyCapacity: 18, buildingTier: 'small', equipmentSlotCount: 2, effectLabel: '18 goats/day · 6 stalls' },
+  { id: 'bld_goat_milking_stand_m', name: 'Medium Goat Milking Stand', category: 'production', cost: 25000, maintenancePerDay: 8, animalTypeId: 'cabra', dailyCapacity: 45, buildingTier: 'medium', equipmentSlotCount: 2, effectLabel: '45 goats/day · 15 stalls' },
+  { id: 'bld_goat_milking_stand_l', name: 'Large Goat Milking Stand', category: 'production', cost: 60000, maintenancePerDay: 16, animalTypeId: 'cabra', dailyCapacity: 90, buildingTier: 'large', equipmentSlotCount: 2, effectLabel: '90 goats/day · 30 stalls' },
+
+  // Buffalo Dairy (buffalo)
+  { id: 'bld_buffalo_dairy_s', name: 'Small Buffalo Dairy', category: 'production', cost: 18000, maintenancePerDay: 6, animalTypeId: 'bufalo', dailyCapacity: 10, buildingTier: 'small', equipmentSlotCount: 3, effectLabel: '10 buffalo/day · 4 stalls' },
+  { id: 'bld_buffalo_dairy_m', name: 'Medium Buffalo Dairy', category: 'production', cost: 45000, maintenancePerDay: 12, animalTypeId: 'bufalo', dailyCapacity: 25, buildingTier: 'medium', equipmentSlotCount: 3, effectLabel: '25 buffalo/day · 10 stalls' },
+  { id: 'bld_buffalo_dairy_l', name: 'Large Buffalo Dairy', category: 'production', cost: 110000, maintenancePerDay: 25, animalTypeId: 'bufalo', dailyCapacity: 50, buildingTier: 'large', equipmentSlotCount: 3, effectLabel: '50 buffalo/day · 20 stalls' },
+
+  // Shearing Shed (sheep)
+  { id: 'bld_shearing_shed_s', name: 'Small Shearing Shed', category: 'production', cost: 12000, maintenancePerDay: 4, animalTypeId: 'oveja', dailyCapacity: 15, buildingTier: 'small', equipmentSlotCount: 3, effectLabel: '15 sheep/day' },
+  { id: 'bld_shearing_shed_m', name: 'Medium Shearing Shed', category: 'production', cost: 30000, maintenancePerDay: 8, animalTypeId: 'oveja', dailyCapacity: 38, buildingTier: 'medium', equipmentSlotCount: 3, effectLabel: '38 sheep/day' },
+  { id: 'bld_shearing_shed_l', name: 'Large Shearing Shed', category: 'production', cost: 70000, maintenancePerDay: 16, animalTypeId: 'oveja', dailyCapacity: 75, buildingTier: 'large', equipmentSlotCount: 3, effectLabel: '75 sheep/day' },
+
+  // Egg Collection House (chicken)
+  { id: 'bld_egg_collection_house_s', name: 'Small Egg Collection House', category: 'production', cost: 8000, maintenancePerDay: 3, animalTypeId: 'gallina', dailyCapacity: 80, buildingTier: 'small', equipmentSlotCount: 3, effectLabel: '80 chickens/day' },
+  { id: 'bld_egg_collection_house_m', name: 'Medium Egg Collection House', category: 'production', cost: 20000, maintenancePerDay: 6, animalTypeId: 'gallina', dailyCapacity: 200, buildingTier: 'medium', equipmentSlotCount: 3, effectLabel: '200 chickens/day' },
+  { id: 'bld_egg_collection_house_l', name: 'Large Egg Collection House', category: 'production', cost: 50000, maintenancePerDay: 14, animalTypeId: 'gallina', dailyCapacity: 400, buildingTier: 'large', equipmentSlotCount: 3, effectLabel: '400 chickens/day' },
+
+  // Duck Egg House (duck)
+  { id: 'bld_duck_egg_house_s', name: 'Small Duck Egg House', category: 'production', cost: 8000, maintenancePerDay: 3, animalTypeId: 'pato', dailyCapacity: 60, buildingTier: 'small', equipmentSlotCount: 2, effectLabel: '60 ducks/day' },
+  { id: 'bld_duck_egg_house_m', name: 'Medium Duck Egg House', category: 'production', cost: 20000, maintenancePerDay: 6, animalTypeId: 'pato', dailyCapacity: 150, buildingTier: 'medium', equipmentSlotCount: 2, effectLabel: '150 ducks/day' },
+  { id: 'bld_duck_egg_house_l', name: 'Large Duck Egg House', category: 'production', cost: 50000, maintenancePerDay: 14, animalTypeId: 'pato', dailyCapacity: 300, buildingTier: 'large', equipmentSlotCount: 2, effectLabel: '300 ducks/day' },
+
+  // Quail Egg Station (quail)
+  { id: 'bld_quail_egg_station_s', name: 'Small Quail Egg Station', category: 'production', cost: 8000, maintenancePerDay: 3, animalTypeId: 'codorniz', dailyCapacity: 120, buildingTier: 'small', equipmentSlotCount: 2, effectLabel: '120 quail/day' },
+  { id: 'bld_quail_egg_station_m', name: 'Medium Quail Egg Station', category: 'production', cost: 20000, maintenancePerDay: 6, animalTypeId: 'codorniz', dailyCapacity: 300, buildingTier: 'medium', equipmentSlotCount: 2, effectLabel: '300 quail/day' },
+  { id: 'bld_quail_egg_station_l', name: 'Large Quail Egg Station', category: 'production', cost: 50000, maintenancePerDay: 14, animalTypeId: 'codorniz', dailyCapacity: 600, buildingTier: 'large', equipmentSlotCount: 2, effectLabel: '600 quail/day' },
+
+  // Pig Butchery (pig)
+  { id: 'bld_pig_butchery_s', name: 'Small Pig Butchery', category: 'production', cost: 14000, maintenancePerDay: 5, animalTypeId: 'cerdo', dailyCapacity: 8, buildingTier: 'small', equipmentSlotCount: 3, effectLabel: '8 pigs per cull session · +30% meat yield' },
+  { id: 'bld_pig_butchery_m', name: 'Medium Pig Butchery', category: 'production', cost: 35000, maintenancePerDay: 10, animalTypeId: 'cerdo', dailyCapacity: 20, buildingTier: 'medium', equipmentSlotCount: 3, effectLabel: '20 pigs per session · +30% meat yield' },
+  { id: 'bld_pig_butchery_l', name: 'Large Pig Butchery', category: 'production', cost: 80000, maintenancePerDay: 22, animalTypeId: 'cerdo', dailyCapacity: 40, buildingTier: 'large', equipmentSlotCount: 3, effectLabel: '40 pigs per session · +30% meat yield' },
+
+  // Rabbit Butchery (rabbit)
+  { id: 'bld_rabbit_butchery_s', name: 'Small Rabbit Butchery', category: 'production', cost: 10000, maintenancePerDay: 4, animalTypeId: 'conejo', dailyCapacity: 12, buildingTier: 'small', equipmentSlotCount: 2, effectLabel: '12 rabbits per session · +30% meat yield' },
+  { id: 'bld_rabbit_butchery_m', name: 'Medium Rabbit Butchery', category: 'production', cost: 25000, maintenancePerDay: 7, animalTypeId: 'conejo', dailyCapacity: 30, buildingTier: 'medium', equipmentSlotCount: 2, effectLabel: '30 rabbits per session · +30% meat yield' },
+  { id: 'bld_rabbit_butchery_l', name: 'Large Rabbit Butchery', category: 'production', cost: 60000, maintenancePerDay: 15, animalTypeId: 'conejo', dailyCapacity: 60, buildingTier: 'large', equipmentSlotCount: 2, effectLabel: '60 rabbits per session · +30% meat yield' },
+
+  // Honey Extraction Suite (bee)
+  { id: 'bld_honey_extraction_suite_s', name: 'Small Honey Extraction Suite', category: 'production', cost: 12000, maintenancePerDay: 4, animalTypeId: 'abeja', dailyCapacity: 5, buildingTier: 'small', equipmentSlotCount: 3, effectLabel: '5 hives per harvest · 40% yield without equipment' },
+  { id: 'bld_honey_extraction_suite_m', name: 'Medium Honey Extraction Suite', category: 'production', cost: 30000, maintenancePerDay: 8, animalTypeId: 'abeja', dailyCapacity: 12, buildingTier: 'medium', equipmentSlotCount: 3, effectLabel: '12 hives per harvest · 40% yield without equipment' },
+  { id: 'bld_honey_extraction_suite_l', name: 'Large Honey Extraction Suite', category: 'production', cost: 70000, maintenancePerDay: 16, animalTypeId: 'abeja', dailyCapacity: 25, buildingTier: 'large', equipmentSlotCount: 3, effectLabel: '25 hives per harvest · 40% yield without equipment' },
 ];
 
 export const BUILDING_CATEGORY_LABELS: Record<BuildingCategory, string> = {
