@@ -10,16 +10,16 @@ import { ProductionBuildingState } from '../store/useGameStore';
 
 /** Daily hygiene decay rates per animal type (base, at-capacity herd). */
 export const HYGIENE_DECAY_RATES: Record<string, number> = {
-  vaca:     2.5,
-  cabra:    2.0,
-  bufalo:   2.5,
-  oveja:    1.5,
-  gallina:  3.0,
-  pato:     3.0,
-  codorniz: 2.5,
-  cerdo:    4.0,
-  conejo:   2.0,
-  abeja:    0.5,
+  vaca:     3,    // dairy — wet environment, fastest
+  cabra:    3,
+  bufalo:   3,
+  cerdo:    4,    // pigs — highest waste output
+  gallina:  2,    // poultry
+  pato:     2,
+  codorniz: 2,
+  oveja:    1.5,  // sheep — slower
+  conejo:   2,
+  abeja:    0.5,  // bees — minimal
 };
 
 /**
@@ -46,10 +46,11 @@ export const DAIRY_SPECIES: Set<string> = new Set(['vaca', 'cabra', 'bufalo']);
 
 /**
  * Returns effective daily capacity for a building.
- * Currently a direct pass-through; reserved for future equipment-based modifiers.
+ * Includes equipment-based modifiers (e.g., auto-cluster +20% throughput).
  */
 export function effectiveCapacity(building: ProductionBuildingState): number {
-  return building.capacity;
+  const hasAutoCluster = building.equipmentSlots.includes('eq_auto_cluster');
+  return building.capacity * (hasAutoCluster ? 1.2 : 1.0);
 }
 
 /**
