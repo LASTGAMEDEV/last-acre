@@ -67,6 +67,7 @@ export default function TrabajadoresScreen() {
   }
 
   const vetType = WORKER_TYPES.find(t => t.id === 'vet')!;
+  const truckDriverType = WORKER_TYPES.find(t => t.id === 'truck_driver')!;
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -105,6 +106,16 @@ export default function TrabajadoresScreen() {
           {renderCard(vetType)}
         </View>
       </View>
+
+      {/* Transport department */}
+      {truckDriverType && (
+        <View style={styles.deptSection}>
+          <Text style={styles.deptLabel}>🚛 Transport</Text>
+          <View style={styles.cardRow}>
+            {renderCard(truckDriverType)}
+          </View>
+        </View>
+      )}
 
       {/* Active staff */}
       <Text style={styles.sectionLabel}>Active Staff ({activeWorkers.length})</Text>
