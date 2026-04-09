@@ -57,9 +57,12 @@ export default function DispatchModal({ visible, cargo, marketId, onClose, onCon
     return !busyTrailerIds.has(tr.id);
   });
 
-  const availableDrivers = (workers ?? []).filter(w =>
-    w.typeId === 'truck_driver' && !busyDriverIds.has(w.id)
-  );
+  // All truck_driver workers sorted by hire day — used to derive a stable "Driver #N" label
+  const allDrivers = (workers ?? [])
+    .filter(w => w.typeId === 'truck_driver')
+    .sort((a, b) => a.hiredDay - b.hiredDay);
+
+  const availableDrivers = allDrivers.filter(w => !busyDriverIds.has(w.id));
 
   const fuelLitres = selectedTruck
     ? (TRUCK_FUEL_LITRES[selectedTruck.typeId]?.[marketId] ?? 60)
@@ -154,15 +157,18 @@ export default function DispatchModal({ visible, cargo, marketId, onClose, onCon
             <Text style={s.sectionLabel}>Driver</Text>
             {availableDrivers.length === 0 ? (
               <Text style={s.unavailable}>No drivers hired — use contractor</Text>
-            ) : availableDrivers.map(w => (
-              <TouchableOpacity
-                key={w.id}
-                style={[s.optionRow, selectedDriverId === w.id && s.optionSelected]}
-                onPress={() => setSelectedDriverId(w.id)}
-              >
-                <Text style={s.optionText}>🚛 Driver (hired day {w.hiredDay})</Text>
-              </TouchableOpacity>
-            ))}
+            ) : availableDrivers.map(w => {
+              const driverNum = allDrivers.findIndex(d => d.id === w.id) + 1;
+              return (
+                <TouchableOpacity
+                  key={w.id}
+                  style={[s.optionRow, selectedDriverId === w.id && s.optionSelected]}
+                  onPress={() => setSelectedDriverId(w.id)}
+                >
+                  <Text style={s.optionText}>🚛 Driver #{driverNum} (hired day {w.hiredDay})</Text>
+                </TouchableOpacity>
+              );
+            })}
 
             {/* Fuel cost */}
             {selectedTruckId && (
