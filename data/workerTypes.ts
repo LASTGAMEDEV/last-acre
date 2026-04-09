@@ -144,13 +144,13 @@ export const WORKER_TYPES: WorkerType[] = [
 
   // ── Transport ────────────────────────────────────────────────────────────
   {
-    id: 'truck_driver' as WorkerRole,
+    id: 'truck_driver',
     name: 'Truck Driver',
     icon: '🚛',
     dailyWage: 55,
     maxCount: 2,
+    department: 'transport',
+    tier: 'basic',
     description: 'Handles deliveries to local, city, and export markets. Required to self-dispatch — without one, deliveries go through a contractor at 12% fee.',
-    department: 'transport' as WorkerDepartment,
-    tier: 'basic' as WorkerTier,
   },
 ];
