@@ -260,6 +260,43 @@ export interface OwnedTrailer {
   hitchedTo: string | null; // truckId | null
 }
 
+export interface DeliveryCargo {
+  itemId: string;       // cropId / productType / animalId
+  quantity: number;
+  category: 'crop' | 'animal_product' | 'animal';
+}
+
+export interface ReturnOrder {
+  itemId: string;       // cropId / 'fuel' / animalTypeId won at auction
+  quantity: number;
+  costPerUnit: number;  // locked in at dispatch
+}
+
+export interface DeliveryJob {
+  id: string;
+  truckId: string;
+  trailerId: string;
+  driverId: string;
+  cargo: DeliveryCargo[];
+  marketId: 'local' | 'city' | 'export';
+  departDay: number;
+  returnDay: number;
+  expectedRevenue: number;
+  fuelCost: number;
+  returnOrders: ReturnOrder[];
+  status: 'outbound' | 'returning';
+  breakdownDaysAdded: number;
+  needsMaintenance: boolean;
+}
+
+export interface AuctionPickup {
+  listingId: string;
+  animalTypeId: string;
+  genes: AnimalGenes;
+  paidDay: number;
+  pickedUpDay: number | null;
+}
+
 export interface TractorJob {
   id: string;
   tractorId: string;
@@ -422,6 +459,7 @@ export interface GameState {
   fieldEvents: FieldEvent[];
   listings: AuctionListing[];
   nextAnimalAuctionDay: number;
+  pendingPickup: AuctionPickup[];
   daySummary: DaySummaryEvent[] | null;
 
   insurances: InsurancePolicy[];
@@ -451,6 +489,7 @@ export interface GameState {
   attachments: OwnedAttachment[];
   trailers: OwnedTrailer[];
   tractorJobs: TractorJob[];
+  deliveryJobs: DeliveryJob[];
   harvestJobs: HarvestJob[];
   npcFarms: NPCFarm[];
   rivalNews: RivalNewsItem[];
@@ -493,6 +532,7 @@ export interface GameState {
 
   farmName: string;
   fuel: number;
+  fuelPrice: number;
   priceAlerts: PriceAlert[];
   // Animal Shows
   showEntries: ShowEntry[];
@@ -603,6 +643,14 @@ export interface GameState {
   assignJob: (tractorId: string, attachmentId: string, operation: 'till' | 'plant' | 'spray', parcelIds: string[], cropId?: string) => void;
   assignHarvestJob: (combineId: string, parcelIds: string[]) => void;
   hireContractor: (operation: ContractorOperation, parcelIds: string[], cropId?: string) => void;
+  dispatchDelivery: (params: {
+    truckId: string;
+    trailerId: string;
+    driverId: string;
+    cargo: DeliveryCargo[];
+    marketId: 'local' | 'city' | 'export';
+    returnOrders: ReturnOrder[];
+  }) => void;
 
   // ── World Map ────────────────────────────────────────────────────────────
   mapFields: MapField[];
@@ -789,6 +837,9 @@ function makeInitialState() {
     seasonalEvent: null as { type: 'heat_wave' | 'flood' | 'frost'; startDay: number; endsDay: number; severity: number } | null,
     farmName: 'My Farm',
     fuel: 200,
+    fuelPrice: 1.20,
+    deliveryJobs: [],
+    pendingPickup: [],
     priceAlerts: [] as PriceAlert[],
     showEntries: [] as ShowEntry[],
     showResults: [] as ShowResult[],
@@ -3521,6 +3572,10 @@ export const useGameStore = create<GameState>()(
             ),
           });
         }
+      },
+
+      dispatchDelivery: (_params) => {
+        // Implementation added in Task 4
       },
 
       requestLoan: (principal, termDays, label) => {
