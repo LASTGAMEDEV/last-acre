@@ -10,6 +10,7 @@ import { Contract } from '../engine/contracts';
 import { CROP_TYPES } from '../data/cropTypes';
 import { MACHINE_TYPES, MachineType } from '../data/machineTypes';
 import { BUILDING_TYPES, PRODUCTION_EQUIPMENT, EquipmentItem } from '../data/buildingTypes';
+import { ANIMAL_TYPES } from '../data/animalTypes';
 import {
   PRODUCTION_BUILDING_PREFIX,
   DAIRY_SPECIES,
@@ -2894,7 +2895,7 @@ export const useGameStore = create<GameState>()(
             if (fee > 0) {
               productionBuildingContractorFees += fee;
               summary.push({
-                id: `contractor_fee_${pb.animalTypeId}`,
+                id: `contractor_fee_${pb.id}`,
                 icon: '🚚',
                 title: `Contractor processing ${bt.name} — $${fee}`,
                 detail: manned ? 'Building at capacity — upgrade to process full herd' : 'Building unmanned — assign a farmhand',
@@ -2991,8 +2992,9 @@ export const useGameStore = create<GameState>()(
           const herdSize = (state.animals ?? []).filter(a => a.typeId === pb.animalTypeId).length;
           const sickCount = (state.animals ?? []).filter(a => a.typeId === pb.animalTypeId && (a as any).sick).length;
           const effCap = effectiveCapacity(pb);
-          const isLargeLivestock = pb.animalTypeId === 'vaca' || pb.animalTypeId === 'bufalo' || pb.animalTypeId === 'cabra' || pb.animalTypeId === 'oveja';
-          const feedRatio = isLargeLivestock
+          const animalTypeDef = ANIMAL_TYPES.find((at: any) => at.id === pb.animalTypeId);
+          const isHayFed = animalTypeDef?.feedType === 'hay';
+          const feedRatio = isHayFed
             ? Math.max(0, 1 - (newHayMissed / 7))
             : Math.max(0, 1 - (newGrainMissed / 7));
 
