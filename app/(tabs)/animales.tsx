@@ -4,7 +4,7 @@ import AnimalShowModal from '../../components/AnimalShowModal';
 import HintCard from '../../components/HintCard';
 import DispatchModal from '../../components/DispatchModal';
 import { useGameStore } from '../../store/useGameStore';
-import { DeliveryCargo, LIVESTOCK_TRAILER_IDS } from '../../store/useGameStore';
+import { DeliveryCargo, LIVESTOCK_TRAILER_IDS, ProductionBuildingState } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
@@ -12,6 +12,70 @@ import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
 import { sellValue, isMature, canBreed, TRAIT_ICONS, TRAIT_DESC, AnimalGenes, OwnedAnimal, getLactationState, lactationDaysRemaining, dryDaysRemaining, LACTATION_PARAMS, getSeasonMultiplier, GRAIN_CROP_IDS } from '../../engine/animals';
 import { ENCLOSURE_BUILDINGS } from '../../constants/enclosures';
 import HelpSheet from '../../components/HelpSheet';
+import { DAIRY_SPECIES } from '../../engine/productionBuildings';
+
+function WelfareBadge({ score }: { score: number | undefined }) {
+  if (score === undefined) return null;
+  const color = score >= 80 ? '#4caf50' : score >= 60 ? '#ff9800' : '#ef5350';
+  const label = score >= 80 ? 'Good' : score >= 60 ? 'Fair' : 'Poor';
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+      <Text style={{ color, fontSize: 11, fontWeight: 'bold' }}>Welfare {score} — {label}</Text>
+    </View>
+  );
+}
+
+function BuildingStatusLine({
+  animalTypeId,
+  productionBuildings,
+}: {
+  animalTypeId: string;
+  productionBuildings: ProductionBuildingState[];
+}) {
+  const pb = productionBuildings.find(b => b.animalTypeId === animalTypeId);
+  if (!pb) {
+    return (
+      <Text style={{ color: '#ff9800', fontSize: 11 }}>
+        🏗 No production building — contractor covering (12% fee)
+      </Text>
+    );
+  }
+  const bt = BUILDING_TYPES.find(b => b.id === pb.buildingTypeId);
+  const manned = pb.assignedWorkerIds.length > 0;
+  const certEmoji = pb.certificationTier === 'organic' ? '🌿' : pb.certificationTier === 'certified' ? '✅' : '';
+  return (
+    <View style={{ gap: 2 }}>
+      <Text style={{ color: '#81c784', fontSize: 11 }}>
+        🏛 {bt?.name ?? pb.buildingTypeId} {certEmoji}
+        {!manned ? ' ⚠ Unmanned' : ''}
+      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <Text style={{ color: '#aaa', fontSize: 11 }}>Hygiene</Text>
+        <View style={{ flex: 1, height: 4, backgroundColor: '#333', borderRadius: 2, maxWidth: 80 }}>
+          <View style={{
+            width: `${pb.hygiene}%` as any,
+            height: 4,
+            borderRadius: 2,
+            backgroundColor: pb.hygiene >= 60 ? '#4caf50' : pb.hygiene >= 40 ? '#ff9800' : '#ef5350',
+          }} />
+        </View>
+        <Text style={{ color: '#aaa', fontSize: 11 }}>{Math.round(pb.hygiene)}%</Text>
+      </View>
+    </View>
+  );
+}
+
+function MilkGradeBadge({ animalTypeId, milkGrades }: { animalTypeId: string; milkGrades: Record<string, 'A' | 'B' | 'C'> }) {
+  if (!DAIRY_SPECIES.has(animalTypeId)) return null;
+  const grade = milkGrades[animalTypeId] ?? 'B';
+  const color = grade === 'A' ? '#4caf50' : grade === 'B' ? '#ff9800' : '#ef5350';
+  return (
+    <Text style={{ color, fontSize: 11, fontWeight: 'bold' }}>
+      Milk Grade {grade}{grade === 'C' ? ' ⚠ city/export blocked' : ''}
+    </Text>
+  );
+}
 
 function geneGrade(v: number): string {
   if (v >= 1.4) return 'S';
@@ -75,6 +139,7 @@ export default function AnimalesScreen() {
     showWindowOpen, showResults,
     workers, grainMissedDays, hayMissedDays, feedAnimals, inventory, animalsManuallyFed,
     trailers, deliveryJobs,
+    productionBuildings, animalWelfareScores, milkGrades,
   } = useGameStore();
   const fairMult = activeFair ? (1 - activeFair.discount) : 1.0;
   const hasAnimalWorker = (workers ?? []).some(
@@ -577,6 +642,9 @@ export default function AnimalesScreen() {
                     ? `🚫 ${occupantType!.name}s here`
                     : `${occupied}/${capacity} housed`}
               </Text>
+              <WelfareBadge score={animalWelfareScores?.[item.id]} />
+              <BuildingStatusLine animalTypeId={item.id} productionBuildings={productionBuildings ?? []} />
+              <MilkGradeBadge animalTypeId={item.id} milkGrades={milkGrades ?? {}} />
               <View style={styles.sexBtnRow}>
                 {!isBee && (
                   <TouchableOpacity
