@@ -4,7 +4,7 @@ import { useGameStore } from '../../store/useGameStore';
 import ScreenHeader from '../../components/ScreenHeader';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { PRODUCT_TYPES, CATEGORY_LABELS, ProductCategory } from '../../data/productTypes';
-import { BUILDING_TYPES, BUILDING_CATEGORY_LABELS, BuildingCategory } from '../../data/buildingTypes';
+import { BUILDING_TYPES, BUILDING_CATEGORY_LABELS, BuildingCategory, PRODUCTION_EQUIPMENT } from '../../data/buildingTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { ATTACHMENT_TYPES } from '../../data/attachmentTypes';
 
@@ -18,7 +18,7 @@ const PRODUCT_CATEGORY_ORDER: ProductCategory[] = [
   'fertilizer_solid', 'fertilizer_liquid', 'herbicide', 'fungicide', 'insecticide',
 ];
 
-const BUILDING_CATEGORY_ORDER: BuildingCategory[] = ['animal', 'silo', 'industrial', 'lab', 'upgrade'];
+const BUILDING_CATEGORY_ORDER: BuildingCategory[] = ['animal', 'production', 'silo', 'industrial', 'lab', 'upgrade'];
 
 // ── Seeds Tab ───────────────────────────────────────────────────────────────
 function SeedsTab() {
@@ -128,7 +128,20 @@ function ProductsTab() {
 
 // ── Buildings Tab ───────────────────────────────────────────────────────────
 function BuildingsTab() {
-  const { money, buildings, buyBuilding } = useGameStore();
+  const { money, buildings, buyBuilding, purchaseProductionBuilding, productionBuildings, installEquipment } = useGameStore();
+
+  const ownedProductionSpecies = new Set(
+    (productionBuildings ?? []).map(pb => pb.animalTypeId)
+  );
+
+  const handleBuyBuilding = (buildingId: string) => {
+    const bt = BUILDING_TYPES.find(b => b.id === buildingId);
+    if (bt?.category === 'production') {
+      purchaseProductionBuilding(buildingId);
+    } else {
+      buyBuilding(buildingId);
+    }
+  };
 
   return (
     <ScrollView style={[styles.list, { flex: 1 }]} contentContainerStyle={{ paddingBottom: 20 }}>
@@ -139,8 +152,10 @@ function BuildingsTab() {
             <Text style={styles.categoryTitle}>{BUILDING_CATEGORY_LABELS[cat]}</Text>
             <View style={styles.buildingGrid}>
               {items.map(building => {
+                const bt = BUILDING_TYPES.find(b => b.id === building.id);
                 const ownedCount = buildings.filter(id => id === building.id).length;
                 const canAfford = money >= building.cost;
+                const alreadyOwned = bt?.category === 'production' && ownedProductionSpecies.has(bt?.animalTypeId ?? '');
                 return (
                   <View key={building.id} style={styles.buildingCard}>
                     <Text style={styles.buildingName}>{building.name}</Text>
@@ -159,20 +174,68 @@ function BuildingsTab() {
                       {ownedCount > 0 && (
                         <Text style={styles.ownedBadge}>✓ ×{ownedCount}</Text>
                       )}
-                      <TouchableOpacity
-                        style={[styles.buildBtn, !canAfford && styles.buildBtnDisabled]}
-                        onPress={() => buyBuilding(building.id)}
-                        disabled={!canAfford}
-                      >
-                        <Text style={styles.buildBtnText}>
-                          ${building.cost.toLocaleString()}
-                        </Text>
-                      </TouchableOpacity>
+                      {alreadyOwned ? (
+                        <Text style={[styles.buildBtnText, { color: '#4caf50' }]}>Owned</Text>
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.buildBtn, !canAfford && styles.buildBtnDisabled]}
+                          onPress={() => handleBuyBuilding(building.id)}
+                          disabled={!canAfford}
+                        >
+                          <Text style={styles.buildBtnText}>
+                            ${building.cost.toLocaleString()}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 );
               })}
             </View>
+            {/* Equipment for owned production buildings */}
+            {cat === 'production' && (productionBuildings ?? []).length > 0 && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>
+                  Building Equipment
+                </Text>
+                {PRODUCTION_EQUIPMENT.map(eq => {
+                  // Find if the player owns a building this equipment fits
+                  const fitsOwnedBuilding = (productionBuildings ?? []).find(pb =>
+                    eq.applicableBuildingPrefixes.some(prefix => pb.buildingTypeId.startsWith(prefix))
+                  );
+                  if (!fitsOwnedBuilding) return null;
+                  const alreadyInstalled = fitsOwnedBuilding.equipmentSlots.includes(eq.id);
+                  const bt2 = BUILDING_TYPES.find(b => b.id === fitsOwnedBuilding.buildingTypeId);
+                  const maxSlots = bt2?.equipmentSlotCount ?? 2;
+                  const slotsFull = fitsOwnedBuilding.equipmentSlots.length >= maxSlots;
+                  const canAffordEq = money >= eq.cost;
+                  return (
+                    <View key={eq.id} style={{ backgroundColor: '#0d1b2a', borderRadius: 8, padding: 12, marginBottom: 8 }}>
+                      <Text style={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 }}>{eq.name}</Text>
+                      <Text style={{ color: '#aaa', fontSize: 11, marginVertical: 4 }}>{eq.effectLabel}</Text>
+                      <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 8 }}>
+                        For: {bt2?.name ?? fitsOwnedBuilding.buildingTypeId}
+                      </Text>
+                      {alreadyInstalled ? (
+                        <Text style={{ color: '#4caf50', fontSize: 12 }}>✓ Installed</Text>
+                      ) : slotsFull ? (
+                        <Text style={{ color: '#aaa', fontSize: 12 }}>All equipment slots full</Text>
+                      ) : (
+                        <TouchableOpacity
+                          style={{ backgroundColor: canAffordEq ? '#1e3a5f' : '#2a2a4a', borderRadius: 6, padding: 8, alignItems: 'center' }}
+                          onPress={() => installEquipment(fitsOwnedBuilding.id, eq.id)}
+                          disabled={!canAffordEq}
+                        >
+                          <Text style={{ color: canAffordEq ? '#90caf9' : '#555', fontSize: 13 }}>
+                            Install — ${eq.cost.toLocaleString()}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
         );
       })}
