@@ -1675,15 +1675,55 @@ export const useGameStore = create<GameState>()(
         let animals = state.animals;
         const newSickIds: string[] = [];
         const diedIds: string[] = [];
+
+        // ── Quarantine graduation ─────────────────────────────────────────────
+        animals = animals.map((a: OwnedAnimal) => {
+          if (!a.quarantineUntilDay) return a;
+          if (newDay < a.quarantineUntilDay) return a;
+          // Period over — 2% residual disease risk even with pen
+          const escaped = Math.random() < 0.02;
+          return {
+            ...a,
+            quarantineUntilDay: undefined,
+            ...(escaped ? { sick: true, sicknessDay: newDay } : {}),
+          };
+        });
+
+        // ── Sick bay auto-isolation ───────────────────────────────────────────
+        const hasVetWorker = (state.workers ?? []).some((w: OwnedWorker) => w.typeId === 'vet');
+        const sickBayCap = state.sickBayCapacity ?? 0;
+        if (sickBayCap > 0 && hasVetWorker) {
+          let isolatedCount = animals.filter((a: OwnedAnimal) => a.inIsolation).length;
+          animals = animals.map((a: OwnedAnimal) => {
+            if (!a.sick) return { ...a, inIsolation: false };
+            if (a.inIsolation) return a;
+            if (isolatedCount >= sickBayCap) return a;
+            isolatedCount++;
+            return { ...a, inIsolation: true };
+          });
+        }
+
+        // Auto-treat animals in sick bay (vet handles them)
+        if (sickBayCap > 0 && hasVetWorker) {
+          animals = animals.map((a: OwnedAnimal) => {
+            if (a.sick && a.inIsolation) {
+              return { ...a, sick: false, sicknessDay: undefined, inIsolation: false };
+            }
+            return a;
+          });
+        }
+
         animals = animals
           .filter((a: OwnedAnimal) => {
             if (a.sick && a.sicknessDay !== undefined && newDay - a.sicknessDay >= 14) {
+              if (a.inIsolation && sickBayCap > 0 && hasVetWorker) return true; // treated, kept
               diedIds.push(a.id);
               return false;
             }
             return true;
           })
           .map((a: OwnedAnimal) => {
+            if (a.inIsolation) return a; // isolated — cannot contract illness from spread
             if (a.sick) return a;
             const baseSickChance = (a.traits ?? []).includes('hardy') ? 0.006 : 0.015;
             const hardinessDiv = a.genes?.hardiness ?? 1.0;
