@@ -151,6 +151,14 @@ export const PRODUCTION_EQUIPMENT: EquipmentItem[] = [
     effectLabel: 'Captures beeswax as a sellable byproduct',
     slot: 3,
   },
+  {
+    id: 'eq_pregnancy_scanner',
+    name: 'Pregnancy Scanner',
+    cost: 9500,
+    applicableBuildingPrefixes: ['bld_calving_pen'],
+    effectLabel: 'Due dates appear in calendar · pen capacity warning 3 days before birth',
+    slot: 1,
+  },
 ];
 
 export const BUILDING_TYPES: BuildingType[] = [
@@ -686,6 +694,21 @@ export const BUILDING_TYPES: BuildingType[] = [
   { id: 'bld_honey_extraction_suite_s', name: 'Small Honey Extraction Suite', category: 'production', cost: 12000, maintenancePerDay: 4, animalTypeId: 'abeja', dailyCapacity: 5, buildingTier: 'small', equipmentSlotCount: 3, effectLabel: '5 hives per harvest · 40% yield without equipment' },
   { id: 'bld_honey_extraction_suite_m', name: 'Medium Honey Extraction Suite', category: 'production', cost: 30000, maintenancePerDay: 8, animalTypeId: 'abeja', dailyCapacity: 12, buildingTier: 'medium', equipmentSlotCount: 3, effectLabel: '12 hives per harvest · 40% yield without equipment' },
   { id: 'bld_honey_extraction_suite_l', name: 'Large Honey Extraction Suite', category: 'production', cost: 70000, maintenancePerDay: 16, animalTypeId: 'abeja', dailyCapacity: 25, buildingTier: 'large', equipmentSlotCount: 3, effectLabel: '25 hives per harvest · 40% yield without equipment' },
+
+  // ── Breeding Infrastructure ────────────────────────────────────────────────
+  { id: 'bld_quarantine_pen',       name: 'Quarantine Pen',                      category: 'production', cost: 8000,  maintenancePerDay: 4,  capacity: 10,  effectLabel: 'New arrivals isolated 14 days · disease intro risk 2% (vs 15%)' },
+  { id: 'bld_calving_pen_s',        name: 'Small Calving / Farrowing Pen',       category: 'production', cost: 12000, maintenancePerDay: 5,  capacity: 2,   buildingTier: 'small',  effectLabel: '2 simultaneous births · newborn mortality 5% (vs 25%)' },
+  { id: 'bld_calving_pen_m',        name: 'Medium Calving / Farrowing Pen',      category: 'production', cost: 28000, maintenancePerDay: 10, capacity: 5,   buildingTier: 'medium', effectLabel: '5 simultaneous births · newborn mortality 5% (vs 25%)' },
+  { id: 'bld_calving_pen_l',        name: 'Large Calving / Farrowing Pen',       category: 'production', cost: 60000, maintenancePerDay: 18, capacity: 10,  buildingTier: 'large',  effectLabel: '10 simultaneous births · newborn mortality 5% (vs 25%)' },
+  { id: 'bld_sire_pen',             name: 'Sire Pen',                            category: 'production', cost: 15000, maintenancePerDay: 6,  capacity: 4,   effectLabel: 'Enables free on-farm breeding using designated sires' },
+  // ── Veterinary & Health Infrastructure ────────────────────────────────────
+  { id: 'bld_vet_room',             name: 'Vet Room',                            category: 'production', cost: 22000, maintenancePerDay: 8,  effectLabel: 'Eliminates callout fee for routine vet events · vet worker handles auto-treatments' },
+  { id: 'bld_medicine_cabinet',     name: 'Medicine Cabinet',                    category: 'production', cost: 9000,  maintenancePerDay: 2,  effectLabel: 'Medicines maintain shelf life · enables bulk purchase discounts' },
+  { id: 'bld_isolation_sick_bay_s', name: 'Small Sick Bay',                      category: 'production', cost: 14000, maintenancePerDay: 5,  capacity: 5,   buildingTier: 'small',  effectLabel: '5 animals isolated · disease spread near zero when vet assigned' },
+  { id: 'bld_isolation_sick_bay_m', name: 'Medium Sick Bay',                     category: 'production', cost: 30000, maintenancePerDay: 10, capacity: 15,  buildingTier: 'medium', effectLabel: '15 animals isolated · disease spread near zero when vet assigned' },
+  { id: 'bld_cattle_crush',         name: 'Cattle Crush',                        category: 'production', cost: 10000, maintenancePerDay: 3,  effectLabel: 'Cattle treatments same day at standard cost · required for Weigh Crate' },
+  { id: 'bld_weigh_crate',          name: 'Weigh Crate',                         category: 'production', cost: 8000,  maintenancePerDay: 2,  effectLabel: 'Flags optimal slaughter weight · +5% sale bonus · requires Cattle Crush' },
+  { id: 'bld_cctv_monitor',         name: 'CCTV Monitor',                        category: 'production', cost: 12000, maintenancePerDay: 3,  effectLabel: 'Overnight surveillance · −1 worker requirement across all animal buildings' },
 ];
 
 export const BUILDING_CATEGORY_LABELS: Record<BuildingCategory, string> = {
