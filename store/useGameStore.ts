@@ -11,10 +11,18 @@ import { CROP_TYPES } from '../data/cropTypes';
 import { MACHINE_TYPES, MachineType } from '../data/machineTypes';
 import { BUILDING_TYPES, PRODUCTION_EQUIPMENT, EquipmentItem } from '../data/buildingTypes';
 import {
+  PRODUCTION_BUILDING_PREFIX,
   DAIRY_SPECIES,
   effectiveCapacity,
   isManned,
+  contractorFee,
+  hygieneDecay,
+  welfareScore,
   milkGrade,
+  shouldInspect,
+  inspectionPassed,
+  inspectorFine,
+  certificationProgress,
   seasonKey,
 } from '../engine/productionBuildings';
 import { INSURANCE_PLANS, InsuranceType } from '../data/insuranceTypes';
@@ -2862,6 +2870,144 @@ export const useGameStore = create<GameState>()(
         }
         const updatedHenilQueue = (state.henilQueue ?? []).filter((b: HenilBatch) => b.readyDay > newDay);
 
+        // ── Production buildings processing ───────────────────────────────
+        const isCoopMember = state.cooperative?.member ?? false;
+        let productionBuildingContractorFees = 0;
+        const newProductionBuildings = (state.productionBuildings ?? []).map(pb => {
+          const bt = BUILDING_TYPES.find(b => b.id === pb.buildingTypeId);
+          if (!bt) return pb;
+
+          const herdSize = (state.animals ?? []).filter(a => a.typeId === pb.animalTypeId).length;
+          const sickCount = (state.animals ?? []).filter(a => a.typeId === pb.animalTypeId && (a as any).sick).length;
+          const effCap = effectiveCapacity(pb);
+          const manned = isManned(pb, bt.buildingTier ?? 'small');
+
+          // Contractor fee: unmanned building = full fee; partial coverage = proportional fee
+          const unprocessedFraction = !manned
+            ? 1.0
+            : Math.max(0, (herdSize - effCap) / Math.max(herdSize, 1));
+
+          if (unprocessedFraction > 0 && herdSize > 0) {
+            const productPrice = (state.animalPrices ?? {})[pb.animalTypeId] ?? 1;
+            const dailyValue = herdSize * productPrice;
+            const fee = contractorFee(unprocessedFraction, dailyValue, isCoopMember);
+            if (fee > 0) {
+              productionBuildingContractorFees += fee;
+              summary.push({
+                id: `contractor_fee_${pb.animalTypeId}`,
+                icon: '🚚',
+                title: `Contractor processing ${bt.name} — $${fee}`,
+                detail: manned ? 'Building at capacity — upgrade to process full herd' : 'Building unmanned — assign a farmhand',
+                severity: 'warning',
+              });
+            }
+          }
+
+          // Hygiene decay
+          const hasCleanerWorker = pb.assignedWorkerIds.some(wid =>
+            ((state.workers ?? []).find((w: OwnedWorker) => w.id === wid)?.typeId as string) === 'farmhand'
+          );
+          const hasUVSanitiser = pb.equipmentSlots.includes('eq_uv_sanitiser');
+          const decay = hygieneDecay(pb.animalTypeId, herdSize, effCap, hasCleanerWorker, hasUVSanitiser);
+          let newHygiene = Math.max(0, Math.min(100, pb.hygiene - decay));
+
+          // Inspector event
+          let fine = 0;
+          let inspectPassed = false;
+          let inspectHappened = false;
+          if (shouldInspect(newHygiene)) {
+            inspectHappened = true;
+            inspectPassed = inspectionPassed(newHygiene);
+            if (!inspectPassed) {
+              fine = inspectorFine(newHygiene);
+              productionBuildingContractorFees += fine;
+              newHygiene = Math.max(0, newHygiene - 10); // hygiene penalty on failed inspection
+              summary.push({
+                id: `inspect_fail_${pb.id}`,
+                icon: '🔍',
+                title: `Inspector failed ${bt.name} — $${fine} fine`,
+                detail: 'Hygiene −10. Improve sanitation to avoid repeat visits.',
+                severity: 'danger',
+              });
+            } else {
+              summary.push({
+                id: `inspect_pass_${pb.id}`,
+                icon: '🔍',
+                title: `Inspector passed ${bt.name}`,
+                severity: 'good',
+              });
+            }
+          }
+
+          // Season end deep clean prompt
+          const currentSeason = seasonKey(newDay);
+          const prevSeason = seasonKey(newDay - 1);
+          if (currentSeason !== prevSeason && pb.lastDeepCleanSeason !== prevSeason) {
+            summary.push({
+              id: `deep_clean_${pb.id}`,
+              icon: '🧹',
+              title: `${bt.name} needs a deep clean`,
+              detail: 'Assign a farmhand or pay a contractor ($150–$400) in the Management tab',
+              severity: 'warning',
+            });
+            // Hygiene penalty for skipping
+            return {
+              ...pb,
+              hygiene: Math.min(newHygiene, 40),
+              ...certificationProgress({ ...pb, hygiene: Math.min(newHygiene, 40) }, newDay, state.lastSyntheticInputDay, false),
+            };
+          }
+
+          // Certification progress
+          const newCert = certificationProgress(
+            { ...pb, hygiene: newHygiene },
+            newDay,
+            state.lastSyntheticInputDay,
+            inspectHappened && inspectPassed,
+          );
+
+          if (newCert.certificationTier !== pb.certificationTier) {
+            const emoji = newCert.certificationTier === 'organic' ? '🌿' : newCert.certificationTier === 'certified' ? '✅' : '⬇️';
+            summary.push({
+              id: `cert_change_${pb.id}`,
+              icon: emoji,
+              title: `${bt.name} is now ${newCert.certificationTier} certified`,
+              severity: newCert.certificationTier === 'basic' ? 'warning' : 'good',
+            });
+          }
+
+          return {
+            ...pb,
+            hygiene: newHygiene,
+            ...newCert,
+          };
+        });
+
+        // Welfare scores — recalculate per species
+        const newWelfareScores: Record<string, number> = { ...(state.animalWelfareScores ?? {}) };
+        const newMilkGrades: Record<string, 'A' | 'B' | 'C'> = { ...(state.milkGrades ?? {}) };
+
+        for (const pb of newProductionBuildings) {
+          const herdSize = (state.animals ?? []).filter(a => a.typeId === pb.animalTypeId).length;
+          const sickCount = (state.animals ?? []).filter(a => a.typeId === pb.animalTypeId && (a as any).sick).length;
+          const effCap = effectiveCapacity(pb);
+          const isLargeLivestock = pb.animalTypeId === 'vaca' || pb.animalTypeId === 'bufalo' || pb.animalTypeId === 'cabra' || pb.animalTypeId === 'oveja';
+          const feedRatio = isLargeLivestock
+            ? Math.max(0, 1 - (newHayMissed / 7))
+            : Math.max(0, 1 - (newGrainMissed / 7));
+
+          newWelfareScores[pb.animalTypeId] = welfareScore(
+            pb.hygiene, feedRatio, herdSize, effCap, sickCount, herdSize
+          );
+
+          // Milk grade (dairy only)
+          if (DAIRY_SPECIES.has(pb.animalTypeId)) {
+            const hasMilkAnalyser = pb.equipmentSlots.includes('eq_milk_analyser');
+            newMilkGrades[pb.animalTypeId] = milkGrade(pb.hygiene, hasMilkAnalyser);
+          }
+        }
+        // ── End production buildings processing ───────────────────────────
+
         // Milestone checks
         const newlyUnlocked = checkNewMilestones(
           {
@@ -2919,7 +3065,7 @@ export const useGameStore = create<GameState>()(
           : [];
         set({
           day: newDay,
-          money: finalMoney + showPrizeMoney + deliveryRevenue - deliveryRepairCost,
+          money: finalMoney + showPrizeMoney + deliveryRevenue - deliveryRepairCost - productionBuildingContractorFees,
           showWindowOpen,
           showEntries: season !== prevSeason
             ? (state.showEntries ?? []).filter(e => {
@@ -2965,6 +3111,9 @@ export const useGameStore = create<GameState>()(
           animalInventory,
           grainMissedDays: newGrainMissed,
           hayMissedDays: newHayMissed,
+          productionBuildings: newProductionBuildings,
+          animalWelfareScores: newWelfareScores,
+          milkGrades: newMilkGrades,
           animalsManuallyFed: false,
           henilQueue: updatedHenilQueue,
           harvestedCropIds: harvestedCropIdsForSet,
@@ -3491,6 +3640,26 @@ export const useGameStore = create<GameState>()(
 
       sellAnimalProduct: (productType, units) => {
         const state = get();
+        // Milk grade multiplier — dairy products only
+        const DAIRY_PRODUCT_SPECIES: Record<string, string> = {
+          milk: 'vaca',
+          goat_milk: 'cabra',
+          buffalo_milk: 'bufalo',
+        };
+        const speciesForProduct = DAIRY_PRODUCT_SPECIES[productType];
+        const grade = speciesForProduct
+          ? ((state.milkGrades ?? {})[speciesForProduct] ?? 'B')
+          : null;
+
+        // Grade C milk is rejected by city and export markets
+        if (grade === 'C') {
+          const activeMarket = state.selectedMarket ?? 'local';
+          if (activeMarket === 'city' || activeMarket === 'export') {
+            return;
+          }
+        }
+
+        const gradeMultiplier = grade === 'A' ? 1.10 : grade === 'C' ? 0.75 : 1.00;
         const { ANIMAL_PRODUCTS } = require('../data/animalProducts');
         const product = ANIMAL_PRODUCTS.find((p: any) => p.productType === productType);
         if (!product) return;
@@ -3500,7 +3669,7 @@ export const useGameStore = create<GameState>()(
         const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
         const livePrice = (state.animalPrices ?? {})[productType] ?? product.basePrice;
-        const revenue = sellRevenue(toSell, livePrice) * coopBonus * prestigeBonus;
+        const revenue = Math.round(sellRevenue(toSell, livePrice) * coopBonus * prestigeBonus * gradeMultiplier);
         set({
           money: state.money + revenue,
           animalInventory: { ...state.animalInventory, [productType]: inStock - toSell },
