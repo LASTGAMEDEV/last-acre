@@ -1692,10 +1692,18 @@ export const useGameStore = create<GameState>()(
         // ── Sick bay auto-isolation ───────────────────────────────────────────
         const hasVetWorker = (state.workers ?? []).some((w: OwnedWorker) => w.typeId === 'vet');
         const sickBayCap = state.sickBayCapacity ?? 0;
+
+        // Always clear isolation on healthy animals (handles case where sick bay is later removed)
+        animals = animals.map((a: OwnedAnimal) => {
+          if (!a.sick && a.inIsolation) return { ...a, inIsolation: false };
+          return a;
+        });
+
+        // Fill sick bay when available
         if (sickBayCap > 0 && hasVetWorker) {
           let isolatedCount = animals.filter((a: OwnedAnimal) => a.inIsolation).length;
           animals = animals.map((a: OwnedAnimal) => {
-            if (!a.sick) return { ...a, inIsolation: false };
+            if (!a.sick) return a;
             if (a.inIsolation) return a;
             if (isolatedCount >= sickBayCap) return a;
             isolatedCount++;
@@ -1713,27 +1721,29 @@ export const useGameStore = create<GameState>()(
           });
         }
 
-        animals = animals
-          .filter((a: OwnedAnimal) => {
-            if (a.sick && a.sicknessDay !== undefined && newDay - a.sicknessDay >= 14) {
-              if (a.inIsolation && sickBayCap > 0 && hasVetWorker) return true; // treated, kept
-              diedIds.push(a.id);
-              return false;
-            }
-            return true;
-          })
-          .map((a: OwnedAnimal) => {
-            if (a.inIsolation) return a; // isolated — cannot contract illness from spread
-            if (a.sick) return a;
-            const baseSickChance = (a.traits ?? []).includes('hardy') ? 0.006 : 0.015;
-            const hardinessDiv = a.genes?.hardiness ?? 1.0;
-            const sickChance = baseSickChance * (1 - workerBonuses.sicknessBonusReduction) / hardinessDiv;
-            if (Math.random() < sickChance) {
-              newSickIds.push(a.id);
-              return { ...a, sick: true, sicknessDay: newDay };
-            }
-            return a;
-          });
+        // Sickness spread — must run BEFORE death filter
+        animals = animals.map((a: OwnedAnimal) => {
+          if (a.inIsolation) return a; // isolated — cannot contract illness from spread
+          if (a.sick) return a;
+          const baseSickChance = (a.traits ?? []).includes('hardy') ? 0.006 : 0.015;
+          const hardinessDiv = a.genes?.hardiness ?? 1.0;
+          const sickChance = baseSickChance * (1 - workerBonuses.sicknessBonusReduction) / hardinessDiv;
+          if (Math.random() < sickChance) {
+            newSickIds.push(a.id);
+            return { ...a, sick: true, sicknessDay: newDay };
+          }
+          return a;
+        });
+
+        // Death filter — runs AFTER sickness spread
+        animals = animals.filter((a: OwnedAnimal) => {
+          if (a.sick && a.sicknessDay !== undefined && newDay - a.sicknessDay >= 14) {
+            if (a.inIsolation && sickBayCap > 0 && hasVetWorker) return true; // safety net
+            diedIds.push(a.id);
+            return false;
+          }
+          return true;
+        });
         if (newSickIds.length > 0) {
           summary.push({ id: 'animals_sick', icon: '🤒', title: `${newSickIds.length} animal${newSickIds.length > 1 ? 's' : ''} fell sick`, detail: 'Treat within 14 days or they will die', severity: 'warning' });
         }
