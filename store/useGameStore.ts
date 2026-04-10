@@ -4315,6 +4315,7 @@ export const useGameStore = create<GameState>()(
         if (!building || state.money < building.cost) return;
         // Industrial buildings are singletons — block duplicate purchase
         if (building.category === 'industrial' && state.buildings.includes(buildingId)) return;
+        if (state.buildings.includes(buildingId)) return;
         const newBuildings = [...state.buildings, buildingId];
         const sickBayCapacity = newBuildings.reduce((cap: number, bid: string) => {
           if (bid === 'bld_isolation_sick_bay_s') return cap + 5;
@@ -4333,7 +4334,6 @@ export const useGameStore = create<GameState>()(
 
       designateAsSire: (animalId) => {
         const state = get();
-        const { BUILDING_TYPES } = require('../data/buildingTypes');
         const animal = (state.animals ?? []).find((a: OwnedAnimal) => a.id === animalId);
         if (!animal || animal.sex !== 'male') return;
         if (!state.buildings.includes('bld_sire_pen')) return;
@@ -5132,6 +5132,7 @@ export const useGameStore = create<GameState>()(
           startHybridization, selectSeedForParcel, startRepair,
           buyAttachment, buyTrailer, hitchTrailer, assignJob, assignHarvestJob, hireContractor,
           selectMapField, buyMapField, scoutMapField, savePanZoom,
+          designateAsSire, removeFromSirePen,
           ...dataState
         } = state;
         return dataState;
