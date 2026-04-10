@@ -82,6 +82,9 @@ export interface OwnedAnimal {
   parentIds?: [string, string];                      // [motherId, fatherId]
   grandparentIds?: [string, string, string, string]; // [MM, MF, FM, FF]
   lactationStartDay?: number;  // day she last gave birth (cows & goats only)
+  quarantineUntilDay?: number;    // day quarantine ends; undefined = not in quarantine
+  inIsolation?: boolean;          // true = moved to sick bay; excluded from disease spread
+  optimalWeightReached?: boolean; // true = within 5% of optimal slaughter weight
 }
 
 /** Effective maturity days accounting for fast_maturing trait and growth gene. */
@@ -110,6 +113,34 @@ export const LACTATION_PARAMS: Record<string, { lactatingDays: number; dryDays: 
   cabra:  { lactatingDays: 200, dryDays: 45,  breedAfterDryDay: 20 },
   bufalo: { lactatingDays: 270, dryDays: 60,  breedAfterDryDay: 30 },
 };
+
+/**
+ * Optimal slaughter weight expressed as a multiplier of the animal's maturityDays.
+ * An animal is "at optimal weight" when its age is within 5% of targetAge.
+ */
+export const OPTIMAL_SLAUGHTER_WEIGHTS: Partial<Record<string, { targetAgeMultiplier: number }>> = {
+  vaca:   { targetAgeMultiplier: 1.6 },
+  cerdo:  { targetAgeMultiplier: 1.1 },
+  oveja:  { targetAgeMultiplier: 1.2 },
+  cabra:  { targetAgeMultiplier: 1.3 },
+  bufalo: { targetAgeMultiplier: 1.8 },
+};
+
+/**
+ * Returns true if the animal is within 5% of its optimal slaughter age.
+ * Only meaningful for beef/pork/lamb/goat/buffalo species.
+ */
+export function isAtOptimalWeight(
+  animal: OwnedAnimal,
+  animalType: { id: string; maturityDays: number },
+  currentDay: number,
+): boolean {
+  const spec = OPTIMAL_SLAUGHTER_WEIGHTS[animalType.id];
+  if (!spec) return false;
+  const targetAge = animalType.maturityDays * spec.targetAgeMultiplier;
+  const age = currentDay - animal.bornDay;
+  return Math.abs(age - targetAge) / targetAge <= 0.05;
+}
 
 /** Returns 'lactating', 'dry', or 'none' (non-dairy species). */
 export function getLactationState(
