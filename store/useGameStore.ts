@@ -4444,14 +4444,14 @@ export const useGameStore = create<GameState>()(
       purchaseProductionBuilding: (buildingTypeId) => {
         const state = get();
         const bt = BUILDING_TYPES.find(b => b.id === buildingTypeId);
-        if (!bt || bt.category !== 'production') return;
+        if (!bt || bt.category !== 'production' || !bt.animalTypeId) return;
         if (state.money < bt.cost) return;
         // Only one production building per species
         if (state.productionBuildings.some(pb => pb.animalTypeId === bt.animalTypeId)) return;
         const newBuilding: ProductionBuildingState = {
           id: `pb_${Date.now()}`,
           buildingTypeId,
-          animalTypeId: bt.animalTypeId!,
+          animalTypeId: bt.animalTypeId,
           hygiene: 100,
           certificationTier: 'basic',
           certDaysAtThreshold: 0,
@@ -4471,12 +4471,17 @@ export const useGameStore = create<GameState>()(
         const state = get();
         const pb = state.productionBuildings.find(b => b.id === buildingId);
         if (!pb) return;
+        const workerExists = (state.workers ?? []).some(w => w.id === workerId);
+        if (!workerExists) return;
         if (pb.assignedWorkerIds.includes(workerId)) return;
         // A worker can only be assigned to one production building
         const alreadyAssigned = state.productionBuildings.some(b =>
           b.id !== buildingId && b.assignedWorkerIds.includes(workerId)
         );
         if (alreadyAssigned) return;
+        const bt2 = BUILDING_TYPES.find(b => b.id === pb.buildingTypeId);
+        const maxWorkers = bt2?.buildingTier === 'large' ? 2 : 1;
+        if (pb.assignedWorkerIds.length >= maxWorkers) return;
         set({
           productionBuildings: state.productionBuildings.map(b =>
             b.id === buildingId
@@ -4487,13 +4492,14 @@ export const useGameStore = create<GameState>()(
       },
 
       unassignWorkerFromBuilding: (buildingId, workerId) => {
-        set(state => ({
+        const state = get();
+        set({
           productionBuildings: state.productionBuildings.map(b =>
             b.id === buildingId
               ? { ...b, assignedWorkerIds: b.assignedWorkerIds.filter(id => id !== workerId) }
               : b
           ),
-        }));
+        });
       },
 
       installEquipment: (buildingId, equipmentItemId) => {
