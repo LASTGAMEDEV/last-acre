@@ -4310,11 +4310,8 @@ export const useGameStore = create<GameState>()(
 
       buyBuilding: (buildingId) => {
         const state = get();
-        const { BUILDING_TYPES } = require('../data/buildingTypes');
         const building = BUILDING_TYPES.find((b: any) => b.id === buildingId);
         if (!building || state.money < building.cost) return;
-        // Industrial buildings are singletons — block duplicate purchase
-        if (building.category === 'industrial' && state.buildings.includes(buildingId)) return;
         if (state.buildings.includes(buildingId)) return;
         const newBuildings = [...state.buildings, buildingId];
         const sickBayCapacity = newBuildings.reduce((cap: number, bid: string) => {
