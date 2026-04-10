@@ -527,6 +527,12 @@ export interface GameState {
   milkGrades: Record<string, 'A' | 'B' | 'C'>;  // animalTypeId → grade (dairy species only)
   // Organic certification tracking (farm-wide)
   lastSyntheticInputDay: number;                  // day last pesticide/chemical fertilizer was used
+  // Breeding & Veterinary infrastructure (Plan 2)
+  sirePenAnimalIds: string[];         // animals designated as sires
+  vetRoomOwned: boolean;              // derived from buildings.includes('bld_vet_room')
+  medicineCabinetOwned: boolean;      // derived from buildings.includes('bld_medicine_cabinet')
+  hasCCTV: boolean;                   // derived from buildings.includes('bld_cctv_monitor')
+  sickBayCapacity: number;            // sum of capacity from owned sick bay buildings
 
   harvestJobs: HarvestJob[];
   npcFarms: NPCFarm[];
@@ -705,6 +711,8 @@ export interface GameState {
   buyMapField: (id: string) => void;
   scoutMapField: (id: string) => void;
   savePanZoom: (x: number, y: number, zoom: number) => void;
+  designateAsSire: (animalId: string) => void;
+  removeFromSirePen: (animalId: string) => void;
 }
 
 const FIELD_NAMES: string[] = [
@@ -924,6 +932,11 @@ function makeInitialState() {
     animalWelfareScores: {},
     milkGrades: {},
     lastSyntheticInputDay: -999,
+    sirePenAnimalIds: [],
+    vetRoomOwned: false,
+    medicineCabinetOwned: false,
+    hasCCTV: false,
+    sickBayCapacity: 0,
     pendingPickup: [],
     priceAlerts: [] as PriceAlert[],
     showEntries: [] as ShowEntry[],
@@ -4302,7 +4315,37 @@ export const useGameStore = create<GameState>()(
         if (!building || state.money < building.cost) return;
         // Industrial buildings are singletons — block duplicate purchase
         if (building.category === 'industrial' && state.buildings.includes(buildingId)) return;
-        set({ money: state.money - building.cost, buildings: [...state.buildings, buildingId] });
+        const newBuildings = [...state.buildings, buildingId];
+        const sickBayCapacity = newBuildings.reduce((cap: number, bid: string) => {
+          if (bid === 'bld_isolation_sick_bay_s') return cap + 5;
+          if (bid === 'bld_isolation_sick_bay_m') return cap + 15;
+          return cap;
+        }, 0);
+        set({
+          money: state.money - building.cost,
+          buildings: newBuildings,
+          vetRoomOwned:         newBuildings.includes('bld_vet_room'),
+          medicineCabinetOwned: newBuildings.includes('bld_medicine_cabinet'),
+          hasCCTV:              newBuildings.includes('bld_cctv_monitor'),
+          sickBayCapacity,
+        });
+      },
+
+      designateAsSire: (animalId) => {
+        const state = get();
+        const { BUILDING_TYPES } = require('../data/buildingTypes');
+        const animal = (state.animals ?? []).find((a: OwnedAnimal) => a.id === animalId);
+        if (!animal || animal.sex !== 'male') return;
+        if (!state.buildings.includes('bld_sire_pen')) return;
+        const maxSires = BUILDING_TYPES.find((b: any) => b.id === 'bld_sire_pen')?.capacity ?? 4;
+        if ((state.sirePenAnimalIds ?? []).length >= maxSires) return;
+        if ((state.sirePenAnimalIds ?? []).includes(animalId)) return;
+        set({ sirePenAnimalIds: [...(state.sirePenAnimalIds ?? []), animalId] });
+      },
+
+      removeFromSirePen: (animalId) => {
+        const state = get();
+        set({ sirePenAnimalIds: (state.sirePenAnimalIds ?? []).filter((id: string) => id !== animalId) });
       },
 
       clearWeeds: (parcelId) => {
