@@ -587,7 +587,7 @@ const smk = StyleSheet.create({
 });
 
 // ── Henil ─────────────────────────────────────────────────────────────────────
-function HenilSection() {
+function HenilAndBuildingsSection() {
   const {
     henilQueue, addToHenil, day, inventory, buildings,
   } = useGameStore();
@@ -650,8 +650,13 @@ function HenilSection() {
               <Text style={{ color: '#666', fontSize: 12 }}>Build a Henil to convert grass into hay for your animals.</Text>
             </View>
           )}
+          <ProductionBuildingsSection />
     </ScrollView>
   );
+}
+
+function HenilSection() {
+  return <HenilAndBuildingsSection />;
 }
 
 // ── Production Buildings ──────────────────────────────────────────────────────
@@ -789,7 +794,7 @@ function ProductionBuildingsSection() {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-type OfficeTab = 'dashboard' | 'office' | 'calendar' | 'settings' | 'guide' | 'seeds' | 'henil' | 'buildings';
+type OfficeTab = 'dashboard' | 'office' | 'calendar' | 'settings' | 'guide' | 'seeds' | 'henil';
 
 const TABS: { id: OfficeTab; label: string }[] = [
   { id: 'dashboard', label: '🏠 Home' },
@@ -797,7 +802,6 @@ const TABS: { id: OfficeTab; label: string }[] = [
   { id: 'calendar',  label: '📅 Calendar' },
   { id: 'seeds',     label: '🌱 Seeds' },
   { id: 'henil',     label: '🌿 Henil' },
-  { id: 'buildings', label: '🏭 Buildings' },
   { id: 'settings',  label: '⚙️ Settings' },
   { id: 'guide',     label: '📖 Guide' },
 ];
@@ -826,7 +830,6 @@ export default function GestionScreen() {
       {tab === 'calendar'  && <CalendarioScreen />}
       {tab === 'seeds'     && <SeedMarketSection />}
       {tab === 'henil'     && <HenilSection />}
-      {tab === 'buildings' && <ProductionBuildingsSection />}
       {tab === 'settings'  && <SettingsSection />}
       {tab === 'guide'     && <Encyclopedia />}
     </View>
