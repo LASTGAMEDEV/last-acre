@@ -77,6 +77,30 @@ function MilkGradeBadge({ animalTypeId, milkGrades }: { animalTypeId: string; mi
   );
 }
 
+function QuarantineBadge({ animal, day }: { animal: OwnedAnimal; day: number }) {
+  if (!animal.quarantineUntilDay || animal.quarantineUntilDay <= day) return null;
+  const remaining = animal.quarantineUntilDay - day;
+  return (
+    <Text style={{ color: '#ff9800', fontSize: 10 }}>
+      🔒 In quarantine — {remaining} day{remaining !== 1 ? 's' : ''} remaining
+    </Text>
+  );
+}
+
+function IsolationBadge({ animal }: { animal: OwnedAnimal }) {
+  if (!animal.inIsolation) return null;
+  return (
+    <Text style={{ color: '#29b6f6', fontSize: 10 }}>🏥 In sick bay (isolated)</Text>
+  );
+}
+
+function OptimalWeightBadge({ animal }: { animal: OwnedAnimal }) {
+  if (!animal.optimalWeightReached) return null;
+  return (
+    <Text style={{ color: '#66bb6a', fontSize: 10, fontWeight: 'bold' }}>⚖ Optimal weight — +5% sale bonus</Text>
+  );
+}
+
 function geneGrade(v: number): string {
   if (v >= 1.4) return 'S';
   if (v >= 1.2) return 'A';
@@ -140,6 +164,7 @@ export default function AnimalesScreen() {
     workers, grainMissedDays, hayMissedDays, feedAnimals, inventory, animalsManuallyFed,
     trailers, deliveryJobs,
     productionBuildings, animalWelfareScores, milkGrades,
+    designateAsSire, removeFromSirePen, sirePenAnimalIds,
   } = useGameStore();
   const fairMult = activeFair ? (1 - activeFair.discount) : 1.0;
   const hasAnimalWorker = (workers ?? []).some(
@@ -306,6 +331,18 @@ export default function AnimalesScreen() {
 
       {/* Owned animals */}
       <Text style={styles.sectionLabel}>My animals ({animals.length})</Text>
+      {(() => {
+        const inQ = (animals ?? []).filter((a: OwnedAnimal) => a.quarantineUntilDay && a.quarantineUntilDay > day);
+        if (inQ.length === 0) return null;
+        const minR = Math.min(...inQ.map((a: OwnedAnimal) => a.quarantineUntilDay! - day));
+        return (
+          <View style={{ backgroundColor: '#3e2723', borderRadius: 8, marginHorizontal: 8, marginBottom: 6, padding: 10 }}>
+            <Text style={{ color: '#ff9800', fontWeight: 'bold', fontSize: 12 }}>
+              🔒 {inQ.length} animal{inQ.length !== 1 ? 's' : ''} in quarantine — {minR} day{minR !== 1 ? 's' : ''} remaining (soonest)
+            </Text>
+          </View>
+        );
+      })()}
       <FlatList
         data={animals}
         keyExtractor={a => a.id}
@@ -574,6 +611,9 @@ export default function AnimalesScreen() {
                   </TouchableOpacity>
                 </View>
               )}
+              <QuarantineBadge animal={item} day={day} />
+              <IsolationBadge animal={item} />
+              <OptimalWeightBadge animal={item} />
               {!item.sick && type.productionType && (
                 <TouchableOpacity style={styles.collectBtn} onPress={() => collectAnimalProduction(item.id)}>
                   <Text style={styles.btnText}>Collect</Text>
@@ -599,6 +639,20 @@ export default function AnimalesScreen() {
                   onPress={() => handleLiveAnimalSell(item.id, item.typeId)}
                 >
                   <Text style={styles.btnText}>🐄 Sell Live</Text>
+                </TouchableOpacity>
+              )}
+              {item.sex === 'male' && (buildings ?? []).includes('bld_sire_pen') && (
+                <TouchableOpacity
+                  style={{ backgroundColor: (sirePenAnimalIds ?? []).includes(item.id) ? '#4a148c' : '#1b5e20', borderRadius: 6, padding: 6, marginTop: 4 }}
+                  onPress={() =>
+                    (sirePenAnimalIds ?? []).includes(item.id)
+                      ? removeFromSirePen(item.id)
+                      : designateAsSire(item.id)
+                  }
+                >
+                  <Text style={{ color: '#fff', fontSize: 11 }}>
+                    {(sirePenAnimalIds ?? []).includes(item.id) ? '♂ Remove from Sire Pen' : '♂ Designate as Sire'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
