@@ -3583,7 +3583,7 @@ export const useGameStore = create<GameState>()(
         const hasSirePen = state.buildings.includes('bld_sire_pen');
         const sirePenIds = state.sirePenAnimalIds ?? [];
         const sirePenMale = (state.animals ?? []).find(
-          (a: OwnedAnimal) => sirePenIds.includes(a.id) && a.typeId === animal.typeId
+          (a: OwnedAnimal) => sirePenIds.includes(a.id) && a.typeId === animal.typeId && a.sex === 'male'
         );
         const fatherGenes = hasSirePen && sirePenMale
           ? sirePenMale.genes
