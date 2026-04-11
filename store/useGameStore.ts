@@ -2650,6 +2650,7 @@ export const useGameStore = create<GameState>()(
         const fuelPausedNames: string[] = [];
 
         // ── Process TractorJobs ──────────────────────────────────────────────
+        let tractorSlurryDrain = 0;
         const completedTractorJobIds: string[] = [];
         for (const job of (state.tractorJobs ?? [])) {
           if (job.completesDay > newDay) continue;
@@ -2700,6 +2701,22 @@ export const useGameStore = create<GameState>()(
               icon: '🌱',
               title: 'Planting Complete',
               detail: `${job.parcelIds.length} parcel(s) planted`,
+              severity: 'good' as const,
+            });
+          } else if (job.operation === 'spread_slurry') {
+            // Apply +1 fertility to all assigned parcels (clamped at 25)
+            finalParcels = finalParcels.map((p: LandParcel) =>
+              job.parcelIds.includes(p.id)
+                ? { ...p, fertility: Math.min(25, (p.fertility ?? 1) + 1) }
+                : p
+            );
+            // Drain the whole tank — tractor job empties it in one pass
+            tractorSlurryDrain = state.slurryLevel ?? 0;
+            summary.push({
+              id: `tj_${job.id}`,
+              icon: '💧',
+              title: 'Slurry Spread Complete',
+              detail: `${job.parcelIds.length} parcel(s) received +1 soil fertility`,
               severity: 'good' as const,
             });
           }
@@ -3229,7 +3246,7 @@ export const useGameStore = create<GameState>()(
         const dairyPigCount = animals.filter((a: OwnedAnimal) =>
           ['vaca', 'bufalo', 'cabra', 'cerdo'].includes(a.typeId)
         ).length;
-        let newSlurryLevel = state.slurryLevel ?? 0;
+        let newSlurryLevel = Math.max(0, (state.slurryLevel ?? 0) - tractorSlurryDrain);
         let slurryFine = 0;
         if (dailySlurryProduced > 0) {
           if (!hasSlurryTank && dairyPigCount > 15 && Math.random() < 0.03) {
