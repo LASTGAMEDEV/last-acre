@@ -1872,6 +1872,9 @@ export const useGameStore = create<GameState>()(
             const hasApiaryShelter = (state.buildings ?? []).includes('bld_apiary_shelter');
             const bees = animals.filter((a: OwnedAnimal) => a.typeId === 'abeja' && !a.sick);
             let collapseCount = 0;
+            // Note: collapsed colonies push to diedIds but do NOT incur the livestock
+            // disposal fee (computed earlier in this function) — colony collapse is
+            // environmental loss, not a carcass disposal event.
             bees.forEach((bee: OwnedAnimal) => {
               const collapseChance = hasApiaryShelter ? 0.04 : 0.20; // 4% vs 20% per colony
               if (Math.random() < collapseChance) {
