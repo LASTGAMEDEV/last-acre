@@ -136,9 +136,11 @@ function BuildingsTab() {
 
   const handleBuyBuilding = (buildingId: string) => {
     const bt = BUILDING_TYPES.find(b => b.id === buildingId);
-    if (bt?.category === 'production') {
+    if (bt?.category === 'production' && bt.animalTypeId) {
+      // Species-specific production buildings → production building state
       purchaseProductionBuilding(buildingId);
     } else {
+      // All other buildings (including vet/breeding/infrastructure) → generic buildings[]
       buyBuilding(buildingId);
     }
   };
@@ -155,7 +157,9 @@ function BuildingsTab() {
                 const bt = BUILDING_TYPES.find(b => b.id === building.id);
                 const ownedCount = buildings.filter(id => id === building.id).length;
                 const canAfford = money >= building.cost;
-                const alreadyOwned = bt?.category === 'production' && ownedProductionSpecies.has(bt?.animalTypeId ?? '');
+                const alreadyOwned =
+                  (bt?.category === 'production' && !!bt.animalTypeId && ownedProductionSpecies.has(bt.animalTypeId)) ||
+                  (bt?.category === 'production' && !bt.animalTypeId && (buildings ?? []).includes(building.id));
                 return (
                   <View key={building.id} style={styles.buildingCard}>
                     <Text style={styles.buildingName}>{building.name}</Text>
