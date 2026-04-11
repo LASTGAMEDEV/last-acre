@@ -4024,7 +4024,7 @@ export const useGameStore = create<GameState>()(
         const totalUnits = Math.round(units * graneroBonus);
 
         // Cream separator: 10% of milk output becomes cream (remaining 90% stays as milk)
-        const hasCreamSeparator = (state.buildings ?? []).includes('bld_cream_separator');
+        const hasCreamSeparator = state.buildings.includes('bld_cream_separator');
         const creamUnits = (hasCreamSeparator && animalType.productionType === 'milk')
           ? Math.floor(totalUnits * 0.1)
           : 0;
