@@ -4070,7 +4070,17 @@ export const useGameStore = create<GameState>()(
         const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
         const livePrice = (state.animalPrices ?? {})[productType] ?? product.basePrice;
-        const revenue = Math.round(sellRevenue(toSell, livePrice) * coopBonus * prestigeBonus * gradeMultiplier);
+        const hasWoolScouring = productType === 'wool' && (state.buildings ?? []).some((bid: string) =>
+          bid === 'bld_wool_scouring_s' || bid === 'bld_wool_scouring_m' || bid === 'bld_wool_scouring_l'
+        );
+        const woolScouringBonus = hasWoolScouring ? 1.30 : 1.0;
+
+        const hasSmokehouse = productType === 'meat' && (state.buildings ?? []).some((bid: string) =>
+          bid === 'bld_smokehouse_s' || bid === 'bld_smokehouse_m' || bid === 'bld_smokehouse_l'
+        );
+        const smokehouseBonus = hasSmokehouse ? 1.40 : 1.0;
+
+        const revenue = Math.round(sellRevenue(toSell, livePrice) * coopBonus * prestigeBonus * gradeMultiplier * woolScouringBonus * smokehouseBonus);
         set({
           money: state.money + revenue,
           animalInventory: { ...state.animalInventory, [productType]: inStock - toSell },
