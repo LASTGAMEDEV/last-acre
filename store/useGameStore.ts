@@ -4943,6 +4943,11 @@ export const useGameStore = create<GameState>()(
           soundEnabled: state.soundEnabled,
           hapticEnabled: state.hapticEnabled,
           musicEnabled: state.musicEnabled,
+          sirePenAnimalIds: [],
+          vetRoomOwned: false,
+          medicineCabinetOwned: false,
+          hasCCTV: false,
+          sickBayCapacity: 0,
         });
       },
 
@@ -5282,6 +5287,16 @@ export const useGameStore = create<GameState>()(
           ...dataState
         } = state;
         return dataState;
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const b = state.buildings ?? [];
+        state.vetRoomOwned         = b.includes('bld_vet_room');
+        state.medicineCabinetOwned = b.includes('bld_medicine_cabinet');
+        state.hasCCTV              = b.includes('bld_cctv_monitor');
+        state.sickBayCapacity      = (b.includes('bld_isolation_sick_bay_s') ? 5 : 0) +
+                                      (b.includes('bld_isolation_sick_bay_m') ? 15 : 0);
+        state.sirePenAnimalIds     = state.sirePenAnimalIds ?? [];
       },
     }
   )
