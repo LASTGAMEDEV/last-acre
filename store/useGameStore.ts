@@ -5304,6 +5304,9 @@ export const useGameStore = create<GameState>()(
           sickBayCapacity: 0,
           slurryLevel: 0,
           slurryCapacity: 0,
+          silageLevel: 0,
+          silageCapacity: 0,
+          biogasMode: 'income',
         });
       },
 
@@ -5657,6 +5660,11 @@ export const useGameStore = create<GameState>()(
                                       (b.includes('bld_slurry_tank_m') ? 15000 : 0) +
                                       (b.includes('bld_slurry_tank_l') ? 40000 : 0);
         state.slurryLevel          = state.slurryLevel ?? 0;
+        state.silageCapacity = (b.includes('bld_silage_pit_s') ? 5000 : 0) +
+                                (b.includes('bld_silage_pit_m') ? 15000 : 0) +
+                                (b.includes('bld_silage_pit_l') ? 40000 : 0);
+        state.silageLevel    = state.silageLevel ?? 0;
+        state.biogasMode     = state.biogasMode ?? 'income';
       },
     }
   )
