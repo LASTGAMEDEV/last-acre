@@ -3531,7 +3531,11 @@ export const useGameStore = create<GameState>()(
         const { sellValue } = require('../engine/animals');
         const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
-        const value = sellValue(animal, animalType, state.day) * coopBonus * prestigeBonus;
+        const baseValue = sellValue(animal, animalType, state.day) * coopBonus * prestigeBonus;
+        const weighCrateFunctional = (state.buildings ?? []).includes('bld_weigh_crate') &&
+          (state.buildings ?? []).includes('bld_cattle_crush');
+        const optimalBonus = weighCrateFunctional && (animal.optimalWeightReached ?? false) ? 1.05 : 1.0;
+        const value = Math.round(baseValue * optimalBonus);
         const nextPairs = { ...state.breedingPairs };
         delete nextPairs[animalId]; // in case she was a female with a preferred pair
         for (const [femId, maleId] of Object.entries(nextPairs)) {
