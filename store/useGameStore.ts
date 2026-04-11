@@ -1709,7 +1709,12 @@ export const useGameStore = create<GameState>()(
             if (!animalType) return false;
             const gestDays = (animalType as any).gestationDays ?? ((animalType as any).breedingDays ?? 0) * 2;
             if (gestDays === 0) return false;
-            const dueDay = (a as any).lastBreedDay + gestDays;
+            const lastBreedDay = a.lastBreedDay;
+            if (lastBreedDay === undefined || lastBreedDay === null) return false;
+            // Only warn if currently in active gestation window
+            if (newDay < lastBreedDay) return false;          // not yet bred (future date)
+            if (newDay > lastBreedDay + gestDays) return false; // gestation already over
+            const dueDay = lastBreedDay + gestDays;
             return dueDay >= newDay && dueDay <= newDay + 3;
           });
           if (imminentBirths.length > 0) {
@@ -3583,7 +3588,16 @@ export const useGameStore = create<GameState>()(
         const hasSirePen = state.buildings.includes('bld_sire_pen');
         const sirePenIds = state.sirePenAnimalIds ?? [];
         const sirePenMale = (state.animals ?? []).find(
-          (a: OwnedAnimal) => sirePenIds.includes(a.id) && a.typeId === animal.typeId && a.sex === 'male'
+          (a: OwnedAnimal) => {
+            if (!sirePenIds.includes(a.id)) return false;
+            if (a.typeId !== animal.typeId) return false;
+            if (a.sex !== 'male') return false;
+            // Check maturity using same method as existing father selection
+            const sirePenAnimalType = ANIMAL_TYPES.find((t: any) => t.id === a.typeId);
+            if (!sirePenAnimalType) return false;
+            const matureDays = (sirePenAnimalType as any).maturityDays ?? 0;
+            return (state.day - a.bornDay) >= matureDays;
+          }
         );
         const fatherGenes = hasSirePen && sirePenMale
           ? sirePenMale.genes
