@@ -591,6 +591,8 @@ function HenilAndBuildingsSection() {
   const {
     henilQueue, addToHenil, day, inventory, buildings,
     slurryLevel, slurryCapacity, spreadSlurry, attachments,
+    silageLevel, silageCapacity, fillSilagePit,
+    biogasMode, setBiogasMode,
   } = useGameStore();
 
   const hasHenil = (buildings ?? []).includes('bld_henil');
@@ -651,6 +653,12 @@ function HenilAndBuildingsSection() {
               <Text style={{ color: '#666', fontSize: 12 }}>Build a Henil to convert grass into hay for your animals.</Text>
             </View>
           )}
+          <SilageSection
+            silageLevel={silageLevel ?? 0}
+            silageCapacity={silageCapacity ?? 0}
+            fillSilagePit={fillSilagePit}
+            grassInStock={Math.floor(grassInStock)}
+          />
           <SlurrySection
             slurryLevel={slurryLevel ?? 0}
             slurryCapacity={slurryCapacity ?? 0}
@@ -659,8 +667,90 @@ function HenilAndBuildingsSection() {
               a.typeId === 'att_slurry_tanker_s' || a.typeId === 'att_slurry_tanker_l'
             )}
           />
+          {(buildings ?? []).includes('bld_biogas_upgrader') && (
+            <BiogasToggle
+              biogasMode={biogasMode ?? 'income'}
+              setBiogasMode={setBiogasMode}
+            />
+          )}
           <ProductionBuildingsSection />
     </ScrollView>
+  );
+}
+
+// ── Silage Section ────────────────────────────────────────────────────────────
+function SilageSection({
+  silageLevel,
+  silageCapacity,
+  fillSilagePit,
+  grassInStock,
+}: {
+  silageLevel: number;
+  silageCapacity: number;
+  fillSilagePit: (kg: number) => void;
+  grassInStock: number;
+}) {
+  if (silageCapacity <= 0) return null;
+  const fillPct = Math.min(1, silageLevel / silageCapacity);
+  const barColor = fillPct >= 0.9 ? '#4caf50' : fillPct >= 0.5 ? '#8bc34a' : '#ff9800';
+  const space = silageCapacity - silageLevel;
+  const canFill = grassInStock > 0 && space > 0;
+  return (
+    <View style={{ backgroundColor: '#1a2e1a', borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
+      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>🌿 Silage Pit</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+        <View style={{ flex: 1, backgroundColor: '#333', borderRadius: 4, height: 8, marginRight: 8 }}>
+          <View style={{ width: `${Math.round(fillPct * 100)}%`, backgroundColor: barColor, borderRadius: 4, height: 8 }} />
+        </View>
+        <Text style={{ color: '#aaa', fontSize: 11 }}>
+          {silageLevel.toLocaleString()} / {silageCapacity.toLocaleString()} kg
+        </Text>
+      </View>
+      {canFill && (
+        <TouchableOpacity
+          style={{ backgroundColor: '#388e3c', borderRadius: 6, padding: 8, marginTop: 8, alignItems: 'center' }}
+          onPress={() => fillSilagePit(Math.floor(Math.min(grassInStock, space)))}
+        >
+          <Text style={{ color: '#fff', fontSize: 12 }}>
+            Fill with Grass ({Math.floor(Math.min(grassInStock, space))} kg available)
+          </Text>
+        </TouchableOpacity>
+      )}
+      {!canFill && space > 0 && (
+        <Text style={{ color: '#888', fontSize: 11, marginTop: 6 }}>No grass in stock to fill pit</Text>
+      )}
+      {space <= 0 && (
+        <Text style={{ color: '#4caf50', fontSize: 11, marginTop: 6 }}>Pit full — spread or wait for winter feed draw</Text>
+      )}
+    </View>
+  );
+}
+
+// ── Biogas Toggle ─────────────────────────────────────────────────────────────
+function BiogasToggle({
+  biogasMode,
+  setBiogasMode,
+}: {
+  biogasMode: 'income' | 'fuel';
+  setBiogasMode: (mode: 'income' | 'fuel') => void;
+}) {
+  return (
+    <View style={{ backgroundColor: '#1a1a2e', borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <View>
+        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>⚡ Biogas Upgrader</Text>
+        <Text style={{ color: '#aaa', fontSize: 11, marginTop: 2 }}>
+          {biogasMode === 'income' ? 'Selling to grid · $0.80/animal/day' : 'On-farm fuel · 0.3 L/animal/day'}
+        </Text>
+      </View>
+      <TouchableOpacity
+        style={{ backgroundColor: biogasMode === 'income' ? '#1565c0' : '#2e7d32', borderRadius: 6, padding: 8, minWidth: 70, alignItems: 'center' }}
+        onPress={() => setBiogasMode(biogasMode === 'income' ? 'fuel' : 'income')}
+      >
+        <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
+          {biogasMode === 'income' ? '💰 Income' : '⛽ Fuel'}
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
