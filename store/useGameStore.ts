@@ -2711,7 +2711,7 @@ export const useGameStore = create<GameState>()(
                 : p
             );
             // Drain the whole tank — tractor job empties it in one pass
-            tractorSlurryDrain = state.slurryLevel ?? 0;
+            tractorSlurryDrain += state.slurryLevel ?? 0;
             summary.push({
               id: `tj_${job.id}`,
               icon: '💧',
