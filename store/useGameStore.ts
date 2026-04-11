@@ -5144,6 +5144,8 @@ export const useGameStore = create<GameState>()(
           medicineCabinetOwned: false,
           hasCCTV: false,
           sickBayCapacity: 0,
+          slurryLevel: 0,
+          slurryCapacity: 0,
         });
       },
 
@@ -5493,6 +5495,10 @@ export const useGameStore = create<GameState>()(
         state.sickBayCapacity      = (b.includes('bld_isolation_sick_bay_s') ? 5 : 0) +
                                       (b.includes('bld_isolation_sick_bay_m') ? 15 : 0);
         state.sirePenAnimalIds     = state.sirePenAnimalIds ?? [];
+        state.slurryCapacity       = (b.includes('bld_slurry_tank_s') ? 5000 : 0) +
+                                      (b.includes('bld_slurry_tank_m') ? 15000 : 0) +
+                                      (b.includes('bld_slurry_tank_l') ? 40000 : 0);
+        state.slurryLevel          = state.slurryLevel ?? 0;
       },
     }
   )
