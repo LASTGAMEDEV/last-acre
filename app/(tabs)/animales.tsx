@@ -641,20 +641,23 @@ export default function AnimalesScreen() {
                   <Text style={styles.btnText}>🐄 Sell Live</Text>
                 </TouchableOpacity>
               )}
-              {item.sex === 'male' && (buildings ?? []).includes('bld_sire_pen') && (
-                <TouchableOpacity
-                  style={{ backgroundColor: (sirePenAnimalIds ?? []).includes(item.id) ? '#4a148c' : '#1b5e20', borderRadius: 6, padding: 6, marginTop: 4 }}
-                  onPress={() =>
-                    (sirePenAnimalIds ?? []).includes(item.id)
-                      ? removeFromSirePen(item.id)
-                      : designateAsSire(item.id)
-                  }
-                >
-                  <Text style={{ color: '#fff', fontSize: 11 }}>
-                    {(sirePenAnimalIds ?? []).includes(item.id) ? '♂ Remove from Sire Pen' : '♂ Designate as Sire'}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              {item.sex === 'male' && (buildings ?? []).includes('bld_sire_pen') && (() => {
+                const isSire = (sirePenAnimalIds ?? []).includes(item.id);
+                return (
+                  <TouchableOpacity
+                    style={{ backgroundColor: isSire ? '#4a148c' : '#1b5e20', borderRadius: 6, padding: 6, marginTop: 4 }}
+                    onPress={() =>
+                      isSire
+                        ? removeFromSirePen(item.id)
+                        : designateAsSire(item.id)
+                    }
+                  >
+                    <Text style={{ color: '#fff', fontSize: 11 }}>
+                      {isSire ? '♂ Remove from Sire Pen' : '♂ Designate as Sire'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })()}
             </View>
           );
         }}
