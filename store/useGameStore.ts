@@ -1682,6 +1682,11 @@ export const useGameStore = create<GameState>()(
         let animals = state.animals;
         const newSickIds: string[] = [];
         const diedIds: string[] = [];
+        // ORDERING NOTE: the livestock disposal fee block (further below) reads
+        // diedIds.length BEFORE the apiary colony-collapse block appends to it.
+        // This is intentional — bee colony collapse is not a carcass disposal event.
+        // If you add new death sources after the disposal fee block, document their
+        // fee treatment here.
 
         // ── Quarantine graduation ─────────────────────────────────────────────
         animals = animals.map((a: OwnedAnimal) => {
@@ -2743,8 +2748,9 @@ export const useGameStore = create<GameState>()(
                 ? { ...p, fertility: Math.min(25, (p.fertility ?? 1) + 1) }
                 : p
             );
-            // Drain the whole tank — tractor job empties it in one pass
-            tractorSlurryDrain += state.slurryLevel ?? 0;
+            // Drain the whole tank — one shared tank, so assign (not +=); Math.max(0,…)
+            // at the accumulation block prevents negatives regardless of job count.
+            tractorSlurryDrain = state.slurryLevel ?? 0;
             summary.push({
               id: `tj_${job.id}`,
               icon: '💧',
