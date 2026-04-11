@@ -3989,6 +3989,15 @@ export const useGameStore = create<GameState>()(
           }
         }
 
+        // Pasteurisation gate: raw milk cannot be sold at city market
+        if (productType === 'milk') {
+          const activeMarket = state.selectedMarket ?? 'local';
+          if (activeMarket === 'city') {
+            const hasPasteurisation = (state.buildings ?? []).includes('bld_pasteurisation_unit');
+            if (!hasPasteurisation) return;
+          }
+        }
+
         const gradeMultiplier = grade === 'A' ? 1.10 : grade === 'C' ? 0.75 : 1.00;
         const { ANIMAL_PRODUCTS } = require('../data/animalProducts');
         const product = ANIMAL_PRODUCTS.find((p: any) => p.productType === productType);
