@@ -1796,6 +1796,20 @@ export const useGameStore = create<GameState>()(
           summary.push({ id: 'animals_died', icon: '💀', title: `${diedIds.length} animal${diedIds.length > 1 ? 's' : ''} died from untreated sickness`, severity: 'danger' });
         }
 
+        // ── Animal disposal fee ───────────────────────────────────────────────
+        const hasRenderer = (state.buildings ?? []).includes('bld_rendering_incinerator');
+        let disposalFee = 0;
+        if (diedIds.length > 0 && !hasRenderer) {
+          disposalFee = diedIds.length * 80;
+          summary.push({
+            id: `disposal_fee_${newDay}`,
+            icon: '💀',
+            title: `${diedIds.length} animal${diedIds.length > 1 ? 's' : ''} died — disposal fee`,
+            detail: `$${disposalFee} callout fee. Build a Rendering Unit to avoid this.`,
+            severity: 'warning',
+          });
+        }
+
         // Auction: AI bidding + resolve
         const parcelAdditions: LandParcel[] = [];
         let moneyDelta = 0;
@@ -2868,6 +2882,14 @@ export const useGameStore = create<GameState>()(
 
         const declinedTemplates = newDay % 180 === 0 ? [] : state.declinedTemplates;
 
+        // ── Pest control: feed loss ───────────────────────────────────────────
+        const hasPestControl = (state.buildings ?? []).includes('bld_pest_control_station');
+        let pestHayLoss = 0;
+        if (!hasPestControl) {
+          const currentHay = ((state.animalInventory ?? {}) as Record<string, number>)['hay'] ?? 0;
+          pestHayLoss = Math.floor(currentHay * 0.015);
+        }
+
         // ── Feed deduction ────────────────────────────────────────────────────
         {
           const { computeFeedNeeded, GRAIN_CROP_IDS: GRAIN_IDS } = require('../engine/animals');
@@ -2930,7 +2952,7 @@ export const useGameStore = create<GameState>()(
 
             // ── Hay deduction ──
             if (hayKg > 0) {
-              const hayAvail = animalInventory['hay'] ?? 0;
+              const hayAvail = Math.max(0, (animalInventory['hay'] ?? 0) - pestHayLoss);
               if (hayAvail >= hayKg) {
                 animalInventory = { ...animalInventory, hay: Math.round((hayAvail - hayKg) * 10) / 10 };
                 newHayMissed = Math.max(0, newHayMissed - 1);
@@ -3123,6 +3145,55 @@ export const useGameStore = create<GameState>()(
         }
         // ── End production buildings processing ───────────────────────────
 
+        // ── Slurry accumulation ───────────────────────────────────────────────────
+        const SLURRY_LITRES_PER_DAY: Partial<Record<string, number>> = {
+          vaca: 35, bufalo: 30, cabra: 12, cerdo: 8, oveja: 5,
+        };
+        const hasSlurryTank = (state.buildings ?? []).some(bid =>
+          bid === 'bld_slurry_tank_s' || bid === 'bld_slurry_tank_m' || bid === 'bld_slurry_tank_l'
+        );
+        const newSlurryCapacity = hasSlurryTank
+          ? (state.buildings ?? []).reduce((cap, bid) => {
+              if (bid === 'bld_slurry_tank_s') return cap + 5000;
+              if (bid === 'bld_slurry_tank_m') return cap + 15000;
+              if (bid === 'bld_slurry_tank_l') return cap + 40000;
+              return cap;
+            }, 0)
+          : 0;
+        const dailySlurryProduced = animals.reduce((total: number, a: OwnedAnimal) => {
+          return total + (SLURRY_LITRES_PER_DAY[a.typeId] ?? 0);
+        }, 0);
+        const dairyPigCount = animals.filter((a: OwnedAnimal) =>
+          ['vaca', 'bufalo', 'cabra', 'cerdo'].includes(a.typeId)
+        ).length;
+        let newSlurryLevel = state.slurryLevel ?? 0;
+        let slurryFine = 0;
+        if (dailySlurryProduced > 0) {
+          if (!hasSlurryTank && dairyPigCount > 15 && Math.random() < 0.03) {
+            slurryFine = 400;
+            summary.push({
+              id: `slurry_fine_${newDay}`,
+              icon: '⚠️',
+              title: 'Environmental fine — no slurry storage',
+              detail: `$${slurryFine} fine. Build a Slurry Tank to avoid these.`,
+              severity: 'warning',
+            });
+          }
+          if (hasSlurryTank) {
+            newSlurryLevel = Math.min(newSlurryCapacity, newSlurryLevel + dailySlurryProduced);
+            if (newSlurryLevel >= newSlurryCapacity && newSlurryCapacity > 0) {
+              slurryFine = 300;
+              summary.push({
+                id: `slurry_overflow_${newDay}`,
+                icon: '⚠️',
+                title: 'Slurry tank full — overflow fine',
+                detail: `$${slurryFine} fine. Spread slurry to free capacity.`,
+                severity: 'warning',
+              });
+            }
+          }
+        }
+
         // ── Weigh Crate: flag optimal slaughter weight ────────────────────────────
         const hasWeighCrate = (state.buildings ?? []).includes('bld_weigh_crate') &&
           (state.buildings ?? []).includes('bld_cattle_crush');
@@ -3187,13 +3258,32 @@ export const useGameStore = create<GameState>()(
             }
           : state.processedInventory;
 
+        // ── Biogas upgrader income ────────────────────────────────────────────
+        const hasBiogasUpgrader = (state.buildings ?? []).includes('bld_biogas_upgrader');
+        let biogasIncome = 0;
+        if (hasBiogasUpgrader) {
+          const biogasAnimalCount = animals.filter((a: OwnedAnimal) =>
+            ['vaca', 'bufalo', 'cabra', 'cerdo', 'oveja'].includes(a.typeId)
+          ).length;
+          biogasIncome = Math.round(biogasAnimalCount * 0.8);
+          if (biogasIncome > 0) {
+            summary.push({
+              id: `biogas_income_${newDay}`,
+              icon: '⚡',
+              title: `Biogas income +$${biogasIncome}`,
+              detail: `${biogasAnimalCount} animals producing biogas`,
+              severity: 'info',
+            });
+          }
+        }
+
         const autoSellSalesEntries = autoSellLog.map(s => ({ day: newDay, amount: Math.round(s.revenue), category: 'crops' as const }));
         const deliverySalesEntries = deliveryRevenue > 0
           ? [{ day: newDay, amount: deliveryRevenue, category: 'crops' as const }]
           : [];
         set({
           day: newDay,
-          money: finalMoney + showPrizeMoney + deliveryRevenue - deliveryRepairCost - productionBuildingContractorFees,
+          money: finalMoney + showPrizeMoney + deliveryRevenue - deliveryRepairCost - productionBuildingContractorFees - slurryFine - disposalFee + biogasIncome,
           showWindowOpen,
           showEntries: season !== prevSeason
             ? (state.showEntries ?? []).filter(e => {
@@ -3239,6 +3329,8 @@ export const useGameStore = create<GameState>()(
           animalInventory,
           grainMissedDays: newGrainMissed,
           hayMissedDays: newHayMissed,
+          slurryLevel: newSlurryLevel,
+          slurryCapacity: newSlurryCapacity,
           productionBuildings: newProductionBuildings,
           animalWelfareScores: newWelfareScores,
           milkGrades: newMilkGrades,
