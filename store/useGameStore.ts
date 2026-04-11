@@ -1789,6 +1789,40 @@ export const useGameStore = create<GameState>()(
           }
           return true;
         });
+
+        // ── Brooder house: young poultry mortality ────────────────────────────────
+        const BROODER_SPECIES = new Set(['gallina', 'pato', 'codorniz']);
+        const hasBrooder = (state.buildings ?? []).some(bid =>
+          bid === 'bld_brooder_house_s' || bid === 'bld_brooder_house_m' || bid === 'bld_brooder_house_l'
+        );
+        animals = animals.filter((a: OwnedAnimal) => {
+          if (!BROODER_SPECIES.has(a.typeId)) return true;
+          const agedays = newDay - a.bornDay;
+          if (agedays > 14) return true; // no longer a chick
+          const mortalityRate = hasBrooder ? 0.005 : 0.03; // 0.5% vs 3% per day
+          if (Math.random() < mortalityRate) {
+            diedIds.push(a.id);
+            return false;
+          }
+          return true;
+        });
+
+        // ── Weaner accommodation: post-weaning pig mortality ─────────────────────
+        const hasWeanerAccom = (state.buildings ?? []).some(bid =>
+          bid === 'bld_weaner_accommodation_s' || bid === 'bld_weaner_accommodation_m' || bid === 'bld_weaner_accommodation_l'
+        );
+        animals = animals.filter((a: OwnedAnimal) => {
+          if (a.typeId !== 'cerdo') return true;
+          const agedays = newDay - a.bornDay;
+          if (agedays < 28 || agedays > 56) return true; // only weaners (28–56 days)
+          const mortalityRate = hasWeanerAccom ? 0.003 : 0.02; // 0.3% vs 2% per day
+          if (Math.random() < mortalityRate) {
+            diedIds.push(a.id);
+            return false;
+          }
+          return true;
+        });
+
         if (newSickIds.length > 0) {
           summary.push({ id: 'animals_sick', icon: '🤒', title: `${newSickIds.length} animal${newSickIds.length > 1 ? 's' : ''} fell sick`, detail: 'Treat within 14 days or they will die', severity: 'warning' });
         }
@@ -1808,6 +1842,26 @@ export const useGameStore = create<GameState>()(
             detail: `$${disposalFee} callout fee. Build a Rendering Unit to avoid this.`,
             severity: 'warning',
           });
+        }
+
+        // ── Sheep dip: autumn lameness event ──────────────────────────────────────
+        {
+          const prevSeason = seasonKey(newDay - 1);
+          const currentSeason = seasonKey(newDay);
+          if (currentSeason === 'autumn' && prevSeason !== 'autumn') {
+            // Season just changed to autumn — run annual sheep dip check
+            const hasSheepDip = (state.buildings ?? []).includes('bld_sheep_dip');
+            const sheep = animals.filter((a: OwnedAnimal) => a.typeId === 'oveja' && !a.sick);
+            sheep.forEach((s: OwnedAnimal) => {
+              const lamenessChance = hasSheepDip ? 0.01 : 0.1; // 1% vs 10% per sheep
+              if (Math.random() < lamenessChance) {
+                animals = animals.map((a: OwnedAnimal) =>
+                  a.id === s.id ? { ...a, sick: true, sicknessDay: newDay } : a
+                );
+                newSickIds.push(s.id);
+              }
+            });
+          }
         }
 
         // Auction: AI bidding + resolve
@@ -3025,7 +3079,16 @@ export const useGameStore = create<GameState>()(
 
           if (unprocessedFraction > 0 && herdSize > 0) {
             const productPrice = (state.animalPrices ?? {})[pb.animalTypeId] ?? 1;
-            const dailyValue = herdSize * productPrice;
+            let dailyValue = herdSize * productPrice;
+            // Poultry lighting: winter production penalty
+            const POULTRY_SPECIES = new Set(['gallina', 'pato', 'codorniz']);
+            if (POULTRY_SPECIES.has(pb.animalTypeId)) {
+              const isWinter = seasonKey(newDay) === 'winter';
+              const hasLighting = (state.buildings ?? []).includes('bld_lighting_system');
+              if (isWinter && !hasLighting) {
+                dailyValue = Math.round(dailyValue * 0.4);
+              }
+            }
             const fee = contractorFee(unprocessedFraction, dailyValue, isCoopMember);
             if (fee > 0) {
               productionBuildingContractorFees += fee;
@@ -3634,7 +3697,11 @@ export const useGameStore = create<GameState>()(
         const weighCrateFunctional = (state.buildings ?? []).includes('bld_weigh_crate') &&
           (state.buildings ?? []).includes('bld_cattle_crush');
         const optimalBonus = weighCrateFunctional && (animal.optimalWeightReached ?? false) ? 1.05 : 1.0;
-        const value = Math.round(baseValue * optimalBonus);
+        const hasFinishingUnit = (state.buildings ?? []).some(bid =>
+          bid === 'bld_finishing_unit_s' || bid === 'bld_finishing_unit_m' || bid === 'bld_finishing_unit_l'
+        );
+        const finishingBonus = hasFinishingUnit && animal.typeId === 'cerdo' ? 1.10 : 1.0;
+        const value = Math.round(baseValue * optimalBonus * finishingBonus);
         const nextPairs = { ...state.breedingPairs };
         delete nextPairs[animalId]; // in case she was a female with a preferred pair
         for (const [femId, maleId] of Object.entries(nextPairs)) {
