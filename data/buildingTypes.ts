@@ -749,6 +749,13 @@ export const BUILDING_TYPES: BuildingType[] = [
   { id: 'bld_cream_separator',        name: 'Cream Separator',                   category: 'production', cost: 18000, maintenancePerDay: 5,  effectLabel: 'Splits milk into cream + skim milk · cream sold as separate product' },
   { id: 'bld_apiary_shelter',         name: 'Apiary Shelter',                    category: 'production', cost: 8000,  maintenancePerDay: 3,  effectLabel: 'Protects hives from winter · colony collapse 4% (vs 20%) per winter' },
   { id: 'bld_queen_rearing_unit',     name: 'Queen Rearing Unit',                category: 'production', cost: 14000, maintenancePerDay: 5,  effectLabel: 'Breed replacement queens on-farm in 16 days · excess queens sellable' },
+  // ── Processing Buildings ───────────────────────────────────────────────────
+  { id: 'bld_smokehouse_s',      name: 'Small Smokehouse',      category: 'production', cost: 12000, maintenancePerDay: 5,  capacity: 20,  buildingTier: 'small',  effectLabel: 'Cures & smokes meat · +40% sale price on all meat products' },
+  { id: 'bld_smokehouse_m',      name: 'Medium Smokehouse',     category: 'production', cost: 28000, maintenancePerDay: 10, capacity: 50,  buildingTier: 'medium', effectLabel: 'Cures & smokes meat · +40% sale price on all meat products' },
+  { id: 'bld_smokehouse_l',      name: 'Large Smokehouse',      category: 'production', cost: 60000, maintenancePerDay: 20, capacity: 150, buildingTier: 'large',  effectLabel: 'Cures & smokes meat · +40% sale price on all meat products' },
+  { id: 'bld_wool_scouring_s',   name: 'Small Wool Scouring',   category: 'production', cost: 8000,  maintenancePerDay: 3,  buildingTier: 'small',  effectLabel: 'Washes raw wool before sale · +30% sale price on all wool' },
+  { id: 'bld_wool_scouring_m',   name: 'Medium Wool Scouring',  category: 'production', cost: 18000, maintenancePerDay: 6,  buildingTier: 'medium', effectLabel: 'Washes raw wool before sale · +30% sale price on all wool' },
+  { id: 'bld_wool_scouring_l',   name: 'Large Wool Scouring',   category: 'production', cost: 40000, maintenancePerDay: 14, buildingTier: 'large',  effectLabel: 'Washes raw wool before sale · +30% sale price on all wool' },
 ];
 
 export const BUILDING_CATEGORY_LABELS: Record<BuildingCategory, string> = {

@@ -11,4 +11,5 @@ export const ANIMAL_PRODUCTS: AnimalProductInfo[] = [
   { productType: 'honey', name: 'Honey',  unit: 'kg', basePrice: 25.0 },
   { productType: 'wool', name: 'Wool',         unit: 'kg', basePrice: 42.0 },
   { productType: 'meat', name: 'Meat',         unit: 'kg', basePrice: 14.0 },
+  { productType: 'cream', name: 'Cream', unit: 'L',  basePrice: 4.50 },
 ];
