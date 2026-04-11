@@ -4021,12 +4021,26 @@ export const useGameStore = create<GameState>()(
         if (units <= 0 || !animalType.productionType) return;
         // Granero: +20% animal production (improved feeding and shelter)
         const graneroBonus = hasGranero(state.buildings) ? 1.2 : 1.0;
+        const totalUnits = Math.round(units * graneroBonus);
+
+        // Cream separator: 10% of milk output becomes cream (remaining 90% stays as milk)
+        const hasCreamSeparator = (state.buildings ?? []).includes('bld_cream_separator');
+        const creamUnits = (hasCreamSeparator && animalType.productionType === 'milk')
+          ? Math.floor(totalUnits * 0.1)
+          : 0;
+        const primaryUnits = totalUnits - creamUnits;
+
+        const updatedInventory: Record<string, number> = {
+          ...state.animalInventory,
+          [animalType.productionType]: (state.animalInventory[animalType.productionType] ?? 0) + primaryUnits,
+        };
+        if (creamUnits > 0) {
+          updatedInventory['cream'] = (state.animalInventory['cream'] ?? 0) + creamUnits;
+        }
+
         set({
           animals: state.animals.map(a => a.id === animalId ? { ...a, lastProductionDay: nextDay } : a),
-          animalInventory: {
-            ...state.animalInventory,
-            [animalType.productionType]: (state.animalInventory[animalType.productionType] ?? 0) + Math.round(units * graneroBonus),
-          },
+          animalInventory: updatedInventory,
         });
       },
 
