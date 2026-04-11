@@ -1884,7 +1884,7 @@ export const useGameStore = create<GameState>()(
               summary.push({
                 id: `apiary_collapse_${newDay}`,
                 icon: '🐝',
-                title: `${collapseCount} bee colony${collapseCount > 1 ? 'ies' : ''} collapsed`,
+                title: `${collapseCount} bee ${collapseCount > 1 ? 'colonies' : 'colony'} collapsed`,
                 detail: hasApiaryShelter
                   ? 'Shelter reduced losses. Consider adding a queen rearing unit.'
                   : 'Build an Apiary Shelter to protect hives from winter.',
