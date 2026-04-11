@@ -538,6 +538,13 @@ export interface GameState {
   slurryLevel: number;          // current litres in slurry tank
   slurryCapacity: number;       // derived: sum of capacity from owned slurry tank buildings
 
+  // Silage pit (Plan 6)
+  silageLevel: number;      // current kg of silage stored
+  silageCapacity: number;   // derived: sum of silage pit capacities
+
+  // Biogas mode (Plan 6)
+  biogasMode: 'income' | 'fuel'; // 'income' = sell to grid; 'fuel' = use on-farm
+
   harvestJobs: HarvestJob[];
   npcFarms: NPCFarm[];
   rivalNews: RivalNewsItem[];
@@ -718,6 +725,8 @@ export interface GameState {
   designateAsSire: (animalId: string) => void;
   removeFromSirePen: (animalId: string) => void;
   spreadSlurry: () => void;
+  fillSilagePit: (kgGrass: number) => void;
+  setBiogasMode: (mode: 'income' | 'fuel') => void;
 }
 
 const FIELD_NAMES: string[] = [
@@ -944,6 +953,9 @@ function makeInitialState() {
     sickBayCapacity: 0,
     slurryLevel: 0,
     slurryCapacity: 0,
+    silageLevel: 0,
+    silageCapacity: 0,
+    biogasMode: 'income' as const,
     pendingPickup: [],
     priceAlerts: [] as PriceAlert[],
     showEntries: [] as ShowEntry[],
@@ -4735,6 +4747,12 @@ export const useGameStore = create<GameState>()(
           if (bid === 'bld_slurry_tank_l') return cap + 40000;
           return cap;
         }, 0);
+        const silageCapacity = newBuildings.reduce((cap: number, bid: string) => {
+          if (bid === 'bld_silage_pit_s') return cap + 5000;
+          if (bid === 'bld_silage_pit_m') return cap + 15000;
+          if (bid === 'bld_silage_pit_l') return cap + 40000;
+          return cap;
+        }, 0);
         set({
           money: state.money - building.cost,
           buildings: newBuildings,
@@ -4743,6 +4761,7 @@ export const useGameStore = create<GameState>()(
           hasCCTV:              newBuildings.includes('bld_cctv_monitor'),
           sickBayCapacity,
           slurryCapacity,
+          silageCapacity,
         });
       },
 
@@ -4774,6 +4793,23 @@ export const useGameStore = create<GameState>()(
           return { ...p, fertility: Math.min(25, p.fertility + 1) };
         });
         set({ parcels: newParcels, slurryLevel: 0 });
+      },
+
+      fillSilagePit: (kgGrass) => {
+        const state = get();
+        if ((state.silageCapacity ?? 0) <= 0) return;
+        const grassAvail = state.inventory['grass'] ?? 0;
+        const space = (state.silageCapacity ?? 0) - (state.silageLevel ?? 0);
+        const toFill = Math.min(kgGrass, grassAvail, space);
+        if (toFill <= 0) return;
+        set({
+          inventory: { ...state.inventory, grass: Math.max(0, grassAvail - toFill) },
+          silageLevel: (state.silageLevel ?? 0) + toFill,
+        });
+      },
+
+      setBiogasMode: (mode) => {
+        set({ biogasMode: mode });
       },
 
       clearWeeds: (parcelId) => {
@@ -5567,7 +5603,7 @@ export const useGameStore = create<GameState>()(
           startHybridization, selectSeedForParcel, startRepair,
           buyAttachment, buyTrailer, hitchTrailer, assignJob, assignHarvestJob, hireContractor,
           selectMapField, buyMapField, scoutMapField, savePanZoom,
-          designateAsSire, removeFromSirePen, spreadSlurry,
+          designateAsSire, removeFromSirePen, spreadSlurry, fillSilagePit, setBiogasMode,
           ...dataState
         } = state;
         return dataState;
