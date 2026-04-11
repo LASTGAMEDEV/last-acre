@@ -1682,10 +1682,18 @@ export const useGameStore = create<GameState>()(
           if (newDay < a.quarantineUntilDay) return a;
           // Period over — 2% residual disease risk even with pen
           const escaped = Math.random() < 0.02;
+          if (escaped) {
+            newSickIds.push(a.id);
+            return {
+              ...a,
+              quarantineUntilDay: undefined,
+              sick: true,
+              sicknessDay: newDay,
+            };
+          }
           return {
             ...a,
             quarantineUntilDay: undefined,
-            ...(escaped ? { sick: true, sicknessDay: newDay } : {}),
           };
         });
 
@@ -1738,7 +1746,6 @@ export const useGameStore = create<GameState>()(
         // Death filter — runs AFTER sickness spread
         animals = animals.filter((a: OwnedAnimal) => {
           if (a.sick && a.sicknessDay !== undefined && newDay - a.sicknessDay >= 14) {
-            if (a.inIsolation && sickBayCap > 0 && hasVetWorker) return true; // safety net
             diedIds.push(a.id);
             return false;
           }
