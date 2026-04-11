@@ -60,8 +60,9 @@ export function effectiveCapacity(building: ProductionBuildingState): number {
 export function isManned(
   building: ProductionBuildingState,
   tier: 'small' | 'medium' | 'large',
+  hasCCTV = false,
 ): boolean {
-  const required = tier === 'large' ? 2 : 1;
+  const required = Math.max(1, (tier === 'large' ? 2 : 1) - (hasCCTV ? 1 : 0));
   return building.assignedWorkerIds.length >= required;
 }
 

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { PlantedCrop, SoilType, getSoilModifier, harvestAmount } from '../engine/crops';
-import { OwnedAnimal, AnimalGenes, inheritTrait, randomGenes, breedGenes } from '../engine/animals';
+import { OwnedAnimal, AnimalGenes, inheritTrait, randomGenes, breedGenes, isAtOptimalWeight } from '../engine/animals';
 import { MarketPrice, NewsEvent } from '../engine/market';
 import { WeatherDay } from '../engine/climate';
 import { Loan, SavingsAccount, TimeDeposit, SaleRecord, LoanRecord,
@@ -1697,6 +1697,32 @@ export const useGameStore = create<GameState>()(
           };
         });
 
+        // ── Pregnancy scanner: due-date warnings ─────────────────────────────────
+        const hasPregScanner = (state.productionBuildings ?? []).some(pb =>
+          pb.buildingTypeId.startsWith('bld_calving_pen') &&
+          pb.equipmentSlots.includes('eq_pregnancy_scanner')
+        );
+        if (hasPregScanner) {
+          const imminentBirths = animals.filter((a: OwnedAnimal) => {
+            if (a.sex !== 'female') return false;
+            const animalType = ANIMAL_TYPES.find(t => t.id === a.typeId);
+            if (!animalType) return false;
+            const gestDays = (animalType as any).gestationDays ?? ((animalType as any).breedingDays ?? 0) * 2;
+            if (gestDays === 0) return false;
+            const dueDay = (a as any).lastBreedDay + gestDays;
+            return dueDay >= newDay && dueDay <= newDay + 3;
+          });
+          if (imminentBirths.length > 0) {
+            summary.push({
+              id: `preg_scanner_warning_${newDay}`,
+              icon: '🤰',
+              title: `${imminentBirths.length} animal${imminentBirths.length > 1 ? 's' : ''} due to give birth within 3 days`,
+              detail: 'Check calving pen capacity in Management',
+              severity: 'warning',
+            });
+          }
+        }
+
         // ── Sick bay auto-isolation ───────────────────────────────────────────
         const hasVetWorker = (state.workers ?? []).some((w: OwnedWorker) => w.typeId === 'vet');
         const sickBayCap = state.sickBayCapacity ?? 0;
@@ -2045,13 +2071,17 @@ export const useGameStore = create<GameState>()(
             if (listing.category === 'land' && listing.parcel) {
               auctionParcelAdditions.push({ ...listing.parcel, owned: true });
             } else if (listing.category === 'animal' && listing.animalTypeId && listing.animalGenes) {
+              const hasQuarantinePenAuction = (state.buildings ?? []).includes('bld_quarantine_pen');
+              const arrivedSickAuction = !hasQuarantinePenAuction && Math.random() < 0.15;
               const newAnimal: OwnedAnimal = {
                 id: `animal_auction_${listing.id}`,
                 typeId: listing.animalTypeId,
                 sex: Math.random() < 0.5 ? 'female' : 'male',
                 bornDay: newDay - 30,
                 genes: listing.animalGenes,
-                sick: false,
+                sick: arrivedSickAuction,
+                sicknessDay: arrivedSickAuction ? newDay : undefined,
+                quarantineUntilDay: hasQuarantinePenAuction ? newDay + 14 : undefined,
                 lastProductionDay: newDay,
                 lastBreedDay: newDay,
               };
@@ -2410,7 +2440,8 @@ export const useGameStore = create<GameState>()(
             animals = animals.map((a: OwnedAnimal) => {
               if (!a.sick) return a;
               const animalType = AT_VET.find((t: any) => t.id === a.typeId);
-              const treatCost = Math.max(50, Math.round((animalType?.maxSellPrice ?? 1000) * 0.05));
+              const baseTreatCost = Math.max(50, Math.round((animalType?.maxSellPrice ?? 1000) * 0.05));
+              const treatCost = state.vetRoomOwned ? 0 : baseTreatCost;
               vetTreatmentCost += treatCost;
               return { ...a, sick: false, sicknessDay: undefined };
             });
@@ -2951,7 +2982,7 @@ export const useGameStore = create<GameState>()(
           const herdSize = (state.animals ?? []).filter(a => a.typeId === pb.animalTypeId).length;
           const sickCount = (state.animals ?? []).filter(a => a.typeId === pb.animalTypeId && (a as any).sick).length;
           const effCap = effectiveCapacity(pb);
-          const manned = isManned(pb, bt.buildingTier ?? 'small');
+          const manned = isManned(pb, bt.buildingTier ?? 'small', state.hasCCTV ?? false);
 
           // Contractor fee: unmanned building = full fee; partial coverage = proportional fee
           const unprocessedFraction = !manned
@@ -3079,6 +3110,19 @@ export const useGameStore = create<GameState>()(
           }
         }
         // ── End production buildings processing ───────────────────────────
+
+        // ── Weigh Crate: flag optimal slaughter weight ────────────────────────────
+        const hasWeighCrate = (state.buildings ?? []).includes('bld_weigh_crate') &&
+          (state.buildings ?? []).includes('bld_cattle_crush');
+        if (hasWeighCrate) {
+          animals = animals.map((a: OwnedAnimal) => {
+            const animalType = ANIMAL_TYPES.find((t: any) => t.id === a.typeId);
+            if (!animalType) return a;
+            const atOptimal = isAtOptimalWeight(a, animalType, newDay);
+            if (atOptimal === (a.optimalWeightReached ?? false)) return a;
+            return { ...a, optimalWeightReached: atOptimal };
+          });
+        }
 
         // Milestone checks
         const newlyUnlocked = checkNewMilestones(
@@ -3423,6 +3467,9 @@ export const useGameStore = create<GameState>()(
           ? state.day - animalType.maturityDays - freshenOffset - 10
           : state.day;
 
+        const hasQuarantinePen = state.buildings.includes('bld_quarantine_pen');
+        const arrivedSick = !hasQuarantinePen && Math.random() < 0.15;
+
         const newAnimal: OwnedAnimal = {
           id: `animal_${Date.now()}`,
           typeId,
@@ -3430,7 +3477,9 @@ export const useGameStore = create<GameState>()(
           bornDay: newBornDay,
           lastProductionDay: state.day,
           lastBreedDay: state.day,
-          sick: false,
+          sick: arrivedSick,
+          sicknessDay: arrivedSick ? state.day : undefined,
+          quarantineUntilDay: hasQuarantinePen ? state.day + 14 : undefined,
           genes: randomGenes(),
           ...(isDairy && sex === 'female' ? { lactationStartDay: state.day - freshenOffset } : {}),
         };
@@ -3530,6 +3579,16 @@ export const useGameStore = create<GameState>()(
             ? [motherParents[0], motherParents[1], fatherParents[0], fatherParents[1]]
             : undefined;
 
+        // Prefer sire pen animal of same species
+        const hasSirePen = state.buildings.includes('bld_sire_pen');
+        const sirePenIds = state.sirePenAnimalIds ?? [];
+        const sirePenMale = (state.animals ?? []).find(
+          (a: OwnedAnimal) => sirePenIds.includes(a.id) && a.typeId === animal.typeId
+        );
+        const fatherGenes = hasSirePen && sirePenMale
+          ? sirePenMale.genes
+          : father?.genes;
+
         const offspring: OwnedAnimal = {
           id: `animal_${Date.now()}`,
           typeId: animal.typeId,
@@ -3539,10 +3598,25 @@ export const useGameStore = create<GameState>()(
           lastBreedDay: state.day,
           sick: false,
           traits: offspringTraits.length > 0 ? offspringTraits : undefined,
-          genes: breedGenes(animal.genes, father?.genes),
+          genes: breedGenes(animal.genes, fatherGenes),
           parentIds: [animalId, father.id],
           grandparentIds,
         };
+
+        // Calving pen mortality reduction
+        const CALVING_SPECIES = new Set(['vaca', 'cabra', 'bufalo', 'cerdo']);
+        if (CALVING_SPECIES.has(offspring.typeId)) {
+          const calvingCap = ['bld_calving_pen_s', 'bld_calving_pen_m', 'bld_calving_pen_l']
+            .reduce((cap, bid) => {
+              const bt = BUILDING_TYPES.find(b => b.id === bid);
+              return state.buildings.includes(bid) ? cap + (bt?.capacity ?? 0) : cap;
+            }, 0);
+          const mortalityChance = calvingCap > 0 ? 0.05 : 0.25;
+          if (Math.random() < mortalityChance) {
+            // Offspring did not survive — abort
+            return;
+          }
+        }
 
         const nextPairs = { ...state.breedingPairs };
         delete nextPairs[animalId];
