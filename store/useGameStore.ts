@@ -534,6 +534,10 @@ export interface GameState {
   hasCCTV: boolean;                   // derived from buildings.includes('bld_cctv_monitor')
   sickBayCapacity: number;            // sum of capacity from owned sick bay buildings
 
+  // Feed & Waste infrastructure (Plan 3)
+  slurryLevel: number;          // current litres in slurry tank
+  slurryCapacity: number;       // derived: sum of capacity from owned slurry tank buildings
+
   harvestJobs: HarvestJob[];
   npcFarms: NPCFarm[];
   rivalNews: RivalNewsItem[];
@@ -713,6 +717,7 @@ export interface GameState {
   savePanZoom: (x: number, y: number, zoom: number) => void;
   designateAsSire: (animalId: string) => void;
   removeFromSirePen: (animalId: string) => void;
+  spreadSlurry: () => void;
 }
 
 const FIELD_NAMES: string[] = [
@@ -937,6 +942,8 @@ function makeInitialState() {
     medicineCabinetOwned: false,
     hasCCTV: false,
     sickBayCapacity: 0,
+    slurryLevel: 0,
+    slurryCapacity: 0,
     pendingPickup: [],
     priceAlerts: [] as PriceAlert[],
     showEntries: [] as ShowEntry[],
@@ -4468,6 +4475,12 @@ export const useGameStore = create<GameState>()(
           if (bid === 'bld_isolation_sick_bay_m') return cap + 15;
           return cap;
         }, 0);
+        const slurryCapacity = newBuildings.reduce((cap: number, bid: string) => {
+          if (bid === 'bld_slurry_tank_s') return cap + 5000;
+          if (bid === 'bld_slurry_tank_m') return cap + 15000;
+          if (bid === 'bld_slurry_tank_l') return cap + 40000;
+          return cap;
+        }, 0);
         set({
           money: state.money - building.cost,
           buildings: newBuildings,
@@ -4475,6 +4488,7 @@ export const useGameStore = create<GameState>()(
           medicineCabinetOwned: newBuildings.includes('bld_medicine_cabinet'),
           hasCCTV:              newBuildings.includes('bld_cctv_monitor'),
           sickBayCapacity,
+          slurryCapacity,
         });
       },
 
@@ -4492,6 +4506,20 @@ export const useGameStore = create<GameState>()(
       removeFromSirePen: (animalId) => {
         const state = get();
         set({ sirePenAnimalIds: (state.sirePenAnimalIds ?? []).filter((id: string) => id !== animalId) });
+      },
+
+      spreadSlurry: () => {
+        const state = get();
+        if ((state.slurryLevel ?? 0) <= 0) return;
+        const hasSlurryTanker = (state.attachments ?? []).some(
+          (a: OwnedAttachment) => a.typeId === 'att_slurry_tanker_s' || a.typeId === 'att_slurry_tanker_l'
+        );
+        if (!hasSlurryTanker) return;
+        const newParcels = (state.parcels ?? []).map((p: LandParcel) => {
+          if (!p.owned) return p;
+          return { ...p, fertility: Math.min(25, p.fertility + 1) };
+        });
+        set({ parcels: newParcels, slurryLevel: 0 });
       },
 
       clearWeeds: (parcelId) => {
@@ -5283,7 +5311,7 @@ export const useGameStore = create<GameState>()(
           startHybridization, selectSeedForParcel, startRepair,
           buyAttachment, buyTrailer, hitchTrailer, assignJob, assignHarvestJob, hireContractor,
           selectMapField, buyMapField, scoutMapField, savePanZoom,
-          designateAsSire, removeFromSirePen,
+          designateAsSire, removeFromSirePen, spreadSlurry,
           ...dataState
         } = state;
         return dataState;
