@@ -2693,6 +2693,7 @@ export const useGameStore = create<GameState>()(
         let animalInventory = { ...animalInventoryForSet };
         let newGrainMissed = state.grainMissedDays ?? 0;
         let newHayMissed = state.hayMissedDays ?? 0;
+        let newSilageLevel = state.silageLevel ?? 0;
         const harvestedCropIdsForSet = workerHarvestedIds ?? state.harvestedCropIds;
 
         // ── Fuel tracking for job day ────────────────────────────────────────
@@ -3085,15 +3086,33 @@ export const useGameStore = create<GameState>()(
                 animalInventory = { ...animalInventory, hay: Math.round((hayAvail - hayKg) * 10) / 10 };
                 newHayMissed = Math.max(0, newHayMissed - 1);
               } else {
+                // Try silage as a fallback for the shortfall
+                const hayShortfall = hayKg - hayAvail;
+                const silageForFeed = Math.min(newSilageLevel, hayShortfall);
+                const totalFed = hayAvail + silageForFeed;
                 animalInventory = { ...animalInventory, hay: 0 };
-                newHayMissed = Math.min(7, newHayMissed + 1);
-                summary.push({
-                  id: 'feed_hay_empty',
-                  icon: '🌾',
-                  title: 'Hay stock depleted',
-                  detail: 'Hay-eating animals are underfed — grow grass and process it in the Henil',
-                  severity: 'warning',
-                });
+                newSilageLevel = Math.max(0, newSilageLevel - silageForFeed);
+                if (totalFed >= hayKg) {
+                  // Silage fully covered the shortfall
+                  newHayMissed = Math.max(0, newHayMissed - 1);
+                  summary.push({
+                    id: 'feed_silage_used',
+                    icon: '🌿',
+                    title: 'Silage used as hay substitute',
+                    detail: `${Math.round(silageForFeed)} kg silage fed to ruminants`,
+                    severity: 'info' as const,
+                  });
+                } else {
+                  // Even silage couldn't cover it
+                  newHayMissed = Math.min(7, newHayMissed + 1);
+                  summary.push({
+                    id: 'feed_hay_empty',
+                    icon: '🌾',
+                    title: 'Hay and silage stock depleted',
+                    detail: 'Ruminants are underfed — grow grass and fill the Henil or Silage Pit',
+                    severity: 'warning' as const,
+                  });
+                }
               }
             } else {
               newHayMissed = Math.max(0, newHayMissed - 1);
@@ -3466,6 +3485,7 @@ export const useGameStore = create<GameState>()(
           animalInventory,
           grainMissedDays: newGrainMissed,
           hayMissedDays: newHayMissed,
+          silageLevel: newSilageLevel,
           slurryLevel: newSlurryLevel,
           slurryCapacity: newSlurryCapacity,
           productionBuildings: newProductionBuildings,
