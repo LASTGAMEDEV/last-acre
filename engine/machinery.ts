@@ -59,7 +59,7 @@ export function canAssignJob(
   tractorType: MachineType,
   attachment: OwnedAttachmentRef,
   attachmentType: AttachmentType,
-  operation: 'till' | 'plant' | 'spray',
+  operation: 'till' | 'plant' | 'spray' | 'spread_slurry',
   parcelsTilled: boolean[],
   activeJobs: ActiveJobRef[],
 ): CanAssignResult {

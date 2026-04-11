@@ -2,7 +2,7 @@ export interface AttachmentType {
   id: string;
   name: string;
   cost: number;
-  operation: 'till' | 'plant' | 'spray';
+  operation: 'till' | 'plant' | 'spray' | 'spread_slurry';
   size: 'small' | 'medium' | 'large';
   haPerDay: number;
   compatibleTractorSizes: ('small' | 'medium' | 'large')[];
@@ -21,4 +21,23 @@ export const ATTACHMENT_TYPES: AttachmentType[] = [
   { id: 'sprayer-small',     name: 'Small Sprayer',     cost: 4000,  operation: 'spray', size: 'small',  haPerDay: 6,  compatibleTractorSizes: ['small', 'medium'] },
   { id: 'sprayer-medium',    name: 'Medium Sprayer',    cost: 9500,  operation: 'spray', size: 'medium', haPerDay: 15, compatibleTractorSizes: ['medium', 'large'] },
   { id: 'sprayer-large',     name: 'Large Sprayer',     cost: 22000, operation: 'spray', size: 'large',  haPerDay: 35, compatibleTractorSizes: ['large'] },
+  // Slurry Tankers
+  {
+    id: 'att_slurry_tanker_s',
+    name: 'Small Slurry Tanker',
+    cost: 12000,
+    operation: 'spread_slurry',
+    size: 'small',
+    haPerDay: 8,
+    compatibleTractorSizes: ['small', 'medium', 'large'],
+  },
+  {
+    id: 'att_slurry_tanker_l',
+    name: 'Large Slurry Tanker',
+    cost: 28000,
+    operation: 'spread_slurry',
+    size: 'large',
+    haPerDay: 20,
+    compatibleTractorSizes: ['large'],
+  },
 ];

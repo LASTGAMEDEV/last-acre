@@ -331,7 +331,7 @@ export interface TractorJob {
   id: string;
   tractorId: string;
   attachmentId: string;
-  operation: 'till' | 'plant' | 'spray';
+  operation: 'till' | 'plant' | 'spray' | 'spread_slurry';
   parcelIds: string[];
   cropId?: string;       // required when operation === 'plant'
   totalHa: number;
@@ -689,7 +689,7 @@ export interface GameState {
   buyAttachment: (typeId: string) => void;
   buyTrailer: (typeId: string) => void;
   hitchTrailer: (trailerId: string, truckId: string | null) => void;
-  assignJob: (tractorId: string, attachmentId: string, operation: 'till' | 'plant' | 'spray', parcelIds: string[], cropId?: string) => void;
+  assignJob: (tractorId: string, attachmentId: string, operation: 'till' | 'plant' | 'spray' | 'spread_slurry', parcelIds: string[], cropId?: string) => void;
   assignHarvestJob: (combineId: string, parcelIds: string[]) => void;
   hireContractor: (operation: ContractorOperation, parcelIds: string[], cropId?: string) => void;
   dispatchDelivery: (params: {
