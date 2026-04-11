@@ -3421,15 +3421,31 @@ export const useGameStore = create<GameState>()(
           const biogasAnimalCount = animals.filter((a: OwnedAnimal) =>
             ['vaca', 'bufalo', 'cabra', 'cerdo', 'oveja'].includes(a.typeId)
           ).length;
-          biogasIncome = Math.round(biogasAnimalCount * 0.8);
-          if (biogasIncome > 0) {
-            summary.push({
-              id: `biogas_income_${newDay}`,
-              icon: '⚡',
-              title: `Biogas income +$${biogasIncome}`,
-              detail: `${biogasAnimalCount} animals producing biogas`,
-              severity: 'info',
-            });
+          if (biogasAnimalCount > 0) {
+            if ((state.biogasMode ?? 'income') === 'fuel') {
+              // Fuel mode: convert biogas to on-farm fuel instead of money
+              const biogasFuelLitres = Math.round(biogasAnimalCount * 0.3);
+              currentFuel += biogasFuelLitres;
+              summary.push({
+                id: `biogas_fuel_${newDay}`,
+                icon: '⛽',
+                title: `Biogas fuel +${biogasFuelLitres} L`,
+                detail: `${biogasAnimalCount} animals producing biogas → free fuel`,
+                severity: 'info' as const,
+              });
+            } else {
+              // Income mode: sell biogas to grid
+              biogasIncome = Math.round(biogasAnimalCount * 0.8);
+              if (biogasIncome > 0) {
+                summary.push({
+                  id: `biogas_income_${newDay}`,
+                  icon: '⚡',
+                  title: `Biogas income +$${biogasIncome}`,
+                  detail: `${biogasAnimalCount} animals producing biogas`,
+                  severity: 'info' as const,
+                });
+              }
+            }
           }
         }
 
