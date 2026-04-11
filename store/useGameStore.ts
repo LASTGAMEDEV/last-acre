@@ -2968,7 +2968,13 @@ export const useGameStore = create<GameState>()(
           const hasAnimalWorker = (state.workers ?? []).some(
             (w: OwnedWorker) => w.typeId === 'animal_keeper' || w.typeId === 'zootechnician'
           );
-          const { grainKg, hayKg, pigGrainKg } = computeFeedNeeded(animals, AT_FEED, newDay);
+          const { grainKg: _rawGrainKg, hayKg, pigGrainKg: _rawPigGrainKg } = computeFeedNeeded(animals, AT_FEED, newDay);
+          const hasFeedMill = (state.buildings ?? []).some(bid =>
+            bid === 'bld_feed_mill_s' || bid === 'bld_feed_mill_m' || bid === 'bld_feed_mill_l'
+          );
+          const feedMillMult = hasFeedMill ? 0.65 : 1.0; // 35% reduction when milling on-farm
+          const grainKg = Math.round(_rawGrainKg * feedMillMult * 10) / 10;
+          const pigGrainKg = Math.round(_rawPigGrainKg * feedMillMult * 10) / 10;
           const shouldFeed = hasAnimalWorker || state.animalsManuallyFed;
 
           if (shouldFeed && (grainKg > 0 || hayKg > 0)) {
