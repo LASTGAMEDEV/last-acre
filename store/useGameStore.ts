@@ -2886,7 +2886,7 @@ export const useGameStore = create<GameState>()(
         const hasPestControl = (state.buildings ?? []).includes('bld_pest_control_station');
         let pestHayLoss = 0;
         if (!hasPestControl) {
-          const currentHay = ((state.animalInventory ?? {}) as Record<string, number>)['hay'] ?? 0;
+          const currentHay = animalInventory['hay'] ?? 0;
           pestHayLoss = Math.floor(currentHay * 0.015);
         }
 
