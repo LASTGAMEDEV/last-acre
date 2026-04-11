@@ -7,7 +7,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import OficinaScreen from './oficina';
 import CalendarioScreen from './calendario';
 import Encyclopedia from '../../components/Encyclopedia';
-import { useGameStore, HenilBatch, ProductionBuildingState } from '../../store/useGameStore';
+import { useGameStore, HenilBatch, ProductionBuildingState, OwnedAttachment } from '../../store/useGameStore';
 import { getSeason } from '../../engine/climate';
 import { SEASON_THEME, C } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
@@ -590,6 +590,7 @@ const smk = StyleSheet.create({
 function HenilAndBuildingsSection() {
   const {
     henilQueue, addToHenil, day, inventory, buildings,
+    slurryLevel, slurryCapacity, spreadSlurry, attachments,
   } = useGameStore();
 
   const hasHenil = (buildings ?? []).includes('bld_henil');
@@ -650,8 +651,57 @@ function HenilAndBuildingsSection() {
               <Text style={{ color: '#666', fontSize: 12 }}>Build a Henil to convert grass into hay for your animals.</Text>
             </View>
           )}
+          <SlurrySection
+            slurryLevel={slurryLevel ?? 0}
+            slurryCapacity={slurryCapacity ?? 0}
+            spreadSlurry={spreadSlurry}
+            hasSlurryTanker={(attachments ?? []).some((a: OwnedAttachment) =>
+              a.typeId === 'att_slurry_tanker_s' || a.typeId === 'att_slurry_tanker_l'
+            )}
+          />
           <ProductionBuildingsSection />
     </ScrollView>
+  );
+}
+
+// ── Slurry Section ────────────────────────────────────────────────────────────
+function SlurrySection({
+  slurryLevel,
+  slurryCapacity,
+  spreadSlurry,
+  hasSlurryTanker,
+}: {
+  slurryLevel: number;
+  slurryCapacity: number;
+  spreadSlurry: () => void;
+  hasSlurryTanker: boolean;
+}) {
+  if (slurryCapacity <= 0) return null;
+  const fillPct = Math.min(1, slurryLevel / slurryCapacity);
+  const barColor = fillPct >= 0.9 ? '#f44336' : fillPct >= 0.7 ? '#ff9800' : '#4caf50';
+  return (
+    <View style={{ backgroundColor: '#1a1a2e', borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
+      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Slurry Tank</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+        <View style={{ flex: 1, backgroundColor: '#333', borderRadius: 4, height: 8, marginRight: 8 }}>
+          <View style={{ width: `${Math.round(fillPct * 100)}%`, backgroundColor: barColor, borderRadius: 4, height: 8 }} />
+        </View>
+        <Text style={{ color: '#aaa', fontSize: 11 }}>
+          {slurryLevel.toLocaleString()} / {slurryCapacity.toLocaleString()} L
+        </Text>
+      </View>
+      {hasSlurryTanker && slurryLevel > 0 && (
+        <TouchableOpacity
+          style={{ backgroundColor: '#2e7d32', borderRadius: 6, padding: 8, marginTop: 8, alignItems: 'center' }}
+          onPress={spreadSlurry}
+        >
+          <Text style={{ color: '#fff', fontSize: 12 }}>Spread on Fields (+1 fertility all owned parcels)</Text>
+        </TouchableOpacity>
+      )}
+      {!hasSlurryTanker && slurryLevel > 0 && (
+        <Text style={{ color: '#ff9800', fontSize: 11, marginTop: 6 }}>Buy a Slurry Tanker attachment to spread slurry</Text>
+      )}
+    </View>
   );
 }
 
