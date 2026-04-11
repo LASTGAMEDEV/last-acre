@@ -1864,6 +1864,36 @@ export const useGameStore = create<GameState>()(
           }
         }
 
+        // ── Apiary shelter: winter colony collapse ────────────────────────────────
+        {
+          const prevSeasonApiary = seasonKey(newDay - 1);
+          const currSeasonApiary = seasonKey(newDay);
+          if (currSeasonApiary === 'winter' && prevSeasonApiary !== 'winter') {
+            const hasApiaryShelter = (state.buildings ?? []).includes('bld_apiary_shelter');
+            const bees = animals.filter((a: OwnedAnimal) => a.typeId === 'abeja' && !a.sick);
+            let collapseCount = 0;
+            bees.forEach((bee: OwnedAnimal) => {
+              const collapseChance = hasApiaryShelter ? 0.04 : 0.20; // 4% vs 20% per colony
+              if (Math.random() < collapseChance) {
+                diedIds.push(bee.id);
+                animals = animals.filter((a: OwnedAnimal) => a.id !== bee.id);
+                collapseCount++;
+              }
+            });
+            if (collapseCount > 0) {
+              summary.push({
+                id: `apiary_collapse_${newDay}`,
+                icon: '🐝',
+                title: `${collapseCount} bee colony${collapseCount > 1 ? 'ies' : ''} collapsed`,
+                detail: hasApiaryShelter
+                  ? 'Shelter reduced losses. Consider adding a queen rearing unit.'
+                  : 'Build an Apiary Shelter to protect hives from winter.',
+                severity: 'warning' as const,
+              });
+            }
+          }
+        }
+
         // Auction: AI bidding + resolve
         const parcelAdditions: LandParcel[] = [];
         let moneyDelta = 0;
