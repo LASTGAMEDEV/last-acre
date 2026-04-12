@@ -1839,6 +1839,43 @@ export const useGameStore = create<GameState>()(
           return true;
         });
 
+        // ── Hatchery: incubation queue hatching ───────────────────────────────
+        {
+          const INCUBATION_DAYS: Record<string, number> = { gallina: 21, pato: 28, codorniz: 17 };
+          const HATCH_RATE = 0.80;
+          const readyBatches = newIncubationQueue.filter(
+            (b: IncubationBatch) => b.readyDay <= newDay
+          );
+          newIncubationQueue = newIncubationQueue.filter(
+            (b: IncubationBatch) => b.readyDay > newDay
+          );
+          for (const batch of readyBatches) {
+            const chickCount = Math.round(batch.eggCount * HATCH_RATE);
+            if (chickCount <= 0) continue;
+            const newChicks: OwnedAnimal[] = [];
+            for (let i = 0; i < chickCount; i++) {
+              newChicks.push({
+                id: `animal_hatch_${newDay}_${batch.batchId}_${i}`,
+                typeId: batch.typeId,
+                sex: Math.random() < 0.5 ? 'male' : 'female',
+                bornDay: newDay,
+                lastProductionDay: newDay,
+                lastBreedDay: newDay,
+                sick: false,
+                genes: randomGenes(),
+              });
+            }
+            animals = [...animals, ...newChicks];
+            summary.push({
+              id: `hatch_${newDay}_${batch.batchId}`,
+              icon: '🐣',
+              title: `${chickCount} ${batch.typeId === 'gallina' ? 'chick' : batch.typeId === 'pato' ? 'duckling' : 'quail chick'}${chickCount > 1 ? 's' : ''} hatched`,
+              detail: `from ${batch.eggCount} eggs placed ${newDay - batch.startDay} days ago`,
+              severity: 'info' as const,
+            });
+          }
+        }
+
         // ── Weaner accommodation: post-weaning pig mortality ─────────────────────
         const hasWeanerAccom = (state.buildings ?? []).some(bid =>
           bid === 'bld_weaner_accommodation_s' || bid === 'bld_weaner_accommodation_m' || bid === 'bld_weaner_accommodation_l'
@@ -2709,6 +2746,7 @@ export const useGameStore = create<GameState>()(
         let newGrainMissed = state.grainMissedDays ?? 0;
         let newHayMissed = state.hayMissedDays ?? 0;
         let newSilageLevel = state.silageLevel ?? 0;
+        let newIncubationQueue = [...(state.incubationQueue ?? [])];
         const harvestedCropIdsForSet = workerHarvestedIds ?? state.harvestedCropIds;
 
         // ── Fuel tracking for job day ────────────────────────────────────────
@@ -3517,6 +3555,7 @@ export const useGameStore = create<GameState>()(
           grainMissedDays: newGrainMissed,
           hayMissedDays: newHayMissed,
           silageLevel: newSilageLevel,
+          incubationQueue: newIncubationQueue,
           slurryLevel: newSlurryLevel,
           slurryCapacity: newSlurryCapacity,
           productionBuildings: newProductionBuildings,
