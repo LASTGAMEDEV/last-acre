@@ -456,6 +456,14 @@ export interface HenilBatch {
   readyDay: number;  // startDay + 3
 }
 
+export interface IncubationBatch {
+  batchId: string;
+  typeId: string;      // 'gallina' | 'pato' | 'codorniz'
+  eggCount: number;
+  startDay: number;
+  readyDay: number;    // startDay + INCUBATION_DAYS[typeId]
+}
+
 export interface GameState {
   day: number;
   money: number;
@@ -544,6 +552,10 @@ export interface GameState {
 
   // Biogas mode (Plan 6)
   biogasMode: 'income' | 'fuel'; // 'income' = sell to grid; 'fuel' = use on-farm
+
+  // Hatchery (Plan 7)
+  incubationQueue: IncubationBatch[];
+  hatcheryCapacity: number;   // derived: sum of hatchery building capacities
 
   harvestJobs: HarvestJob[];
   npcFarms: NPCFarm[];
@@ -727,6 +739,7 @@ export interface GameState {
   spreadSlurry: () => void;
   fillSilagePit: (kgGrass: number) => void;
   setBiogasMode: (mode: 'income' | 'fuel') => void;
+  queueEggsForIncubation: (typeId: string, quantity: number) => void;
 }
 
 const FIELD_NAMES: string[] = [
@@ -956,6 +969,8 @@ function makeInitialState() {
     silageLevel: 0,
     silageCapacity: 0,
     biogasMode: 'income' as const,
+    incubationQueue: [] as IncubationBatch[],
+    hatcheryCapacity: 0,
     pendingPickup: [],
     priceAlerts: [] as PriceAlert[],
     showEntries: [] as ShowEntry[],
