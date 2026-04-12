@@ -4804,6 +4804,12 @@ export const useGameStore = create<GameState>()(
           if (bid === 'bld_silage_pit_l') return cap + 40000;
           return cap;
         }, 0);
+        const hatcheryCapacity = newBuildings.reduce((cap: number, bid: string) => {
+          if (bid === 'bld_hatchery_s') return cap + 50;
+          if (bid === 'bld_hatchery_m') return cap + 150;
+          if (bid === 'bld_hatchery_l') return cap + 400;
+          return cap;
+        }, 0);
         set({
           money: state.money - building.cost,
           buildings: newBuildings,
@@ -4813,6 +4819,7 @@ export const useGameStore = create<GameState>()(
           sickBayCapacity,
           slurryCapacity,
           silageCapacity,
+          hatcheryCapacity,
         });
       },
 
@@ -4861,6 +4868,35 @@ export const useGameStore = create<GameState>()(
 
       setBiogasMode: (mode) => {
         set({ biogasMode: mode });
+      },
+
+      queueEggsForIncubation: (typeId, quantity) => {
+        const state = get();
+        const INCUBATION_DAYS: Record<string, number> = { gallina: 21, pato: 28, codorniz: 17 };
+        if (!INCUBATION_DAYS[typeId]) return; // unsupported species
+        const cap = state.hatcheryCapacity ?? 0;
+        if (cap <= 0) return; // no hatchery built
+        const eggsInQueue = (state.incubationQueue ?? []).reduce(
+          (sum: number, b: IncubationBatch) => sum + b.eggCount, 0
+        );
+        const space = cap - eggsInQueue;
+        const eggsAvail = state.animalInventory['eggs'] ?? 0;
+        const toQueue = Math.min(quantity, eggsAvail, space);
+        if (toQueue <= 0) return;
+        const newBatch: IncubationBatch = {
+          batchId: `hatch_${state.day}_${typeId}_${Date.now()}`,
+          typeId,
+          eggCount: toQueue,
+          startDay: state.day,
+          readyDay: state.day + INCUBATION_DAYS[typeId],
+        };
+        set({
+          animalInventory: {
+            ...state.animalInventory,
+            eggs: Math.max(0, eggsAvail - toQueue),
+          },
+          incubationQueue: [...(state.incubationQueue ?? []), newBatch],
+        });
       },
 
       clearWeeds: (parcelId) => {
@@ -5657,7 +5693,7 @@ export const useGameStore = create<GameState>()(
           startHybridization, selectSeedForParcel, startRepair,
           buyAttachment, buyTrailer, hitchTrailer, assignJob, assignHarvestJob, hireContractor,
           selectMapField, buyMapField, scoutMapField, savePanZoom,
-          designateAsSire, removeFromSirePen, spreadSlurry, fillSilagePit, setBiogasMode,
+          designateAsSire, removeFromSirePen, spreadSlurry, fillSilagePit, setBiogasMode, queueEggsForIncubation,
           ...dataState
         } = state;
         return dataState;
