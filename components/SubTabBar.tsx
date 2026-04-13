@@ -25,8 +25,8 @@ export default function SubTabBar({ tabs, active, onSelect }: Props) {
   // Scroll active tab into view
   useEffect(() => {
     const idx = tabs.findIndex(t => t.id === active);
-    if (idx > 1 && scrollRef.current) {
-      scrollRef.current.scrollTo({ x: idx * 90, animated: true });
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ x: Math.max(0, idx - 1) * 90, animated: true });
     }
   }, [active, tabs]);
 
@@ -85,8 +85,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: F.size.sm,
-    fontWeight: F.weight.bold,
   },
-  labelActive:   { color: '#fff' },
-  labelInactive: { color: C.textMuted },
+  labelActive:   { color: '#fff', fontWeight: F.weight.bold },
+  labelInactive: { color: C.textMuted, fontWeight: F.weight.normal },
 });
