@@ -374,7 +374,7 @@ function SettingsSection() {
             value={soundEnabled}
             onValueChange={setSoundEnabled}
             trackColor={{ false: '#333', true: '#4caf50' }}
-            thumbColor=C.white
+            thumbColor={C.white}
           />
         </View>
         <View style={[set.row, { marginTop: 8 }]}>
@@ -386,7 +386,7 @@ function SettingsSection() {
             value={hapticEnabled}
             onValueChange={setHapticEnabled}
             trackColor={{ false: '#333', true: '#4caf50' }}
-            thumbColor=C.white
+            thumbColor={C.white}
           />
         </View>
         <View style={[set.row, { marginTop: 8 }]}>
@@ -398,7 +398,7 @@ function SettingsSection() {
             value={musicEnabled}
             onValueChange={setMusicEnabled}
             trackColor={{ false: '#333', true: '#4caf50' }}
-            thumbColor=C.white
+            thumbColor={C.white}
           />
         </View>
       </View>
