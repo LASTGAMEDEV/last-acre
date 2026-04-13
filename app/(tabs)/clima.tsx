@@ -72,6 +72,7 @@ export default function ClimaScreen() {
             <Text style={styles.todayEvent}>{todayWeather.event.replace('_', ' ')}</Text>
             <Text style={styles.todayMod}>
               Crop modifier: {(todayWeather.climateModifier * 100).toFixed(0)}%
+              {'  '}🌡️ {todayWeather.minTemp?.toFixed(0) ?? '?'}–{todayWeather.maxTemp?.toFixed(0) ?? '?'}°C
             </Text>
           </>
         ) : (
@@ -87,13 +88,33 @@ export default function ClimaScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.forecastList}
-        renderItem={({ item, index }) => (
-          <View style={styles.forecastCard}>
-            <Text style={styles.forecastDay}>Day {day + index + 1}</Text>
-            <Text style={styles.forecastIcon}>{WEATHER_ICONS[item.event]}</Text>
-            <Text style={styles.forecastMod}>{(item.climateModifier * 100).toFixed(0)}%</Text>
-          </View>
-        )}
+        renderItem={({ item, index }) => {
+          const isFrost = item.event === 'frost';
+          const isLowConfidence = item.probability <= 0.55;
+          const streakLabel = item.streakDay != null
+            ? `day ${item.streakDay}` : null;
+          return (
+            <View style={[
+              styles.forecastCard,
+              isFrost && styles.forecastCardFrost,
+              isLowConfidence && styles.forecastCardDim,
+            ]}>
+              <Text style={styles.forecastDay}>+{index + 1}d</Text>
+              <Text style={styles.forecastIcon}>{WEATHER_ICONS[item.event]}</Text>
+              {item.probability < 1.0 && (
+                <Text style={styles.forecastProb}>
+                  {Math.round(item.probability * 100)}%
+                </Text>
+              )}
+              <Text style={styles.forecastTemp}>
+                {item.minTemp?.toFixed(0) ?? '?'}–{item.maxTemp?.toFixed(0) ?? '?'}°C
+              </Text>
+              {streakLabel && (
+                <Text style={styles.forecastStreak}>{streakLabel}</Text>
+              )}
+            </View>
+          );
+        }}
       />
 
       {/* ── CALENDAR ── */}
@@ -218,6 +239,29 @@ const styles = StyleSheet.create({
   forecastDay: { color: C.textMuted, fontSize: F.size.xs, marginBottom: S.xs },
   forecastIcon: { fontSize: 26 },
   forecastMod: { color: '#aaa', fontSize: F.size.xs, marginTop: S.xs },
+  forecastCardFrost: {
+    borderColor: C.red,
+    borderWidth: 1.5,
+  },
+  forecastCardDim: {
+    opacity: 0.65,
+  },
+  forecastProb: {
+    fontSize: F.size.xs,
+    color: C.amber,
+    fontWeight: F.weight.bold,
+  },
+  forecastTemp: {
+    fontSize: F.size.xs,
+    color: C.textMuted,
+    marginTop: 2,
+  },
+  forecastStreak: {
+    fontSize: F.size.xs,
+    color: C.red,
+    fontWeight: F.weight.bold,
+    marginTop: 1,
+  },
 
   // Filter tabs
   filterRow: { marginBottom: S.sm },

@@ -45,7 +45,7 @@ export default function TierrasScreen() {
   const CELL_SIZE = Math.min(60, Math.floor((Math.min(screenWidth, 480) - 20) / MAP_COLS));
 
   const {
-    parcels, money, day, inventory, machines, buildings, cooperative, prices,
+    parcels, money, day, inventory, machines, buildings, cooperative, prices, forecast,
     buyParcel, plantCrop, harvestCrop, harvestAllReady,
     fieldEvents, resolveFieldEvent, productInventory,
     clearWeeds, fertilizeCrop, installGreenhouse, removeGreenhouse, installIrrigation,
@@ -53,6 +53,9 @@ export default function TierrasScreen() {
     tractorJobs, harvestJobs, assignJob, assignHarvestJob, hireContractor,
     cureDisease, plantCropBatch, hapticEnabled,
   } = useGameStore();
+
+  // True if a frost event is forecast within the next 3 days
+  const frostInNext3Days = forecast.slice(0, 3).some(w => w.event === 'frost');
   const [batchCropId, setBatchCropId] = useState<string | null>(null);
   const [batchModal, setBatchModal] = useState(false);
 
@@ -261,6 +264,12 @@ export default function TierrasScreen() {
           </Text>
         ) : (
           <Text style={styles.emptyTag}>Empty</Text>
+        )}
+
+        {frostInNext3Days && parcel.plantedCrop && !parcel.greenhouse && (
+          <View style={styles.frostWarning}>
+            <Text style={styles.frostWarningText}>❄️ Frost risk</Text>
+          </View>
         )}
 
         {parcel.owned && (() => {
@@ -1066,6 +1075,19 @@ const styles = StyleSheet.create({
   soilBadge: { color: C.textMuted, fontSize: F.size.xs, marginTop: 2 },
   cropTag: { color: '#81c784', fontSize: F.size.sm, marginTop: 2 },
   emptyTag: { color: '#555', fontSize: F.size.sm, marginTop: 2 },
+  frostWarning: {
+    backgroundColor: '#1a1a3a',
+    borderRadius: R.xs,
+    paddingHorizontal: S.xs,
+    paddingVertical: 2,
+    marginTop: 2,
+    borderWidth: 1,
+    borderColor: C.blue,
+  },
+  frostWarningText: {
+    fontSize: F.size.xs,
+    color: '#90caf9',
+  },
   weedTag: { color: '#ffb74d', fontSize: 11, marginTop: 3 },
   daysLeft: { color: '#aaa', fontSize: 11, marginTop: S.xs },
   priceTag: { color: '#64b5f6', fontSize: F.size.md, fontWeight: 'bold', marginTop: 2, marginBottom: S.xs },
