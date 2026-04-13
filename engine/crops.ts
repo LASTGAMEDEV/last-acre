@@ -116,3 +116,91 @@ export function computeSoilYieldModifier(soil: SoilStats): number {
 
   return Math.max(0.3, nMod * omMod * compMod * pHMod * microMod);
 }
+
+export interface SoilTickParams {
+  /** cropId currently growing, or null if fallow */
+  activeCropId: string | null;
+  /** true if a crop was harvested TODAY on this parcel */
+  harvestedToday: boolean;
+  /** true if any machinery operated on this parcel today */
+  machineryUsedToday: boolean;
+  /** true if today's rainfall was heavy (≥ 8 mm simulated) */
+  heavyRainToday: boolean;
+  /** true if a pesticide was applied to this parcel today */
+  pesticideAppliedToday: boolean;
+  /** true if manure/compost was applied today */
+  manureAppliedToday: boolean;
+  /** true if subsoiler attachment was used today */
+  subsoilerUsedToday: boolean;
+}
+
+/**
+ * Pure daily soil tick. Returns a new SoilStats object.
+ * Called once per owned parcel per advanceDay() call.
+ */
+export function advanceSoilStats(
+  soil: SoilStats,
+  params: SoilTickParams,
+  cropNitrogenDemand: number, // nitrogenDemand from CropType, 0 if fallow
+): SoilStats {
+  let { nitrogen, organicMatter, compaction, pH, microbialLife } = soil;
+
+  // ── Nitrogen ──
+  if (params.activeCropId) {
+    nitrogen -= cropNitrogenDemand / 90; // spread demand over ~1 season of growth
+  }
+  if (params.heavyRainToday) {
+    nitrogen -= 1.5; // runoff loss
+  }
+  if (params.harvestedToday) {
+    nitrogen -= cropNitrogenDemand * 0.5; // burst loss at harvest
+  }
+  // Fallow recovery (very slow natural mineralisation)
+  if (!params.activeCropId) {
+    nitrogen += 0.1;
+  }
+
+  // ── Organic Matter ──
+  if (params.activeCropId) {
+    organicMatter -= 0.004; // slow depletion during active crop
+  }
+  if (!params.activeCropId) {
+    organicMatter += 0.003; // slow natural accumulation when fallow
+  }
+  if (params.manureAppliedToday) {
+    organicMatter += 0.5;
+  }
+
+  // ── Compaction ──
+  if (params.machineryUsedToday) {
+    compaction += 2;
+  }
+  if (!params.activeCropId && !params.machineryUsedToday) {
+    compaction -= 0.5; // fallow recovery via freeze-thaw etc.
+  }
+  if (params.subsoilerUsedToday) {
+    compaction -= 18;
+  }
+
+  // ── pH ── (drifts very slowly; lime/sulfur handled by applySoilAmendment action)
+  if (params.heavyRainToday) {
+    pH -= 0.005; // leaching slightly acidifies
+  }
+
+  // ── Microbial Life ──
+  if (params.pesticideAppliedToday) {
+    microbialLife -= 10;
+  }
+  // Follows organic matter: tends toward organicMatter * 12 over time
+  const microTarget = Math.min(100, organicMatter * 12);
+  microbialLife += (microTarget - microbialLife) * 0.01; // 1% convergence per day
+
+  // Clamp all values
+  return {
+    nitrogen:     Math.max(0, Math.min(100, nitrogen)),
+    organicMatter: Math.max(0, Math.min(10, organicMatter)),
+    compaction:   Math.max(0, Math.min(100, compaction)),
+    pH:           Math.max(4.0, Math.min(8.5, pH)),
+    microbialLife: Math.max(0, Math.min(100, microbialLife)),
+  };
+}
