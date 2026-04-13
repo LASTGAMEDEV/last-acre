@@ -4195,7 +4195,25 @@ export const useGameStore = create<GameState>()(
         );
         const smokehouseBonus = hasSmokehouse ? 1.40 : 1.0;
 
-        const revenue = Math.round(sellRevenue(toSell, livePrice) * coopBonus * prestigeBonus * gradeMultiplier * woolScouringBonus * smokehouseBonus);
+        const MEAT_SPECIES_WELFARE = new Set([
+          'vaca', 'bufalo', 'cabra', 'oveja', 'cerdo', 'conejo', 'gallina', 'pato', 'codorniz',
+        ]);
+        const welfareScores = state.animalWelfareScores ?? {};
+        let welfareMultiplier = 1.0;
+        if (productType === 'meat') {
+          const relevantScores = Object.entries(welfareScores)
+            .filter(([typeId]) => MEAT_SPECIES_WELFARE.has(typeId))
+            .map(([, score]) => score as number);
+          if (relevantScores.length > 0) {
+            const avgWelfare = relevantScores.reduce((s, v) => s + v, 0) / relevantScores.length;
+            welfareMultiplier = avgWelfare >= 80 ? 1.10 : avgWelfare < 60 ? 0.90 : 1.00;
+          }
+        } else if (productType === 'wool') {
+          const sheepWelfare = (welfareScores['oveja'] as number) ?? 60;
+          welfareMultiplier = sheepWelfare >= 80 ? 1.10 : sheepWelfare < 60 ? 0.90 : 1.00;
+        }
+
+        const revenue = Math.round(sellRevenue(toSell, livePrice) * coopBonus * prestigeBonus * gradeMultiplier * woolScouringBonus * smokehouseBonus * welfareMultiplier);
         set({
           money: state.money + revenue,
           animalInventory: { ...state.animalInventory, [productType]: inStock - toSell },
