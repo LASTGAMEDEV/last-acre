@@ -103,13 +103,13 @@ export const C = {
   textMuted: '#6a9a6a',
   textFaint: '#4a6e4a',
 
-  // Legacy aliases (backwards compat — same values as text/textDim)
-  gold:      '#c8e6c9',
-  goldDim:   '#81c784',
+  // Legacy aliases (backwards compat — migrate to text/textDim/textMuted/textFaint)
+  gold:      '#c8e6c9',   // → C.text
+  goldDim:   '#81c784',   // → C.textDim
   white:     '#ffffff',
-  muted:     '#6a9a6a',
-  faint:     '#4a6e4a',
-  dim:       '#81c784',
+  muted:     '#6a9a6a',   // → C.textMuted
+  faint:     '#4a6e4a',   // → C.textFaint
+  dim:       '#81c784',   // → C.textDim
 
   // Semantic
   green:     '#4caf50',
