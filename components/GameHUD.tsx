@@ -35,7 +35,7 @@ export default function GameHUD() {
     money, day, savings, loans, contracts, seasonalEvent,
     farmName, workers, machines, buildings,
     advanceDay, advanceDays,
-    todayWeather,
+    todayWeather, recurringContracts, buyers,
   } = useGameStore();
 
   const season = getSeason(day);
@@ -61,6 +61,19 @@ export default function GameHUD() {
 
   const urgentLoan = loans.find(l => !l.paid && !l.defaulted && l.payoffDay - day <= WARN_DAYS && l.payoffDay >= day);
   const urgentContract = contracts.find(c => !c.completed && !c.failed && c.deadlineDay - day <= WARN_DAYS && c.deadlineDay >= day);
+
+  const urgentDelivery = (recurringContracts ?? [])
+    .filter((c) => c.active)
+    .map((c) => ({
+      contract: c,
+      daysToClose: (c.nextDeliveryDay + c.deliveryWindowDays) - day,
+    }))
+    .filter(({ daysToClose }) => daysToClose > 0 && daysToClose <= 3)
+    .sort((a, b) => a.daysToClose - b.daysToClose)[0];
+
+  const urgentDeliveryBuyer = urgentDelivery
+    ? (buyers ?? []).find((b) => b.id === urgentDelivery.contract.buyerId)
+    : undefined;
 
   const weather = todayWeather ? WEATHER_DISPLAY[todayWeather.event] : null;
 
@@ -159,6 +172,15 @@ export default function GameHUD() {
               ⚠️ Contract deadline in {urgentContract.deadlineDay - day}d
             </Text>
           )}
+        </View>
+      )}
+      {urgentDelivery && (
+        <View style={styles.warnStrip}>
+          <Text style={styles.warnText}>
+            ⚠️ Delivery closes in {urgentDelivery.daysToClose}d
+            {' '}— {urgentDeliveryBuyer?.name ?? 'Buyer'}
+            {' '}({urgentDelivery.contract.cropId} {urgentDelivery.contract.amountPerDelivery} kg)
+          </Text>
         </View>
       )}
     </>

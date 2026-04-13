@@ -11,7 +11,7 @@ type CalendarEntry = {
   title: string;
   detail: string;
   daysLeft: number;
-  category: 'contract' | 'loan' | 'futures' | 'season' | 'deposit';
+  category: 'contract' | 'loan' | 'futures' | 'season' | 'deposit' | 'recurring';
   urgent: boolean;
 };
 
@@ -28,7 +28,7 @@ function nextSeasonChange(day: number): { season: string; daysLeft: number } {
 }
 
 export default function CalendarioScreen() {
-  const { day, contracts, loans, futures, timeDeposits } = useGameStore();
+  const { day, contracts, loans, futures, timeDeposits, recurringContracts, buyers } = useGameStore();
 
   const entries: CalendarEntry[] = [];
 
@@ -93,6 +93,26 @@ export default function CalendarioScreen() {
     });
   }
 
+  // Recurring contract delivery windows
+  for (const c of (recurringContracts ?? [])) {
+    if (!c.active) continue;
+    if (c.nextDeliveryDay < day) continue;
+    const buyer = (buyers ?? []).find((b) => b.id === c.buyerId);
+    const daysLeft = c.nextDeliveryDay - day;
+    const windowCloseDay = c.nextDeliveryDay + c.deliveryWindowDays;
+    const daysToClose = windowCloseDay - day;
+    const urgent = daysToClose <= 3;
+    entries.push({
+      id: `rc_${c.id}`,
+      icon: urgent ? '⚠️' : '📋',
+      title: `${buyer?.emoji ?? '🏭'} ${buyer?.name ?? c.buyerId} delivery`,
+      detail: `${c.cropId} · ${c.amountPerDelivery} kg · window closes day ${windowCloseDay}`,
+      daysLeft,
+      category: 'recurring',
+      urgent,
+    });
+  }
+
   // Next season change
   const { season: nextSeason, daysLeft: seasonDays } = nextSeasonChange(day);
   entries.push({
@@ -112,11 +132,12 @@ export default function CalendarioScreen() {
   const upcoming = entries.filter(e => e.daysLeft >= 0);
 
   const CATEGORY_COLORS: Record<string, string> = {
-    contract: '#1565c0',
-    loan:     '#b71c1c',
-    futures:  '#4a148c',
-    deposit:  '#1b5e20',
-    season:   '#e65100',
+    contract:  '#1565c0',
+    loan:      '#b71c1c',
+    futures:   '#4a148c',
+    deposit:   '#1b5e20',
+    season:    '#e65100',
+    recurring: '#2e7d32',
   };
 
   function EntryCard({ entry }: { entry: CalendarEntry }) {
