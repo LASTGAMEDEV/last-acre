@@ -5397,6 +5397,8 @@ export const useGameStore = create<GameState>()(
           silageLevel: 0,
           silageCapacity: 0,
           biogasMode: 'income',
+          hatcheryCapacity: 0,
+          incubationQueue: [],
         });
       },
 
@@ -5755,6 +5757,10 @@ export const useGameStore = create<GameState>()(
                                 (b.includes('bld_silage_pit_l') ? 40000 : 0);
         state.silageLevel    = state.silageLevel ?? 0;
         state.biogasMode     = state.biogasMode ?? 'income';
+        state.hatcheryCapacity = (b.includes('bld_hatchery_s') ? 50 : 0) +
+                                  (b.includes('bld_hatchery_m') ? 150 : 0) +
+                                  (b.includes('bld_hatchery_l') ? 400 : 0);
+        state.incubationQueue  = state.incubationQueue ?? [];
       },
     }
   )
