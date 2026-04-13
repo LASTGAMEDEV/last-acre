@@ -7,7 +7,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import OficinaScreen from './oficina';
 import CalendarioScreen from './calendario';
 import Encyclopedia from '../../components/Encyclopedia';
-import { useGameStore, HenilBatch, ProductionBuildingState, OwnedAttachment } from '../../store/useGameStore';
+import { useGameStore, HenilBatch, ProductionBuildingState, OwnedAttachment, IncubationBatch } from '../../store/useGameStore';
 import { getSeason } from '../../engine/climate';
 import { SEASON_THEME, C } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
@@ -593,6 +593,8 @@ function HenilAndBuildingsSection() {
     slurryLevel, slurryCapacity, spreadSlurry, attachments,
     silageLevel, silageCapacity, fillSilagePit,
     biogasMode, setBiogasMode,
+    incubationQueue, hatcheryCapacity, queueEggsForIncubation,
+    animalInventory,
   } = useGameStore();
 
   const hasHenil = (buildings ?? []).includes('bld_henil');
@@ -653,6 +655,13 @@ function HenilAndBuildingsSection() {
               <Text style={{ color: '#666', fontSize: 12 }}>Build a Henil to convert grass into hay for your animals.</Text>
             </View>
           )}
+          <IncubationSection
+            incubationQueue={incubationQueue ?? []}
+            hatcheryCapacity={hatcheryCapacity ?? 0}
+            queueEggsForIncubation={queueEggsForIncubation}
+            eggsInStock={animalInventory?.['eggs'] ?? 0}
+            currentDay={day}
+          />
           <SilageSection
             silageLevel={silageLevel ?? 0}
             silageCapacity={silageCapacity ?? 0}
@@ -675,6 +684,89 @@ function HenilAndBuildingsSection() {
           )}
           <ProductionBuildingsSection />
     </ScrollView>
+  );
+}
+
+// ── Incubation Section ───────────────────────────────────────────────────────
+const POULTRY_HATCH_CONFIG = [
+  { typeId: 'gallina',  label: 'Chicken', icon: '🐓', days: 21 },
+  { typeId: 'pato',     label: 'Duck',    icon: '🦆', days: 28 },
+  { typeId: 'codorniz', label: 'Quail',   icon: '🪶', days: 17 },
+] as const;
+
+function IncubationSection({
+  incubationQueue,
+  hatcheryCapacity,
+  queueEggsForIncubation,
+  eggsInStock,
+  currentDay,
+}: {
+  incubationQueue: IncubationBatch[];
+  hatcheryCapacity: number;
+  queueEggsForIncubation: (typeId: string, quantity: number) => void;
+  eggsInStock: number;
+  currentDay: number;
+}) {
+  if (hatcheryCapacity <= 0) return null;
+
+  const eggsInQueue = incubationQueue.reduce((sum, b) => sum + b.eggCount, 0);
+  const space = hatcheryCapacity - eggsInQueue;
+  const fillPct = Math.min(1, eggsInQueue / hatcheryCapacity);
+  const barColor = fillPct >= 0.9 ? '#e65100' : fillPct >= 0.5 ? '#f57c00' : '#ffa726';
+
+  return (
+    <View style={{ backgroundColor: '#1a1a2e', borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
+      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>🥚 Hatchery</Text>
+
+      {/* Capacity bar */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, marginBottom: 8 }}>
+        <View style={{ flex: 1, backgroundColor: '#333', borderRadius: 4, height: 8, marginRight: 8 }}>
+          <View style={{ width: `${Math.round(fillPct * 100)}%`, backgroundColor: barColor, borderRadius: 4, height: 8 }} />
+        </View>
+        <Text style={{ color: '#aaa', fontSize: 11 }}>
+          {eggsInQueue} / {hatcheryCapacity} eggs
+        </Text>
+      </View>
+
+      {/* Add-eggs rows */}
+      {POULTRY_HATCH_CONFIG.map(({ typeId, label, icon, days }) => {
+        const canAdd = eggsInStock > 0 && space > 0;
+        const toAdd = Math.min(eggsInStock, space);
+        return (
+          <View key={typeId} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <Text style={{ color: '#ddd', fontSize: 12 }}>{icon} {label} <Text style={{ color: '#888' }}>({days}d)</Text></Text>
+            {canAdd ? (
+              <TouchableOpacity
+                style={{ backgroundColor: '#37474f', borderRadius: 5, paddingHorizontal: 10, paddingVertical: 5 }}
+                onPress={() => queueEggsForIncubation(typeId, toAdd)}
+              >
+                <Text style={{ color: '#fff', fontSize: 11 }}>+ {toAdd} eggs</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={{ color: '#555', fontSize: 11 }}>
+                {eggsInStock <= 0 ? 'No eggs' : 'Hatchery full'}
+              </Text>
+            )}
+          </View>
+        );
+      })}
+
+      {/* Active batches */}
+      {incubationQueue.length > 0 && (
+        <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: '#333', paddingTop: 8 }}>
+          <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 4 }}>Incubating:</Text>
+          {incubationQueue.map(batch => {
+            const cfg = POULTRY_HATCH_CONFIG.find(c => c.typeId === batch.typeId);
+            const daysLeft = batch.readyDay - currentDay;
+            return (
+              <Text key={batch.batchId} style={{ color: '#ccc', fontSize: 11, marginBottom: 2 }}>
+                {cfg?.icon ?? '🥚'} {batch.eggCount} {cfg?.label ?? batch.typeId} eggs — hatches in {daysLeft}d
+              </Text>
+            );
+          })}
+        </View>
+      )}
+    </View>
   );
 }
 
