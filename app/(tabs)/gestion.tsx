@@ -595,6 +595,7 @@ function HenilAndBuildingsSection() {
     biogasMode, setBiogasMode,
     incubationQueue, hatcheryCapacity, queueEggsForIncubation,
     animalInventory,
+    milkGrades, animalWelfareScores, productionBuildings,
   } = useGameStore();
 
   const hasHenil = (buildings ?? []).includes('bld_henil');
@@ -655,6 +656,11 @@ function HenilAndBuildingsSection() {
               <Text style={{ color: '#666', fontSize: 12 }}>Build a Henil to convert grass into hay for your animals.</Text>
             </View>
           )}
+          <AnimalQualitySection
+            milkGrades={milkGrades ?? {}}
+            animalWelfareScores={animalWelfareScores ?? {}}
+            productionBuildings={productionBuildings ?? []}
+          />
           <IncubationSection
             incubationQueue={incubationQueue ?? []}
             hatcheryCapacity={hatcheryCapacity ?? 0}
@@ -684,6 +690,89 @@ function HenilAndBuildingsSection() {
           )}
           <ProductionBuildingsSection />
     </ScrollView>
+  );
+}
+
+// ── Animal Quality Section ────────────────────────────────────────────────────
+function AnimalQualitySection({
+  milkGrades,
+  animalWelfareScores,
+  productionBuildings,
+}: {
+  milkGrades: Record<string, 'A' | 'B' | 'C'>;
+  animalWelfareScores: Record<string, number>;
+  productionBuildings: { animalTypeId: string }[];
+}) {
+  if (productionBuildings.length === 0) return null;
+
+  const DAIRY_LABELS: Record<string, string> = {
+    vaca: 'Cows 🐄',
+    cabra: 'Goats 🐐',
+    bufalo: 'Buffalo 🐃',
+  };
+  const SPECIES_LABELS: Record<string, string> = {
+    vaca: 'Cow', cabra: 'Goat', bufalo: 'Buffalo',
+    oveja: 'Sheep', cerdo: 'Pig', conejo: 'Rabbit',
+    gallina: 'Chicken', pato: 'Duck', codorniz: 'Quail',
+    abeja: 'Bees',
+  };
+
+  const dairyEntries = Object.entries(milkGrades);
+  const welfareEntries = Object.entries(animalWelfareScores).filter(
+    ([typeId]) => productionBuildings.some(pb => pb.animalTypeId === typeId)
+  );
+
+  if (dairyEntries.length === 0 && welfareEntries.length === 0) return null;
+
+  return (
+    <View style={{ backgroundColor: '#1c1c1c', borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
+      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>📊 Animal Quality</Text>
+
+      {/* Milk grades */}
+      {dairyEntries.length > 0 && (
+        <View style={{ marginBottom: 8 }}>
+          <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 4 }}>Milk Grade</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+            {dairyEntries.map(([typeId, grade]) => {
+              const badgeColor = grade === 'A' ? '#4caf50' : grade === 'B' ? '#ffa726' : '#f44336';
+              return (
+                <View
+                  key={typeId}
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#2a2a2a', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}
+                >
+                  <Text style={{ color: '#ccc', fontSize: 11, marginRight: 4 }}>
+                    {DAIRY_LABELS[typeId] ?? typeId}
+                  </Text>
+                  <View style={{ backgroundColor: badgeColor, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>Grade {grade}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {/* Welfare scores */}
+      {welfareEntries.length > 0 && (
+        <View>
+          <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 4 }}>Welfare Score</Text>
+          {welfareEntries.map(([typeId, score]) => {
+            const barColor = score >= 80 ? '#4caf50' : score >= 60 ? '#ffa726' : '#f44336';
+            const label = SPECIES_LABELS[typeId] ?? typeId;
+            return (
+              <View key={typeId} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <Text style={{ color: '#ccc', fontSize: 11, width: 64 }}>{label}</Text>
+                <View style={{ flex: 1, backgroundColor: '#333', borderRadius: 4, height: 6, marginHorizontal: 6 }}>
+                  <View style={{ width: `${Math.round(score)}%`, backgroundColor: barColor, borderRadius: 4, height: 6 }} />
+                </View>
+                <Text style={{ color: '#aaa', fontSize: 11, width: 30, textAlign: 'right' }}>{Math.round(score)}</Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </View>
   );
 }
 
