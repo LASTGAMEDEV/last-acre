@@ -133,12 +133,12 @@ function PriceChart({ history, basePrice }: { history: number[]; basePrice: numb
       <Rect x={PAD.left} y={PAD.top} width={w} height={h} fill="#0a1628" rx={4} />
       <Line x1={PAD.left} y1={baseY} x2={PAD.left + w} y2={baseY} stroke="#444" strokeWidth={1} strokeDasharray="4,3" />
       {yLabels.map((v, i) => (
-        <SvgText key={i} x={PAD.left - 4} y={toY(v) + 4} fontSize={9} fill=C.textFaint textAnchor="end">
+        <SvgText key={i} x={PAD.left - 4} y={toY(v) + 4} fontSize={9} fill={C.textFaint} textAnchor="end">
           ${v.toFixed(0)}
         </SvgText>
       ))}
       {[0, Math.floor((history.length - 1) / 2), history.length - 1].map(idx => (
-        <SvgText key={idx} x={toX(idx)} y={CHART_H - 6} fontSize={9} fill=C.textFaint textAnchor="middle">
+        <SvgText key={idx} x={toX(idx)} y={CHART_H - 6} fontSize={9} fill={C.textFaint} textAnchor="middle">
           -{history.length - 1 - idx}d
         </SvgText>
       ))}
@@ -146,7 +146,7 @@ function PriceChart({ history, basePrice }: { history: number[]; basePrice: numb
       {history.length >= MA_WINDOW && (
         <Polyline points={maPointsStr} fill="none" stroke="#ffd54f" strokeWidth={1.5} strokeDasharray="5,3" opacity={0.8} />
       )}
-      <Circle cx={lastX} cy={lastY} r={4} fill={up ? '#4caf50' : '#ef5350'} stroke=C.white strokeWidth={1} />
+      <Circle cx={lastX} cy={lastY} r={4} fill={up ? '#4caf50' : '#ef5350'} stroke={C.white} strokeWidth={1} />
     </Svg>
   );
 }
