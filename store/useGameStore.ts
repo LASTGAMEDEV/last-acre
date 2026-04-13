@@ -3353,6 +3353,26 @@ export const useGameStore = create<GameState>()(
         }
         // ── End production buildings processing ───────────────────────────
 
+        // ── Mastitis / low-hygiene warnings ──────────────────────────────────────
+        {
+          const DAIRY_SPECIES_WARN = new Set(['vaca', 'cabra', 'bufalo']);
+          for (const pb of newProductionBuildings) {
+            if (!DAIRY_SPECIES_WARN.has(pb.animalTypeId)) continue;
+            if (pb.hygiene < 40) {
+              const speciesLabel =
+                pb.animalTypeId === 'vaca' ? 'cow' :
+                pb.animalTypeId === 'cabra' ? 'goat' : 'buffalo';
+              summary.push({
+                id: `mastitis_${pb.animalTypeId}_${newDay}`,
+                icon: '🦠',
+                title: `Low hygiene in ${speciesLabel} dairy`,
+                detail: `Hygiene ${Math.round(pb.hygiene)}/100 — Grade C milk likely. Clean the parlour and reduce herd density.`,
+                severity: 'warning' as const,
+              });
+            }
+          }
+        }
+
         // ── Slurry accumulation ───────────────────────────────────────────────────
         const SLURRY_LITRES_PER_DAY: Partial<Record<string, number>> = {
           vaca: 35, bufalo: 30, cabra: 12, cerdo: 8, oveja: 5,
