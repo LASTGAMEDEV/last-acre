@@ -1,28 +1,50 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+// components/GameHUD.tsx
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useGameStore } from '../store/useGameStore';
 import { getSeason } from '../engine/climate';
-import { SEASON_THEME, C } from '../constants/theme';
+import { WeatherEvent } from '../engine/climate';
+import { SEASON_THEME, C, S, F, R, MIN_TOUCH } from '../constants/theme';
+import { playSound } from '../engine/sounds';
 import { WORKER_TYPES } from '../data/workerTypes';
 import { MACHINE_TYPES } from '../data/machineTypes';
 import { BUILDING_TYPES } from '../data/buildingTypes';
 
 const WARN_DAYS = 7;
 
-const SEASON_DAYS = 90;
+const WEATHER_DISPLAY: Record<WeatherEvent, { icon: string; pillBg: string; textColor: string }> = {
+  perfect:    { icon: '✨', pillBg: '#1b3a1b', textColor: '#81c784' },
+  sunny:      { icon: '☀️', pillBg: '#3a2800', textColor: '#ffd54f' },
+  cloudy:     { icon: '⛅', pillBg: '#1b2e2e', textColor: '#90caf9' },
+  rain:       { icon: '🌧️', pillBg: '#001a3a', textColor: '#90caf9' },
+  heavy_rain: { icon: '⛈️', pillBg: '#001a3a', textColor: '#64b5f6' },
+  drought:    { icon: '🌵', pillBg: '#3a1500', textColor: '#ffb74d' },
+  frost:      { icon: '❄️', pillBg: '#001a3a', textColor: '#b3e5fc' },
+  hail:       { icon: '🌨️', pillBg: '#1a1a3a', textColor: '#90caf9' },
+  wind:       { icon: '💨', pillBg: '#1b2e1b', textColor: '#c8e6c9' },
+  fog:        { icon: '🌫️', pillBg: '#1a1a1a', textColor: '#aaaaaa' },
+};
 
-const EVENT_ICONS: Record<string, string> = { heat_wave: '🌡️', flood: '🌊', frost: '❄️' };
-const EVENT_NAMES: Record<string, string> = { heat_wave: 'Heat Wave', flood: 'Flood', frost: 'Frost' };
 const EVENT_COLORS: Record<string, string> = { heat_wave: '#5a1a00', flood: '#001a3a', frost: '#001a3a' };
 const EVENT_TEXT_COLORS: Record<string, string> = { heat_wave: '#ffb74d', flood: '#64b5f6', frost: '#b3e5fc' };
+const EVENT_ICONS: Record<string, string> = { heat_wave: '🌡️', flood: '🌊', frost: '❄️' };
+const EVENT_NAMES: Record<string, string> = { heat_wave: 'Heat Wave', flood: 'Flood', frost: 'Frost' };
 
 export default function GameHUD() {
-  const { money, day, savings, loans, contracts, seasonalEvent, farmName, workers, machines, buildings } = useGameStore();
+  const {
+    money, day, savings, loans, contracts, seasonalEvent,
+    farmName, workers, machines, buildings,
+    advanceDay, advanceDays,
+    todayWeather,
+  } = useGameStore();
 
-  const dailyWages = (workers ?? []).reduce((sum, w) => {
-    const def = WORKER_TYPES.find(t => t.id === w.typeId);
-    return sum + (def?.dailyWage ?? 0);
-  }, 0);
+  const season = getSeason(day);
+  const theme = SEASON_THEME[season];
+
+  const SEASON_DAYS = 90;
+  const daysIntoSeason = (day % (SEASON_DAYS * 4)) % SEASON_DAYS;
+  const daysLeftInSeason = SEASON_DAYS - daysIntoSeason;
+
   const hasTaller = (buildings ?? []).includes('bld_taller');
   const machineMaint = (machines ?? []).reduce((s, m) => {
     const t = MACHINE_TYPES.find(mt => mt.id === m.typeId);
@@ -32,180 +54,216 @@ export default function GameHUD() {
     const t = BUILDING_TYPES.find(bt => bt.id === bId);
     return s + (t?.maintenancePerDay ?? 0);
   }, 0);
+  const dailyWages = (workers ?? []).reduce((sum, w) => {
+    const def = WORKER_TYPES.find(t => t.id === w.typeId);
+    return sum + (def?.dailyWage ?? 0);
+  }, 0);
   const dailyBurn = Math.round(dailyWages + machineMaint + buildingMaint);
+
   const urgentLoan = loans.find(l => !l.paid && !l.defaulted && l.payoffDay - day <= WARN_DAYS && l.payoffDay >= day);
   const urgentContract = contracts.find(c => !c.completed && !c.failed && c.deadlineDay - day <= WARN_DAYS && c.deadlineDay >= day);
-  const season = getSeason(day);
-  const theme = SEASON_THEME[season];
-  const daysIntoSeason = (day % (SEASON_DAYS * 4)) % SEASON_DAYS;
-  const daysLeftInSeason = SEASON_DAYS - daysIntoSeason;
 
-  // Animate money delta when it changes
-  const prevMoney = useRef(money);
-  const deltaRef = useRef(0);
-  const deltaOpacity = useRef(new Animated.Value(0)).current;
-  const deltaY = useRef(new Animated.Value(0)).current;
+  const weather = todayWeather ? WEATHER_DISPLAY[todayWeather.event] : null;
 
-  useEffect(() => {
-    const diff = money - prevMoney.current;
-    if (diff !== 0) {
-      deltaRef.current = diff;
-      deltaOpacity.setValue(1);
-      deltaY.setValue(0);
-      Animated.parallel([
-        Animated.timing(deltaOpacity, { toValue: 0, duration: 1400, useNativeDriver: true }),
-        Animated.timing(deltaY,       { toValue: -22, duration: 1400, useNativeDriver: true }),
-      ]).start();
-    }
-    prevMoney.current = money;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [money]);
-
-  const delta = deltaRef.current;
-  const deltaColor = delta >= 0 ? C.greenSoft : C.red;
-  const deltaText = delta >= 0 ? `+$${Math.round(delta).toLocaleString()}` : `-$${Math.abs(Math.round(delta)).toLocaleString()}`;
+  const fmtMoney = (n: number) => {
+    const abs = Math.abs(Math.round(n));
+    return abs >= 1000 ? `$${(abs / 1000).toFixed(1)}k` : `$${abs}`;
+  };
 
   return (
     <>
-    <View style={[styles.hud, { backgroundColor: theme.tabBar, borderBottomColor: theme.accent + '44' }]}>
-      {/* Farm name */}
-      <View style={styles.hudCell}>
-        <Text style={styles.hudLabel}>FARM</Text>
-        <Text style={[styles.hudValue, { fontSize: 10 }]} numberOfLines={1}>{farmName ?? 'My Farm'}</Text>
+      <View style={[styles.hud, { backgroundColor: theme.tabBar, borderBottomColor: theme.accent + '33' }]}>
+
+        {/* Row 1: Farm · Season · Weather · Day */}
+        <View style={styles.row1}>
+          <Text style={styles.farmName} numberOfLines={1}>🌿 {farmName ?? 'My Farm'}</Text>
+          <View style={[styles.pill, { backgroundColor: theme.badge }]}>
+            <Text style={[styles.pillText, { color: theme.badgeText }]}>{theme.icon} {season.charAt(0).toUpperCase() + season.slice(1)} · {daysLeftInSeason}d</Text>
+          </View>
+          {weather && (
+            <View style={[styles.pill, { backgroundColor: weather.pillBg }]}>
+              <Text style={[styles.pillText, { color: weather.textColor }]}>{weather.icon} {todayWeather!.event.replace('_', ' ')}</Text>
+            </View>
+          )}
+          <Text style={styles.dayNum}>Day {day}</Text>
+        </View>
+
+        {/* Row 2: Stats · Advance · Skip */}
+        <View style={styles.row2}>
+          {/* Stats */}
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>{fmtMoney(money)}</Text>
+            <Text style={styles.statLabel}>CASH</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.stat}>
+            <Text style={[styles.statValue, { color: C.textDim }]}>{fmtMoney(savings.balance)}</Text>
+            <Text style={styles.statLabel}>SAVINGS</Text>
+          </View>
+          {dailyBurn > 0 && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.stat}>
+                <Text style={[styles.statValue, { color: C.red }]}>−{fmtMoney(dailyBurn)}</Text>
+                <Text style={styles.statLabel}>BURN/D</Text>
+              </View>
+            </>
+          )}
+
+          <View style={{ flex: 1 }} />
+
+          {/* Advance button */}
+          <TouchableOpacity
+            style={[styles.advanceBtn, { backgroundColor: theme.accent, shadowColor: theme.accent }]}
+            onPress={() => { playSound('dayAdvance'); advanceDay(); }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.advanceDayNum}>Day {day}</Text>
+            <Text style={styles.advanceLabel}>▶ Advance</Text>
+          </TouchableOpacity>
+
+          {/* Skip buttons */}
+          <View style={styles.skipRow}>
+            {([5, 10, 30] as const).map(n => (
+              <TouchableOpacity
+                key={n}
+                style={[styles.skipBtn, { borderColor: theme.accent }]}
+                onPress={() => { playSound('dayAdvance'); advanceDays(n); }}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.skipLabel, { color: theme.accent }]}>+{n}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
       </View>
 
-      <View style={styles.divider} />
+      {/* Seasonal event banner */}
+      {seasonalEvent && (
+        <View style={[styles.warnStrip, { backgroundColor: EVENT_COLORS[seasonalEvent.type] ?? '#1a1a00' }]}>
+          <Text style={[styles.warnText, { color: EVENT_TEXT_COLORS[seasonalEvent.type] ?? '#ffb74d' }]}>
+            {EVENT_ICONS[seasonalEvent.type]} {EVENT_NAMES[seasonalEvent.type]} · {Math.max(0, seasonalEvent.endsDay - day)}d remaining
+          </Text>
+        </View>
+      )}
 
-      {/* Money */}
-      <View style={styles.hudCell}>
-        <Text style={styles.hudLabel}>CASH</Text>
-        <View style={styles.hudValueRow}>
-          <Text style={styles.hudValue}>${Math.round(money).toLocaleString()}</Text>
-          {delta !== 0 && (
-            <Animated.Text style={[styles.delta, { color: deltaColor, opacity: deltaOpacity, transform: [{ translateY: deltaY }] }]}>
-              {deltaText}
-            </Animated.Text>
+      {/* Deadline warnings */}
+      {(urgentLoan || urgentContract) && (
+        <View style={styles.warnStrip}>
+          {urgentLoan && (
+            <Text style={styles.warnText}>
+              ⚠️ Loan due in {urgentLoan.payoffDay - day}d · ${Math.round(urgentLoan.totalOwed).toLocaleString()} owed
+            </Text>
+          )}
+          {urgentContract && (
+            <Text style={styles.warnText}>
+              ⚠️ Contract deadline in {urgentContract.deadlineDay - day}d
+            </Text>
           )}
         </View>
-        {dailyBurn > 0 && (
-          <Text style={styles.burnRate}>−${dailyBurn.toLocaleString()}/d</Text>
-        )}
-      </View>
-
-      <View style={styles.divider} />
-
-      {/* Day */}
-      <View style={styles.hudCell}>
-        <Text style={styles.hudLabel}>DAY</Text>
-        <Text style={styles.hudValue}>{day}</Text>
-      </View>
-
-      <View style={styles.divider} />
-
-      {/* Season */}
-      <View style={styles.hudCell}>
-        <Text style={styles.hudLabel}>SEASON</Text>
-        <View style={[styles.seasonBadge, { backgroundColor: theme.badge }]}>
-          <Text style={styles.seasonIcon}>{theme.icon}</Text>
-          <Text style={[styles.seasonText, { color: theme.badgeText }]}>
-            {season.charAt(0).toUpperCase() + season.slice(1)}
-          </Text>
-          <Text style={[styles.seasonDays, { color: theme.badgeText }]}>
-            {daysLeftInSeason}d left
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.divider} />
-
-      {/* Savings */}
-      <View style={styles.hudCell}>
-        <Text style={styles.hudLabel}>SAVINGS</Text>
-        <Text style={[styles.hudValue, { color: C.greenSoft }]}>${Math.round(savings.balance).toLocaleString()}</Text>
-      </View>
-    </View>
-
-    {/* Seasonal event banner */}
-    {seasonalEvent && (
-      <View style={[styles.warnStrip, { backgroundColor: EVENT_COLORS[seasonalEvent.type] ?? '#1a1a00' }]}>
-        <Text style={[styles.warnText, { color: EVENT_TEXT_COLORS[seasonalEvent.type] ?? '#ffb74d' }]}>
-          {EVENT_ICONS[seasonalEvent.type]} {EVENT_NAMES[seasonalEvent.type]} · {Math.max(0, seasonalEvent.endsDay - day)}d remaining
-        </Text>
-      </View>
-    )}
-
-    {/* Deadline warnings */}
-    {(urgentLoan || urgentContract) && (
-      <View style={styles.warnStrip}>
-        {urgentLoan && (
-          <Text style={styles.warnText}>
-            ⚠️ Loan due in {urgentLoan.payoffDay - day}d · ${Math.round(urgentLoan.totalOwed).toLocaleString()} owed
-          </Text>
-        )}
-        {urgentContract && (
-          <Text style={styles.warnText}>
-            ⚠️ Contract deadline in {urgentContract.deadlineDay - day}d
-          </Text>
-        )}
-      </View>
-    )}
+      )}
     </>
   );
 }
 
 const styles = StyleSheet.create({
   hud: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
     borderBottomWidth: 1,
-    alignItems: 'center',
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.sm,
   },
-  hudCell: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  hudLabel: {
-    color: C.faint,
-    fontSize: 8,
-    fontWeight: 'bold',
-    letterSpacing: 0.8,
-    marginBottom: 2,
-  },
-  hudValueRow: {
+  row1: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: S.sm,
+    marginBottom: S.xs + 1,
   },
-  hudValue: {
-    color: C.gold,
-    fontSize: 12,
-    fontWeight: 'bold',
+  farmName: {
+    color: C.textMuted,
+    fontSize: F.size.xs,
+    fontWeight: F.weight.bold,
+    flexShrink: 1,
   },
-  delta: {
-    position: 'absolute',
-    left: '100%',
-    marginLeft: 4,
-    fontSize: 11,
-    fontWeight: 'bold',
+  pill: {
+    borderRadius: R.pill,
+    paddingHorizontal: S.sm - 1,
+    paddingVertical: 2,
+  },
+  pillText: {
+    color: C.textDim,
+    fontSize: 9,
+    fontWeight: F.weight.bold,
+  },
+  dayNum: {
+    color: C.text,
+    fontSize: F.size.xs,
+    fontWeight: F.weight.bold,
+    marginLeft: 'auto',
+  },
+  row2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: S.xs,
+  },
+  stat: {
+    flexDirection: 'column',
+  },
+  statValue: {
+    color: C.text,
+    fontSize: F.size.sm,
+    fontWeight: F.weight.bold,
+  },
+  statLabel: {
+    color: C.textFaint,
+    fontSize: 7,
+    letterSpacing: 0.5,
   },
   divider: {
     width: 1,
-    height: 28,
+    height: 22,
     backgroundColor: C.divider,
-    marginHorizontal: 4,
+    marginHorizontal: S.xs,
   },
-  seasonBadge: {
-    flexDirection: 'row',
+  advanceBtn: {
+    borderRadius: R.md,
+    paddingHorizontal: S.sm,
+    paddingVertical: S.xs,
     alignItems: 'center',
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    gap: 3,
+    minHeight: MIN_TOUCH,
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  seasonIcon: { fontSize: 10 },
-  seasonText: { fontSize: 10, fontWeight: 'bold' },
-  seasonDays: { fontSize: 8, opacity: 0.75, marginTop: 1 },
-  burnRate:  { color: C.red, fontSize: 8, opacity: 0.75, marginTop: 1 },
-  warnStrip: { backgroundColor: '#3a1a00', paddingHorizontal: 12, paddingVertical: 4, gap: 2 },
-  warnText:  { color: '#ffb74d', fontSize: 10, fontWeight: 'bold' },
+  advanceDayNum: { color: C.white, fontSize: 8, opacity: 0.8 },
+  advanceLabel:  { color: C.white, fontSize: F.size.xs, fontWeight: F.weight.heavy },
+  skipRow: {
+    flexDirection: 'row',
+    gap: S.xs,
+  },
+  skipBtn: {
+    borderWidth: 1,
+    borderRadius: R.sm,
+    paddingHorizontal: S.sm,
+    minHeight: MIN_TOUCH,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  skipLabel: {
+    fontSize: 9,
+    fontWeight: F.weight.bold,
+  },
+  warnStrip: {
+    backgroundColor: '#3a1a00',
+    paddingHorizontal: S.md,
+    paddingVertical: S.xs,
+    gap: 2,
+  },
+  warnText: {
+    color: '#ffb74d',
+    fontSize: F.size.xs,
+    fontWeight: F.weight.bold,
+  },
 });
