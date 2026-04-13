@@ -7,6 +7,8 @@ import TrabajadoresScreen from './trabajadores';
 import { useGameStore, SeedEntry, SeedGenes, HybridJob } from '../../store/useGameStore';
 import { CROP_TYPES } from '../../data/cropTypes';
 import HelpSheet from '../../components/HelpSheet';
+import SubTabBar from '../../components/SubTabBar';
+import { C } from '../../constants/theme';
 
 type FarmTab = 'fields' | 'animals' | 'machinery' | 'workers' | 'seedlab';
 
@@ -280,19 +282,7 @@ export default function GranjaScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabBar}>
-        {TABS.map(t => (
-          <TouchableOpacity
-            key={t.id}
-            style={[styles.tabBtn, tab === t.id && styles.tabBtnActive]}
-            onPress={() => setTab(t.id)}
-          >
-            <Text style={[styles.tabBtnText, tab === t.id && styles.tabBtnTextActive]}>
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <SubTabBar tabs={TABS} active={tab} onSelect={setTab} />
 
       {tab === 'fields'    && <TierrasScreen />}
       {tab === 'animals'   && <AnimalesScreen />}
@@ -304,10 +294,5 @@ export default function GranjaScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: '#0a1628' },
-  tabBar:           { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 6, gap: 6, backgroundColor: '#0a1628' },
-  tabBtn:           { flex: 1, backgroundColor: '#16213e', borderRadius: 8, paddingVertical: 7, alignItems: 'center' },
-  tabBtnActive:     { backgroundColor: '#0f3460' },
-  tabBtnText:       { color: '#888', fontSize: 10, fontWeight: 'bold' },
-  tabBtnTextActive: { color: '#e8d5a3' },
+  container: { flex: 1, backgroundColor: C.bg },
 });
