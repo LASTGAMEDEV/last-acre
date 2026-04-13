@@ -17,7 +17,7 @@ interface Props {
 }
 
 export default function SubTabBar({ tabs, active, onSelect }: Props) {
-  const { day } = useGameStore();
+  const day = useGameStore(s => s.day);
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
   const scrollRef = useRef<ScrollView>(null);
@@ -25,8 +25,9 @@ export default function SubTabBar({ tabs, active, onSelect }: Props) {
   // Scroll active tab into view
   useEffect(() => {
     const idx = tabs.findIndex(t => t.id === active);
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ x: Math.max(0, idx - 1) * 90, animated: true });
+    if (idx > 1 && scrollRef.current) {
+      // Approximation: assumes ~90px average pill width
+      scrollRef.current.scrollTo({ x: idx * 90, animated: true });
     }
   }, [active, tabs]);
 
@@ -86,6 +87,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: F.size.sm,
   },
-  labelActive:   { color: '#fff', fontWeight: F.weight.bold },
+  labelActive:   { color: C.white, fontWeight: F.weight.bold },
   labelInactive: { color: C.textMuted, fontWeight: F.weight.normal },
 });
