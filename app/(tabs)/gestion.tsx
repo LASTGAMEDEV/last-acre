@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, Alert, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -10,6 +10,7 @@ import Encyclopedia from '../../components/Encyclopedia';
 import { useGameStore, HenilBatch, ProductionBuildingState, OwnedAttachment, IncubationBatch } from '../../store/useGameStore';
 import { getSeason } from '../../engine/climate';
 import { SEASON_THEME, C } from '../../constants/theme';
+import SubTabBar from '../../components/SubTabBar';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { BUILDING_TYPES, PRODUCTION_EQUIPMENT } from '../../data/buildingTypes';
@@ -1132,19 +1133,7 @@ export default function GestionScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabBar}>
-        {TABS.map(t => (
-          <TouchableOpacity
-            key={t.id}
-            style={[styles.tabBtn, tab === t.id && styles.tabBtnActive]}
-            onPress={() => setTab(t.id)}
-          >
-            <Text style={[styles.tabBtnText, tab === t.id && styles.tabBtnTextActive]}>
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <SubTabBar tabs={TABS} active={tab} onSelect={setTab} />
 
       {tab === 'dashboard' && <DashboardSection />}
       {tab === 'office'    && <OficinaScreen />}
@@ -1158,12 +1147,7 @@ export default function GestionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: '#0a1628' },
-  tabBar:           { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 6, gap: 6, backgroundColor: '#0a1628' },
-  tabBtn:           { flex: 1, backgroundColor: '#16213e', borderRadius: 8, paddingVertical: 7, alignItems: 'center' },
-  tabBtnActive:     { backgroundColor: '#0f3460' },
-  tabBtnText:       { color: '#888', fontSize: 10, fontWeight: 'bold' },
-  tabBtnTextActive: { color: '#e8d5a3' },
-  sectionCard:      { backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
-  sectionTitle:     { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold', marginBottom: 8 },
+  container:    { flex: 1, backgroundColor: C.bg },
+  sectionCard:  { backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
+  sectionTitle: { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold', marginBottom: 8 },
 });
