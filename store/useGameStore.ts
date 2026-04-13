@@ -3855,6 +3855,30 @@ export const useGameStore = create<GameState>()(
         const crop = parcel.plantedCrop;
         const cropType = CROP_TYPES.find(c => c.id === crop.cropId);
         if (!cropType) return;
+        // Cover crop guard: apply soil benefits and exit without adding inventory
+        const isCoverCrop = !!(cropType as any)?.coverCrop;
+        if (isCoverCrop) {
+          const benefits = COVER_CROP_BENEFITS[crop.cropId] ?? {};
+          const oldSoil = parcel.soil ?? SOIL_DEFAULTS;
+          set({
+            parcels: state.parcels.map(p => p.id === parcelId
+              ? {
+                  ...p,
+                  plantedCrop: null,
+                  cropHistory: [...(parcel.cropHistory ?? []).slice(-3), crop.cropId],
+                  soil: {
+                    ...oldSoil,
+                    nitrogen:      Math.min(100, oldSoil.nitrogen + (benefits.nitrogen ?? 0)),
+                    organicMatter: Math.min(10,  oldSoil.organicMatter + (benefits.organicMatter ?? 0)),
+                    compaction:    Math.max(0,   oldSoil.compaction - (benefits.compactionReduction ?? 0)),
+                    microbialLife: Math.min(100, oldSoil.microbialLife + (benefits.microbialLife ?? 0)),
+                  },
+                }
+              : p
+            ),
+          });
+          return;
+        }
         // Seed genes for this parcel
         const seedEntry = parcel.seedEntryId
           ? state.seedVault.find(s => s.id === parcel.seedEntryId)
