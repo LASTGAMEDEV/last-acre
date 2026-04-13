@@ -760,7 +760,7 @@ function IncubationSection({
             const daysLeft = batch.readyDay - currentDay;
             return (
               <Text key={batch.batchId} style={{ color: '#ccc', fontSize: 11, marginBottom: 2 }}>
-                {cfg?.icon ?? '🥚'} {batch.eggCount} {cfg?.label ?? batch.typeId} eggs — hatches in {daysLeft}d
+                {cfg?.icon ?? '🥚'} {batch.eggCount} {cfg?.label ?? batch.typeId} eggs — {daysLeft > 0 ? `hatches in ${daysLeft}d` : 'Ready!'}
               </Text>
             );
           })}

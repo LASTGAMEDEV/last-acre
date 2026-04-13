@@ -1842,7 +1842,6 @@ export const useGameStore = create<GameState>()(
         // ── Hatchery: incubation queue hatching ───────────────────────────────
         let newIncubationQueue = [...(state.incubationQueue ?? [])];
         {
-          const INCUBATION_DAYS: Record<string, number> = { gallina: 21, pato: 28, codorniz: 17 };
           const HATCH_RATE = 0.80;
           const readyBatches = newIncubationQueue.filter(
             (b: IncubationBatch) => b.readyDay <= newDay
@@ -4923,7 +4922,7 @@ export const useGameStore = create<GameState>()(
         const toQueue = Math.min(quantity, eggsAvail, space);
         if (toQueue <= 0) return;
         const newBatch: IncubationBatch = {
-          batchId: `hatch_${state.day}_${typeId}_${Date.now()}`,
+          batchId: `hatch_${state.day}_${typeId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
           typeId,
           eggCount: toQueue,
           startDay: state.day,
