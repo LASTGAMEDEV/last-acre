@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { PlantedCrop, SoilType, getSoilModifier, harvestAmount } from '../engine/crops';
+import {
+  PlantedCrop, SoilType, getSoilModifier, harvestAmount,
+  SoilStats, SOIL_DEFAULTS, advanceSoilStats, SoilTickParams,
+} from '../engine/crops';
 import { OwnedAnimal, AnimalGenes, inheritTrait, randomGenes, breedGenes, isAtOptimalWeight } from '../engine/animals';
 import { MarketPrice, NewsEvent } from '../engine/market';
 import { WeatherDay } from '../engine/climate';
@@ -141,7 +144,11 @@ function estimateCropValue(parcel: LandParcel, prices: MarketPrice[]): number {
 export interface LandParcel {
   id: string;
   name: string;
+  /** @deprecated use soil.nitrogen — kept for save migration only */
   fertility: number;
+  // ── Soil system ──
+  soil: SoilStats;
+  cropHistory: string[]; // last 4 harvested cropIds (oldest first)
   hectares: number;
   pricePerHa: number;
   owned: boolean;
@@ -681,6 +688,8 @@ export interface GameState {
   ) => void;
   deliverToRecurringContract: (contractId: string, amountDelivered: number) => void;
   cancelRecurringContract: (contractId: string) => void;
+  applySoilAmendment: (parcelId: string, amendment: 'lime' | 'sulfur' | 'subsoiler') => void;
+  plantCoverCrop: (parcelId: string, coverCropId: string) => void;
   buyProduct: (productId: string) => void;
   buyBuilding: (buildingId: string) => void;
   resolveFieldEvent: (eventId: string, productId: string) => void;
@@ -840,6 +849,8 @@ function generateParcelsFromMap(): LandParcel[] {
         id: field.parcelId,
         name: field.name,
         fertility: Math.max(1, Math.round((field.fertility ?? 70) / 4)),
+        soil: { ...SOIL_DEFAULTS },
+        cropHistory: [],
         hectares: field.approximateHa,
         pricePerHa: 0,
         owned: true,
@@ -854,6 +865,8 @@ function generateParcelsFromMap(): LandParcel[] {
         id: `p-${field.id}`,
         name: field.name,
         fertility: Math.max(1, Math.round((field.fertility ?? 65) / 4)),
+        soil: { ...SOIL_DEFAULTS },
+        cropHistory: [],
         hectares: field.approximateHa,
         pricePerHa: Math.round((field.askingPrice ?? 20000) / field.approximateHa),
         owned: false,
@@ -874,8 +887,8 @@ function generateInitialPrices(): MarketPrice[] {
 
 function generateInitialListings(): AuctionListing[] {
   const premiumParcels: LandParcel[] = [
-    { id: 'auction_p0', name: 'Gold Acre',   fertility: 22, hectares: 5,  pricePerHa: 55000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
-    { id: 'auction_p1', name: 'Prime Ridge', fertility: 25, hectares: 2,  pricePerHa: 60000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
+    { id: 'auction_p0', name: 'Gold Acre',   fertility: 22, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 5,  pricePerHa: 55000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
+    { id: 'auction_p1', name: 'Prime Ridge', fertility: 25, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 2,  pricePerHa: 60000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
   ];
   return premiumParcels.map((parcel, i) => ({
     id: `lot_init_${i}`,
@@ -1033,6 +1046,18 @@ function getWorkerBonuses(workers: OwnedWorker[]) {
     autoProcessEnabled:     supervisorCount > 0,
   };
 }
+
+const COVER_CROP_BENEFITS: Record<string, {
+  nitrogen?: number;
+  organicMatter?: number;
+  compactionReduction?: number;
+  microbialLife?: number;
+}> = {
+  rye:       { compactionReduction: 8, organicMatter: 0.4 },
+  clover:    { nitrogen: 20, organicMatter: 2.0 },
+  mustard:   { microbialLife: 10 },
+  buckwheat: { microbialLife: 10, organicMatter: 0.5 },
+};
 
 export const useGameStore = create<GameState>()(
   persist(
@@ -1386,6 +1411,8 @@ export const useGameStore = create<GameState>()(
                   id: foreId,
                   name: `${farm.name}'s Holding`,
                   fertility: 8 + (farm.tier * 3),
+                  soil: { ...SOIL_DEFAULTS },
+                  cropHistory: [],
                   hectares: farm.tier * 2,
                   pricePerHa: 1200 + (farm.tier * 300), // ~40% below market
                   owned: false,
@@ -2433,6 +2460,8 @@ export const useGameStore = create<GameState>()(
             id: `auction_p${newDay}`,
             name: auctionNames[newDay % auctionNames.length],
             fertility, hectares, pricePerHa,
+            soil: { ...SOIL_DEFAULTS },
+            cropHistory: [],
             owned: false, hasWeeds: false, plantedCrop: null,
             greenhouse: false, irrigated: false, tilled: false,
           };
@@ -2739,6 +2768,24 @@ export const useGameStore = create<GameState>()(
               const cropType = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
               if (!cropType) return p;
               if (newDay < p.plantedCrop.plantedDay + Math.max(1, Math.round(cropType.growthDays) - workerBonuses.cropGrowthReduction)) return p;
+              // Cover crop maturation: apply soil benefits, skip normal harvest
+              const isCoverCropW = !!(cropType as any)?.coverCrop;
+              if (isCoverCropW) {
+                const benefits = COVER_CROP_BENEFITS[p.plantedCrop.cropId] ?? {};
+                const oldSoil = p.soil ?? SOIL_DEFAULTS;
+                return {
+                  ...p,
+                  plantedCrop: null,
+                  cropHistory: [...(p.cropHistory ?? []).slice(-3), p.plantedCrop.cropId],
+                  soil: {
+                    ...oldSoil,
+                    nitrogen:      Math.min(100, oldSoil.nitrogen + (benefits.nitrogen ?? 0)),
+                    organicMatter: Math.min(10,  oldSoil.organicMatter + (benefits.organicMatter ?? 0)),
+                    compaction:    Math.max(0,   oldSoil.compaction - (benefits.compactionReduction ?? 0)),
+                    microbialLife: Math.min(100, oldSoil.microbialLife + (benefits.microbialLife ?? 0)),
+                  },
+                };
+              }
               const baseClimate = state.todayWeather?.climateModifier ?? 1.0;
               const waterScale = (cropType.waterNeed ?? 3) / 5;
               const climateModifier = 1.0 + (baseClimate - 1.0) * waterScale;
@@ -2749,13 +2796,13 @@ export const useGameStore = create<GameState>()(
               const rotationMod = p.lastCropId && p.lastCropId !== p.plantedCrop.cropId ? 1.15 : 1.0;
               const soilMod = getSoilModifier(p.soilType, p.plantedCrop.cropId);
               const machineYieldWithEngineer = yieldBonusW + workerBonuses.machineYieldBonus; // yieldBonusW = 1.0
-              const rawUnits = harvestAmt(p.plantedCrop, cropType, p.fertility, climateModifier, p.hasWeeds, machineYieldWithEngineer, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0);
+              const rawUnits = harvestAmt(p.plantedCrop, cropType, p.soil ?? SOIL_DEFAULTS, climateModifier, p.hasWeeds, machineYieldWithEngineer, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0);
               const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * irrigationBonus * rotationMod * soilMod * workerBonuses.cropYieldMultiplier), siloCapacity - siloTotal);
               siloTotal += units;
               workerNewInventory[p.plantedCrop.cropId] = (workerNewInventory[p.plantedCrop.cropId] ?? 0) + units;
               if (!newHarvestedIds.includes(p.plantedCrop.cropId)) newHarvestedIds.push(p.plantedCrop.cropId);
               const newFertility = Math.max(1, p.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonuses.fertilityDrainMult));
-              return { ...p, plantedCrop: null, lastCropId: p.plantedCrop.cropId, fertility: newFertility };
+              return { ...p, plantedCrop: null, lastCropId: p.plantedCrop.cropId, fertility: newFertility, cropHistory: [...(p.cropHistory ?? []).slice(-3), p.plantedCrop.cropId] };
             });
             (autoSellFinalInventory as any).__workerInventory = workerNewInventory;
             (autoSellFinalInventory as any).__harvestedIds = newHarvestedIds;
@@ -2928,19 +2975,43 @@ export const useGameStore = create<GameState>()(
             if (!parcel || !parcel.plantedCrop) continue;
             const cropType = CROP_TYPES.find((c: { id: string }) => c.id === parcel.plantedCrop!.cropId);
             if (!cropType) continue;
+            // Cover crop maturation: apply soil benefits, skip normal harvest
+            const isCoverCropHJ = !!(cropType as any)?.coverCrop;
+            if (isCoverCropHJ) {
+              const benefits = COVER_CROP_BENEFITS[parcel.plantedCrop!.cropId] ?? {};
+              const oldSoil = parcel.soil ?? SOIL_DEFAULTS;
+              finalParcels = finalParcels.map((p: LandParcel) =>
+                p.id === pid
+                  ? {
+                      ...p,
+                      plantedCrop: null,
+                      cropHistory: [...(parcel.cropHistory ?? []).slice(-3), parcel.plantedCrop!.cropId],
+                      soil: {
+                        ...oldSoil,
+                        nitrogen:      Math.min(100, oldSoil.nitrogen + (benefits.nitrogen ?? 0)),
+                        organicMatter: Math.min(10,  oldSoil.organicMatter + (benefits.organicMatter ?? 0)),
+                        compaction:    Math.max(0,   oldSoil.compaction - (benefits.compactionReduction ?? 0)),
+                        microbialLife: Math.min(100, oldSoil.microbialLife + (benefits.microbialLife ?? 0)),
+                      },
+                    }
+                  : p
+              );
+              processedHa += parcel.hectares;
+              continue;
+            }
             const currentTotal = Object.values(harvestInventory).reduce((a: number, b) => a + (b as number), 0);
             if (currentTotal >= siloCapForHarvest) break;
             const baseClimate = state.todayWeather?.climateModifier ?? 1.0;
             const waterScale = (cropType.waterNeed ?? 3) / 5;
             const climateModifier = 1.0 + (baseClimate - 1.0) * waterScale;
             const units = Math.min(
-              Math.round(harvestAmount(parcel.plantedCrop!, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, 1.0, parcel.plantedCrop!.frostDamage ?? 0, parcel.plantedCrop!.droughtStress ?? 0)),
+              Math.round(harvestAmount(parcel.plantedCrop!, cropType, parcel.soil ?? SOIL_DEFAULTS, climateModifier, parcel.hasWeeds, 1.0, parcel.plantedCrop!.frostDamage ?? 0, parcel.plantedCrop!.droughtStress ?? 0)),
               siloCapForHarvest - currentTotal,
             );
             const newFertility = Math.max(1, parcel.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonuses.fertilityDrainMult));
             finalParcels = finalParcels.map((p: LandParcel) =>
               p.id === pid
-                ? { ...p, plantedCrop: null, lastCropId: parcel.plantedCrop!.cropId, fertility: newFertility, tilled: false }
+                ? { ...p, plantedCrop: null, lastCropId: parcel.plantedCrop!.cropId, fertility: newFertility, tilled: false, cropHistory: [...(parcel.cropHistory ?? []).slice(-3), parcel.plantedCrop!.cropId] }
                 : p
             );
             harvestInventory = {
@@ -3074,6 +3145,31 @@ export const useGameStore = create<GameState>()(
         if (newlyDiseased.length > 0) {
           summary.push({ id: 'blight_new', icon: '🦠', title: `Crop blight on ${newlyDiseased.length} plot${newlyDiseased.length > 1 ? 's' : ''}`, detail: 'Treat quickly or lose the crop', severity: 'danger' });
         }
+
+        // ── Soil daily tick ──────────────────────────────────────────────────
+        const parcelsWithSoil = finalParcels.map((p) => {
+          if (!p.owned) return p;
+          const cropType = p.plantedCrop
+            ? CROP_TYPES.find(ct => ct.id === p.plantedCrop!.cropId)
+            : undefined;
+          const tickParams: SoilTickParams = {
+            activeCropId: p.plantedCrop?.cropId ?? null,
+            harvestedToday: false,
+            machineryUsedToday: false,
+            heavyRainToday: (todayWeather?.event === 'heavy_rain' || todayWeather?.event === 'rain'),
+            pesticideAppliedToday: false,
+            manureAppliedToday: false,
+            subsoilerUsedToday: false,
+          };
+          const nitrogenDemand = cropType
+            ? (cropType.fertilityDrain ?? 0) * 4
+            : 0;
+          return {
+            ...p,
+            soil: advanceSoilStats(p.soil ?? SOIL_DEFAULTS, tickParams, nitrogenDemand),
+          };
+        });
+        finalParcels = parcelsWithSoil;
 
         // ── Price alert triggers ─────────────────────────────────────────────
         let priceAlerts = [...(state.priceAlerts ?? [])];
@@ -3780,7 +3876,7 @@ export const useGameStore = create<GameState>()(
         const droughtScale = rawClimateDelta < 0 ? 1.0 / seedGenes.drought : 1.0;
         const climateModifier = 1.0 + rawClimateDelta * droughtScale;
         const { harvestAmount } = require('../engine/crops');
-        const rawUnits = harvestAmount(crop, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, 1.0, crop.frostDamage ?? 0, crop.droughtStress ?? 0);
+        const rawUnits = harvestAmount(crop, cropType, parcel.soil ?? SOIL_DEFAULTS, climateModifier, parcel.hasWeeds, 1.0, crop.frostDamage ?? 0, crop.droughtStress ?? 0);
         // Field event penalty: −25% yield per unresolved disease/pest event
         const unresolvedEvents = state.fieldEvents.filter(e => e.parcelId === parcelId && !e.resolved).length;
         const fieldEventMod = Math.pow(0.75, unresolvedEvents);
@@ -3809,7 +3905,7 @@ export const useGameStore = create<GameState>()(
         const newFertility = Math.max(1, parcel.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonusesManual.fertilityDrainMult));
         set({
           parcels: state.parcels.map(p => p.id === parcelId
-            ? { ...p, plantedCrop: null, lastCropId: crop.cropId, fertility: newFertility, seedEntryId: undefined, diseased: false, diseasedDay: undefined }
+            ? { ...p, plantedCrop: null, lastCropId: crop.cropId, fertility: newFertility, seedEntryId: undefined, diseased: false, diseasedDay: undefined, cropHistory: [...(parcel.cropHistory ?? []).slice(-3), crop.cropId] }
             : p
           ),
           inventory: { ...state.inventory, [crop.cropId]: (state.inventory[crop.cropId] ?? 0) + units },
@@ -4773,6 +4869,56 @@ export const useGameStore = create<GameState>()(
         }));
       },
 
+      applySoilAmendment: (parcelId, amendment) => {
+        set((s) => {
+          const parcel = s.parcels.find((p) => p.id === parcelId);
+          if (!parcel || !parcel.owned) return {};
+          const current = parcel.soil ?? SOIL_DEFAULTS;
+          let newSoil: SoilStats;
+          let cost = 0;
+          if (amendment === 'lime') {
+            newSoil = { ...current, pH: Math.min(8.5, current.pH + 0.5) };
+            cost = 120;
+          } else if (amendment === 'sulfur') {
+            newSoil = { ...current, pH: Math.max(4.0, current.pH - 0.5) };
+            cost = 100;
+          } else {
+            newSoil = { ...current, compaction: Math.max(0, current.compaction - 18) };
+            cost = 200;
+          }
+          if (s.money < cost) return {};
+          return {
+            money: s.money - cost,
+            parcels: s.parcels.map((p) =>
+              p.id === parcelId ? { ...p, soil: newSoil } : p,
+            ),
+          };
+        });
+      },
+
+      plantCoverCrop: (parcelId, coverCropId) => {
+        set((s) => {
+          const parcel = s.parcels.find((p) => p.id === parcelId);
+          if (!parcel || !parcel.owned || parcel.plantedCrop) return {};
+          const cropType = CROP_TYPES.find((ct) => ct.id === coverCropId);
+          if (!cropType) return {};
+          if (s.money < cropType.seedCost * parcel.hectares) return {};
+          const coverCrop: PlantedCrop = {
+            cropId: coverCropId,
+            parcelId,
+            plantedDay: s.day,
+            hectares: parcel.hectares,
+            fertilized: false,
+          };
+          return {
+            money: s.money - cropType.seedCost * parcel.hectares,
+            parcels: s.parcels.map((p) =>
+              p.id === parcelId ? { ...p, plantedCrop: coverCrop } : p,
+            ),
+          };
+        });
+      },
+
       counterOfferContract: (templateId, mod) => {
         const state = get();
         const { CONTRACT_TEMPLATES } = require('../engine/contracts');
@@ -5673,13 +5819,13 @@ export const useGameStore = create<GameState>()(
           const rotationMod = p.lastCropId && p.lastCropId !== p.plantedCrop.cropId ? 1.15 : 1.0;
           const irrigationMod = p.irrigated ? 1.20 : 1.0;
           const soilMod = getSoilModifier(p.soilType, p.plantedCrop.cropId);
-          const rawUnits = harvestAmount(p.plantedCrop, cropType, p.fertility, climateModifier, p.hasWeeds, yieldBonus, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0);
+          const rawUnits = harvestAmount(p.plantedCrop, cropType, p.soil ?? SOIL_DEFAULTS, climateModifier, p.hasWeeds, yieldBonus, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0);
           const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationMod * soilMod), siloCapacity - totalInventory);
           totalInventory += units;
           newInventory[p.plantedCrop.cropId] = (newInventory[p.plantedCrop.cropId] ?? 0) + units;
           if (!newHarvestedCropIds.includes(p.plantedCrop.cropId)) newHarvestedCropIds.push(p.plantedCrop.cropId);
           const newFertility = Math.max(1, p.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonusesAll.fertilityDrainMult));
-          return { ...p, plantedCrop: null, lastCropId: p.plantedCrop.cropId, fertility: newFertility };
+          return { ...p, plantedCrop: null, lastCropId: p.plantedCrop.cropId, fertility: newFertility, cropHistory: [...(p.cropHistory ?? []).slice(-3), p.plantedCrop.cropId] };
         });
         set({ parcels: newParcels, inventory: newInventory, harvestedCropIds: newHarvestedCropIds });
       },
@@ -5869,7 +6015,7 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'last-acre-save-v3',
+      name: 'last-acre-save-v5',
       storage: createJSONStorage(() => {
         try {
           return localStorage;
@@ -5902,6 +6048,7 @@ export const useGameStore = create<GameState>()(
           buyAttachment, buyTrailer, hitchTrailer, assignJob, assignHarvestJob, hireContractor,
           selectMapField, buyMapField, scoutMapField, savePanZoom,
           designateAsSire, removeFromSirePen, spreadSlurry, fillSilagePit, setBiogasMode, queueEggsForIncubation,
+          applySoilAmendment, plantCoverCrop,
           ...dataState
         } = state;
         return dataState;
@@ -5928,6 +6075,14 @@ export const useGameStore = create<GameState>()(
                                   (b.includes('bld_hatchery_m') ? 150 : 0) +
                                   (b.includes('bld_hatchery_l') ? 400 : 0);
         state.incubationQueue  = state.incubationQueue ?? [];
+        state.parcels = state.parcels.map((p) => ({
+          ...p,
+          soil: p.soil ?? {
+            ...SOIL_DEFAULTS,
+            nitrogen: Math.round((p.fertility / 25) * 100),
+          },
+          cropHistory: p.cropHistory ?? [],
+        }));
       },
     }
   )
