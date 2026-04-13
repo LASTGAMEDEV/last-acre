@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { playSound } from '../../engine/sounds';
 import Svg, { Polyline, Line, Text as SvgText, Rect, G, Circle } from 'react-native-svg';
@@ -12,12 +12,26 @@ import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { MARKET_REGIONS, MarketId } from '../../data/marketRegions';
 import { sellRevenue, computeSellPressureModifier, sellPressureDuration } from '../../engine/market';
 import { getSeason } from '../../engine/climate';
+import {
+  Buyer,
+  RecurringContract,
+  BUYER_TIER_CONFIG,
+  getBuyerPriceBonus,
+  BuyerTier,
+} from '../../engine/contracts';
 import HelpSheet from '../../components/HelpSheet';
 import HintCard from '../../components/HintCard';
 import RevenueChart, { RevenueChartDataPoint } from '../../components/RevenueChart';
 
 const TIER_COLORS: Record<CropTier, string> = {
   D: '#9e9e9e', C: '#4caf50', B: '#2196f3', A: '#9c27b0', S: '#ff9800',
+};
+
+const BUYER_TIER_COLORS: Record<BuyerTier, string> = {
+  new:       '#37474f',
+  regular:   '#1565c0',
+  preferred: '#6a1fa3',
+  exclusive: '#b8860b',
 };
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -152,10 +166,10 @@ function PriceChart({ history, basePrice }: { history: number[]; basePrice: numb
   );
 }
 
-type EcoTab = 'market' | 'autosell' | 'stats' | 'futures' | 'orders';
+type EcoTab = 'market' | 'autosell' | 'stats' | 'futures' | 'orders' | 'supply';
 
 export default function EconomiaScreen() {
-  const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture, priceAlerts, addPriceAlert, removePriceAlert, money, marketOrders, placeMarketOrder, cancelMarketOrder, selectedMarket, setSelectedMarket, hapticEnabled } = useGameStore();
+  const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture, priceAlerts, addPriceAlert, removePriceAlert, money, marketOrders, placeMarketOrder, cancelMarketOrder, selectedMarket, setSelectedMarket, hapticEnabled, buyers, recurringContracts, reputation, signRecurringContract, deliverToRecurringContract, cancelRecurringContract } = useGameStore();
   const [selectedCrop, setSelectedCrop] = useState<string>(CROP_TYPES[0].id);
   const [ecoTab, setEcoTab] = useState<EcoTab>('market');
   const [dispatchVisible, setDispatchVisible] = useState(false);
@@ -175,6 +189,17 @@ export default function EconomiaScreen() {
   const [orderQty, setOrderQty] = useState('');
   const [orderTargetPrice, setOrderTargetPrice] = useState('');
   const [orderTerm, setOrderTerm] = useState<7 | 14 | 30>(7);
+
+  // Supply tab modal state
+  const [signModalVisible, setSignModalVisible] = useState(false);
+  const [signingBuyerId, setSigningBuyerId] = useState<string | null>(null);
+  const [signCropId, setSignCropId] = useState<string>('');
+  const [signAmount, setSignAmount] = useState<string>('');
+  const [signFrequency, setSignFrequency] = useState<7 | 14 | 30>(14);
+  const [signDuration, setSignDuration] = useState<number>(1);
+  const [deliverModalVisible, setDeliverModalVisible] = useState(false);
+  const [deliveringContractId, setDeliveringContractId] = useState<string | null>(null);
+  const [deliverAmount, setDeliverAmount] = useState<string>('');
 
   useEffect(() => {
     return () => {
@@ -272,6 +297,16 @@ export default function EconomiaScreen() {
     .map(crop => ({ crop, qty: Math.round(inventory[crop.id] ?? 0), price: prices.find(p => p.cropId === crop.id)?.price ?? crop.basePrice }))
     .filter(x => x.qty > 0);
 
+  function isBuyerAvailable(buyer: Buyer): boolean {
+    if (day < buyer.unlockedDay) return false;
+    if (buyer.requiresReputation && (reputation ?? 0) < buyer.requiresReputation) return false;
+    return true;
+  }
+
+  function activeBuyerContract(buyerId: string): RecurringContract | undefined {
+    return (recurringContracts ?? []).find((c) => c.buyerId === buyerId && c.active);
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.screenTitle}>Economy</Text>
@@ -286,6 +321,7 @@ export default function EconomiaScreen() {
           { id: 'stats',    label: '📊 Stats' },
           { id: 'futures',  label: '📉 Futures' },
           { id: 'orders',   label: '📋 Orders' },
+          { id: 'supply',   label: '🤝 Supply' },
         ]}
         active={ecoTab}
         onSelect={id => setEcoTab(id as EcoTab)}
@@ -704,6 +740,132 @@ export default function EconomiaScreen() {
         );
       })()}
 
+      {/* ── SUPPLY TAB ── */}
+      {ecoTab === 'supply' && (
+        <ScrollView style={styles.tabScroll} showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ padding: S.md, paddingBottom: 40 }}>
+
+          <Text style={styles.sectionHeader}>Recurring Buyers</Text>
+          <Text style={[styles.sectionSubtitle, { marginBottom: S.md }]}>
+            Consistent deliveries build streaks and unlock better prices and larger orders.
+          </Text>
+
+          {(buyers ?? []).map((buyer) => {
+            const available = isBuyerAvailable(buyer);
+            const activeContract = activeBuyerContract(buyer.id);
+            const tierCfg = BUYER_TIER_CONFIG[buyer.tier];
+            const priceBonus = getBuyerPriceBonus(buyer);
+            const nextTierEntry = (['new','regular','preferred','exclusive'] as BuyerTier[])
+              .find((t) => BUYER_TIER_CONFIG[t].deliveryGate > buyer.totalDeliveries);
+            const gateToNext = nextTierEntry
+              ? BUYER_TIER_CONFIG[nextTierEntry].deliveryGate - buyer.totalDeliveries
+              : 0;
+
+            return (
+              <View key={buyer.id} style={[styles.card, !available && { opacity: 0.45 }]}>
+                {/* Header */}
+                <View style={styles.rowBetween}>
+                  <View style={styles.rowInline}>
+                    <Text style={styles.buyerEmoji}>{buyer.emoji}</Text>
+                    <Text style={styles.cardTitle}>{buyer.name}</Text>
+                  </View>
+                  <View style={[styles.tierBadge, { backgroundColor: BUYER_TIER_COLORS[buyer.tier] }]}>
+                    <Text style={styles.tierBadgeText}>{tierCfg.emoji} {tierCfg.label}</Text>
+                  </View>
+                </View>
+
+                {/* Accepted crops */}
+                <Text style={styles.buyerCropLabel}>
+                  Accepts: {buyer.cropIds[0] === 'any' ? 'Any crop' : buyer.cropIds.join(', ')}
+                </Text>
+
+                {/* Tier stats */}
+                <View style={[styles.rowInline, { gap: S.md, marginTop: S.xs }]}>
+                  <Text style={styles.buyerStat}>+{Math.round(priceBonus * 100)}% price</Text>
+                  <Text style={styles.buyerStat}>
+                    Max {tierCfg.maxOrderKg === Infinity ? 'Unlimited' : `${tierCfg.maxOrderKg} kg`}
+                  </Text>
+                  {gateToNext > 0 && (
+                    <Text style={styles.buyerStat}>{gateToNext} more to upgrade</Text>
+                  )}
+                </View>
+
+                {/* Streak pips */}
+                {buyer.deliveryStreak > 0 && (
+                  <View style={[styles.rowInline, { gap: 4, marginTop: S.xs, flexWrap: 'wrap' }]}>
+                    {Array.from({ length: Math.min(buyer.deliveryStreak, 15) }).map((_, i) => (
+                      <View key={i} style={styles.streakPip} />
+                    ))}
+                    <Text style={[styles.buyerStat, { marginLeft: 4 }]}>
+                      {buyer.deliveryStreak} streak
+                    </Text>
+                  </View>
+                )}
+
+                {/* Lock reason */}
+                {!available && (
+                  <Text style={styles.lockedReason}>
+                    {day < buyer.unlockedDay
+                      ? `Unlocks day ${buyer.unlockedDay}`
+                      : `Requires ${buyer.requiresReputation} reputation`}
+                  </Text>
+                )}
+
+                {/* Active contract summary */}
+                {activeContract && (
+                  <View style={styles.activeContractChip}>
+                    <Text style={styles.activeContractText}>
+                      📦 {activeContract.cropId} · {activeContract.amountPerDelivery} kg
+                      {' '}· Next: day {activeContract.nextDeliveryDay}
+                      {activeContract.graceDaysRemaining > 0
+                        ? ` (+${activeContract.graceDaysRemaining}d grace)`
+                        : ''}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Actions */}
+                {available && (
+                  <View style={[styles.rowInline, { gap: S.sm, marginTop: S.sm }]}>
+                    {!activeContract ? (
+                      <TouchableOpacity
+                        style={[styles.actionBtn, { backgroundColor: C.green }]}
+                        onPress={() => {
+                          setSigningBuyerId(buyer.id);
+                          setSignCropId(buyer.cropIds[0] === 'any' ? CROP_TYPES[0].id : buyer.cropIds[0]);
+                          setSignModalVisible(true);
+                        }}
+                      >
+                        <Text style={styles.actionBtnText}>Sign Contract</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, { flex: 1, backgroundColor: C.green }]}
+                          onPress={() => {
+                            setDeliveringContractId(activeContract.id);
+                            setDeliverAmount(String(activeContract.amountPerDelivery));
+                            setDeliverModalVisible(true);
+                          }}
+                        >
+                          <Text style={styles.actionBtnText}>Deliver</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, { flex: 1, backgroundColor: '#5c1a1a' }]}
+                          onPress={() => cancelRecurringContract(activeContract.id)}
+                        >
+                          <Text style={[styles.actionBtnText, { color: '#ef9a9a' }]}>Cancel</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
+
       {/* MARKET TAB */}
       {ecoTab === 'market' && <>
       {/* News ticker */}
@@ -1039,6 +1201,201 @@ export default function EconomiaScreen() {
           setDispatchVisible(false);
         }}
       />
+
+      {/* ── Sign Contract Modal ── */}
+      <Modal
+        visible={signModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSignModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            {(() => {
+              const buyer = (buyers ?? []).find((b) => b.id === signingBuyerId);
+              if (!buyer) return null;
+              const tierCfg = BUYER_TIER_CONFIG[buyer.tier];
+              const acceptedCrops =
+                buyer.cropIds[0] === 'any'
+                  ? CROP_TYPES.map((ct) => ct.id)
+                  : buyer.cropIds;
+
+              return (
+                <>
+                  <Text style={styles.modalTitle}>
+                    {buyer.emoji} Sign Contract — {buyer.name}
+                  </Text>
+                  <Text style={styles.modalSub}>
+                    {tierCfg.emoji} {tierCfg.label} · +{Math.round(getBuyerPriceBonus(buyer) * 100)}% price bonus
+                  </Text>
+
+                  <Text style={styles.formLabel}>Crop</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                    style={{ marginBottom: S.sm }}>
+                    {acceptedCrops.map((id) => (
+                      <TouchableOpacity
+                        key={id}
+                        style={[styles.supplyChip, signCropId === id && styles.supplyChipActive]}
+                        onPress={() => setSignCropId(id)}
+                      >
+                        <Text style={[styles.supplyChipText, signCropId === id && { color: C.white }]}>
+                          {CROP_TYPES.find((ct) => ct.id === id)?.name ?? id}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  <Text style={styles.formLabel}>
+                    Amount per delivery (kg)
+                    {tierCfg.maxOrderKg !== Infinity ? ` — max ${tierCfg.maxOrderKg}` : ''}
+                  </Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={signAmount}
+                    onChangeText={setSignAmount}
+                    keyboardType="numeric"
+                    placeholder="e.g. 200"
+                    placeholderTextColor={C.textFaint}
+                  />
+
+                  <Text style={styles.formLabel}>Delivery frequency</Text>
+                  <View style={[styles.rowInline, { gap: S.sm, marginBottom: S.sm }]}>
+                    {([7, 14, 30] as const).map((f) => (
+                      <TouchableOpacity
+                        key={f}
+                        style={[styles.supplyChip, { flex: 1 }, signFrequency === f && styles.supplyChipActive]}
+                        onPress={() => setSignFrequency(f)}
+                      >
+                        <Text style={[styles.supplyChipText, signFrequency === f && { color: C.white }]}>
+                          {f === 7 ? 'Weekly' : f === 14 ? 'Biweekly' : 'Monthly'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={styles.formLabel}>Duration (seasons)</Text>
+                  <View style={[styles.rowInline, { gap: S.sm, marginBottom: S.md }]}>
+                    {[1, 2, 3, 4].map((d) => (
+                      <TouchableOpacity
+                        key={d}
+                        style={[styles.supplyChip, { flex: 1 }, signDuration === d && styles.supplyChipActive]}
+                        onPress={() => setSignDuration(d)}
+                      >
+                        <Text style={[styles.supplyChipText, signDuration === d && { color: C.white }]}>
+                          {d}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <View style={[styles.rowInline, { gap: S.sm }]}>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { flex: 1, backgroundColor: C.green }]}
+                      onPress={() => {
+                        const amt = Number(signAmount);
+                        if (!signCropId || !amt || amt <= 0) return;
+                        if (tierCfg.maxOrderKg !== Infinity && amt > tierCfg.maxOrderKg) return;
+                        signRecurringContract(
+                          signingBuyerId!, signCropId, amt, signFrequency, signDuration,
+                        );
+                        setSignModalVisible(false);
+                        setSignAmount('');
+                      }}
+                    >
+                      <Text style={styles.actionBtnText}>Confirm</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { flex: 1, backgroundColor: C.bgCard }]}
+                      onPress={() => setSignModalVisible(false)}
+                    >
+                      <Text style={[styles.actionBtnText, { color: C.textMuted }]}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              );
+            })()}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Deliver Modal ── */}
+      <Modal
+        visible={deliverModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDeliverModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            {(() => {
+              const contract = (recurringContracts ?? []).find((c) => c.id === deliveringContractId);
+              if (!contract) return null;
+              const buyer = (buyers ?? []).find((b) => b.id === contract.buyerId);
+              if (!buyer) return null;
+              const inStock = inventory[contract.cropId] ?? 0;
+              const cropType = CROP_TYPES.find((ct) => ct.id === contract.cropId);
+              const basePrice = cropType?.basePrice ?? 1;
+              const previewAmt = Math.min(Number(deliverAmount) || 0, inStock);
+              const previewRevenue = previewAmt * basePrice * (1 + contract.priceBonus);
+              const threshold80 = Math.ceil(contract.amountPerDelivery * 0.8);
+              const isOnTime = previewAmt >= threshold80;
+
+              return (
+                <>
+                  <Text style={styles.modalTitle}>
+                    {buyer.emoji} Deliver to {buyer.name}
+                  </Text>
+                  <Text style={styles.modalSub}>
+                    Required: {contract.amountPerDelivery} kg {contract.cropId}
+                    {' '}(≥{threshold80} kg counts as on-time)
+                  </Text>
+                  <Text style={styles.modalSub}>
+                    In stock: {inStock.toLocaleString()} kg · +{Math.round(contract.priceBonus * 100)}% bonus
+                  </Text>
+
+                  <Text style={styles.formLabel}>Amount to deliver (kg)</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={deliverAmount}
+                    onChangeText={setDeliverAmount}
+                    keyboardType="numeric"
+                    placeholder={String(contract.amountPerDelivery)}
+                    placeholderTextColor={C.textFaint}
+                  />
+
+                  {previewAmt > 0 && (
+                    <Text style={[styles.modalSub, { color: isOnTime ? '#81c784' : '#ef9a9a', marginBottom: S.sm }]}>
+                      Revenue: ${previewRevenue.toFixed(0)}
+                      {isOnTime ? ' ✓ On-time' : ' ⚠️ Below 80% — counts as missed'}
+                    </Text>
+                  )}
+
+                  <View style={[styles.rowInline, { gap: S.sm }]}>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { flex: 1, backgroundColor: C.green }]}
+                      onPress={() => {
+                        const amt = Number(deliverAmount);
+                        if (!amt || amt <= 0) return;
+                        deliverToRecurringContract(contract.id, amt);
+                        setDeliverModalVisible(false);
+                        setDeliverAmount('');
+                      }}
+                    >
+                      <Text style={styles.actionBtnText}>Deliver</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { flex: 1, backgroundColor: C.bgCard }]}
+                      onPress={() => setDeliverModalVisible(false)}
+                    >
+                      <Text style={[styles.actionBtnText, { color: C.textMuted }]}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              );
+            })()}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1248,6 +1605,40 @@ const styles = StyleSheet.create({
     paddingTop: S.sm,
     paddingBottom: S.xs,
   },
+  // Supply tab styles
+  tabScroll:          { flex: 1 },
+  sectionHeader:      { color: C.text, fontSize: F.size.lg, fontWeight: F.weight.bold, marginBottom: S.xs },
+  sectionSubtitle:    { color: C.textMuted, fontSize: F.size.sm },
+  card:               { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.sm },
+  cardTitle:          { color: C.text, fontWeight: F.weight.bold, fontSize: F.size.md },
+  rowInline:          { flexDirection: 'row', alignItems: 'center' },
+  rowBetween:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: S.xs },
+  buyerEmoji:         { fontSize: 22, marginRight: S.xs },
+  buyerCropLabel:     { fontSize: F.size.xs, color: C.textFaint, marginTop: 2 },
+  buyerStat:          { fontSize: F.size.xs, color: C.textMuted },
+  streakPip:          { width: 8, height: 8, borderRadius: 4, backgroundColor: C.green },
+  tierBadge:          { paddingHorizontal: S.sm, paddingVertical: 2, borderRadius: R.sm },
+  tierBadgeText:      { fontSize: F.size.xs, color: C.white, fontWeight: '700' },
+  lockedReason:       { fontSize: F.size.xs, color: C.textFaint, marginTop: S.xs, fontStyle: 'italic' },
+  activeContractChip: { backgroundColor: C.bg, borderRadius: R.sm, padding: S.sm, marginTop: S.sm },
+  activeContractText: { fontSize: F.size.xs, color: C.textMuted },
+  actionBtn:          { flex: 1, borderRadius: R.md, paddingVertical: S.sm, alignItems: 'center' },
+  actionBtnText:      { color: C.white, fontWeight: '700', fontSize: F.size.sm },
+  // Supply modal styles
+  supplyChip:         { paddingHorizontal: S.sm, paddingVertical: S.xs, borderRadius: R.pill,
+                        backgroundColor: C.bgCard, marginRight: S.xs, alignItems: 'center' },
+  supplyChipActive:   { backgroundColor: C.green },
+  supplyChipText:     { fontSize: F.size.sm, color: C.textMuted },
+  modalOverlay:       { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalSheet:         { backgroundColor: C.bg, borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl,
+                        padding: S.lg, paddingBottom: 36 },
+  modalTitle:         { color: C.text, fontSize: F.size.lg, fontWeight: F.weight.bold, marginBottom: S.xs },
+  modalSub:           { color: C.textMuted, fontSize: F.size.sm, marginBottom: S.xs },
+  formLabel:          { color: C.textMuted, fontSize: F.size.xs, fontWeight: '600',
+                        marginTop: S.sm, marginBottom: 4 },
+  formInput:          { backgroundColor: C.bgCard, borderRadius: R.md, color: C.text,
+                        fontSize: F.size.md, paddingHorizontal: S.md, paddingVertical: S.sm,
+                        marginBottom: S.sm },
 });
 
 const regionStyles = StyleSheet.create({
