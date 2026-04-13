@@ -414,7 +414,7 @@ export default function TierrasScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.screenTitle}>My Fields</Text>
+        <Text style={localStyles.screenTitle}>My Fields</Text>
         <TouchableOpacity style={styles.viewToggle} onPress={() => { setMapView(v => !v); setMapSelected(null); }}>
           <Text style={styles.viewToggleText}>{mapView ? '📋 List' : '🗺️ Map'}</Text>
         </TouchableOpacity>
