@@ -6,7 +6,18 @@ import { MarketPrice, NewsEvent } from '../engine/market';
 import { WeatherDay } from '../engine/climate';
 import { Loan, SavingsAccount, TimeDeposit, SaleRecord, LoanRecord,
          loanTotalOwed, calculateRate, accrueInterest } from '../engine/banking';
-import { Contract } from '../engine/contracts';
+import {
+  Contract,
+  Buyer,
+  RecurringContract,
+  INITIAL_BUYERS,
+  signRecurringContract as buildRecurringContract,
+  resolveDelivery,
+  checkRecurringDeliveries,
+  applyDisasterGrace,
+  getBuyerPriceBonus,
+  BUYER_TIER_CONFIG,
+} from '../engine/contracts';
 import { CROP_TYPES } from '../data/cropTypes';
 import { MACHINE_TYPES, MachineType } from '../data/machineTypes';
 import { BUILDING_TYPES, PRODUCTION_EQUIPMENT, EquipmentItem } from '../data/buildingTypes';
@@ -480,6 +491,8 @@ export interface GameState {
   savings: SavingsAccount;
   timeDeposits: TimeDeposit[];
   contracts: Contract[];
+  buyers: Buyer[];
+  recurringContracts: RecurringContract[];
 
   salesLog: SaleRecord[];
   loanHistory: LoanRecord[];
@@ -659,6 +672,15 @@ export interface GameState {
   acceptContract: (templateId: string) => void;
   declineContract: (templateId: string) => void;
   deliverCrop: (contractId: string, amount: number) => void;
+  signRecurringContract: (
+    buyerId: string,
+    cropId: string,
+    amountPerDelivery: number,
+    frequencyDays: 7 | 14 | 30,
+    durationSeasons: number,
+  ) => void;
+  deliverToRecurringContract: (contractId: string, amountDelivered: number) => void;
+  cancelRecurringContract: (contractId: string) => void;
   buyProduct: (productId: string) => void;
   buyBuilding: (buildingId: string) => void;
   resolveFieldEvent: (eventId: string, productId: string) => void;
@@ -890,6 +912,8 @@ function makeInitialState() {
     savings: { balance: 0, lastInterestDay: 1 } as SavingsAccount,
     timeDeposits: [] as TimeDeposit[],
     contracts: [] as Contract[],
+    buyers: INITIAL_BUYERS.map((b) => ({ ...b })),
+    recurringContracts: [] as RecurringContract[],
     salesLog: [] as SaleRecord[],
     loanHistory: [] as LoanRecord[],
     forecast: generateForecast('spring'),
@@ -3610,6 +3634,11 @@ export const useGameStore = create<GameState>()(
           timeDeposits,
           insuranceClaims: [...state.insuranceClaims, ...newClaims].slice(-100),
           contracts,
+          ...(() => {
+            const { contracts: updatedRecurring, buyers: updatedBuyers } =
+              checkRecurringDeliveries(get().recurringContracts, get().buyers, newDay);
+            return { recurringContracts: updatedRecurring, buyers: updatedBuyers };
+          })(),
           declinedTemplates,
           completedMilestones,
           futures,
@@ -4689,6 +4718,59 @@ export const useGameStore = create<GameState>()(
       declineContract: (templateId) => {
         const state = get();
         set({ declinedTemplates: [...state.declinedTemplates, templateId] });
+      },
+
+      signRecurringContract: (buyerId, cropId, amountPerDelivery, frequencyDays, durationSeasons) => {
+        set((s) => {
+          const buyer = s.buyers.find((b) => b.id === buyerId);
+          if (!buyer) return {};
+          const alreadyActive = s.recurringContracts.some(
+            (c) => c.buyerId === buyerId && c.active,
+          );
+          if (alreadyActive) return {};
+          const cfg = BUYER_TIER_CONFIG[buyer.tier];
+          if (cfg.maxOrderKg !== Infinity && amountPerDelivery > cfg.maxOrderKg) return {};
+          const newContract = buildRecurringContract(
+            buyer, cropId, amountPerDelivery, frequencyDays, durationSeasons, s.day,
+          );
+          return { recurringContracts: [...s.recurringContracts, newContract] };
+        });
+      },
+
+      deliverToRecurringContract: (contractId, amountDelivered) => {
+        set((s) => {
+          const contract = s.recurringContracts.find((c) => c.id === contractId);
+          if (!contract || !contract.active) return {};
+          const buyer = s.buyers.find((b) => b.id === contract.buyerId);
+          if (!buyer) return {};
+
+          const available = s.inventory[contract.cropId] ?? 0;
+          const actual = Math.min(amountDelivered, available);
+          if (actual <= 0) return {};
+
+          const cropType = CROP_TYPES.find((ct) => ct.id === contract.cropId);
+          const basePrice = cropType?.basePrice ?? 1;
+
+          const { contract: updatedContract, buyer: updatedBuyer, revenue } =
+            resolveDelivery(contract, buyer, actual, basePrice, s.day);
+
+          return {
+            money: s.money + revenue,
+            inventory: { ...s.inventory, [contract.cropId]: Math.max(0, available - actual) },
+            recurringContracts: s.recurringContracts.map((c) =>
+              c.id === contractId ? updatedContract : c,
+            ),
+            buyers: s.buyers.map((b) => (b.id === buyer.id ? updatedBuyer : b)),
+          };
+        });
+      },
+
+      cancelRecurringContract: (contractId) => {
+        set((s) => ({
+          recurringContracts: s.recurringContracts.map((c) =>
+            c.id === contractId ? { ...c, active: false } : c,
+          ),
+        }));
       },
 
       counterOfferContract: (templateId, mod) => {
