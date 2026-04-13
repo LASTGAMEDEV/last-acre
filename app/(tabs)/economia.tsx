@@ -6,7 +6,7 @@ import Svg, { Polyline, Line, Text as SvgText, Rect, G, Circle } from 'react-nat
 import { useGameStore } from '../../store/useGameStore';
 import DispatchModal from '../../components/DispatchModal';
 import { DeliveryCargo, COLD_CARGO_IDS, BULK_LIQUID_IDS } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F } from '../../constants/theme';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { MARKET_REGIONS, MarketId } from '../../data/marketRegions';
 import { sellRevenue, computeSellPressureModifier, sellPressureDuration } from '../../engine/market';
@@ -273,7 +273,7 @@ export default function EconomiaScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Economy" />
+      <Text style={styles.screenTitle}>Economy</Text>
       {Object.values(inventory).reduce((a, b) => a + b, 0) > 0 && money < 5000 && (
         <HintCard id="hint_sell" title="You have crops to sell!" body="Your inventory has stock but funds are low. Go to the Market tab, select a crop, and tap Sell All to convert it to cash." />
       )}
@@ -1243,6 +1243,14 @@ const styles = StyleSheet.create({
   ordersBadgeGood:          { color: '#66bb6a', fontSize: 11, fontWeight: 'bold' },
   ordersBadgeWarn:          { color: '#ffa726', fontSize: 11 },
   ordersBadgeGray:          { color: '#555', fontSize: 11 },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
 });
 
 const regionStyles = StyleSheet.create({

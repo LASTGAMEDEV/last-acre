@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F } from '../../constants/theme';
 import HintCard from '../../components/HintCard';
 import { PROCESSING_RECIPES, PROCESSED_PRODUCTS, ProcessingRecipe } from '../../data/processingTypes';
 import { CROP_TYPES } from '../../data/cropTypes';
@@ -62,7 +62,8 @@ export default function ProcesadoScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <ScreenHeader title="Processing" subtitle="Transform raw materials into higher-value products" />
+      <Text style={styles.screenTitle}>Processing</Text>
+      <Text style={styles.screenSubtitle}>Convert raw crops into products</Text>
       {Object.values(inventory).some(v => v > 0) && !Object.values(processedInventory).some(v => v > 0) && (
         <HintCard id="hint_processing" title="Process crops for higher margins" body="Raw crops sell at base price, but processed goods (flour, oil, juice) sell for 2–4× more. Select a recipe and tap Process to start a batch." />
       )}
@@ -281,4 +282,18 @@ const styles = StyleSheet.create({
   processBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
 
   maxInfo: { color: '#555', fontSize: 11, marginTop: 6 },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
+  screenSubtitle: {
+    color: C.textMuted,
+    fontSize: F.size.xs,
+    paddingHorizontal: S.md,
+    paddingBottom: S.xs,
+  },
 });

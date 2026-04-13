@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { playSound } from '../../engine/sounds';
 import { useRouter } from 'expo-router';
 import { useGameStore, LandParcel, FieldEvent } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F } from '../../constants/theme';
 import HintCard from '../../components/HintCard';
 import { CROP_TYPES, PlantingSeason } from '../../data/cropTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
@@ -414,7 +414,7 @@ export default function TierrasScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <ScreenHeader title="My Fields" />
+        <Text style={styles.screenTitle}>My Fields</Text>
         <TouchableOpacity style={styles.viewToggle} onPress={() => { setMapView(v => !v); setMapSelected(null); }}>
           <Text style={styles.viewToggleText}>{mapView ? '📋 List' : '🗺️ Map'}</Text>
         </TouchableOpacity>
@@ -1196,4 +1196,12 @@ const localStyles = StyleSheet.create({
   batchChipActive:{ backgroundColor: '#1a3a1a', borderColor: '#66bb6a' },
   batchChipText:  { color: '#888', fontSize: 11 },
   batchCancel:    { justifyContent: 'center', paddingHorizontal: 12 },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
 });

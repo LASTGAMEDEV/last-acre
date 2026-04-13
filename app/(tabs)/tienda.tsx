@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F } from '../../constants/theme';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { PRODUCT_TYPES, CATEGORY_LABELS, ProductCategory } from '../../data/productTypes';
 import { BUILDING_TYPES, BUILDING_CATEGORY_LABELS, BuildingCategory, PRODUCTION_EQUIPMENT } from '../../data/buildingTypes';
@@ -391,7 +391,7 @@ export default function TiendaScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Shop" />
+      <Text style={styles.screenTitle}>Shop</Text>
 
       {/* Sub-tab bar */}
       <View style={styles.tabBar}>
@@ -476,4 +476,12 @@ const styles = StyleSheet.create({
   buildBtn: { backgroundColor: '#2e7d32', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5 },
   buildBtnDisabled: { backgroundColor: '#333' },
   buildBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
 });

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import { useGameStore, AuctionListing, AuctionCategory } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F } from '../../constants/theme';
 import HintCard from '../../components/HintCard';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { geneScore } from '../../engine/animals';
@@ -31,7 +31,7 @@ export default function SubastaScreen() {
   if (view === 'hub') {
     return (
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="Auction House" />
+        <Text style={styles.screenTitle}>Auction House</Text>
         <HintCard
           id="hint_auction"
           title="Buy and sell at auction"
@@ -86,7 +86,9 @@ export default function SubastaScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title={view === 'land' ? '🏡 Land Auction' : view === 'animal' ? '🐄 Animals' : view === 'crop' ? '🌾 Crops' : '⚙️ Machinery'} />
+      <Text style={styles.screenTitle}>
+        {view === 'land' ? '🏡 Land Auction' : view === 'animal' ? '🐄 Animals' : view === 'crop' ? '🌾 Crops' : '⚙️ Machinery'}
+      </Text>
       <TouchableOpacity style={styles.backBtn} onPress={() => setView('hub')}>
         <Text style={styles.backBtnText}>← Back to Auction House</Text>
       </TouchableOpacity>
@@ -826,4 +828,12 @@ const styles = StyleSheet.create({
   bidWarn:         { color: '#ff9800', fontSize: 11, marginTop: 4 },
   emptyBox:        { alignItems: 'center', padding: 40 },
   emptyText:       { color: '#555', fontSize: 15, marginBottom: 8 },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
 });

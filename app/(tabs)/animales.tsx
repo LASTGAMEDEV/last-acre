@@ -5,7 +5,7 @@ import HintCard from '../../components/HintCard';
 import DispatchModal from '../../components/DispatchModal';
 import { useGameStore } from '../../store/useGameStore';
 import { DeliveryCargo, LIVESTOCK_TRAILER_IDS, ProductionBuildingState } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F } from '../../constants/theme';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
@@ -204,7 +204,7 @@ export default function AnimalesScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Animals" />
+      <Text style={styles.screenTitle}>Animals</Text>
 
       {animals.length === 0 && (
         <HintCard id="hint_animals" title="Start your livestock" body="Animals produce eggs, milk, honey, wool, and meat every day. Buy a chicken coop from the Shop first, then purchase hens from this screen." />
@@ -857,6 +857,14 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   priceOriginal: { color: '#666', fontSize: 11, textDecorationLine: 'line-through' },
   priceFair: { color: '#81c784', fontWeight: 'bold', fontSize: 13 },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
 });
 
 const genStyles = StyleSheet.create({

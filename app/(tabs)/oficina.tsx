@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
 import { useGameStore, FuturesPosition, SeasonGoal } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F } from '../../constants/theme';
 import HintCard from '../../components/HintCard';
 import { CONTRACT_TEMPLATES } from '../../engine/contracts';
 import { CROP_TYPES, CropType } from '../../data/cropTypes';
@@ -1178,7 +1178,7 @@ export default function OficinaScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="My Office" />
+      <Text style={styles.screenTitle}>My Office</Text>
       {activeLoans.length === 0 && (
         <HintCard id="hint_banking" title="Banking & Loans" body="Need capital? The Banking tab lets you take loans at rates based on your credit score. Repay on time to unlock larger tiers." />
       )}
@@ -1422,4 +1422,12 @@ const styles = StyleSheet.create({
   milestoneTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
   milestoneDesc: { color: '#666', fontSize: 11, marginTop: 1 },
   milestoneDone: { color: '#4caf50', fontWeight: 'bold', fontSize: 16, marginLeft: 8 },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
 });
