@@ -282,7 +282,7 @@ export default function GranjaScreen() {
 
   return (
     <View style={styles.container}>
-      <SubTabBar tabs={TABS} active={tab} onSelect={setTab} />
+      <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as FarmTab)} />
 
       {tab === 'fields'    && <TierrasScreen />}
       {tab === 'animals'   && <AnimalesScreen />}

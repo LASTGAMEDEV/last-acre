@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, Alert, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, Alert, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -1133,7 +1133,7 @@ export default function GestionScreen() {
 
   return (
     <View style={styles.container}>
-      <SubTabBar tabs={TABS} active={tab} onSelect={setTab} />
+      <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as OfficeTab)} />
 
       {tab === 'dashboard' && <DashboardSection />}
       {tab === 'office'    && <OficinaScreen />}

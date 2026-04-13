@@ -19,7 +19,7 @@ export default function MercadoScreen() {
 
   return (
     <View style={styles.container}>
-      <SubTabBar tabs={TABS} active={tab} onSelect={setTab} />
+      <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as MarketTab)} />
 
       {tab === 'economy' && <EconomiaScreen />}
       {tab === 'auction' && <SubastaScreen />}
