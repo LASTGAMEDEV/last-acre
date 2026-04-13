@@ -90,13 +90,13 @@ export function computeSoilYieldModifier(soil: SoilStats): number {
       ? 0.6 + (soil.nitrogen / 40) * 0.4        // 0.6 at 0, 1.0 at 40
       : soil.nitrogen > 90
       ? 0.85                                     // excess nitrogen = slight penalty
-      : 1.0 + Math.min((soil.nitrogen - 60) / 200, 0.10); // +0–10% in 60–80 range
+      : 1.0 + Math.max(0, Math.min((soil.nitrogen - 60) / 200, 0.10)); // +0–10% in 60–80 range; neutral 40–60
 
   // Organic matter: optimal ≥ 4%; below 2% penalised
   const omMod =
     soil.organicMatter < 2
       ? 0.75 + (soil.organicMatter / 2) * 0.25  // 0.75 at 0%, 1.0 at 2%
-      : 1.0 + Math.min((soil.organicMatter - 4) / 40, 0.05); // +0–5% above 4%
+      : 1.0 + Math.max(0, Math.min((soil.organicMatter - 4) / 40, 0.05)); // +0–5% above 4%; neutral 2–4%
 
   // Compaction: 0 = best, 100 = worst
   const compMod =
@@ -105,14 +105,14 @@ export function computeSoilYieldModifier(soil: SoilStats): number {
       : 1.0;
 
   // pH: optimal 6.0–7.0; outside 5.5–7.5 penalised
-  const pHDev = Math.max(0, Math.abs(soil.pH - 6.5) - 0.5); // deviation beyond ±0.5
+  const pHDev = Math.max(0, Math.abs(soil.pH - 6.5) - 1.0); // deviation beyond ±1.0 (outside 5.5–7.5)
   const pHMod = Math.max(0.80, 1.0 - pHDev * 0.20);
 
   // Microbial life: below 30 penalised; above 60 slight bonus
   const microMod =
     soil.microbialLife < 30
       ? 0.85 + (soil.microbialLife / 30) * 0.15 // 0.85 at 0, 1.0 at 30
-      : 1.0 + Math.min((soil.microbialLife - 60) / 400, 0.05); // +0–5% above 60
+      : Math.max(1.0, 1.0 + Math.min((soil.microbialLife - 60) / 400, 0.05)); // +0–5% above 60; neutral 30–60
 
   return Math.max(0.3, nMod * omMod * compMod * pHMod * microMod);
 }
