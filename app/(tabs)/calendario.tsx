@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { getSeason } from '../../engine/climate';
 
@@ -141,7 +141,7 @@ export default function CalendarioScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Calendar" />
+      <Text style={styles.screenTitle}>Calendar</Text>
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.dayLabel}>Day {day} — {getSeason(day).charAt(0).toUpperCase() + getSeason(day).slice(1)}</Text>
 
@@ -168,7 +168,15 @@ export default function CalendarioScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
+  container: { flex: 1, backgroundColor: C.bg },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
   scroll: { flex: 1, paddingHorizontal: 12 },
   dayLabel: { color: '#888', fontSize: 12, marginTop: 8, marginBottom: 4 },
   sectionLabel: { color: '#555', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginTop: 12, marginBottom: 6 },

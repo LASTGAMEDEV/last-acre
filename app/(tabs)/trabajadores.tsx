@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore, OwnedWorker } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F } from '../../constants/theme';
 import HintCard from '../../components/HintCard';
 import { WORKER_TYPES, WorkerType, WorkerRole } from '../../data/workerTypes';
 
@@ -71,7 +71,7 @@ export default function TrabajadoresScreen() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <ScreenHeader title="Staff" />
+      <Text style={styles.screenTitle}>Staff</Text>
       {activeWorkers.length === 0 && (
         <HintCard id="hint_workers" title="Hire workers to automate tasks" body="Field Workers harvest automatically, Animal Keepers collect daily production, and Agronomists boost crop yield. Each worker costs a daily wage deducted at midnight." />
       )}
@@ -149,7 +149,15 @@ export default function TrabajadoresScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:         { flex: 1, backgroundColor: '#1a1a2e' },
+  container:         { flex: 1, backgroundColor: C.bg },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
   sectionLabel:      { color: '#888', fontSize: 13, paddingHorizontal: 16, marginTop: 16, marginBottom: 6 },
   empty:             { color: '#555', padding: 16 },
 

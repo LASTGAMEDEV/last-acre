@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { useGameStore, OwnedMachine, OwnedAttachment, OwnedTrailer, TractorJob, HarvestJob, DeliveryJob } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F } from '../../constants/theme';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { ATTACHMENT_TYPES } from '../../data/attachmentTypes';
 
@@ -340,7 +340,7 @@ export default function MaquinariaScreen() {
 
   return (
     <View style={s.container}>
-      <ScreenHeader title="Machinery" />
+      <Text style={s.screenTitle}>Machinery</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabBar} contentContainerStyle={{ flexDirection: 'row' }}>
         {MACHINERY_TABS.map(t => (
           <TouchableOpacity
@@ -365,7 +365,15 @@ export default function MaquinariaScreen() {
 }
 
 const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#0a0a1a' },
+  container:    { flex: 1, backgroundColor: C.bg },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
   tabBar:       { borderBottomWidth: 1, borderBottomColor: '#333' },
   tabBtn:       { flex: 1, padding: 12, alignItems: 'center' },
   tabBtnActive: { borderBottomWidth: 2, borderBottomColor: '#81c784' },

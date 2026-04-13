@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ScrollView, TouchableOpacity } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F } from '../../constants/theme';
 import { getSeason, WeatherEvent, Season } from '../../engine/climate';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { CROP_CALENDAR, STATUS_COLORS, STATUS_ICONS, STATUS_LABELS, SeasonStatus } from '../../data/cropCalendar';
@@ -61,7 +61,7 @@ export default function ClimaScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <ScreenHeader title="Weather" />
+      <Text style={styles.screenTitle}>Weather</Text>
 
       {/* Today */}
       <View style={styles.todayCard}>
@@ -189,7 +189,15 @@ export default function ClimaScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
+  container: { flex: 1, backgroundColor: C.bg },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
   header: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 4 },
   title: { fontSize: 22, fontWeight: 'bold', color: '#e8d5a3' },
   season: { fontSize: 14, color: '#81c784' },

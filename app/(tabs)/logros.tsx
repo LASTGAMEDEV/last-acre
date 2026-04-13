@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F } from '../../constants/theme';
 import { MILESTONES } from '../../data/milestones';
 import { CROP_TYPES } from '../../data/cropTypes';
 
@@ -120,7 +120,7 @@ export default function LogrosScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Achievements" />
+      <Text style={styles.screenTitle}>Achievements</Text>
 
       {/* Overall progress */}
       <View style={styles.overallCard}>
@@ -191,7 +191,15 @@ export default function LogrosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: '#1a1a2e' },
+  container:     { flex: 1, backgroundColor: C.bg },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
   scroll:        { flex: 1 },
 
   overallCard: {
