@@ -19,6 +19,7 @@ export interface CropType {
   frostKillTemp: number;      // °C below which crop is killed (e.g. -5)
   heatStressTemp: number;     // °C above which heat stress starts (e.g. 36)
   droughtTolerance: number;   // 0–1 (0=very sensitive, 1=immune)
+  coverCrop?: boolean; // true = no harvest revenue; matures into soil benefits
 }
 
 export const CROP_TYPES: CropType[] = [
@@ -54,4 +55,9 @@ export const CROP_TYPES: CropType[] = [
   { id: 'vanilla',      name: 'Vanilla',          tier: 'S', growthDays: 200, basePrice: 420, seedCost: 7000, waterNeed: 4, fertilizerBonus: 1.3, unit: 'kg', baseYield: 175,  seasons: ['spring','summer'],          peakSeason: 'summer',  fertilityDrain: 1, frostKillTemp: -1,  heatStressTemp: 38, droughtTolerance: 0.5 },
   { id: 'lavender',     name: 'Lavender',         tier: 'S', growthDays: 150, basePrice: 220, seedCost: 5000, waterNeed: 2, fertilizerBonus: 1.3, unit: 'L',  baseYield: 280,  seasons: ['spring','summer'],          peakSeason: 'summer',  fertilityDrain: 1, frostKillTemp: -8,  heatStressTemp: 38, droughtTolerance: 0.7 },
   { id: 'ginseng',      name: 'Ginseng',          tier: 'S', growthDays: 240, basePrice: 380, seedCost: 9000, waterNeed: 3, fertilizerBonus: 1.3, unit: 'kg', baseYield: 240,  seasons: ['spring'],                   peakSeason: 'autumn',  fertilityDrain: 1, frostKillTemp: -5,  heatStressTemp: 30, droughtTolerance: 0.4 },
+  // ── Cover Crops (no harvest revenue) ──────────────────────────────────────
+  { id: 'rye',       name: 'Winter Rye',    tier: 'D', growthDays: 60, basePrice: 0, seedCost: 40,  waterNeed: 1, fertilizerBonus: 1.0, unit: 'kg', baseYield: 0, seasons: ['autumn','winter'],          peakSeason: 'winter', fertilityDrain: 0, frostKillTemp: -20, heatStressTemp: 30, droughtTolerance: 0.8, coverCrop: true },
+  { id: 'clover',    name: 'Red Clover',    tier: 'D', growthDays: 45, basePrice: 0, seedCost: 35,  waterNeed: 2, fertilizerBonus: 1.0, unit: 'kg', baseYield: 0, seasons: ['spring','summer'],           peakSeason: 'summer', fertilityDrain: 0, frostKillTemp: -10, heatStressTemp: 32, droughtTolerance: 0.5, coverCrop: true },
+  { id: 'mustard',   name: 'White Mustard', tier: 'D', growthDays: 40, basePrice: 0, seedCost: 30,  waterNeed: 1, fertilizerBonus: 1.0, unit: 'kg', baseYield: 0, seasons: ['spring','summer','autumn'],  peakSeason: 'summer', fertilityDrain: 0, frostKillTemp: -5,  heatStressTemp: 35, droughtTolerance: 0.6, coverCrop: true },
+  { id: 'buckwheat', name: 'Buckwheat',     tier: 'D', growthDays: 35, basePrice: 0, seedCost: 25,  waterNeed: 1, fertilizerBonus: 1.0, unit: 'kg', baseYield: 0, seasons: ['spring','summer'],           peakSeason: 'summer', fertilityDrain: 0, frostKillTemp: -1,  heatStressTemp: 40, droughtTolerance: 0.7, coverCrop: true },
 ];
