@@ -60,3 +60,59 @@ export function harvestAmount(
     droughtMod
   );
 }
+
+// ─── Soil System ─────────────────────────────────────────────────────────────
+
+export interface SoilStats {
+  nitrogen: number;       // 0–100, optimal 60–80
+  organicMatter: number;  // 0–10, optimal 4–7
+  compaction: number;     // 0–100, optimal 0–25 (lower = better)
+  pH: number;             // 4.0–8.5, optimal 6.0–7.0
+  microbialLife: number;  // 0–100, optimal 60–100
+}
+
+export const SOIL_DEFAULTS: SoilStats = {
+  nitrogen: 65,
+  organicMatter: 4.5,
+  compaction: 20,
+  pH: 6.5,
+  microbialLife: 70,
+};
+
+/**
+ * Returns a yield multiplier (0.3–1.2) based on all 5 soil dimensions.
+ * Modifiers stack multiplicatively. A perfectly managed parcel can reach 1.2.
+ */
+export function computeSoilYieldModifier(soil: SoilStats): number {
+  // Nitrogen: optimal 60–80, penalise outside that range
+  const nMod =
+    soil.nitrogen < 40
+      ? 0.6 + (soil.nitrogen / 40) * 0.4        // 0.6 at 0, 1.0 at 40
+      : soil.nitrogen > 90
+      ? 0.85                                     // excess nitrogen = slight penalty
+      : 1.0 + Math.min((soil.nitrogen - 60) / 200, 0.10); // +0–10% in 60–80 range
+
+  // Organic matter: optimal ≥ 4%; below 2% penalised
+  const omMod =
+    soil.organicMatter < 2
+      ? 0.75 + (soil.organicMatter / 2) * 0.25  // 0.75 at 0%, 1.0 at 2%
+      : 1.0 + Math.min((soil.organicMatter - 4) / 40, 0.05); // +0–5% above 4%
+
+  // Compaction: 0 = best, 100 = worst
+  const compMod =
+    soil.compaction > 50
+      ? 1.0 - ((soil.compaction - 50) / 50) * 0.30 // −30% at 100
+      : 1.0;
+
+  // pH: optimal 6.0–7.0; outside 5.5–7.5 penalised
+  const pHDev = Math.max(0, Math.abs(soil.pH - 6.5) - 0.5); // deviation beyond ±0.5
+  const pHMod = Math.max(0.80, 1.0 - pHDev * 0.20);
+
+  // Microbial life: below 30 penalised; above 60 slight bonus
+  const microMod =
+    soil.microbialLife < 30
+      ? 0.85 + (soil.microbialLife / 30) * 0.15 // 0.85 at 0, 1.0 at 30
+      : 1.0 + Math.min((soil.microbialLife - 60) / 400, 0.05); // +0–5% above 60
+
+  return Math.max(0.3, nMod * omMod * compMod * pHMod * microMod);
+}
