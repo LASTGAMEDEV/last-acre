@@ -21,6 +21,9 @@ export interface PlantedCrop {
   hectares: number;
   fertilized: boolean;
   appliedFertilizerBonus?: number; // set by mid-growth fertilizeCrop; undefined = use cropType.fertilizerBonus
+  frostDamage?: number;    // 0–1 accumulated; ≥1.0 = crop killed
+  droughtStress?: number;  // 0–1 accumulated
+  moistureLevel?: number;  // 0–1 soil moisture; default 0.7
 }
 
 export function isReady(crop: PlantedCrop, cropType: CropType, currentDay: number): boolean {
@@ -34,12 +37,26 @@ export function harvestAmount(
   climateModifier: number,    // 0.6–1.2
   hasWeeds: boolean,
   machineYieldBonus: number,  // 1.0 = no machine, 1.1+ = from owned machines
+  frostDamage = 0,    // default 0 = no damage (backwards compatible)
+  droughtStress = 0,  // default 0 = no stress
 ): number {
   const fertilityMod = 0.5 + (fertility / 25) * 0.5;
   const fertilizerMod = crop.fertilized
     ? (crop.appliedFertilizerBonus ?? cropType.fertilizerBonus)
     : 1.0;
   const weedMod = hasWeeds ? 0.75 : 1.0;
+  const frostMod = Math.max(0, 1 - frostDamage * 0.7);
+  const droughtMod = Math.max(0, 1 - droughtStress * 0.8);
 
-  return crop.hectares * cropType.baseYield * fertilityMod * fertilizerMod * weedMod * climateModifier * machineYieldBonus;
+  return (
+    crop.hectares *
+    cropType.baseYield *
+    fertilityMod *
+    fertilizerMod *
+    weedMod *
+    climateModifier *
+    machineYieldBonus *
+    frostMod *
+    droughtMod
+  );
 }

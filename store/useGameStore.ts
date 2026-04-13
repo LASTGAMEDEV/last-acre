@@ -30,7 +30,7 @@ import { INSURANCE_PLANS, InsuranceType } from '../data/insuranceTypes';
 import { PROCESSING_RECIPES, PROCESSED_PRODUCTS } from '../data/processingTypes';
 import { MILESTONES, checkNewMilestones, MILESTONE_REWARDS } from '../data/milestones';
 import { applyDailyFluctuation, sellRevenue, SellPressure, computeSellPressureModifier, sellPressureDuration } from '../engine/market';
-import { getSeason, generateForecast } from '../engine/climate';
+import { getSeason, generateForecast, applyDailyWeather } from '../engine/climate';
 import { ENCLOSURE_BUILDINGS } from '../constants/enclosures';
 import { WorkerRole, WorkerType as WorkerTypeDef } from '../data/workerTypes';
 import { GameEventType } from '../data/randomEvents';
@@ -1032,6 +1032,26 @@ export const useGameStore = create<GameState>()(
         const todayWeather = state.forecast[0] ?? generateForecast(season)[0];
         if (forecast.length < 3) forecast.push(...generateForecast(season, 4));
 
+        // Apply probabilistic forecast deviation: if today's forecast probability < 1.0, re-roll
+        let resolvedWeather = todayWeather;
+        if (todayWeather && todayWeather.probability < 1.0 && Math.random() > todayWeather.probability) {
+          const rerolled = generateForecast(season, 1)[0];
+          resolvedWeather = { ...rerolled, probability: 1.0 };
+        }
+
+        // Apply daily weather to all planted crops (moisture, frost damage, drought stress)
+        const weatherResults = applyDailyWeather(
+          state.parcels.map(p => ({
+            id: p.id,
+            plantedCrop: p.plantedCrop,
+            irrigated: p.irrigated,
+            greenhouse: p.greenhouse,
+          })),
+          resolvedWeather ?? todayWeather,
+          CROP_TYPES,
+        );
+        const killedParcelIds = weatherResults.filter(r => r.killed).map(r => r.id);
+
         // Weather summary
         const WEATHER_INFO: Record<string, { icon: string; name: string; severity: DaySummaryEvent['severity'] }> = {
           perfect:    { icon: '✨', name: 'Perfect day — ideal conditions',       severity: 'good' },
@@ -1519,29 +1539,58 @@ export const useGameStore = create<GameState>()(
           return p;
         });
 
-        // Weather crop destruction + insurance payouts
+        // Weather crop damage accumulation (frost kill + drought stress from applyDailyWeather)
         let destroyedCount = 0;
         let weatherInsurancePayout = 0;
         const newClaims: InsuranceClaim[] = [];
 
-        if (todayWeather && ['frost', 'hail', 'drought'].includes(todayWeather.event)) {
+        // Merge applyDailyWeather results back into parcels
+        parcels = parcels.map(p => {
+          const result = weatherResults.find(r => r.id === p.id);
+          if (!result) return p;
+          return { ...p, plantedCrop: result.plantedCrop };
+        });
+
+        // Handle frost-killed parcels: insurance claim + summary
+        if (killedParcelIds.length > 0) {
           const climaPlan = INSURANCE_PLANS.find(pl => pl.type === 'clima')!;
           const insured = hasActiveInsurance(state.insurances, 'clima');
+          for (const parcelId of killedParcelIds) {
+            const p = parcels.find(lp => lp.id === parcelId);
+            if (!p) continue;
+            destroyedCount++;
+            if (insured) {
+              const cropVal = estimateCropValue(p, prices);
+              const payout = Math.round(cropVal * climaPlan.coveragePercent);
+              weatherInsurancePayout += payout;
+              newClaims.push({
+                id: `claim_${newDay}_${p.id}`,
+                day: newDay,
+                type: 'clima' as InsuranceType,
+                payout,
+                description: `${p.hectares}ha plot killed by accumulated frost damage`,
+              });
+            }
+          }
+        }
 
+        // Hail still uses a one-day random chance (hail is sudden, not accumulated)
+        if (resolvedWeather?.event === 'hail') {
+          const climaPlan = INSURANCE_PLANS.find(pl => pl.type === 'clima')!;
+          const insured = hasActiveInsurance(state.insurances, 'clima');
           parcels = parcels.map(p => {
-            const destructChance = p.irrigated ? 0.05 : 0.15; // irrigation cuts drought/frost risk by 67%
-            if (p.plantedCrop && !p.greenhouse && Math.random() < destructChance) {
+            if (p.plantedCrop && !p.greenhouse && Math.random() < 0.12) {
               destroyedCount++;
               if (insured) {
                 const cropVal = estimateCropValue(p, prices);
                 const payout = Math.round(cropVal * climaPlan.coveragePercent);
                 weatherInsurancePayout += payout;
                 newClaims.push({
-                  id: `claim_${newDay}_${p.id}`,
+                  id: `claim_${newDay}_hail_${p.id}`,
                   day: newDay,
                   type: 'clima' as InsuranceType,
                   payout,
-                  description: `${p.hectares}ha plot destroyed by ${todayWeather.event === 'drought' ? 'drought' : todayWeather.event === 'hail' ? 'hail' : 'frost'}`,
+                  description: `${p.hectares}ha plot destroyed by hail`,
                 });
               }
               return { ...p, plantedCrop: null };
@@ -2676,7 +2725,7 @@ export const useGameStore = create<GameState>()(
               const rotationMod = p.lastCropId && p.lastCropId !== p.plantedCrop.cropId ? 1.15 : 1.0;
               const soilMod = getSoilModifier(p.soilType, p.plantedCrop.cropId);
               const machineYieldWithEngineer = yieldBonusW + workerBonuses.machineYieldBonus; // yieldBonusW = 1.0
-              const rawUnits = harvestAmt(p.plantedCrop, cropType, p.fertility, climateModifier, p.hasWeeds, machineYieldWithEngineer);
+              const rawUnits = harvestAmt(p.plantedCrop, cropType, p.fertility, climateModifier, p.hasWeeds, machineYieldWithEngineer, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0);
               const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * irrigationBonus * rotationMod * soilMod * workerBonuses.cropYieldMultiplier), siloCapacity - siloTotal);
               siloTotal += units;
               workerNewInventory[p.plantedCrop.cropId] = (workerNewInventory[p.plantedCrop.cropId] ?? 0) + units;
@@ -2861,7 +2910,7 @@ export const useGameStore = create<GameState>()(
             const waterScale = (cropType.waterNeed ?? 3) / 5;
             const climateModifier = 1.0 + (baseClimate - 1.0) * waterScale;
             const units = Math.min(
-              Math.round(harvestAmount(parcel.plantedCrop!, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, 1.0)),
+              Math.round(harvestAmount(parcel.plantedCrop!, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, 1.0, parcel.plantedCrop!.frostDamage ?? 0, parcel.plantedCrop!.droughtStress ?? 0)),
               siloCapForHarvest - currentTotal,
             );
             const newFertility = Math.max(1, parcel.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonuses.fertilityDrainMult));
@@ -3702,7 +3751,7 @@ export const useGameStore = create<GameState>()(
         const droughtScale = rawClimateDelta < 0 ? 1.0 / seedGenes.drought : 1.0;
         const climateModifier = 1.0 + rawClimateDelta * droughtScale;
         const { harvestAmount } = require('../engine/crops');
-        const rawUnits = harvestAmount(crop, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, 1.0);
+        const rawUnits = harvestAmount(crop, cropType, parcel.fertility, climateModifier, parcel.hasWeeds, 1.0, crop.frostDamage ?? 0, crop.droughtStress ?? 0);
         // Field event penalty: −25% yield per unresolved disease/pest event
         const unresolvedEvents = state.fieldEvents.filter(e => e.parcelId === parcelId && !e.resolved).length;
         const fieldEventMod = Math.pow(0.75, unresolvedEvents);
@@ -5542,7 +5591,7 @@ export const useGameStore = create<GameState>()(
           const rotationMod = p.lastCropId && p.lastCropId !== p.plantedCrop.cropId ? 1.15 : 1.0;
           const irrigationMod = p.irrigated ? 1.20 : 1.0;
           const soilMod = getSoilModifier(p.soilType, p.plantedCrop.cropId);
-          const rawUnits = harvestAmount(p.plantedCrop, cropType, p.fertility, climateModifier, p.hasWeeds, yieldBonus);
+          const rawUnits = harvestAmount(p.plantedCrop, cropType, p.fertility, climateModifier, p.hasWeeds, yieldBonus, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0);
           const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationMod * soilMod), siloCapacity - totalInventory);
           totalInventory += units;
           newInventory[p.plantedCrop.cropId] = (newInventory[p.plantedCrop.cropId] ?? 0) + units;
