@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { playSound } from '../../engine/sounds';
 import { useRouter } from 'expo-router';
 import { useGameStore, LandParcel, FieldEvent } from '../../store/useGameStore';
-import { C, S, F } from '../../constants/theme';
+import { C, S, F, R } from '../../constants/theme';
 import HintCard from '../../components/HintCard';
 import { CROP_TYPES, PlantingSeason } from '../../data/cropTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
@@ -465,7 +465,7 @@ export default function TierrasScreen() {
                 { bg: '#1a5c1a', label: 'Ready' },
                 { bg: '#3a1010', label: 'Event' },
                 { bg: '#2a1f00', label: 'Weeds' },
-                { bg: '#16213e', label: 'Empty' },
+                { bg: C.bgCard, label: 'Empty' },
               ].map(item => (
                 <View key={item.label} style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: item.bg }]} />
@@ -618,7 +618,7 @@ export default function TierrasScreen() {
                       style={[localStyles.batchChip, batchCropId === c.id && localStyles.batchChipActive]}
                       onPress={() => setBatchCropId(c.id)}
                     >
-                      <Text style={[localStyles.batchChipText, batchCropId === c.id && { color: '#fff' }]}>{c.name}</Text>
+                      <Text style={[localStyles.batchChipText, batchCropId === c.id && { color: C.white }]}>{c.name}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -781,7 +781,7 @@ export default function TierrasScreen() {
                         body="Planting a different crop than the previous one gives a +15% yield bonus. Rotating also slows fertility loss over time. Try to avoid planting the same high-drain crop twice in a row."
                       />
                     </View>
-                    <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }}>Different crop from last harvest — you get a yield boost.</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>Different crop from last harvest — you get a yield boost.</Text>
                   </View>
                 );
               }
@@ -795,9 +795,9 @@ export default function TierrasScreen() {
               return (
                 <View style={{ backgroundColor: '#2a1a00', borderRadius: 8, padding: 10, marginTop: 8, borderLeftWidth: 3, borderLeftColor: '#ffb74d' }}>
                   <Text style={{ color: '#ffb74d', fontSize: 12, fontWeight: 'bold' }}>⚠️ No Rotation Bonus</Text>
-                  <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }}>Same as last crop ({lastCrop?.name}). Plant something else for +15% yield.</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>Same as last crop ({lastCrop?.name}). Plant something else for +15% yield.</Text>
                   {alternatives.length > 0 && (
-                    <Text style={{ color: '#888', fontSize: 11, marginTop: 4 }}>
+                    <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>
                       Try: {alternatives.map(c => c.name).join(', ')}
                     </Text>
                   )}
@@ -838,26 +838,26 @@ export default function TierrasScreen() {
                 [`Est. yield (${Math.round(estYield).toLocaleString()} ${crop.unit})`, `+$${estRevenue.toLocaleString()}`, '#4caf50'],
                 ['Est. profit', `${estProfit >= 0 ? '+' : ''}$${estProfit.toLocaleString()}`, profitColor],
                 ['Daily return', `$${dailyRate.toLocaleString()}/day`, dailyRate >= 0 ? '#64b5f6' : '#ef5350'],
-                ['Ready in', `${crop.growthDays}d`, '#888'],
+                ['Ready in', `${crop.growthDays}d`, C.textMuted],
               ];
               return (
                 <View style={{ backgroundColor: '#0d1117', borderRadius: 10, padding: 12, marginTop: 10, borderWidth: 1, borderColor: '#1e2a3a' }}>
-                  <Text style={{ color: '#e8d5a3', fontSize: 11, fontWeight: 'bold', marginBottom: 8 }}>📊 {crop.name} — Profit Preview</Text>
+                  <Text style={{ color: C.text, fontSize: 11, fontWeight: 'bold', marginBottom: 8 }}>📊 {crop.name} — Profit Preview</Text>
                   {rows.map(([label, value, color]) => (
                     <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
-                      <Text style={{ color: '#666', fontSize: 11 }}>{label}</Text>
+                      <Text style={{ color: C.textFaint, fontSize: 11 }}>{label}</Text>
                       <Text style={{ color, fontSize: 11, fontWeight: 'bold' }}>{value}</Text>
                     </View>
                   ))}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
-                    <Text style={{ color: '#666', fontSize: 11 }}>Fertility after harvest</Text>
+                    <Text style={{ color: C.textFaint, fontSize: 11 }}>Fertility after harvest</Text>
                     <Text style={{ color: crop.fertilityDrain === 0 ? '#66bb6a' : crop.fertilityDrain >= 2 ? '#ef5350' : '#ffb74d', fontSize: 11, fontWeight: 'bold' }}>
                       {crop.fertilityDrain === 0 ? '✅ No drain (fixes N₂)' : `⚠️ -${crop.fertilityDrain} pt${crop.fertilityDrain > 1 ? 's' : ''}`}
                     </Text>
                   </View>
                   {herbCost > 0 && (
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
-                      <Text style={{ color: '#666', fontSize: 11 }}>⚠️ Herbicide (weeds)</Text>
+                      <Text style={{ color: C.textFaint, fontSize: 11 }}>⚠️ Herbicide (weeds)</Text>
                       <Text style={{ color: '#ffb74d', fontSize: 11, fontWeight: 'bold' }}>~-${herbCost.toLocaleString()}</Text>
                     </View>
                   )}
@@ -878,21 +878,21 @@ export default function TierrasScreen() {
                 <View style={{ marginTop: 10 }}>
                   {availableSeeds.length > 0 && (
                     <>
-                      <Text style={{ color: '#888', fontSize: 11, marginBottom: 6 }}>🌱 Seed (optional)</Text>
+                      <Text style={{ color: C.textMuted, fontSize: 11, marginBottom: 6 }}>🌱 Seed (optional)</Text>
                       <TouchableOpacity
-                        style={{ backgroundColor: !selectedSeedId ? '#0f3460' : '#16213e', borderRadius: 6, padding: 7, marginBottom: 4, borderWidth: !selectedSeedId ? 1 : 0, borderColor: '#4fc3f7' }}
+                        style={{ backgroundColor: !selectedSeedId ? '#0f3460' : C.bgCard, borderRadius: 6, padding: 7, marginBottom: 4, borderWidth: !selectedSeedId ? 1 : 0, borderColor: '#4fc3f7' }}
                         onPress={() => setSelectedSeedId(null)}
                       >
-                        <Text style={{ color: !selectedSeedId ? '#e8d5a3' : '#888', fontSize: 11 }}>Base seeds (no bonus)</Text>
+                        <Text style={{ color: !selectedSeedId ? C.text : C.textMuted, fontSize: 11 }}>Base seeds (no bonus)</Text>
                       </TouchableOpacity>
                       {availableSeeds.map(s => (
                         <TouchableOpacity
                           key={s.id}
-                          style={{ backgroundColor: selectedSeedId === s.id ? '#0f3460' : '#16213e', borderRadius: 6, padding: 7, marginBottom: 4, borderWidth: selectedSeedId === s.id ? 1 : 0, borderColor: '#4fc3f7' }}
+                          style={{ backgroundColor: selectedSeedId === s.id ? '#0f3460' : C.bgCard, borderRadius: 6, padding: 7, marginBottom: 4, borderWidth: selectedSeedId === s.id ? 1 : 0, borderColor: '#4fc3f7' }}
                           onPress={() => setSelectedSeedId(s.id)}
                         >
-                          <Text style={{ color: '#e8d5a3', fontSize: 11 }}>Gen {s.generation} · Yld {geneGrade(s.genes.yield)} / Drt {geneGrade(s.genes.drought)} / Grw {geneGrade(s.genes.growth)} / Qlt {geneGrade(s.genes.quality)}</Text>
-                          <Text style={{ color: '#888', fontSize: 10 }}>{s.quantity} batch{s.quantity !== 1 ? 'es' : ''} available</Text>
+                          <Text style={{ color: C.text, fontSize: 11 }}>Gen {s.generation} · Yld {geneGrade(s.genes.yield)} / Drt {geneGrade(s.genes.drought)} / Grw {geneGrade(s.genes.growth)} / Qlt {geneGrade(s.genes.quality)}</Text>
+                          <Text style={{ color: C.textMuted, fontSize: 10 }}>{s.quantity} batch{s.quantity !== 1 ? 'es' : ''} available</Text>
                         </TouchableOpacity>
                       ))}
                     </>
@@ -955,7 +955,7 @@ export default function TierrasScreen() {
                     <Text style={styles.cardSub}>{mapSelected.hectares} ha · ♦ Fertility {mapSelected.fertility}/25</Text>
                   </View>
                   <TouchableOpacity onPress={() => setMapSelected(null)}>
-                    <Text style={{ color: '#888', fontSize: 18 }}>✕</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 18 }}>✕</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1037,97 +1037,97 @@ export default function TierrasScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 16 },
-  viewToggle: { backgroundColor: '#16213e', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  viewToggleText: { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' },
+  container: { flex: 1, backgroundColor: C.bg },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: S.lg },
+  viewToggle: { backgroundColor: C.bgCard, borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 5 },
+  viewToggleText: { color: C.text, fontSize: F.size.md, fontWeight: 'bold' },
 
   // Map view
-  mapLegend: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: 8, gap: 8 },
+  mapLegend: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: S.md, marginBottom: S.sm, gap: 8 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendDot: { width: 10, height: 10, borderRadius: 3 },
-  legendLabel: { color: '#888', fontSize: 10 },
+  legendLabel: { color: C.textMuted, fontSize: F.size.xs },
 
   mapModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-  mapModalPrice: { color: '#64b5f6', fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  sectionLabel: { color: '#888', fontSize: 13, paddingHorizontal: 16, marginTop: 8, marginBottom: 4 },
-  hScroll: { paddingHorizontal: 8 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8 },
-  empty: { color: '#555', padding: 16 },
+  mapModalPrice: { color: '#64b5f6', fontSize: F.size.xxl, fontWeight: 'bold', marginBottom: 10 },
+  sectionLabel: { color: C.textMuted, fontSize: F.size.md, paddingHorizontal: S.lg, marginTop: S.sm, marginBottom: S.xs },
+  hScroll: { paddingHorizontal: S.sm },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: S.sm },
+  empty: { color: '#555', padding: S.lg },
 
-  eventsBanner: { backgroundColor: '#7f2020', paddingVertical: 8, paddingHorizontal: 16, marginHorizontal: 12, borderRadius: 8, marginBottom: 4 },
-  eventsBannerText: { color: '#ffcdd2', fontWeight: 'bold', fontSize: 13 },
+  eventsBanner: { backgroundColor: '#7f2020', paddingVertical: S.sm, paddingHorizontal: S.lg, marginHorizontal: S.md, borderRadius: R.md, marginBottom: S.xs },
+  eventsBannerText: { color: '#ffcdd2', fontWeight: 'bold', fontSize: F.size.md },
 
-  card: { backgroundColor: '#16213e', borderRadius: 10, padding: 12, margin: 6, width: 160 },
+  card: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, margin: 6, width: 160 },
   marketCard: { width: '45%' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  cardTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 15 },
-  fertility: { color: '#aaa', fontSize: 12 },
-  soilBadge: { color: '#888', fontSize: 10, marginTop: 2 },
-  cropTag: { color: '#81c784', fontSize: 12, marginTop: 2 },
-  emptyTag: { color: '#555', fontSize: 12, marginTop: 2 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: S.xs },
+  cardTitle: { color: C.text, fontWeight: 'bold', fontSize: 15 },
+  fertility: { color: '#aaa', fontSize: F.size.sm },
+  soilBadge: { color: C.textMuted, fontSize: F.size.xs, marginTop: 2 },
+  cropTag: { color: '#81c784', fontSize: F.size.sm, marginTop: 2 },
+  emptyTag: { color: '#555', fontSize: F.size.sm, marginTop: 2 },
   weedTag: { color: '#ffb74d', fontSize: 11, marginTop: 3 },
-  daysLeft: { color: '#aaa', fontSize: 11, marginTop: 4 },
-  priceTag: { color: '#64b5f6', fontSize: 13, fontWeight: 'bold', marginTop: 2, marginBottom: 4 },
+  daysLeft: { color: '#aaa', fontSize: 11, marginTop: S.xs },
+  priceTag: { color: '#64b5f6', fontSize: F.size.md, fontWeight: 'bold', marginTop: 2, marginBottom: S.xs },
 
-  harvestBtn: { backgroundColor: '#2e7d32', borderRadius: 6, padding: 6, marginTop: 6, alignItems: 'center' },
-  plantBtn: { backgroundColor: '#1565c0', borderRadius: 6, padding: 6, marginTop: 6, alignItems: 'center' },
-  buyBtn: { backgroundColor: '#2e7d32', borderRadius: 6, padding: 6, alignItems: 'center' },
+  harvestBtn: { backgroundColor: '#2e7d32', borderRadius: R.sm, padding: 6, marginTop: 6, alignItems: 'center' },
+  plantBtn: { backgroundColor: '#1565c0', borderRadius: R.sm, padding: 6, marginTop: 6, alignItems: 'center' },
+  buyBtn: { backgroundColor: '#2e7d32', borderRadius: R.sm, padding: 6, alignItems: 'center' },
   btnDisabled: { backgroundColor: '#333' },
-  btnText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  btnText: { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
 
-  eventAlert: { backgroundColor: '#4a1515', borderRadius: 6, padding: 8, marginTop: 6 },
-  eventText: { color: '#ffcdd2', fontSize: 12, fontWeight: 'bold', marginBottom: 4 },
+  eventAlert: { backgroundColor: '#4a1515', borderRadius: R.sm, padding: S.sm, marginTop: 6 },
+  eventText: { color: '#ffcdd2', fontSize: F.size.sm, fontWeight: 'bold', marginBottom: S.xs },
   resolveBtn: { backgroundColor: '#b71c1c', borderRadius: 5, padding: 5, alignItems: 'center' },
-  resolveBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  resolveBtnText: { color: C.white, fontSize: 11, fontWeight: 'bold' },
   noProductText: { color: '#ef9a9a', fontSize: 11 },
-  fertilizeBtn: { backgroundColor: '#1565c0', borderRadius: 6, padding: 5, marginTop: 4, alignItems: 'center' },
-  weedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
-  smallBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  fertilizeBtn: { backgroundColor: '#1565c0', borderRadius: R.sm, padding: 5, marginTop: S.xs, alignItems: 'center' },
+  weedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: S.xs },
+  smallBtnText: { color: C.white, fontSize: 11, fontWeight: 'bold' },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modalBox: { backgroundColor: '#16213e', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '80%' },
-  modalTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 17, marginBottom: 12 },
+  modalBox: { backgroundColor: C.bgCard, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '80%' },
+  modalTitle: { color: C.text, fontWeight: 'bold', fontSize: 17, marginBottom: S.md },
   fertRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  fertLabel: { color: '#aaa', fontSize: 12, flex: 1, marginRight: 8 },
-  fertToggle: { backgroundColor: '#333', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
+  fertLabel: { color: '#aaa', fontSize: F.size.sm, flex: 1, marginRight: S.sm },
+  fertToggle: { backgroundColor: '#333', borderRadius: R.md, paddingHorizontal: 14, paddingVertical: 6 },
   fertToggleOn: { backgroundColor: '#1565c0' },
-  fertToggleText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  fertToggleText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
   cropList: { maxHeight: 320 },
-  cropOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
+  cropOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.divider },
   cropOptionDisabled: { opacity: 0.4 },
   cropOptionOutOfSeason: { opacity: 0.35, borderColor: '#333' },
-  seasonLabel: { color: '#888', fontSize: 12, marginBottom: 6, fontStyle: 'italic' },
+  seasonLabel: { color: C.textMuted, fontSize: F.size.sm, marginBottom: 6, fontStyle: 'italic' },
   cropOptionLeft: { flex: 1 },
-  cropOptionName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14 },
-  cropOptionDetail: { color: '#888', fontSize: 11, marginTop: 2 },
-  cropOptionCost: { color: '#4caf50', fontWeight: 'bold', fontSize: 14 },
-  rotationBadge: { backgroundColor: '#1b3a1b', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#4caf50' },
-  rotationBadgeText: { color: '#81c784', fontSize: 10, fontWeight: 'bold' },
-  cancelBtn: { backgroundColor: '#333', borderRadius: 10, padding: 12, alignItems: 'center', marginTop: 12 },
-  cancelBtnText: { color: '#aaa', fontWeight: 'bold', fontSize: 14 },
+  cropOptionName: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
+  cropOptionDetail: { color: C.textMuted, fontSize: 11, marginTop: 2 },
+  cropOptionCost: { color: '#4caf50', fontWeight: 'bold', fontSize: F.size.lg },
+  rotationBadge: { backgroundColor: '#1b3a1b', borderRadius: R.sm, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#4caf50' },
+  rotationBadgeText: { color: '#81c784', fontSize: F.size.xs, fontWeight: 'bold' },
+  cancelBtn: { backgroundColor: '#333', borderRadius: 10, padding: S.md, alignItems: 'center', marginTop: S.md },
+  cancelBtnText: { color: '#aaa', fontWeight: 'bold', fontSize: F.size.lg },
 
   // Filters
-  filterBar: { paddingHorizontal: 8, marginBottom: 4 },
-  filterChip: { backgroundColor: '#16213e', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 5, marginRight: 6, marginVertical: 4 },
+  filterBar: { paddingHorizontal: S.sm, marginBottom: S.xs },
+  filterChip: { backgroundColor: C.bgCard, borderRadius: R.xl, paddingHorizontal: S.md, paddingVertical: 5, marginRight: 6, marginVertical: S.xs },
   filterChipActive: { backgroundColor: '#1565c0' },
-  filterChipText: { color: '#666', fontSize: 12, fontWeight: 'bold' },
-  filterChipTextActive: { color: '#fff' },
+  filterChipText: { color: C.textFaint, fontSize: F.size.sm, fontWeight: 'bold' },
+  filterChipTextActive: { color: C.white },
 
   // Batch harvest
-  batchHarvestBtn: { backgroundColor: '#2e7d32', borderRadius: 8, marginHorizontal: 12, marginBottom: 6, padding: 10, alignItems: 'center' },
-  batchHarvestText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  batchHarvestBtn: { backgroundColor: '#2e7d32', borderRadius: R.md, marginHorizontal: S.md, marginBottom: 6, padding: 10, alignItems: 'center' },
+  batchHarvestText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
 
   // Greenhouse
-  ghRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  ghRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: S.xs },
   ghBadge: { color: '#81c784', fontSize: 11, fontWeight: 'bold' },
   ghRemove: { color: '#ef9a9a', fontSize: 11 },
-  ghInstallBtn: { backgroundColor: '#1b3a20', borderRadius: 6, padding: 5, marginTop: 4, alignItems: 'center' },
-  cardSub: { color: '#888', fontSize: 11, marginTop: 1 },
+  ghInstallBtn: { backgroundColor: '#1b3a20', borderRadius: R.sm, padding: 5, marginTop: S.xs, alignItems: 'center' },
+  cardSub: { color: C.textMuted, fontSize: 11, marginTop: 1 },
   // Irrigation
-  irrigatedBadge: { color: '#4fc3f7', fontSize: 11, fontWeight: 'bold', marginTop: 4 },
-  irrigateBtn: { backgroundColor: '#0d2840', borderRadius: 6, padding: 5, marginTop: 4, alignItems: 'center' },
+  irrigatedBadge: { color: '#4fc3f7', fontSize: 11, fontWeight: 'bold', marginTop: S.xs },
+  irrigateBtn: { backgroundColor: '#0d2840', borderRadius: R.sm, padding: 5, marginTop: S.xs, alignItems: 'center' },
 
   // Map selection panel
   mapPanel: {
@@ -1135,7 +1135,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#16213e',
+    backgroundColor: C.bgCard,
     borderTopWidth: 1,
     borderTopColor: '#c8860a66',
     borderTopLeftRadius: 16,
@@ -1144,10 +1144,10 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   mapPanelHeader:    { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
-  mapPanelTitle:     { color: '#e8d5a3', fontWeight: 'bold', fontSize: 15 },
-  mapPanelSub:       { color: '#888', fontSize: 11, marginTop: 2 },
-  mapPanelClose:     { padding: 4 },
-  mapPanelCloseText: { color: '#666', fontSize: 16, fontWeight: 'bold' },
+  mapPanelTitle:     { color: C.text, fontWeight: 'bold', fontSize: 15 },
+  mapPanelSub:       { color: C.textMuted, fontSize: 11, marginTop: 2 },
+  mapPanelClose:     { padding: S.xs },
+  mapPanelCloseText: { color: C.textFaint, fontSize: F.size.xl, fontWeight: 'bold' },
 
   mapPanelActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   mapActionRow:    { flexDirection: 'row', gap: 8, flex: 1, flexWrap: 'wrap' },
@@ -1156,46 +1156,46 @@ const styles = StyleSheet.create({
   mapActionBuy:    { backgroundColor: '#1565c0' },
   mapActionPlant:  { backgroundColor: '#1b5e20' },
   mapActionHarvest:{ backgroundColor: '#2e7d32' },
-  mapActionText:   { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  mapActionText:   { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
   mapActionAlert:  { flex: 1, backgroundColor: '#3a1200', borderRadius: 10, padding: 11, alignItems: 'center' },
-  mapActionAlertText: { color: '#ffb74d', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
+  mapActionAlertText: { color: '#ffb74d', fontSize: F.size.sm, fontWeight: 'bold', textAlign: 'center' },
   mapActionInfo:   { flex: 1, backgroundColor: '#1a2744', borderRadius: 10, padding: 11, alignItems: 'center' },
-  mapActionInfoText: { color: '#81c784', fontSize: 13, fontWeight: 'bold' },
+  mapActionInfoText: { color: '#81c784', fontSize: F.size.md, fontWeight: 'bold' },
 
   // World Map button
   worldMapBtn: {
     backgroundColor: '#0e1e2a',
     borderWidth: 1,
     borderColor: '#1e4060',
-    borderRadius: 8,
+    borderRadius: R.md,
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: S.lg,
     marginHorizontal: 10,
     marginBottom: 10,
     alignItems: 'center',
   },
   worldMapBtnText: {
     color: '#4a8ab0',
-    fontSize: 14,
+    fontSize: F.size.lg,
     fontWeight: '600',
   },
 });
 
 const localStyles = StyleSheet.create({
-  opBtn:          { backgroundColor: '#0f3460', borderRadius: 8, padding: 8, alignItems: 'center', marginTop: 8 },
+  opBtn:          { backgroundColor: '#0f3460', borderRadius: R.md, padding: S.sm, alignItems: 'center', marginTop: S.sm },
   opBtnYellow:    { backgroundColor: '#e65100' },
   opBtnRed:       { backgroundColor: '#b71c1c' },
-  opBtnText:      { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  progressRow:    { backgroundColor: '#1a1a2e', borderRadius: 8, padding: 8, marginTop: 8 },
-  progressText:   { color: '#ffb74d', fontSize: 12, textAlign: 'center' },
-  batchPlantBtn:  { backgroundColor: '#1a3a1a', borderRadius: 8, padding: 10, alignItems: 'center', marginHorizontal: 12, marginTop: 6 },
-  batchPlantText: { color: '#66bb6a', fontSize: 13, fontWeight: 'bold' },
-  batchBox:       { backgroundColor: '#16213e', borderRadius: 10, padding: 12, marginHorizontal: 12, marginTop: 6 },
-  batchTitle:     { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' },
-  batchChip:      { backgroundColor: '#0d1a2e', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, marginRight: 6, borderWidth: 1, borderColor: '#2a3a5e' },
+  opBtnText:      { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
+  progressRow:    { backgroundColor: C.bg, borderRadius: R.md, padding: S.sm, marginTop: S.sm },
+  progressText:   { color: '#ffb74d', fontSize: F.size.sm, textAlign: 'center' },
+  batchPlantBtn:  { backgroundColor: '#1a3a1a', borderRadius: R.md, padding: 10, alignItems: 'center', marginHorizontal: S.md, marginTop: 6 },
+  batchPlantText: { color: '#66bb6a', fontSize: F.size.md, fontWeight: 'bold' },
+  batchBox:       { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginHorizontal: S.md, marginTop: 6 },
+  batchTitle:     { color: C.text, fontSize: F.size.md, fontWeight: 'bold' },
+  batchChip:      { backgroundColor: '#0d1a2e', borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6, marginRight: 6, borderWidth: 1, borderColor: '#2a3a5e' },
   batchChipActive:{ backgroundColor: '#1a3a1a', borderColor: '#66bb6a' },
-  batchChipText:  { color: '#888', fontSize: 11 },
-  batchCancel:    { justifyContent: 'center', paddingHorizontal: 12 },
+  batchChipText:  { color: C.textMuted, fontSize: 11 },
+  batchCancel:    { justifyContent: 'center', paddingHorizontal: S.md },
   screenTitle: {
     color: C.text,
     fontSize: F.size.xl,

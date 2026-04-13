@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
-import { C, S, F } from '../../constants/theme';
+import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { getSeason } from '../../engine/climate';
 
@@ -177,27 +177,27 @@ const styles = StyleSheet.create({
     paddingTop: S.sm,
     paddingBottom: S.xs,
   },
-  scroll: { flex: 1, paddingHorizontal: 12 },
-  dayLabel: { color: '#888', fontSize: 12, marginTop: 8, marginBottom: 4 },
-  sectionLabel: { color: '#555', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginTop: 12, marginBottom: 6 },
+  scroll: { flex: 1, paddingHorizontal: S.md },
+  dayLabel: { color: C.textMuted, fontSize: F.size.sm, marginTop: S.sm, marginBottom: S.xs },
+  sectionLabel: { color: '#555', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginTop: S.md, marginBottom: 6 },
   empty: { color: '#555', padding: 20, textAlign: 'center' },
 
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#16213e',
+    backgroundColor: C.bgCard,
     borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
+    padding: S.md,
+    marginBottom: S.sm,
     borderLeftWidth: 3,
   },
   cardUrgent: { backgroundColor: '#1a1010' },
   cardLeft: { marginRight: 10 },
   cardIcon: { fontSize: 20 },
   cardBody: { flex: 1 },
-  cardTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
+  cardTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
   cardTitleUrgent: { color: '#ef9a9a' },
-  cardDetail: { color: '#888', fontSize: 11, marginTop: 2 },
-  badge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginLeft: 8, alignItems: 'center', minWidth: 56 },
-  badgeDays: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  cardDetail: { color: C.textMuted, fontSize: 11, marginTop: 2 },
+  badge: { borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: S.xs, marginLeft: S.sm, alignItems: 'center', minWidth: 56 },
+  badgeDays: { color: C.white, fontSize: 11, fontWeight: 'bold' },
 });

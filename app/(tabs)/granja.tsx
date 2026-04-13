@@ -8,7 +8,7 @@ import { useGameStore, SeedEntry, SeedGenes, HybridJob } from '../../store/useGa
 import { CROP_TYPES } from '../../data/cropTypes';
 import HelpSheet from '../../components/HelpSheet';
 import SubTabBar from '../../components/SubTabBar';
-import { C } from '../../constants/theme';
+import { C, S, F, R } from '../../constants/theme';
 
 type FarmTab = 'fields' | 'animals' | 'machinery' | 'workers' | 'seedlab';
 
@@ -77,7 +77,7 @@ function SeedLabScreen() {
   return (
     <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
       <View style={{ padding: 12, paddingTop: 16 }}>
-        <Text style={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: 17, marginBottom: 4 }}>🌱 Seed Lab</Text>
+        <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 17, marginBottom: 4 }}>🌱 Seed Lab</Text>
       </View>
 
       {/* Lab status */}
@@ -244,37 +244,37 @@ function SeedLabScreen() {
 }
 
 const slStyles = StyleSheet.create({
-  lockedCard:         { margin: 12, backgroundColor: '#16213e', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#333', borderStyle: 'dashed' },
-  lockedTitle:        { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13, marginBottom: 4 },
-  lockedSub:          { color: '#888', fontSize: 11 },
-  statusBadge:        { color: '#66bb6a', fontSize: 11, fontWeight: 'bold', marginHorizontal: 12, marginBottom: 8 },
-  card:               { backgroundColor: '#16213e', borderRadius: 10, padding: 12, marginHorizontal: 12, marginBottom: 10 },
-  cardTitle:          { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13, marginBottom: 10 },
-  sectionLabel:       { color: '#888', fontSize: 11, fontWeight: 'bold', marginHorizontal: 12, marginTop: 8, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
-  label:              { color: '#888', fontSize: 11, marginBottom: 4 },
+  lockedCard:         { margin: S.md, backgroundColor: C.bgCard, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#333', borderStyle: 'dashed' },
+  lockedTitle:        { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: S.xs },
+  lockedSub:          { color: C.textMuted, fontSize: 11 },
+  statusBadge:        { color: '#66bb6a', fontSize: 11, fontWeight: 'bold', marginHorizontal: S.md, marginBottom: S.sm },
+  card:               { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginHorizontal: S.md, marginBottom: 10 },
+  cardTitle:          { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: 10 },
+  sectionLabel:       { color: C.textMuted, fontSize: 11, fontWeight: 'bold', marginHorizontal: S.md, marginTop: S.sm, marginBottom: S.xs, textTransform: 'uppercase', letterSpacing: 1 },
+  label:              { color: C.textMuted, fontSize: 11, marginBottom: S.xs },
   emptyText:          { color: '#555', fontSize: 11 },
-  cropChip:           { backgroundColor: '#0a1628', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5, marginRight: 6 },
+  cropChip:           { backgroundColor: '#0a1628', borderRadius: 14, paddingHorizontal: S.md, paddingVertical: 5, marginRight: 6 },
   cropChipActive:     { backgroundColor: '#0f3460', borderWidth: 1, borderColor: '#4fc3f7' },
-  cropChipText:       { color: '#888', fontSize: 11 },
-  cropChipTextActive: { color: '#e8d5a3', fontWeight: 'bold' },
-  seedChip:           { backgroundColor: '#0a1628', borderRadius: 8, padding: 8, marginRight: 6, minWidth: 80 },
+  cropChipText:       { color: C.textMuted, fontSize: 11 },
+  cropChipTextActive: { color: C.text, fontWeight: 'bold' },
+  seedChip:           { backgroundColor: '#0a1628', borderRadius: R.md, padding: S.sm, marginRight: 6, minWidth: 80 },
   seedChipActive:     { backgroundColor: '#0f3460', borderWidth: 1, borderColor: '#4fc3f7' },
-  seedChipGen:        { color: '#888', fontSize: 10, marginBottom: 4 },
-  prediction:         { backgroundColor: '#0a1628', borderRadius: 8, padding: 10, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#66bb6a' },
+  seedChipGen:        { color: C.textMuted, fontSize: F.size.xs, marginBottom: S.xs },
+  prediction:         { backgroundColor: '#0a1628', borderRadius: R.md, padding: 10, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: '#66bb6a' },
   predLabel:          { color: '#66bb6a', fontSize: 11, fontWeight: 'bold', marginBottom: 6 },
-  predSub:            { color: '#888', fontSize: 10, marginTop: 6 },
-  hybBtn:             { backgroundColor: '#1b5e20', borderRadius: 8, padding: 10, alignItems: 'center' },
+  predSub:            { color: C.textMuted, fontSize: F.size.xs, marginTop: 6 },
+  hybBtn:             { backgroundColor: '#1b5e20', borderRadius: R.md, padding: 10, alignItems: 'center' },
   hybBtnDisabled:     { backgroundColor: '#333' },
-  hybBtnText:         { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  hybBtnText:         { color: C.white, fontWeight: 'bold', fontSize: F.size.sm },
   progressBg:         { height: 6, backgroundColor: '#0a1628', borderRadius: 3, marginTop: 6 },
   progressFill:       { height: 6, backgroundColor: '#66bb6a', borderRadius: 3 },
-  jobName:            { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' },
+  jobName:            { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
   jobDays:            { color: '#66bb6a', fontSize: 11, fontWeight: 'bold' },
-  vaultRow:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
-  vaultName:          { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' },
-  genBadge:           { backgroundColor: '#ffd70033', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
-  genBadgeText:       { color: '#ffd700', fontSize: 10, fontWeight: 'bold' },
-  vaultQty:           { color: '#888', fontSize: 12, fontWeight: 'bold' },
+  vaultRow:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider },
+  vaultName:          { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+  genBadge:           { backgroundColor: '#ffd70033', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2 },
+  genBadgeText:       { color: '#ffd700', fontSize: F.size.xs, fontWeight: 'bold' },
+  vaultQty:           { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'bold' },
 });
 
 export default function GranjaScreen() {
