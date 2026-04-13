@@ -7,6 +7,7 @@ import { useGameStore } from '../../store/useGameStore';
 import DispatchModal from '../../components/DispatchModal';
 import { DeliveryCargo, COLD_CARGO_IDS, BULK_LIQUID_IDS } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
+import SubTabBar from '../../components/SubTabBar';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { MARKET_REGIONS, MarketId } from '../../data/marketRegions';
 import { sellRevenue, computeSellPressureModifier, sellPressureDuration } from '../../engine/market';
@@ -278,16 +279,17 @@ export default function EconomiaScreen() {
         <HintCard id="hint_sell" title="You have crops to sell!" body="Your inventory has stock but funds are low. Go to the Market tab, select a crop, and tap Sell All to convert it to cash." />
       )}
 
-      {/* Tab bar */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={{ flexDirection: 'row' }}>
-        {(['market', 'autosell', 'stats', 'futures', 'orders'] as EcoTab[]).map(t => (
-          <TouchableOpacity key={t} style={[styles.tabBtn, ecoTab === t && styles.tabBtnActive]} onPress={() => setEcoTab(t)}>
-            <Text style={[styles.tabBtnText, ecoTab === t && styles.tabBtnTextActive]}>
-              {t === 'market' ? '📈 Market' : t === 'autosell' ? '🤖 Auto-Sell' : t === 'stats' ? '📊 Stats' : t === 'futures' ? '📉 Futures' : '📋 Orders'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <SubTabBar
+        tabs={[
+          { id: 'market',   label: '📈 Market' },
+          { id: 'autosell', label: '🤖 Auto-Sell' },
+          { id: 'stats',    label: '📊 Stats' },
+          { id: 'futures',  label: '📉 Futures' },
+          { id: 'orders',   label: '📋 Orders' },
+        ]}
+        active={ecoTab}
+        onSelect={id => setEcoTab(id as EcoTab)}
+      />
 
       {/* AUTO-SELL TAB */}
       {ecoTab === 'autosell' && (
@@ -1114,11 +1116,6 @@ const styles = StyleSheet.create({
   spoilageWarnText: { color: '#ff8a65', fontSize: 11 },
 
   // Tab bar
-  tabBar: { flexDirection: 'row', paddingHorizontal: S.sm, paddingVertical: 6, gap: 6 },
-  tabBtn: { flex: 1, backgroundColor: C.bgCard, borderRadius: R.md, padding: S.sm, alignItems: 'center' },
-  tabBtnActive: { backgroundColor: '#0f3460' },
-  tabBtnText: { color: C.textMuted, fontSize: 11, fontWeight: 'bold' },
-  tabBtnTextActive: { color: C.text },
 
   // Auto-sell
   autoSellScroll: { flex: 1, paddingHorizontal: S.md },
