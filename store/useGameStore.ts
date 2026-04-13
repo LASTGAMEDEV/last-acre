@@ -3353,12 +3353,11 @@ export const useGameStore = create<GameState>()(
         }
         // ── End production buildings processing ───────────────────────────
 
-        // ── Mastitis / low-hygiene warnings ──────────────────────────────────────
+        // ── Mastitis / low-hygiene warnings (fires at most every 3 days) ─────────
         {
-          const DAIRY_SPECIES_WARN = new Set(['vaca', 'cabra', 'bufalo']);
           for (const pb of newProductionBuildings) {
-            if (!DAIRY_SPECIES_WARN.has(pb.animalTypeId)) continue;
-            if (pb.hygiene < 40) {
+            if (!DAIRY_SPECIES.has(pb.animalTypeId)) continue;
+            if (pb.hygiene < 40 && newDay % 3 === 0) {
               const speciesLabel =
                 pb.animalTypeId === 'vaca' ? 'cow' :
                 pb.animalTypeId === 'cabra' ? 'goat' : 'buffalo';
