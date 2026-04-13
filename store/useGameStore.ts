@@ -1840,6 +1840,7 @@ export const useGameStore = create<GameState>()(
         });
 
         // ── Hatchery: incubation queue hatching ───────────────────────────────
+        let newIncubationQueue = [...(state.incubationQueue ?? [])];
         {
           const INCUBATION_DAYS: Record<string, number> = { gallina: 21, pato: 28, codorniz: 17 };
           const HATCH_RATE = 0.80;
@@ -2156,7 +2157,7 @@ export const useGameStore = create<GameState>()(
         }
 
         // ── Auction House ────────────────────────────────────────────────────
-        const { geneScore, randomGenes } = require('../engine/animals');
+        const { geneScore } = require('../engine/animals');
         const { ANIMAL_TYPES: AT_AUCTION } = require('../data/animalTypes');
 
         let auctionMoneyDelta = 0;
@@ -2746,7 +2747,6 @@ export const useGameStore = create<GameState>()(
         let newGrainMissed = state.grainMissedDays ?? 0;
         let newHayMissed = state.hayMissedDays ?? 0;
         let newSilageLevel = state.silageLevel ?? 0;
-        let newIncubationQueue = [...(state.incubationQueue ?? [])];
         const harvestedCropIdsForSet = workerHarvestedIds ?? state.harvestedCropIds;
 
         // ── Fuel tracking for job day ────────────────────────────────────────
