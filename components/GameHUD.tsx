@@ -2,8 +2,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useGameStore } from '../store/useGameStore';
-import { getSeason } from '../engine/climate';
-import { WeatherEvent } from '../engine/climate';
+import { getSeason, WeatherEvent } from '../engine/climate';
 import { SEASON_THEME, C, S, F, R, MIN_TOUCH } from '../constants/theme';
 import { playSound } from '../engine/sounds';
 import { WORKER_TYPES } from '../data/workerTypes';
@@ -11,6 +10,7 @@ import { MACHINE_TYPES } from '../data/machineTypes';
 import { BUILDING_TYPES } from '../data/buildingTypes';
 
 const WARN_DAYS = 7;
+const SEASON_DAYS = 90;
 
 const WEATHER_DISPLAY: Record<WeatherEvent, { icon: string; pillBg: string; textColor: string }> = {
   perfect:    { icon: '✨', pillBg: '#1b3a1b', textColor: '#81c784' },
@@ -41,7 +41,6 @@ export default function GameHUD() {
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
 
-  const SEASON_DAYS = 90;
   const daysIntoSeason = (day % (SEASON_DAYS * 4)) % SEASON_DAYS;
   const daysLeftInSeason = SEASON_DAYS - daysIntoSeason;
 
