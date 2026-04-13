@@ -10,7 +10,7 @@ import { CROP_TYPES, PlantingSeason } from '../../data/cropTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { getSeason } from '../../engine/climate';
-import { getSoilModifier } from '../../engine/crops';
+import { getSoilModifier, SoilStats, SOIL_DEFAULTS, computeSoilYieldModifier } from '../../engine/crops';
 import { PRODUCT_TYPES } from '../../data/productTypes';
 import ContractorModal from '../../components/ContractorModal';
 import { getContractorCost, ContractorOperation } from '../../engine/machinery';
@@ -39,6 +39,108 @@ const CROP_ICONS: Record<string, string> = {
   grapes: '🍇', tomatoes: '🍅', strawberries: '🍓', olives: '🫒', almonds: '🥜',
 };
 
+const SOIL_BAR_COLORS = {
+  good: '#4caf50',
+  warn: '#ffa726',
+  bad:  '#ef5350',
+};
+
+function soilStatColor(value: number, low: number, high: number, invert = false): string {
+  const pct = (value - low) / (high - low);
+  const good = invert ? pct < 0.3 : pct > 0.6;
+  const bad  = invert ? pct > 0.7 : pct < 0.3;
+  return good ? SOIL_BAR_COLORS.good : bad ? SOIL_BAR_COLORS.bad : SOIL_BAR_COLORS.warn;
+}
+
+function SoilTab({ parcel, onAmendment, onCoverCrop }: {
+  parcel: LandParcel;
+  onAmendment: (type: 'lime' | 'sulfur' | 'subsoiler') => void;
+  onCoverCrop: (cropId: string) => void;
+}) {
+  const soil = parcel.soil ?? SOIL_DEFAULTS;
+  const modifier = computeSoilYieldModifier(soil);
+
+  const stats: { label: string; value: number; min: number; max: number; invert?: boolean; unit?: string }[] = [
+    { label: 'Nitrogen',       value: soil.nitrogen,      min: 0,   max: 100 },
+    { label: 'Organic Matter', value: soil.organicMatter,  min: 0,   max: 10,  unit: '%' },
+    { label: 'Compaction',     value: soil.compaction,     min: 0,   max: 100, invert: true },
+    { label: 'pH',             value: soil.pH,             min: 4.0, max: 8.5 },
+    { label: 'Microbial Life', value: soil.microbialLife,  min: 0,   max: 100 },
+  ];
+
+  return (
+    <View style={{ padding: S.md }}>
+      <Text style={{ color: C.textMuted, fontSize: F.size.xs, marginBottom: S.sm }}>
+        Yield modifier: {modifier >= 1 ? '+' : ''}{Math.round((modifier - 1) * 100)}%
+      </Text>
+
+      {stats.map((st) => {
+        const pct = Math.max(0, Math.min(1, (st.value - st.min) / (st.max - st.min)));
+        const barPct = st.invert ? 1 - pct : pct;
+        const color = soilStatColor(st.value, st.min, st.max, st.invert);
+        return (
+          <View key={st.label} style={{ marginBottom: S.sm }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ color: C.textMuted, fontSize: F.size.xs }}>{st.label}</Text>
+              <Text style={{ color: C.text, fontSize: F.size.xs }}>
+                {st.value.toFixed(st.unit === '%' ? 1 : 0)}{st.unit ?? ''}
+              </Text>
+            </View>
+            <View style={{ height: 6, backgroundColor: C.bgCard, borderRadius: 3, marginTop: 3 }}>
+              <View style={{ width: `${barPct * 100}%` as any, height: 6, borderRadius: 3, backgroundColor: color }} />
+            </View>
+          </View>
+        );
+      })}
+
+      <Text style={{ color: C.textMuted, fontSize: F.size.xs, marginTop: S.md, marginBottom: S.xs, fontWeight: '600' }}>
+        Amendments
+      </Text>
+      <View style={{ flexDirection: 'row', gap: S.sm }}>
+        {[
+          { id: 'lime' as const,      label: '🪨 Lime',    hint: 'pH +0.5 · $120' },
+          { id: 'sulfur' as const,    label: '🟡 Sulfur',  hint: 'pH −0.5 · $100' },
+          { id: 'subsoiler' as const, label: '⚙️ Subsoil', hint: 'Compact −18 · $200' },
+        ].map((a) => (
+          <TouchableOpacity
+            key={a.id}
+            style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: R.md, padding: S.sm, alignItems: 'center' }}
+            onPress={() => onAmendment(a.id)}
+          >
+            <Text style={{ color: C.text, fontSize: F.size.xs }}>{a.label}</Text>
+            <Text style={{ color: C.textFaint, fontSize: 10 }}>{a.hint}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {!parcel.plantedCrop && (
+        <>
+          <Text style={{ color: C.textMuted, fontSize: F.size.xs, marginTop: S.md, marginBottom: S.xs, fontWeight: '600' }}>
+            Cover Crops
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
+            {[
+              { id: 'rye',       label: '🌾 Rye',      hint: 'Compact −8' },
+              { id: 'clover',    label: '🍀 Clover',    hint: 'N +20, OM +2%' },
+              { id: 'mustard',   label: '🌼 Mustard',   hint: 'Pest −15%' },
+              { id: 'buckwheat', label: '🌿 Buckwheat', hint: 'Microbes +10' },
+            ].map((cc) => (
+              <TouchableOpacity
+                key={cc.id}
+                style={{ backgroundColor: C.bgCard, borderRadius: R.md, padding: S.sm, alignItems: 'center', minWidth: 80 }}
+                onPress={() => onCoverCrop(cc.id)}
+              >
+                <Text style={{ color: C.text, fontSize: F.size.xs }}>{cc.label}</Text>
+                <Text style={{ color: C.textFaint, fontSize: 10 }}>{cc.hint}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
 export default function TierrasScreen() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
@@ -52,6 +154,7 @@ export default function TierrasScreen() {
     seedVault, selectSeedForParcel,
     tractorJobs, harvestJobs, assignJob, assignHarvestJob, hireContractor,
     cureDisease, plantCropBatch, hapticEnabled,
+    applySoilAmendment, plantCoverCrop,
   } = useGameStore();
 
   // True if a frost event is forecast within the next 3 days
@@ -74,6 +177,7 @@ export default function TierrasScreen() {
   const currentSeason: PlantingSeason = getSeason(day);
   const [mapView, setMapView] = useState(false);
   const [mapSelected, setMapSelected] = useState<LandParcel | null>(null);
+  const [activeParcelTab, setActiveParcelTab] = useState<'info' | 'soil'>('info');
   type FieldFilter = 'all' | 'empty' | 'growing' | 'ready' | 'events';
   const [fieldFilter, setFieldFilter] = useState<FieldFilter>('all');
 
@@ -954,7 +1058,7 @@ export default function TierrasScreen() {
       {/* Map parcel action modal */}
       <Modal visible={!!mapSelected} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setMapSelected(null)} />
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => { setMapSelected(null); setActiveParcelTab('info'); }} />
           <View style={styles.modalBox}>
             {mapSelected && (
               <>
@@ -963,78 +1067,120 @@ export default function TierrasScreen() {
                     <Text style={styles.modalTitle}>{mapSelected.name}</Text>
                     <Text style={styles.cardSub}>{mapSelected.hectares} ha · ♦ Fertility {mapSelected.fertility}/25</Text>
                   </View>
-                  <TouchableOpacity onPress={() => setMapSelected(null)}>
+                  <TouchableOpacity onPress={() => { setMapSelected(null); setActiveParcelTab('info'); }}>
                     <Text style={{ color: C.textMuted, fontSize: 18 }}>✕</Text>
                   </TouchableOpacity>
                 </View>
 
-                {!mapSelected.owned ? (
-                  <>
-                    <Text style={styles.mapModalPrice}>${(mapSelected.pricePerHa * mapSelected.hectares).toLocaleString()}</Text>
-                    <TouchableOpacity
-                      style={[styles.harvestBtn, money < mapSelected.pricePerHa * mapSelected.hectares && styles.btnDisabled]}
-                      onPress={() => { buyParcel(mapSelected.id); setMapSelected(null); }}
-                      disabled={money < mapSelected.pricePerHa * mapSelected.hectares}
-                    >
-                      <Text style={styles.btnText}>Buy</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : mapSelected.plantedCrop ? (
-                  <>
-                    <Text style={styles.cropTag}>
-                      {CROP_ICONS[mapSelected.plantedCrop.cropId] ?? '🌱'} {mapSelectedCropType?.name ?? mapSelected.plantedCrop.cropId}
-                      {mapSelected.plantedCrop.fertilized ? ' ✨' : ''}
-                    </Text>
-                    {mapSelectedReady ? (
+                {/* Sub-tab bar (only for owned parcels) */}
+                {mapSelected.owned && (
+                  <View style={{ flexDirection: 'row', marginBottom: S.sm, gap: S.xs }}>
+                    {([
+                      { id: 'info' as const, label: '📋 Info' },
+                      { id: 'soil' as const, label: '🌱 Soil' },
+                    ]).map(tab => (
                       <TouchableOpacity
-                        style={[styles.harvestBtn, totalInventory >= siloCapacity && styles.btnDisabled]}
-                        onPress={() => { harvestCrop(mapSelected.id); setMapSelected(null); }}
-                        disabled={totalInventory >= siloCapacity}
+                        key={tab.id}
+                        style={{
+                          flex: 1,
+                          backgroundColor: activeParcelTab === tab.id ? '#1565c0' : C.bgCard,
+                          borderRadius: R.md,
+                          paddingVertical: 6,
+                          alignItems: 'center',
+                        }}
+                        onPress={() => setActiveParcelTab(tab.id)}
                       >
-                        <Text style={styles.btnText}>{totalInventory >= siloCapacity ? '📦 Silo full' : '🌾 Harvest'}</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={styles.daysLeft}>⏳ {mapSelectedDays}d left</Text>
-                    )}
-                    {!mapSelected.plantedCrop.fertilized && mapSelectedFertilizer && (
-                      <TouchableOpacity style={styles.fertilizeBtn} onPress={() => { fertilizeCrop(mapSelected.id, fertilizerIds[0]); setMapSelected(p => p ? { ...p, plantedCrop: { ...p.plantedCrop!, fertilized: true } } : p); }}>
-                        <Text style={styles.smallBtnText}>✨ Fertilize (1 dose)</Text>
-                      </TouchableOpacity>
-                    )}
-                  </>
-                ) : (
-                  <TouchableOpacity style={styles.plantBtn} onPress={() => { setMapSelected(null); setPlantingParcel(mapSelected); }}>
-                    <Text style={styles.btnText}>🌱 Plant</Text>
-                  </TouchableOpacity>
-                )}
-
-                {mapSelected.owned && mapSelected.hasWeeds && (
-                  <View style={styles.weedRow}>
-                    <Text style={styles.weedTag}>⚠️ Weeds</Text>
-                    {mapSelectedHerbicide ? (
-                      <TouchableOpacity style={styles.resolveBtn} onPress={() => { clearWeeds(mapSelected.id); setMapSelected(p => p ? { ...p, hasWeeds: false } : p); }}>
-                        <Text style={styles.resolveBtnText}>Clear</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={styles.noProductText}>No herbicide</Text>
-                    )}
-                  </View>
-                )}
-
-                {mapSelectedEvent && (
-                  <View style={styles.eventAlert}>
-                    <Text style={styles.eventText}>
-                      {mapSelectedEvent.type === 'disease' ? '🍄 Disease' : '🐛 Pest'}
-                    </Text>
-                    {(mapSelectedEvent.type === 'disease' ? fungicideIds : insecticideIds).slice(0, 1).map(pid => (
-                      <TouchableOpacity key={pid} style={styles.resolveBtn} onPress={() => { resolveFieldEvent(mapSelectedEvent.id, pid); setMapSelected(null); }}>
-                        <Text style={styles.resolveBtnText}>Treat (1 unit)</Text>
+                        <Text style={{ color: activeParcelTab === tab.id ? C.white : C.textMuted, fontSize: F.size.sm, fontWeight: 'bold' }}>
+                          {tab.label}
+                        </Text>
                       </TouchableOpacity>
                     ))}
-                    {(mapSelectedEvent.type === 'disease' ? fungicideIds : insecticideIds).length === 0 && (
-                      <Text style={styles.noProductText}>No {mapSelectedEvent.type === 'disease' ? 'fungicide' : 'insecticide'}</Text>
-                    )}
                   </View>
+                )}
+
+                {/* Info tab content (default) */}
+                {activeParcelTab === 'info' && (
+                  <>
+                    {!mapSelected.owned ? (
+                      <>
+                        <Text style={styles.mapModalPrice}>${(mapSelected.pricePerHa * mapSelected.hectares).toLocaleString()}</Text>
+                        <TouchableOpacity
+                          style={[styles.harvestBtn, money < mapSelected.pricePerHa * mapSelected.hectares && styles.btnDisabled]}
+                          onPress={() => { buyParcel(mapSelected.id); setMapSelected(null); setActiveParcelTab('info'); }}
+                          disabled={money < mapSelected.pricePerHa * mapSelected.hectares}
+                        >
+                          <Text style={styles.btnText}>Buy</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : mapSelected.plantedCrop ? (
+                      <>
+                        <Text style={styles.cropTag}>
+                          {CROP_ICONS[mapSelected.plantedCrop.cropId] ?? '🌱'} {mapSelectedCropType?.name ?? mapSelected.plantedCrop.cropId}
+                          {mapSelected.plantedCrop.fertilized ? ' ✨' : ''}
+                        </Text>
+                        {mapSelectedReady ? (
+                          <TouchableOpacity
+                            style={[styles.harvestBtn, totalInventory >= siloCapacity && styles.btnDisabled]}
+                            onPress={() => { harvestCrop(mapSelected.id); setMapSelected(null); setActiveParcelTab('info'); }}
+                            disabled={totalInventory >= siloCapacity}
+                          >
+                            <Text style={styles.btnText}>{totalInventory >= siloCapacity ? '📦 Silo full' : '🌾 Harvest'}</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <Text style={styles.daysLeft}>⏳ {mapSelectedDays}d left</Text>
+                        )}
+                        {!mapSelected.plantedCrop.fertilized && mapSelectedFertilizer && (
+                          <TouchableOpacity style={styles.fertilizeBtn} onPress={() => { fertilizeCrop(mapSelected.id, fertilizerIds[0]); setMapSelected(p => p ? { ...p, plantedCrop: { ...p.plantedCrop!, fertilized: true } } : p); }}>
+                            <Text style={styles.smallBtnText}>✨ Fertilize (1 dose)</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    ) : (
+                      <TouchableOpacity style={styles.plantBtn} onPress={() => { setMapSelected(null); setPlantingParcel(mapSelected); setActiveParcelTab('info'); }}>
+                        <Text style={styles.btnText}>🌱 Plant</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {mapSelected.owned && mapSelected.hasWeeds && (
+                      <View style={styles.weedRow}>
+                        <Text style={styles.weedTag}>⚠️ Weeds</Text>
+                        {mapSelectedHerbicide ? (
+                          <TouchableOpacity style={styles.resolveBtn} onPress={() => { clearWeeds(mapSelected.id); setMapSelected(p => p ? { ...p, hasWeeds: false } : p); }}>
+                            <Text style={styles.resolveBtnText}>Clear</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <Text style={styles.noProductText}>No herbicide</Text>
+                        )}
+                      </View>
+                    )}
+
+                    {mapSelectedEvent && (
+                      <View style={styles.eventAlert}>
+                        <Text style={styles.eventText}>
+                          {mapSelectedEvent.type === 'disease' ? '🍄 Disease' : '🐛 Pest'}
+                        </Text>
+                        {(mapSelectedEvent.type === 'disease' ? fungicideIds : insecticideIds).slice(0, 1).map(pid => (
+                          <TouchableOpacity key={pid} style={styles.resolveBtn} onPress={() => { resolveFieldEvent(mapSelectedEvent.id, pid); setMapSelected(null); setActiveParcelTab('info'); }}>
+                            <Text style={styles.resolveBtnText}>Treat (1 unit)</Text>
+                          </TouchableOpacity>
+                        ))}
+                        {(mapSelectedEvent.type === 'disease' ? fungicideIds : insecticideIds).length === 0 && (
+                          <Text style={styles.noProductText}>No {mapSelectedEvent.type === 'disease' ? 'fungicide' : 'insecticide'}</Text>
+                        )}
+                      </View>
+                    )}
+                  </>
+                )}
+
+                {/* Soil tab content */}
+                {activeParcelTab === 'soil' && mapSelected.owned && (
+                  <SoilTab
+                    parcel={mapSelected}
+                    onAmendment={(type) => applySoilAmendment(mapSelected.id, type)}
+                    onCoverCrop={(cropId) => {
+                      plantCoverCrop(mapSelected.id, cropId);
+                    }}
+                  />
                 )}
               </>
             )}
