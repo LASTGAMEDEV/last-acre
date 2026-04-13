@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
 import { useGameStore, FuturesPosition, SeasonGoal } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
+import SubTabBar from '../../components/SubTabBar';
 import HintCard from '../../components/HintCard';
 import { CONTRACT_TEMPLATES } from '../../engine/contracts';
 import { CROP_TYPES, CropType } from '../../data/cropTypes';
@@ -1210,27 +1211,18 @@ export default function OficinaScreen() {
         </View>
       </View>
 
-      {/* Tab bar */}
-      <View style={styles.tabBar}>
-        {([
+      <SubTabBar
+        tabs={[
           { id: 'banking',     label: '🏦 Bank' },
           { id: 'contracts',   label: '📋 Contracts' },
           { id: 'reputation',  label: '⭐ Farm' },
           { id: 'milestones',  label: '🏆 Goals' },
           { id: 'insurance',   label: '🌦️ Insurance' },
           { id: 'competitors', label: '🏭 Rivals' },
-        ] as { id: OfficeTab; label: string }[]).map(tab => (
-          <TouchableOpacity
-            key={tab.id}
-            style={[styles.tabBtn, activeTab === tab.id && styles.tabBtnActive]}
-            onPress={() => setActiveTab(tab.id)}
-          >
-            <Text style={[styles.tabBtnText, activeTab === tab.id && styles.tabBtnTextActive]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+        ]}
+        active={activeTab}
+        onSelect={id => setActiveTab(id as OfficeTab)}
+      />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         {activeTab === 'banking'     && <BankingSection />}
@@ -1269,11 +1261,6 @@ const styles = StyleSheet.create({
   balanceDivider: { width: 1, height: 40, backgroundColor: '#1a3a6a', marginHorizontal: S.md },
 
   // Tab bar
-  tabBar: { flexDirection: 'row', marginHorizontal: S.md, marginBottom: S.sm, backgroundColor: '#0d1117', borderRadius: 10, padding: S.xs },
-  tabBtn: { flex: 1, paddingVertical: S.sm, alignItems: 'center', borderRadius: R.md },
-  tabBtnActive: { backgroundColor: '#0f3460' },
-  tabBtnText: { color: '#555', fontSize: F.size.md, fontWeight: 'bold' },
-  tabBtnTextActive: { color: C.text },
 
   // Reputation
   repCard: { backgroundColor: C.bgCard, borderRadius: R.lg, margin: S.md, padding: 14 },

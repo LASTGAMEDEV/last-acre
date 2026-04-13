@@ -6,6 +6,7 @@ import DispatchModal from '../../components/DispatchModal';
 import { useGameStore } from '../../store/useGameStore';
 import { DeliveryCargo, LIVESTOCK_TRAILER_IDS, ProductionBuildingState } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
+import SubTabBar from '../../components/SubTabBar';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
@@ -222,20 +223,14 @@ export default function AnimalesScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Herd / Results tab bar */}
-      <View style={showStyles.tabBar}>
-        {(['herd', 'results'] as AnimalTab[]).map(t => (
-          <TouchableOpacity
-            key={t}
-            style={[showStyles.tabBtn, animalTab === t && showStyles.tabBtnActive]}
-            onPress={() => setAnimalTab(t)}
-          >
-            <Text style={[showStyles.tabText, animalTab === t && showStyles.tabTextActive]}>
-              {t === 'herd' ? 'My Herd' : `Show Results${(showResults ?? []).length ? ` (${(showResults ?? []).length})` : ''}`}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <SubTabBar
+        tabs={[
+          { id: 'herd',    label: 'My Herd' },
+          { id: 'results', label: `Show Results${(showResults ?? []).length ? ` (${(showResults ?? []).length})` : ''}` },
+        ]}
+        active={animalTab}
+        onSelect={id => setAnimalTab(id as AnimalTab)}
+      />
 
       {animalTab === 'herd' && <>
       {/* Farm Fair banner */}
@@ -786,11 +781,6 @@ const showStyles = StyleSheet.create({
   banner:          { backgroundColor: '#3a2800', borderBottomWidth: 1, borderBottomColor: '#7a5c00', paddingHorizontal: 14, paddingVertical: S.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   bannerText:      { color: '#ffd700', fontSize: F.size.sm, flex: 1 },
   bannerCta:       { color: '#ffb74d', fontSize: F.size.sm, fontWeight: 'bold' },
-  tabBar:          { flexDirection: 'row', backgroundColor: '#0f1e0f', borderBottomWidth: 1, borderBottomColor: '#1e3a1e' },
-  tabBtn:          { flex: 1, paddingVertical: 10, alignItems: 'center' },
-  tabBtnActive:    { borderBottomWidth: 2, borderBottomColor: '#ffd700' },
-  tabText:         { color: '#555', fontSize: F.size.md },
-  tabTextActive:   { color: '#ffd700', fontWeight: 'bold' },
   emptyResults:    { color: '#555', textAlign: 'center', marginTop: 40, fontSize: F.size.md },
   resultCard:      { margin: 10, backgroundColor: '#1a2a1a', borderRadius: R.md, padding: S.md },
   resultHeader:    { flexDirection: 'row', justifyContent: 'space-between', marginBottom: S.xs },

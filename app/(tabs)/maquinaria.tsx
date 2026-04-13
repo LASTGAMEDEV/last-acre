@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { useGameStore, OwnedMachine, OwnedAttachment, OwnedTrailer, TractorJob, HarvestJob, DeliveryJob } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
+import SubTabBar from '../../components/SubTabBar';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { ATTACHMENT_TYPES } from '../../data/attachmentTypes';
 
@@ -341,19 +342,11 @@ export default function MaquinariaScreen() {
   return (
     <View style={s.container}>
       <Text style={s.screenTitle}>Machinery</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabBar} contentContainerStyle={{ flexDirection: 'row' }}>
-        {MACHINERY_TABS.map(t => (
-          <TouchableOpacity
-            key={t.id}
-            style={[s.tabBtn, tab === t.id && s.tabBtnActive]}
-            onPress={() => setTab(t.id)}
-          >
-            <Text style={[s.tabText, tab === t.id && s.tabTextActive]}>
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <SubTabBar
+        tabs={MACHINERY_TABS}
+        active={tab}
+        onSelect={id => setTab(id as MachineryTab)}
+      />
       <View style={{ flex: 1 }}>
         {tab === 'fleet'       && <FleetTab />}
         {tab === 'attachments' && <AttachmentsTab />}
@@ -374,11 +367,6 @@ const s = StyleSheet.create({
     paddingTop: S.sm,
     paddingBottom: S.xs,
   },
-  tabBar:       { borderBottomWidth: 1, borderBottomColor: '#333' },
-  tabBtn:       { flex: 1, padding: S.md, alignItems: 'center' },
-  tabBtnActive: { borderBottomWidth: 2, borderBottomColor: '#81c784' },
-  tabText:      { color: '#aaa', fontSize: F.size.md },
-  tabTextActive:{ color: '#81c784', fontWeight: 'bold' },
   sectionHeader:{ color: C.text, fontSize: F.size.md, fontWeight: 'bold', paddingHorizontal: S.md, paddingTop: S.lg, paddingBottom: 6 },
   machineCard:  { backgroundColor: C.bgCard, borderRadius: 10, margin: S.sm, padding: S.md },
   machineName:  { color: C.white, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: S.xs },

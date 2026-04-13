@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
+import SubTabBar from '../../components/SubTabBar';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { PRODUCT_TYPES, CATEGORY_LABELS, ProductCategory } from '../../data/productTypes';
 import { BUILDING_TYPES, BUILDING_CATEGORY_LABELS, BuildingCategory, PRODUCTION_EQUIPMENT } from '../../data/buildingTypes';
@@ -393,25 +394,16 @@ export default function TiendaScreen() {
     <View style={styles.container}>
       <Text style={styles.screenTitle}>Shop</Text>
 
-      {/* Sub-tab bar */}
-      <View style={styles.tabBar}>
-        {([
+      <SubTabBar
+        tabs={[
           { id: 'seeds',     label: '🌾 Seeds' },
           { id: 'products',  label: '🧪 Products' },
           { id: 'buildings', label: '🏗️ Buildings' },
-          { id: 'machinery',  label: '🚜 Machinery' },
-        ] as { id: ShopTab; label: string }[]).map(tab => (
-          <TouchableOpacity
-            key={tab.id}
-            style={[styles.tabBtn, activeTab === tab.id && styles.tabBtnActive]}
-            onPress={() => setActiveTab(tab.id)}
-          >
-            <Text style={[styles.tabBtnText, activeTab === tab.id && styles.tabBtnTextActive]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+          { id: 'machinery', label: '🚜 Machinery' },
+        ]}
+        active={activeTab}
+        onSelect={id => setActiveTab(id as ShopTab)}
+      />
 
       {activeTab === 'seeds'     && <SeedsTab />}
       {activeTab === 'products'  && <ProductsTab />}
@@ -427,11 +419,6 @@ const styles = StyleSheet.create({
   title: { fontSize: F.size.title, fontWeight: 'bold', color: C.text },
 
   // Sub-tab bar
-  tabBar: { flexDirection: 'row', marginHorizontal: S.md, marginBottom: S.sm, backgroundColor: '#0d1117', borderRadius: 10, padding: S.xs },
-  tabBtn: { flex: 1, paddingVertical: S.sm, alignItems: 'center', borderRadius: R.md },
-  tabBtnActive: { backgroundColor: '#0f3460' },
-  tabBtnText: { color: '#555', fontSize: F.size.sm, fontWeight: 'bold' },
-  tabBtnTextActive: { color: C.text },
 
   list: { paddingHorizontal: S.sm },
 
