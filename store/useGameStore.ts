@@ -58,12 +58,13 @@ import { MarketId, MARKET_REGIONS } from '../data/marketRegions';
 import { NPC_FARM_GROUP } from '../data/npcFarmGroups';
 import { Well, DrillSpot, advanceAquifer, generateSurveySpots, wellFlowRate, pipeCost } from '../engine/water';
 import type { CoopId, CoopMembership, CoopState } from '../engine/cooperativeTypes';
-import { makeInitialCoopState, getCoopForCrop, getCoopForAnimal, COOP_NAMES, INITIAL_SHARE_PRICES } from '../engine/cooperativeData';
+import { makeInitialCoopState, getCoopForCrop, getCoopForAnimal, COOP_NAMES, INITIAL_SHARE_PRICES, COOP_CROPS, COOP_ANIMALS } from '../engine/cooperativeData';
 import {
   calculateRedemptionMultiplier, getSeason, getYear,
   isMemberSuspended, isCoopActive, isSlotBooked, nextAvailableDay,
   generateAGMProposal, resolveAGMVote, COOP_DEPOT_FUEL_COST,
-  getSeedDiscount,
+  getSeedDiscount, calculateHealthDelta, calculateDividend,
+  isStartOfSpring, rollingAvg, calculatePoolPrice, calculateSharePriceDelta,
 } from '../engine/cooperatives';
 export type { Well, DrillSpot };
 
@@ -3819,9 +3820,218 @@ export const useGameStore = create<GameState>()(
         const deliverySalesEntries = deliveryRevenue > 0
           ? [{ day: newDay, amount: deliveryRevenue, category: 'crops' as const }]
           : [];
+
+        // ── Co-op season/annual tick variables ────────────────────────────────
+        let updatedCoopMemberships = { ...(state.coopMemberships ?? {}) } as typeof state.coopMemberships;
+        let updatedCoopStates = { ...state.coopStates };
+        let coopMoneyDelta = 0; // net money change from co-op events this tick
+
+        // ── Co-op season-end delivery assessment ─────────────────────────────
+        if (newDay % 90 === 0) {
+          const coopIds: CoopId[] = ['grain', 'horticulture', 'livestock'];
+          const currentSeasonNum = getSeason(newDay);
+
+          coopIds.forEach((coopId) => {
+            const membership = updatedCoopMemberships[coopId];
+            if (!membership) return;
+
+            const shortfall = Math.max(0, membership.seasonObligation - membership.seasonDelivered);
+
+            if (shortfall > 0) {
+              const coopSt = updatedCoopStates[coopId];
+              const firstItemPrice = Object.values(coopSt.poolPrices)[0] ?? 0;
+              const recentOffences = membership.offenceHistory.filter(d => newDay - d < 3 * 360);
+
+              if (recentOffences.length >= 1) {
+                // Second offence within 3 years → expulsion
+                const redemptionValue = membership.shares * membership.sharePrice * 0.5;
+                coopMoneyDelta += redemptionValue;
+                const { [coopId]: _expelled, ...restMemberships } = updatedCoopMemberships;
+                updatedCoopMemberships = restMemberships as typeof updatedCoopMemberships;
+                summary.push({
+                  id: `coop_expelled_${coopId}_${newDay}`,
+                  icon: '⚠️',
+                  title: `${COOP_NAMES[coopId]}: Expelled for repeated delivery failure`,
+                  detail: `Equity redeemed at 50% ($${Math.round(redemptionValue).toLocaleString()})`,
+                  severity: 'danger',
+                });
+              } else {
+                // First offence
+                const penalty = shortfall * firstItemPrice * 1.20;
+                coopMoneyDelta -= penalty;
+                summary.push({
+                  id: `coop_shortfall_${coopId}_${newDay}`,
+                  icon: '⚠️',
+                  title: `${COOP_NAMES[coopId]}: Delivery shortfall`,
+                  detail: `Penalty $${Math.round(penalty).toLocaleString()}. Benefits suspended next season.`,
+                  severity: 'warning',
+                });
+                updatedCoopMemberships = {
+                  ...updatedCoopMemberships,
+                  [coopId]: {
+                    ...membership,
+                    offenceHistory: [...membership.offenceHistory, newDay],
+                    suspendedUntilSeason: currentSeasonNum + 1,
+                    seasonDelivered: 0,
+                    seasonObligation: 0,
+                  },
+                };
+              }
+            } else {
+              // Met obligation — clear for next season
+              updatedCoopMemberships = {
+                ...updatedCoopMemberships,
+                [coopId]: { ...membership, seasonDelivered: 0, seasonObligation: 0 },
+              };
+            }
+
+            // Health delta
+            const coopSt = updatedCoopStates[coopId];
+            const offending = shortfall > 0 ? 1 : 0;
+            const delta = calculateHealthDelta({
+              totalMembers: coopSt.memberCount,
+              membersFullyDelivered: shortfall === 0 ? coopSt.memberCount : coopSt.memberCount - 1,
+              poolBelowFloor: false,
+              membersLeft: 0,
+              membersJoined: 0,
+              poolPriceStrongVsSpot: false,
+              equipmentVotePassed: false,
+              offendingMembers: offending,
+            });
+            const newHealth = Math.max(0, Math.min(100, coopSt.health + delta));
+
+            // Dissolution check
+            const lowHealth = newHealth < 10;
+            const consecutiveLow = lowHealth ? coopSt.consecutiveLowHealthSeasons + 1 : 0;
+            let dissolvedUntilYear = coopSt.dissolvedUntilYear;
+            if (consecutiveLow >= 2) {
+              const currentYearNum = getYear(newDay);
+              dissolvedUntilYear = currentYearNum + 3;
+              const m = updatedCoopMemberships[coopId];
+              if (m) {
+                const redemption = m.shares * m.sharePrice * 0.4;
+                coopMoneyDelta += redemption;
+                const { [coopId]: _dissolved, ...restMbrs } = updatedCoopMemberships;
+                updatedCoopMemberships = restMbrs as typeof updatedCoopMemberships;
+                summary.push({
+                  id: `coop_dissolved_${coopId}_${newDay}`,
+                  icon: '💥',
+                  title: `${COOP_NAMES[coopId]} has dissolved`,
+                  detail: `Equity redeemed at 40% ($${Math.round(redemption).toLocaleString()})`,
+                  severity: 'danger',
+                });
+              }
+            }
+
+            updatedCoopStates[coopId] = {
+              ...coopSt,
+              health: newHealth,
+              consecutiveLowHealthSeasons: consecutiveLow,
+              dissolvedUntilYear,
+            };
+          });
+
+          // Pool price recalculation for next season
+          coopIds.forEach((coopId) => {
+            const coopSt = updatedCoopStates[coopId];
+            const newPoolPrices: Record<string, number> = {};
+            const allItems = [...(COOP_CROPS[coopId] ?? []), ...(COOP_ANIMALS[coopId] ?? [])];
+            allItems.forEach((itemId) => {
+              const history: number[] = (state.priceHistory as Record<string, number[]>)[itemId] ?? [];
+              const avg = rollingAvg(history, 90);
+              if (avg > 0) {
+                newPoolPrices[itemId] = calculatePoolPrice(avg, coopSt.health, coopSt.terms.floorPct);
+              }
+            });
+            updatedCoopStates[coopId] = { ...updatedCoopStates[coopId], poolPrices: newPoolPrices };
+          });
+        }
+
+        // ── Co-op annual events ───────────────────────────────────────────────
+        if (newDay % 360 === 0) {
+          const coopIds: CoopId[] = ['grain', 'horticulture', 'livestock'];
+          coopIds.forEach((coopId) => {
+            const coopSt = updatedCoopStates[coopId];
+            const membership = updatedCoopMemberships[coopId];
+            if (!membership) return;
+
+            // Annual fee per share
+            const annualFee = membership.shares * coopSt.terms.annualFeePerShare;
+            coopMoneyDelta -= annualFee;
+
+            // Share price update
+            const pctChange = calculateSharePriceDelta(coopSt.health);
+            const newSharePrice = membership.sharePrice * (1 + pctChange);
+            updatedCoopMemberships = {
+              ...updatedCoopMemberships,
+              [coopId]: { ...membership, sharePrice: newSharePrice },
+            };
+
+            // Dividend payout
+            const estimatedProfit = Object.values(coopSt.poolPrices).reduce((a: number, b) => a + (b as number), 0) * 50;
+            const dividend = calculateDividend(
+              estimatedProfit,
+              membership.seasonDelivered,
+              membership.seasonDelivered * coopSt.memberCount,
+              coopSt.terms.dividendPct,
+              coopSt.health,
+            );
+            if (dividend > 0) {
+              coopMoneyDelta += dividend;
+              summary.push({
+                id: `coop_dividend_${coopId}_${newDay}`,
+                icon: '🌾',
+                title: `${COOP_NAMES[coopId]} dividend: +$${Math.round(dividend).toLocaleString()}`,
+                severity: 'good',
+              });
+            }
+
+            // Process pending redemption if 1 full season has passed
+            if (membership.pendingRedemption) {
+              const seasonsElapsed = getSeason(newDay) - getSeason(membership.pendingRedemption.requestedDay);
+              if (seasonsElapsed >= 1) {
+                const mult = calculateRedemptionMultiplier(coopSt.health);
+                const redemptionAmt = membership.shares * membership.sharePrice * mult;
+                coopMoneyDelta += redemptionAmt;
+                const { [coopId]: _redeemed, ...restMbrs } = updatedCoopMemberships;
+                updatedCoopMemberships = restMbrs as typeof updatedCoopMemberships;
+                updatedCoopStates[coopId] = {
+                  ...coopSt,
+                  memberCount: Math.max(1, coopSt.memberCount - 1),
+                };
+                summary.push({
+                  id: `coop_redeemed_${coopId}_${newDay}`,
+                  icon: '💰',
+                  title: `${COOP_NAMES[coopId]}: Shares redeemed for $${Math.round(redemptionAmt).toLocaleString()}`,
+                  severity: 'good',
+                });
+              }
+            }
+          });
+        }
+
+        // ── AGM trigger at start of spring (day 1, 361, 721, …) ──────────────
+        if (isStartOfSpring(newDay) && newDay > 1) {
+          const coopIds: CoopId[] = ['grain', 'horticulture', 'livestock'];
+          coopIds.forEach((coopId) => {
+            if (!updatedCoopMemberships[coopId]) return;
+            const coopSt = updatedCoopStates[coopId];
+            if (coopSt.pendingAGM && !coopSt.pendingAGM.resolved) return;
+            const proposal = generateAGMProposal(coopId, getSeason(newDay), coopSt.health, coopSt.terms);
+            updatedCoopStates[coopId] = { ...updatedCoopStates[coopId], pendingAGM: proposal };
+            summary.push({
+              id: `coop_agm_${coopId}_${newDay}`,
+              icon: '📋',
+              title: `${COOP_NAMES[coopId]} AGM`,
+              detail: `Review the board's proposal in the Co-ops tab.`,
+              severity: 'info',
+            });
+          });
+        }
+
         set({
           day: newDay,
-          money: finalMoney + showPrizeMoney + deliveryRevenue - deliveryRepairCost - productionBuildingContractorFees - slurryFine - disposalFee + biogasIncome + (moneyAfterDrilling - state.money),
+          money: finalMoney + showPrizeMoney + deliveryRevenue - deliveryRepairCost - productionBuildingContractorFees - slurryFine - disposalFee + biogasIncome + (moneyAfterDrilling - state.money) + coopMoneyDelta,
           wells: updatedWells,
           aquiferLevel: newAquifer,
           showWindowOpen,
@@ -3918,6 +4128,8 @@ export const useGameStore = create<GameState>()(
             seasonStartRevenue: newSeasonStartRevenue,
             seasonHarvestCount: 0,
           } : {}),
+          coopMemberships: updatedCoopMemberships,
+          coopStates: updatedCoopStates,
         });
       },
 
