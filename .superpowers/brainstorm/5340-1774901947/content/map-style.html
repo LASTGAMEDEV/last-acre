@@ -1,0 +1,132 @@
+<h2>World Map — Visual Style</h2>
+<p class="subtitle">Which visual approach fits the game?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="grid" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a1a;padding:16px;border-radius:8px;">
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px;max-width:220px;margin:0 auto;">
+        <div style="background:#1b5e20;border:1.5px solid #43a047;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;">🌽</div>
+        <div style="background:#1b5e20;border:1.5px solid #43a047;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;">🌾</div>
+        <div style="background:#5c1a1a;border:2px solid #c62828;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;">🏴</div>
+        <div style="background:#1a2744;border:1.5px solid #3a5080;border-radius:3px;height:32px;"></div>
+        <div style="background:#1a3a22;border:1.5px solid #2e7232;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#4caf50;">$</div>
+        <div style="background:#1a2744;border:1.5px solid #3a5080;border-radius:3px;height:32px;"></div>
+
+        <div style="background:#1a2744;border:1.5px solid #3a5080;border-radius:3px;height:32px;"></div>
+        <div style="background:#1b5e20;border:1.5px solid #43a047;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;">🥕</div>
+        <div style="background:#1b5e20;border:1.5px solid #43a047;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;">🌽</div>
+        <div style="background:#5c1a1a;border:2px solid #c62828;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;">🏴</div>
+        <div style="background:#5c1a1a;border:2px solid #c62828;border-radius:3px;height:32px;"></div>
+        <div style="background:#1a3a22;border:1.5px solid #2e7232;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#4caf50;">$</div>
+
+        <div style="background:#c8860a22;border:2px solid #c8860a;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;">🌻</div>
+        <div style="background:#c8860a22;border:2px solid #c8860a;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;">🌽</div>
+        <div style="background:#1b5e20;border:1.5px solid #43a047;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;">🌾</div>
+        <div style="background:#1a2744;border:1.5px solid #3a5080;border-radius:3px;height:32px;"></div>
+        <div style="background:#1b5e20;border:1.5px solid #43a047;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:14px;">🥬</div>
+        <div style="background:#1a3a22;border:1.5px solid #2e7232;border-radius:3px;height:32px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#4caf50;">$</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;font-size:10px;flex-wrap:wrap;">
+        <span style="color:#43a047;">■ Yours</span>
+        <span style="color:#c62828;">■ Competitor</span>
+        <span style="color:#c8860a;">■ Selected</span>
+        <span style="color:#2e7232;">■ For sale</span>
+        <span style="color:#3a5080;">■ Empty</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Tile Grid</h3>
+      <p>Each parcel = one square tile. Clean, game-like, easy to read at a glance. Extends the current map style. Fast to navigate on mobile.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="regions" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a1a;padding:16px;border-radius:8px;">
+      <svg width="220" height="130" viewBox="0 0 220 130" style="display:block;margin:0 auto;">
+        <!-- River Valley region (bottom) -->
+        <polygon points="0,80 80,70 140,80 220,70 220,130 0,130" fill="#1a3a1a" stroke="#2e7d32" stroke-width="1"/>
+        <text x="80" y="110" fill="#4caf50" font-size="9" text-anchor="middle">River Valley</text>
+
+        <!-- Plains region (middle) -->
+        <polygon points="0,40 100,30 220,35 220,70 140,80 80,70 0,80" fill="#1a2a1a" stroke="#388e3c" stroke-width="1"/>
+        <text x="110" y="60" fill="#81c784" font-size="9" text-anchor="middle">The Plains</text>
+
+        <!-- Highlands region (top) -->
+        <polygon points="40,0 180,0 220,35 100,30 0,40" fill="#1a1a2e" stroke="#3949ab" stroke-width="1"/>
+        <text x="110" y="18" fill="#7986cb" font-size="9" text-anchor="middle">Highlands</text>
+
+        <!-- River -->
+        <path d="M 0,95 Q 60,85 100,90 Q 150,95 220,88" stroke="#1565c0" stroke-width="3" fill="none" opacity="0.7"/>
+
+        <!-- Parcels -->
+        <rect x="20" y="82" width="18" height="14" fill="#1b5e20" stroke="#43a047" rx="2"/>
+        <text x="29" y="92" fill="white" font-size="8" text-anchor="middle">🌽</text>
+        <rect x="42" y="75" width="18" height="14" fill="#5c1a1a" stroke="#c62828" rx="2"/>
+        <rect x="65" y="73" width="18" height="14" fill="#1b5e20" stroke="#43a047" rx="2"/>
+        <text x="74" y="83" fill="white" font-size="8" text-anchor="middle">🌾</text>
+        <rect x="100" y="40" width="18" height="14" fill="#1a3a22" stroke="#2e7232" rx="2"/>
+        <text x="109" y="50" fill="#4caf50" font-size="7" text-anchor="middle">$</text>
+        <rect x="130" y="37" width="18" height="14" fill="#1b5e20" stroke="#43a047" rx="2"/>
+        <text x="139" y="47" fill="white" font-size="8" text-anchor="middle">🥕</text>
+        <!-- Landmark: old mill -->
+        <text x="170" y="58" font-size="14" text-anchor="middle">🏚️</text>
+        <text x="170" y="68" fill="#e8d5a3" font-size="7" text-anchor="middle">Old Mill</text>
+      </svg>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:6px;font-size:10px;flex-wrap:wrap;">
+        <span style="color:#43a047;">■ Yours</span>
+        <span style="color:#c62828;">■ Competitor</span>
+        <span style="color:#2e7232;">■ For sale</span>
+        <span style="color:#1565c0;">～ River</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Region Map</h3>
+      <p>Named regions as distinct zones. Parcels plotted inside regions. River and landmarks visible as real map features. More atmospheric, reads like a real farm map.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a1a;padding:16px;border-radius:8px;">
+      <div style="position:relative;max-width:220px;margin:0 auto;">
+        <!-- Region background strips -->
+        <div style="background:#1a1a2e;border-radius:6px 6px 0 0;padding:4px 8px;font-size:9px;color:#7986cb;text-align:center;border-bottom:1px solid #3949ab;">⛰️ HIGHLANDS</div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;background:#1a1a2e;padding:4px;">
+          <div style="background:#1a2744;border:1px solid #3a5080;border-radius:2px;height:26px;"></div>
+          <div style="background:#1a2744;border:1px solid #3a5080;border-radius:2px;height:26px;"></div>
+          <div style="background:#5c1a1a;border:1.5px solid #c62828;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;">🏴</div>
+          <div style="background:#0d0d14;border:1px solid #222;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:10px;">🌫️</div>
+          <div style="background:#0d0d14;border:1px solid #222;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:10px;">🌫️</div>
+          <div style="background:#0d0d14;border:1px solid #222;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:10px;">🌫️</div>
+        </div>
+
+        <div style="background:#1a2a1a;padding:2px 8px;font-size:9px;color:#81c784;text-align:center;border-top:1px solid #2e7d32;border-bottom:1px solid #2e7d32;">🌾 THE PLAINS</div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;background:#1a2a1a;padding:4px;">
+          <div style="background:#1b5e20;border:1.5px solid #43a047;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;">🌽</div>
+          <div style="background:#1b5e20;border:1.5px solid #43a047;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;">🌾</div>
+          <div style="background:#c8860a22;border:1.5px solid #c8860a;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;">🌻</div>
+          <div style="background:#1a3a22;border:1px solid #2e7232;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#4caf50;">$</div>
+          <div style="background:#5c1a1a;border:1.5px solid #c62828;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;">🥕</div>
+          <div style="background:#1a2744;border:1px solid #3a5080;border-radius:2px;height:26px;"></div>
+        </div>
+
+        <div style="background:#1a2a2e;padding:2px 8px;font-size:9px;color:#4fc3f7;text-align:center;border-top:1px solid #0288d1;border-bottom:1px solid #0288d1;">🏞️ RIVER VALLEY</div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;background:#1a2a2e;padding:4px;border-radius:0 0 6px 6px;">
+          <div style="background:#1b5e20;border:1.5px solid #43a047;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;">🥬</div>
+          <div style="background:#1b5e20;border:1.5px solid #43a047;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;">🌽</div>
+          <div style="background:#1565c033;border:1px solid #1565c0;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;">💧</div>
+          <div style="background:#1a3a22;border:1px solid #2e7232;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#4caf50;">$</div>
+          <div style="background:#1b5e20;border:1.5px solid #43a047;border-radius:2px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;">🌾</div>
+          <div style="background:#1a2744;border:1px solid #3a5080;border-radius:2px;height:26px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Zoned Grid</h3>
+      <p>Tile grid, but grouped into labeled region rows/zones. Fog of war on undiscovered regions. Best of both — easy to read AND shows the world structure clearly.</p>
+    </div>
+  </div>
+
+</div>
+
+<p style="color:#888;font-size:12px;margin-top:16px;">Click your preferred style, then let me know in the terminal.</p>

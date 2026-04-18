@@ -16,7 +16,7 @@ export interface PriceShock {
   commodityId: string | null; // null = all commodities
   magnitude: number;          // e.g. +0.25 = +25%, -0.18 = -18%
   durationDays: number;
-  decayRate: number;          // fraction decayed per day (unused — we use remainingDays/durationDays)
+  decayRate?: number;         // fraction decayed per day (unused — we use remainingDays/durationDays)
 }
 
 export interface ActiveShock extends PriceShock {
@@ -82,7 +82,7 @@ function shockModifier(commodityId: string, activeShocks: ActiveShock[]): number
   return activeShocks.reduce((mult, shock) => {
     if (shock.remainingDays <= 0) return mult;
     if (shock.commodityId !== null && shock.commodityId !== commodityId) return mult;
-    const strength = shock.remainingDays / shock.durationDays;
+    const strength = shock.durationDays > 0 ? shock.remainingDays / shock.durationDays : 1.0;
     return mult * (1 + shock.magnitude * strength);
   }, 1.0);
 }
@@ -95,10 +95,12 @@ function supplyPressureAdj(commodityId: string, npcMultiplier: number): number {
   return Math.max(-0.15, -0.10 * (npcKg / depth.depthKg));
 }
 
+// Module-level set of crops sensitive to forecast events
+const FORECAST_SENSITIVE_CROPS = new Set(['wheat', 'corn', 'barley', 'oats', 'rice', 'potatoes', 'soy']);
+
 // Addition #5: Forecast pre-movement — grain prices creep up ahead of drought/frost
 function forecastPreMovement(commodityId: string, forecast: WeatherDay[]): number {
-  const SENSITIVE = new Set(['wheat', 'corn', 'barley', 'oats', 'rice', 'potatoes', 'soy']);
-  if (!SENSITIVE.has(commodityId)) return 0;
+  if (!FORECAST_SENSITIVE_CROPS.has(commodityId)) return 0;
   for (let i = 5; i <= 10; i++) {
     const w = forecast[i];
     if (!w) continue;
@@ -127,7 +129,7 @@ function applyCorrelations(
     const adj = adjustments[p.cropId];
     if (!adj) return p;
     // Apply correlation as a gentle nudge (capped at ±10% to avoid runaway feedback)
-    const cappedAdj = Math.max(-0.10, Math.min(0.10, adj * 0.01));
+    const cappedAdj = Math.max(-0.10, Math.min(0.10, adj));
     return { ...p, price: Math.max(p.basePrice * 0.2, p.price * (1 + cappedAdj)) };
   });
 }

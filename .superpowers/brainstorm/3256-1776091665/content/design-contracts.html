@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recurring Contracts Design</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d1a0d; color: #c8e6c9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; }
+  h1 { color: #81c784; font-size: 20px; margin-bottom: 4px; }
+  h2 { color: #81c784; font-size: 15px; margin: 24px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #1b3a1b; }
+  h3 { color: #a5d6a7; font-size: 13px; margin-bottom: 6px; }
+  .intro { color: #6a9a6a; font-size: 13px; margin-bottom: 20px; }
+  p { font-size: 13px; color: #c8e6c9; line-height: 1.6; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+
+  .card { background: #142014; border: 1px solid #1b3a1b; border-radius: 8px; padding: 14px; }
+  .card.highlight { border-color: #2e7d32; }
+
+  code { background: #0a1a0a; padding: 1px 5px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #a5d6a7; }
+  .code-block { background: #0a1a0a; border: 1px solid #1b3a1b; border-radius: 6px; padding: 12px; font-family: monospace; font-size: 12px; color: #a5d6a7; line-height: 1.7; margin: 8px 0; white-space: pre; overflow-x: auto; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0; }
+  th { background: #0a1a0a; color: #6a9a6a; padding: 7px 10px; text-align: left; border-bottom: 1px solid #1b3a1b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 7px 10px; border-bottom: 1px solid #1b3a1b; color: #c8e6c9; }
+  tr:last-child td { border-bottom: none; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .new   { background: #1b5e20; color: #a5d6a7; }
+  .tier-new  { background: #1a3a5c; color: #90caf9; }
+  .tier-reg  { background: #1b4d1b; color: #a5d6a7; }
+  .tier-pref { background: #4a2800; color: #ffcc80; }
+  .tier-excl { background: #4a0000; color: #ef9a9a; }
+
+  .tier-track { display: flex; align-items: stretch; gap: 0; margin: 12px 0; border-radius: 8px; overflow: hidden; border: 1px solid #1b3a1b; }
+  .tier-step { flex: 1; padding: 14px 10px; text-align: center; border-right: 1px solid #1b3a1b; }
+  .tier-step:last-child { border-right: none; }
+  .tier-step.t1 { background: #0d1a2e; }
+  .tier-step.t2 { background: #0d2e0d; }
+  .tier-step.t3 { background: #2e1a00; }
+  .tier-step.t4 { background: #2e0000; }
+  .tier-name { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .tier-req  { font-size: 10px; color: #6a9a6a; margin-bottom: 6px; }
+  .tier-bonus { font-size: 13px; font-weight: 700; color: #81c784; }
+  .tier-perks { font-size: 10px; color: #6a9a6a; margin-top: 4px; line-height: 1.5; }
+  .tier-arrow { display: flex; align-items: center; padding: 0 4px; color: #4a6e4a; font-size: 16px; background: #0a1a0a; border-right: 1px solid #1b3a1b; }
+
+  .buyer-card { background: #142014; border: 1px solid #1b3a1b; border-radius: 8px; padding: 12px; }
+  .buyer-name { font-size: 13px; font-weight: 700; color: #c8e6c9; margin-bottom: 2px; }
+  .buyer-crop { font-size: 11px; color: #81c784; margin-bottom: 6px; }
+  .buyer-detail { font-size: 11px; color: #6a9a6a; line-height: 1.5; }
+
+  .contract-mock { background: #142014; border: 1px solid #2e7d32; border-radius: 10px; padding: 14px; margin: 8px 0; }
+  .contract-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .contract-buyer { font-size: 13px; font-weight: 700; }
+  .contract-tier-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+  .contract-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #1b3a1b; }
+  .contract-row:last-child { border-bottom: none; }
+  .contract-key { color: #6a9a6a; }
+  .contract-val { color: #c8e6c9; font-weight: 600; }
+  .contract-val.green { color: #81c784; }
+  .contract-val.warn  { color: #ffa726; }
+
+  .streak-bar { display: flex; gap: 3px; margin: 10px 0 4px; }
+  .streak-pip { width: 18px; height: 18px; border-radius: 4px; border: 1px solid #1b3a1b; display: flex; align-items: center; justify-content: center; font-size: 9px; }
+  .streak-pip.done { background: #2e7d32; border-color: #4caf50; color: #fff; }
+  .streak-pip.next { background: #1b3a1b; border-color: #4caf50; color: #4caf50; }
+  .streak-pip.empty { background: #0a1a0a; }
+
+  .section-note { background: #142014; border-left: 3px solid #2e7d32; padding: 10px 14px; font-size: 12px; color: #81c784; margin: 12px 0; border-radius: 0 6px 6px 0; }
+
+  .flow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+  .flow-step { background: #142014; border: 1px solid #1b3a1b; border-radius: 6px; padding: 8px 12px; font-size: 12px; text-align: center; }
+  .flow-step.good { border-color: #2e7d32; color: #81c784; }
+  .flow-step.bad  { border-color: #b71c1c; color: #ef9a9a; background: #1a0d0d; }
+  .flow-arrow { color: #4a6e4a; font-size: 16px; }
+</style>
+</head>
+<body>
+
+<h1>📋 Recurring Contracts — System Design</h1>
+<p class="intro">Persistent buyer relationships with 4 tiers. Consistent delivery unlocks better bonuses, bigger orders, and disaster grace periods.</p>
+
+<!-- DATA MODEL -->
+<h2>1. New Data Types</h2>
+<div class="grid-2">
+  <div class="card">
+    <h3>Buyer <span class="badge new">new type</span></h3>
+    <div class="code-block">type Buyer = {
+  id: string
+  name: string
+  emoji: string
+  cropIds: string[]        // what they buy
+  tier: BuyerTier          // 'new'|'regular'|'preferred'|'exclusive'
+  deliveryStreak: number   // consecutive on-time
+  totalDeliveries: number
+  missedInARow: number     // 2 = contract cancelled
+  unlockedDay: number      // when player can access
+}</div>
+  </div>
+  <div class="card">
+    <h3>RecurringContract <span class="badge new">new type</span></h3>
+    <div class="code-block">type RecurringContract = {
+  id: string
+  buyerId: string
+  cropId: string
+  amountPerDelivery: number  // kg
+  frequencyDays: 7|14|30
+  priceBonus: number         // e.g. 0.27 = +27%
+  nextDeliveryDay: number
+  deliveryWindowDays: number // days to fulfill
+  durationSeasons: number    // 1–4
+  endDay: number
+  active: boolean
+  graceDaysRemaining: number
+}</div>
+  </div>
+</div>
+
+<!-- TIER PROGRESSION -->
+<h2>2. Relationship Tier Progression</h2>
+<div class="tier-track">
+  <div class="tier-step t1">
+    <div class="tier-name" style="color:#90caf9">🆕 New</div>
+    <div class="tier-req">Starting tier</div>
+    <div class="tier-bonus">+20%</div>
+    <div class="tier-perks">500 kg max<br>No grace period<br>7-day window</div>
+  </div>
+  <div class="tier-arrow">→</div>
+  <div class="tier-step t2">
+    <div class="tier-name" style="color:#a5d6a7">⭐ Regular</div>
+    <div class="tier-req">3 on-time deliveries</div>
+    <div class="tier-bonus">+27%</div>
+    <div class="tier-perks">1,500 kg max<br>3-day grace<br>5-day window</div>
+  </div>
+  <div class="tier-arrow">→</div>
+  <div class="tier-step t3">
+    <div class="tier-name" style="color:#ffcc80">🌟 Preferred</div>
+    <div class="tier-req">8 total deliveries</div>
+    <div class="tier-bonus">+33%</div>
+    <div class="tier-perks">4,000 kg max<br>7-day grace<br>4-day window</div>
+  </div>
+  <div class="tier-arrow">→</div>
+  <div class="tier-step t4">
+    <div class="tier-name" style="color:#ef9a9a">💎 Exclusive</div>
+    <div class="tier-req">15 total deliveries</div>
+    <div class="tier-bonus">+40%</div>
+    <div class="tier-perks">Unlimited kg<br>14-day grace<br>3-day window</div>
+  </div>
+</div>
+
+<div class="section-note">
+  <strong>Tier upgrades are permanent.</strong> Tiers only drop on contract cancellation (2 consecutive missed deliveries). One miss alone doesn't cancel — it just resets your streak and pauses bonus growth.
+</div>
+
+<!-- DELIVERY FLOW -->
+<h2>3. Delivery Lifecycle</h2>
+<div class="grid-2">
+  <div class="card">
+    <h3>On-time delivery</h3>
+    <div class="flow">
+      <div class="flow-step good">Deliver within window</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step good">Streak +1</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step good">Check tier upgrade</div>
+    </div>
+    <p style="font-size:12px;color:#6a9a6a;margin-top:6px">Partial delivery (≥80% of amount) counts as on-time but pays only for what's delivered. Below 80% = missed.</p>
+  </div>
+  <div class="card">
+    <h3>Missed delivery</h3>
+    <div class="flow">
+      <div class="flow-step bad">Window expires</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step bad">Streak resets to 0</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step bad">missedInARow +1</div>
+    </div>
+    <div class="flow" style="margin-top:6px">
+      <div class="flow-step bad">2 misses in a row</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step bad">Contract cancelled</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step bad">Tier drops one level</div>
+    </div>
+  </div>
+</div>
+
+<!-- DISASTER GRACE -->
+<h2>4. Disaster Grace Period</h2>
+<div class="card">
+  <p style="font-size:12px;color:#6a9a6a;line-height:1.7;margin-bottom:10px">
+    When a weather insurance claim triggers (frost kill, drought wipeout, hail damage), active recurring contracts automatically receive a grace period equal to the buyer's tier grace window. During grace:
+    the delivery window is extended, no streak penalty applies, and <code>missedInARow</code> is not incremented.
+  </p>
+  <table>
+    <thead><tr><th>Tier</th><th>Grace period</th><th>Requires</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge tier-new">New</span></td><td>No grace</td><td>—</td></tr>
+      <tr><td><span class="badge tier-reg">Regular</span></td><td>+3 days</td><td>Active weather insurance</td></tr>
+      <tr><td><span class="badge tier-pref">Preferred</span></td><td>+7 days</td><td>Active weather insurance</td></tr>
+      <tr><td><span class="badge tier-excl">Exclusive</span></td><td>+14 days</td><td>Any active insurance</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:11px;color:#4a6e4a;margin-top:8px">This makes insurance genuinely valuable for contract farmers — not just yield protection but relationship protection.</p>
+</div>
+
+<!-- BUYERS -->
+<h2>5. The 8 Buyers</h2>
+<div class="grid-2">
+  <div class="buyer-card">
+    <div class="buyer-name">🥖 Local Bakery</div>
+    <div class="buyer-crop">Wheat, Corn • Weekly • Small orders</div>
+    <div class="buyer-detail">Available from day 1. Perfect starter — forgiving window, low amounts. Great for building your first streak.</div>
+  </div>
+  <div class="buyer-card">
+    <div class="buyer-name">🍽️ City Restaurant</div>
+    <div class="buyer-crop">Premium crops (lavender, saffron, vanilla) • Biweekly</div>
+    <div class="buyer-detail">Unlocks at reputation 40. High price bonus. Requires premium-tier crops — can't substitute cheap alternatives.</div>
+  </div>
+  <div class="buyer-card">
+    <div class="buyer-name">🏭 Export Processor</div>
+    <div class="buyer-crop">Bulk grains • Monthly • Large volumes</div>
+    <div class="buyer-detail">Unlocks at reputation 60. Monthly cadence gives planning time. Large orders demand serious farm scale.</div>
+  </div>
+  <div class="buyer-card">
+    <div class="buyer-name">🥛 Dairy Distributor</div>
+    <div class="buyer-crop">Milk, Cheese, Butter • Weekly</div>
+    <div class="buyer-detail">Unlocks after first dairy building. Tightly tied to animal production output. Milk grade affects accepted quantity.</div>
+  </div>
+  <div class="buyer-card">
+    <div class="buyer-name">🌿 Organic Market</div>
+    <div class="buyer-crop">Any certified-organic crop • Weekly</div>
+    <div class="buyer-detail">Unlocks when first building reaches Organic certification. Highest price bonus but strict: loses contract if certification drops.</div>
+  </div>
+  <div class="buyer-card">
+    <div class="buyer-name">🛒 Regional Supermarket</div>
+    <div class="buyer-crop">Mixed crops (rotates seasonally) • Biweekly</div>
+    <div class="buyer-detail">Unlocks day 30. Accepts a variety of crops each season — good for diversified farms. Lowest penalty rate.</div>
+  </div>
+  <div class="buyer-card">
+    <div class="buyer-name">🍺 Distillery</div>
+    <div class="buyer-crop">Barley, Corn, Sugarbeet • Monthly</div>
+    <div class="buyer-detail">Unlocks at reputation 50. Accepts lower-grade crops at decent prices. Good outlet for excess harvest.</div>
+  </div>
+  <div class="buyer-card">
+    <div class="buyer-name">🐾 Pet Food Co.</div>
+    <div class="buyer-crop">Any crop (low-grade ok) • Weekly</div>
+    <div class="buyer-detail">Available from day 1. Lowest bonus (+15%) but accepts anything including spoiled/damaged stock. Safety net buyer.</div>
+  </div>
+</div>
+
+<!-- STREAK VISUAL -->
+<h2>6. UI — Contract Card Mockup</h2>
+<div class="contract-mock">
+  <div class="contract-header">
+    <div>
+      <div class="contract-buyer">🥛 Dairy Distributor</div>
+      <div style="font-size:11px;color:#6a9a6a;margin-top:2px">Weekly · Milk · 800 kg/delivery</div>
+    </div>
+    <div class="contract-tier-badge" style="background:#4a2800;color:#ffcc80">🌟 Preferred</div>
+  </div>
+
+  <div style="margin-bottom:10px">
+    <div style="font-size:10px;color:#6a9a6a;margin-bottom:4px">DELIVERY STREAK</div>
+    <div class="streak-bar">
+      <div class="streak-pip done">✓</div>
+      <div class="streak-pip done">✓</div>
+      <div class="streak-pip done">✓</div>
+      <div class="streak-pip done">✓</div>
+      <div class="streak-pip done">✓</div>
+      <div class="streak-pip next">→</div>
+      <div class="streak-pip empty"></div>
+      <div class="streak-pip empty"></div>
+    </div>
+    <div style="font-size:10px;color:#6a9a6a">5 deliveries · 3 more for 💎 Exclusive (+40%)</div>
+  </div>
+
+  <div class="contract-row"><span class="contract-key">Price bonus</span><span class="contract-val green">+33% above market</span></div>
+  <div class="contract-row"><span class="contract-key">Next delivery</span><span class="contract-val warn">Day 47 (3 days left)</span></div>
+  <div class="contract-row"><span class="contract-key">Required</span><span class="contract-val">800 kg milk (have 1,240 kg ✓)</span></div>
+  <div class="contract-row"><span class="contract-key">Grace period</span><span class="contract-val">7 days (weather insured)</span></div>
+  <div class="contract-row"><span class="contract-key">Contract ends</span><span class="contract-val">Day 180 (Season 2)</span></div>
+</div>
+
+<!-- UI PLACEMENT -->
+<h2>7. Where It Lives in the UI</h2>
+<div class="card">
+  <p style="font-size:12px;color:#6a9a6a;line-height:1.8">
+    <strong style="color:#c8e6c9">New "Supply" sub-tab</strong> added to the Economy screen alongside Market / Auto-Sell / Stats / Futures / Orders.<br><br>
+    <strong style="color:#c8e6c9">Buyers list</strong> — shows all 8 buyers, tier badge, current streak, and whether a contract is active.<br><br>
+    <strong style="color:#c8e6c9">Active contract card</strong> — per buyer, shows streak pips, next delivery countdown, stock check (do you have enough?), grace period status.<br><br>
+    <strong style="color:#c8e6c9">Delivery calendar</strong> in Calendar screen — recurring deliveries appear as deadline markers alongside seasonal events.<br><br>
+    <strong style="color:#c8e6c9">HUD warning strip</strong> — existing warning strip system gets a new "⚠️ Delivery due in 2d – Dairy Distributor" entry when within 3 days of a window closing.
+  </p>
+</div>
+
+</body>
+</html>

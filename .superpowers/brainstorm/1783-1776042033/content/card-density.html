@@ -1,0 +1,153 @@
+<h2>How dense should content cards be?</h2>
+<p class="subtitle">On mobile, every pixel counts. This affects how much you see at once vs how easy it is to tap things.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d1f0d; padding:10px; border-radius:6px; max-width:320px; margin:0 auto;">
+      <!-- Compact crop row -->
+      <div style="display:flex; align-items:center; background:#1b2e1b; border-radius:6px; padding:8px 10px; margin-bottom:4px; gap:8px;">
+        <span style="font-size:18px;">🌾</span>
+        <div style="flex:1;">
+          <div style="color:#c8e6c9; font-size:12px; font-weight:bold;">Wheat</div>
+          <div style="color:#6a9a6a; font-size:10px;">Field 1 · 12d left · Tier C</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="color:#81c784; font-size:11px; font-weight:bold;">$84/u</div>
+          <div style="color:#ffd54f; font-size:10px;">×320 units</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; background:#1b2e1b; border-radius:6px; padding:8px 10px; margin-bottom:4px; gap:8px;">
+        <span style="font-size:18px;">🌽</span>
+        <div style="flex:1;">
+          <div style="color:#c8e6c9; font-size:12px; font-weight:bold;">Corn</div>
+          <div style="color:#ffd54f; font-size:10px;">Field 2 · ✅ Ready to harvest</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="color:#81c784; font-size:11px; font-weight:bold;">$61/u</div>
+          <div style="color:#ffd54f; font-size:10px;">×410 units</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; background:#1b2e1b; border-radius:6px; padding:8px 10px; margin-bottom:4px; gap:8px;">
+        <span style="font-size:18px;">🫘</span>
+        <div style="flex:1;">
+          <div style="color:#c8e6c9; font-size:12px; font-weight:bold;">Soybean</div>
+          <div style="color:#6a9a6a; font-size:10px;">Field 3 · 3d left · Tier B</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="color:#81c784; font-size:11px; font-weight:bold;">$120/u</div>
+          <div style="color:#ffd54f; font-size:10px;">×180 units</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; background:#1b2e1b; border-radius:6px; padding:8px 10px; gap:8px;">
+        <span style="font-size:18px;">🌻</span>
+        <div style="flex:1;">
+          <div style="color:#c8e6c9; font-size:12px; font-weight:bold;">Sunflower</div>
+          <div style="color:#6a9a6a; font-size:10px;">Field 4 · 8d left · Tier B</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="color:#81c784; font-size:11px; font-weight:bold;">$95/u</div>
+          <div style="color:#ffd54f; font-size:10px;">×240 units</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Compact Rows</h3>
+      <p>Each item is a slim horizontal row (~44px tall). See 6–8 items without scrolling. Easy to scan, fast to navigate. Touch targets are tight but functional.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d1f0d; padding:10px; border-radius:6px; max-width:320px; margin:0 auto;">
+      <!-- Comfortable crop cards -->
+      <div style="background:#1b2e1b; border-radius:8px; padding:12px; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+          <span style="font-size:24px;">🌾</span>
+          <div style="flex:1;">
+            <div style="color:#c8e6c9; font-size:14px; font-weight:bold;">Wheat</div>
+            <div style="color:#6a9a6a; font-size:11px;">Tier C · Field 1</div>
+          </div>
+          <div style="background:#4caf5022; border-radius:6px; padding:4px 8px;">
+            <div style="color:#81c784; font-size:13px; font-weight:bold;">$84/u</div>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:#6a9a6a; font-size:11px;">⏱ 12 days left</span>
+          <span style="color:#ffd54f; font-size:11px;">×320 units est.</span>
+        </div>
+        <div style="background:#0d1f0d; border-radius:4px; height:4px; margin-top:8px; overflow:hidden;">
+          <div style="background:#4caf50; height:100%; width:65%; border-radius:4px;"></div>
+        </div>
+      </div>
+      <div style="background:#1b2e1b; border-radius:8px; padding:12px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+          <span style="font-size:24px;">🌽</span>
+          <div style="flex:1;">
+            <div style="color:#c8e6c9; font-size:14px; font-weight:bold;">Corn</div>
+            <div style="color:#ffd54f; font-size:11px;">✅ Ready to harvest!</div>
+          </div>
+          <div style="background:#4caf5022; border-radius:6px; padding:4px 8px;">
+            <div style="color:#81c784; font-size:13px; font-weight:bold;">$61/u</div>
+          </div>
+        </div>
+        <div style="background:#0d1f0d; border-radius:4px; height:4px; margin-top:4px; overflow:hidden;">
+          <div style="background:#ffd54f; height:100%; width:100%; border-radius:4px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Comfortable Cards</h3>
+      <p>Each item is a full card (~80px) with a progress bar and generous padding. Very easy to tap, great for phone. See 3–4 items at once — more scrolling required.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d1f0d; padding:10px; border-radius:6px; max-width:320px; margin:0 auto;">
+      <!-- Medium density -->
+      <div style="display:flex; align-items:center; background:#1b2e1b; border-radius:8px; padding:10px 12px; margin-bottom:6px; gap:10px;">
+        <span style="font-size:22px;">🌾</span>
+        <div style="flex:1;">
+          <div style="color:#c8e6c9; font-size:13px; font-weight:bold;">Wheat <span style="color:#4a6e4a; font-size:10px; font-weight:normal;">Tier C</span></div>
+          <div style="background:#0d1f0d; border-radius:3px; height:3px; margin-top:5px; overflow:hidden;">
+            <div style="background:#4caf50; height:100%; width:65%; border-radius:3px;"></div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="color:#81c784; font-size:12px; font-weight:bold;">$84/u</div>
+          <div style="color:#6a9a6a; font-size:10px;">12d left</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; background:#1b2e1b; border-radius:8px; padding:10px 12px; margin-bottom:6px; gap:10px;">
+        <span style="font-size:22px;">🌽</span>
+        <div style="flex:1;">
+          <div style="color:#ffd54f; font-size:13px; font-weight:bold;">Corn <span style="color:#ffd54f; font-size:10px;">✅ Ready</span></div>
+          <div style="background:#0d1f0d; border-radius:3px; height:3px; margin-top:5px; overflow:hidden;">
+            <div style="background:#ffd54f; height:100%; width:100%; border-radius:3px;"></div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="color:#81c784; font-size:12px; font-weight:bold;">$61/u</div>
+          <div style="color:#6a9a6a; font-size:10px;">×410 units</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; background:#1b2e1b; border-radius:8px; padding:10px 12px; margin-bottom:6px; gap:10px;">
+        <span style="font-size:22px;">🫘</span>
+        <div style="flex:1;">
+          <div style="color:#c8e6c9; font-size:13px; font-weight:bold;">Soybean <span style="color:#2196f3; font-size:10px; font-weight:normal;">Tier B</span></div>
+          <div style="background:#0d1f0d; border-radius:3px; height:3px; margin-top:5px; overflow:hidden;">
+            <div style="background:#4caf50; height:100%; width:88%; border-radius:3px;"></div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="color:#81c784; font-size:12px; font-weight:bold;">$120/u</div>
+          <div style="color:#6a9a6a; font-size:10px;">3d left</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Balanced (Recommended)</h3>
+      <p>Medium-height rows (~56px) with a progress bar baked in. Good tap targets for mobile, still fits 5–6 items on screen. Best of both worlds.</p>
+    </div>
+  </div>
+
+</div>

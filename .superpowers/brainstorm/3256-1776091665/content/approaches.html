@@ -1,0 +1,78 @@
+<h2>Implementation Approaches</h2>
+<p class="subtitle">Two systems, two decisions. Pick the approach for each before we go into full design detail.</p>
+
+<div class="section" style="margin-bottom: 32px;">
+  <h3 style="color:#81c784; margin-bottom:4px;">☁️ System 1 — Climate Depth</h3>
+  <p class="subtitle" style="margin-bottom:14px;">How should temperature + multi-day streaks be modelled?</p>
+
+  <div class="options">
+    <div class="option" data-choice="climate-a" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Temperature layer on top of existing events</h3>
+        <p>Each <code>WeatherDay</code> gets <code>minTemp</code> and <code>maxTemp</code> alongside the existing event type. Frost events trigger when <code>minTemp &lt; crop.frostKillTemp</code>. Drought accumulates as a soil moisture deficit over consecutive dry days. Events can streak 1–7 days. Forecast shows probability % that degrades with distance.</p>
+        <div class="pros-cons" style="margin-top:10px">
+          <div class="pros"><h4>Pros</h4><ul><li>Fits cleanly onto existing data model</li><li>Temperature is the right realistic foundation</li><li>Sets up growing degree days later</li></ul></div>
+          <div class="cons"><h4>Cons</h4><ul><li>Requires updating crop data (frostKillTemp per crop)</li></ul></div>
+        </div>
+        <p style="margin-top:8px;font-size:12px;color:#81c784"><strong>⭐ Recommended</strong></p>
+      </div>
+    </div>
+
+    <div class="option" data-choice="climate-b" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Full meteorological model</h3>
+        <p>Track temperature, humidity, rainfall mm, and wind speed separately. Weather event type is <em>derived</em> from these values — frost when minTemp &lt; 0 + low humidity, drought when 10+ consecutive days &lt;2mm rain. Highly realistic, weather feels emergent rather than categorical.</p>
+        <div class="pros-cons" style="margin-top:10px">
+          <div class="pros"><h4>Pros</h4><ul><li>Most realistic possible</li><li>Emergent weather patterns</li></ul></div>
+          <div class="cons"><h4>Cons</h4><ul><li>Large data model change</li><li>UI needs redesigning for new metrics</li><li>High implementation risk</li></ul></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="option" data-choice="climate-c" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>Event streaks only (no temperature)</h3>
+        <p>Keep the existing event types but let them persist for 2–7 days. A frost event lasts 3 days = 3× damage accumulation. No new data dimensions — lowest complexity.</p>
+        <div class="pros-cons" style="margin-top:10px">
+          <div class="pros"><h4>Pros</h4><ul><li>Minimal code change</li><li>Easy to balance</li></ul></div>
+          <div class="cons"><h4>Cons</h4><ul><li>Less realistic — no temperature nuance</li><li>Doesn't set up future features</li></ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3 style="color:#81c784; margin-bottom:4px;">📋 System 2 — Recurring Contracts</h3>
+  <p class="subtitle" style="margin-bottom:14px;">How should the contract + relationship system be structured in the codebase?</p>
+
+  <div class="options">
+    <div class="option" data-choice="contracts-a" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Separate recurring contract type</h3>
+        <p>A new <code>RecurringContract</code> lives alongside existing one-off contracts. Buyers are persistent entities with a <code>relationshipTier</code> (New → Regular → Preferred → Exclusive). Each tier unlocks better bonuses, larger orders, disaster grace periods. Clean separation — one-off and recurring never interfere.</p>
+        <div class="pros-cons" style="margin-top:10px">
+          <div class="pros"><h4>Pros</h4><ul><li>Clean separation of concerns</li><li>Buyers feel like real relationships</li><li>Easy to extend with new buyer types later</li></ul></div>
+          <div class="cons"><h4>Cons</h4><ul><li>New data type to add to store</li></ul></div>
+        </div>
+        <p style="margin-top:8px;font-size:12px;color:#81c784"><strong>⭐ Recommended</strong></p>
+      </div>
+    </div>
+
+    <div class="option" data-choice="contracts-b" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Extend existing contracts with recurring flag</h3>
+        <p>Add <code>recurring: true</code>, <code>frequencyDays</code>, and <code>streakCount</code> to the existing contract type. Reuses the same UI and store logic with minimal additions.</p>
+        <div class="pros-cons" style="margin-top:10px">
+          <div class="pros"><h4>Pros</h4><ul><li>Less new code</li><li>Fits existing UI</li></ul></div>
+          <div class="cons"><h4>Cons</h4><ul><li>Buyer relationships become awkward to track on contracts</li><li>Harder to show relationship tier clearly</li></ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

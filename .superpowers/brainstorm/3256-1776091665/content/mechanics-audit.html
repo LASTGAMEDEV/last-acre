@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Granja Tycoon — Mechanics Audit</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d1a0d; color: #c8e6c9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; }
+  h1 { color: #81c784; font-size: 22px; margin-bottom: 4px; }
+  .intro { color: #6a9a6a; font-size: 13px; margin-bottom: 24px; }
+
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #4a6e4a; margin: 28px 0 10px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 10px; background: #142014; color: #6a9a6a; font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase; border-bottom: 1px solid #1b3a1b; }
+  td { padding: 9px 10px; border-bottom: 1px solid #1b3a1b; vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+
+  .system { font-weight: 600; color: #c8e6c9; white-space: nowrap; }
+  .desc { color: #81c784; font-size: 12px; }
+  .vars { color: #6a9a6a; font-size: 12px; }
+
+  /* depth badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .deep    { background: #1b5e20; color: #a5d6a7; }
+  .mid     { background: #1a3a1a; color: #81c784; }
+  .shallow { background: #2a1a00; color: #ffcc80; }
+
+  /* gap badges */
+  .gap-none    { color: #4caf50; font-size: 12px; }
+  .gap-minor   { color: #ffa726; font-size: 12px; }
+  .gap-major   { color: #ef5350; font-size: 12px; }
+
+  .divider { height: 1px; background: #1b3a1b; margin: 6px 0; }
+
+  /* gaps section */
+  .gaps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 0; }
+  .gap-card { background: #142014; border: 1px solid #1b3a1b; border-radius: 8px; padding: 14px; }
+  .gap-card.major { border-color: #b71c1c; background: #1a0d0d; }
+  .gap-card.minor { border-color: #e65100; background: #1a1000; }
+  .gap-card.good  { border-color: #1b5e20; background: #0d1a0d; }
+  .gap-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .gap-card.major .gap-title { color: #ef9a9a; }
+  .gap-card.minor .gap-title { color: #ffcc80; }
+  .gap-card.good  .gap-title { color: #a5d6a7; }
+  .gap-body { font-size: 12px; color: #81c784; line-height: 1.5; }
+  .gap-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-bottom: 6px; }
+  .gap-card.major .gap-tag { background: #b71c1c; color: #fff; }
+  .gap-card.minor .gap-tag { background: #e65100; color: #fff; }
+  .gap-card.good  .gap-tag { background: #1b5e20; color: #fff; }
+
+  .legend { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6a9a6a; }
+</style>
+</head>
+<body>
+
+<h1>🌾 Granja Tycoon — Full Mechanics Audit</h1>
+<p class="intro">Deep analysis of every simulation system: what's implemented, how many variables interact, and where the realism gaps are.</p>
+
+<div class="legend">
+  <div class="legend-item"><span class="badge deep">Deep</span> 7+ interacting variables</div>
+  <div class="legend-item"><span class="badge mid">Moderate</span> 4–6 variables</div>
+  <div class="legend-item"><span class="badge shallow">Shallow</span> 1–3 variables</div>
+</div>
+
+<div class="section-label">All Systems</div>
+<table>
+  <thead>
+    <tr>
+      <th style="width:140px">System</th>
+      <th>What's simulated</th>
+      <th style="width:90px">Depth</th>
+      <th style="width:220px">Realism gap</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <tr>
+      <td><span class="system">🌱 Crops</span></td>
+      <td>
+        <span class="desc">28 crop varieties, soil type affinity, fertility drain per harvest, weed/disease modifiers, fertilizer boost, climate multiplier, machine yield bonus, peak season pricing</span>
+      </td>
+      <td><span class="badge deep">Deep</span><br><span class="vars">7 vars</span></td>
+      <td class="gap-minor">⚠️ No NPK (nitrogen/phosphorus/potassium) tracking. Fertility is a single scalar — no soil chemistry, no pH, no rotation bonuses.</td>
+    </tr>
+
+    <tr>
+      <td><span class="system">🐄 Animals</span></td>
+      <td>
+        <span class="desc">13 species, 4-gene genetics (production/hardiness/growth/value), 4 traits, lactation cycles, seasonal production, age decay, feed penalties, sickness, optimal slaughter weight, breeding cooldowns, quarantine</span>
+      </td>
+      <td><span class="badge deep">Deep</span><br><span class="vars">11 vars</span></td>
+      <td class="gap-minor">⚠️ No herd-level disease epidemiology (illness is per-animal only). No diet composition trade-offs (grain vs. hay quality). No pasture rotation.</td>
+    </tr>
+
+    <tr>
+      <td><span class="system">📈 Market</span></td>
+      <td>
+        <span class="desc">±2% daily price drift, news event surges (±30%), sell pressure on large volumes, 3 market regions (local/city/export), transport costs, 15% tax, futures positions</span>
+      </td>
+      <td><span class="badge mid">Moderate</span><br><span class="vars">6 vars</span></td>
+      <td class="gap-minor">⚠️ NPC farm output doesn't affect market supply (rivals sell but don't move prices). No multi-year commodity cycles.</td>
+    </tr>
+
+    <tr>
+      <td><span class="system">☁️ Climate</span></td>
+      <td>
+        <span class="desc">10 weather types, 4 seasons (90d each), 7-day forecast with seasonal probability weights, per-event harvest multipliers</span>
+      </td>
+      <td><span class="badge shallow">Shallow</span><br><span class="vars">2 vars</span></td>
+      <td class="gap-major">🔴 Weather is one-day multiplier only — no multi-day streaks, no frost kill thresholds, no cumulative drought damage. No crop phenology (cold weather delaying ripeness).</td>
+    </tr>
+
+    <tr>
+      <td><span class="system">🚜 Machinery</span></td>
+      <td>
+        <span class="desc">Tractors + combines + irrigation + trucks + trailers, attachment compatibility, job scheduling (days-per-ha), fuel consumption, maintenance costs, contractor fallback rates</span>
+      </td>
+      <td><span class="badge mid">Moderate</span><br><span class="vars">5 vars</span></td>
+      <td class="gap-minor">⚠️ No fuel price volatility (fixed cost). No machine wear accumulation toward breakdown. Equipment failure is random event, not predictable degradation.</td>
+    </tr>
+
+    <tr>
+      <td><span class="system">🏦 Banking</span></td>
+      <td>
+        <span class="desc">Loan tiers with income gating, credit score (300–850), debt-to-income ratio, savings account (10% APR), time deposits, loan renegotiation (once), daily interest accrual</span>
+      </td>
+      <td><span class="badge deep">Deep</span><br><span class="vars">7 vars</span></td>
+      <td class="gap-none">✅ Very complete. Minor gap: no emergency overdraft, no farm subsidy programs.</td>
+    </tr>
+
+    <tr>
+      <td><span class="system">📋 Contracts</span></td>
+      <td>
+        <span class="desc">21 buyer templates, 15–32% price bonuses, delivery deadlines, failure penalties (10–60%), reputation gating for export tier, +rep on success</span>
+      </td>
+      <td><span class="badge mid">Moderate</span><br><span class="vars">4 vars</span></td>
+      <td class="gap-minor">⚠️ Contracts are one-off — no recurring weekly/monthly supply agreements. No volume discounts for consistent delivery.</td>
+    </tr>
+
+    <tr>
+      <td><span class="system">🏭 Rivals</span></td>
+      <td>
+        <span class="desc">NPC farms with 3 tiers, crop specializations, wealth accumulation, auction bidding logic, sell interval scheduling</span>
+      </td>
+      <td><span class="badge shallow">Shallow</span><br><span class="vars">3 vars</span></td>
+      <td class="gap-major">🔴 Rivals don't affect market prices when they sell. No rival events (e.g., rival's drought = your price spike). Rival wealth grows but doesn't change strategy.</td>
+    </tr>
+
+    <tr>
+      <td><span class="system">🐄 Production Bldgs</span></td>
+      <td>
+        <span class="desc">8 building types, 15 equipment upgrades, hygiene decay per species, welfare score (4 components), milk grades (A/B/C), butterfat %, inspector visits, certification path (Basic → Certified → Organic), worker type bonuses</span>
+      </td>
+      <td><span class="badge deep">Deep</span><br><span class="vars">10 vars</span></td>
+      <td class="gap-none">✅ Extremely well simulated. Minor gap: no cross-contamination between buildings.</td>
+    </tr>
+
+    <tr>
+      <td><span class="system">⚡ Events</span></td>
+      <td>
+        <span class="desc">8% daily roll, 10 event types (positive + negative), insurance payouts (4 plan types), machine repair queue, field damage modifiers, windfall subsidies</span>
+      </td>
+      <td><span class="badge mid">Moderate</span><br><span class="vars">5 vars</span></td>
+      <td class="gap-minor">⚠️ Events are fully random — no risk escalation from negligence (e.g., bad hygiene → more illness events). No cascading failures.</td>
+    </tr>
+
+    <tr>
+      <td><span class="system">👷 Workers</span></td>
+      <td>
+        <span class="desc">11 roles across 4 departments, specialist unlock dependencies, stacked bonus system (yield/production/maintenance/processing), daily wages, vet auto-treatment, supervisor auto-batch</span>
+      </td>
+      <td><span class="badge mid">Moderate</span><br><span class="vars">5 vars</span></td>
+      <td class="gap-minor">⚠️ No skill progression over time. No worker morale/fatigue. Instant competence on hire — no onboarding period.</td>
+    </tr>
+
+    <tr>
+      <td><span class="system">🧪 Processing</span></td>
+      <td>
+        <span class="desc">5 building types, 24 recipes, 16 processed products, input→output ratio formulas, worker output bonuses</span>
+      </td>
+      <td><span class="badge shallow">Shallow</span><br><span class="vars">2 vars</span></td>
+      <td class="gap-major">🔴 Processing is just a conversion ratio. No energy costs, no quality grades on output, no batch spoilage, no recipe unlocking via research.</td>
+    </tr>
+
+  </tbody>
+</table>
+
+<div class="section-label">Realism Gaps — Priority Summary</div>
+<div class="gaps-grid">
+
+  <div class="gap-card major">
+    <div class="gap-tag">MAJOR GAP</div>
+    <div class="gap-title">☁️ Climate depth</div>
+    <div class="gap-body">Weather is a single-day multiplier. Real farming means multi-day frost events that kill crops, accumulated drought stress, growing degree days. The foundation is there but the simulation is shallow.</div>
+  </div>
+
+  <div class="gap-card major">
+    <div class="gap-tag">MAJOR GAP</div>
+    <div class="gap-title">🏭 Rivals affect market</div>
+    <div class="gap-body">Rival farms sell crops every 7 days but prices don't react. In reality, a bumper crop year from competitors tanks your prices. This would make market strategy much more interesting.</div>
+  </div>
+
+  <div class="gap-card major">
+    <div class="gap-tag">MAJOR GAP</div>
+    <div class="gap-title">🧪 Processing quality</div>
+    <div class="gap-body">Processing is a pure ratio. No quality grades, no energy costs, no spoilage risk. Flour milled from premium wheat should be worth more. This is a missed depth layer.</div>
+  </div>
+
+  <div class="gap-card minor">
+    <div class="gap-tag">MODERATE GAP</div>
+    <div class="gap-title">🌱 Soil chemistry (NPK)</div>
+    <div class="gap-body">Fertility is one number. Real soil has nitrogen for leafy growth, phosphorus for roots/fruiting, potassium for stress resistance. Crop rotation bonuses (legumes fix nitrogen) would add strategy.</div>
+  </div>
+
+  <div class="gap-card minor">
+    <div class="gap-tag">MODERATE GAP</div>
+    <div class="gap-title">👷 Worker progression</div>
+    <div class="gap-body">Workers are instantly fully skilled. Skill levels that grow over time (or decline if not used) would make long-term staff decisions meaningful.</div>
+  </div>
+
+  <div class="gap-card minor">
+    <div class="gap-tag">MODERATE GAP</div>
+    <div class="gap-title">📋 Recurring contracts</div>
+    <div class="gap-body">Contracts are one-off orders. A weekly supply agreement with a buyer would simulate real farm-to-table relationships and reward consistency over time.</div>
+  </div>
+
+  <div class="gap-card good">
+    <div class="gap-tag">WELL COVERED</div>
+    <div class="gap-title">🏦 Banking / Finance</div>
+    <div class="gap-body">Credit scores, DTI ratios, tiered lending, savings products, interest accrual — this is genuinely realistic already.</div>
+  </div>
+
+  <div class="gap-card good">
+    <div class="gap-tag">WELL COVERED</div>
+    <div class="gap-title">🐄 Animal genetics</div>
+    <div class="gap-body">4-gene system with trait inheritance, lactation cycles, seasonal production, optimal slaughter timing — this rivals dedicated livestock sims.</div>
+  </div>
+
+</div>
+
+<div style="margin-top: 24px; padding: 14px; background: #142014; border-radius: 8px; font-size: 12px; color: #6a9a6a; border: 1px solid #1b3a1b;">
+  <strong style="color:#81c784;">Bottom line:</strong> The game has 3 deep systems (crops, animals, production buildings, banking), 5 moderate ones, and 2 shallow ones (climate, rivals). The biggest realism wins are: making rivals move market prices, deepening climate to multi-day effects, and adding quality grades to processing output.
+</div>
+
+</body>
+</html>
