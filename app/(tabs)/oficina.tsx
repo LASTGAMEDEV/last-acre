@@ -12,6 +12,9 @@ import { LOAN_TIERS, computeCreditScore, creditRating, calculateRate,
          loanTotalOwed, checkEligibility, rollingIncome, timeDepositPayout, timeDepositMatured } from '../../engine/banking';
 import HelpSheet from '../../components/HelpSheet';
 import { NPC_FARM_GROUP, RIVAL_GROUP_NAME } from '../../data/npcFarmGroups';
+import type { CoopId } from '../../engine/cooperativeTypes';
+import { COOP_NAMES, INITIAL_SHARE_PRICES } from '../../engine/cooperativeData';
+import { getAvailableEquipment, nextAvailableDay, isMemberSuspended, getSeason, isCoopActive, getYear } from '../../engine/cooperatives';
 
 const TERM_OPTIONS = [
   { days: 30,  label: '30d' },
@@ -620,7 +623,7 @@ function ContractsSection() {
 
 // ── Reputation & Cooperative Section ─────────────────────────────────────────
 function ReputationSection() {
-  const { reputation, cooperative, money, prices, futures, prestige, joinCooperative, leaveCooperative, openFuture } = useGameStore();
+  const { reputation, prices, futures, prestige, openFuture } = useGameStore();
   const rep = reputation ?? 50;
   const repColor = rep >= 80 ? '#4caf50' : rep >= 60 ? '#ffb74d' : rep >= 40 ? C.text : '#f44336';
   const repTier = rep >= 80 ? 'Excellent' : rep >= 65 ? 'Good' : rep >= 40 ? 'Average' : 'Poor';
@@ -669,32 +672,8 @@ function ReputationSection() {
         </View>
       )}
 
-      {/* Cooperative card */}
-      <View style={styles.coopCard}>
-        <Text style={styles.sectionTitle}>🤝 Agricultural Cooperative</Text>
-        {cooperative?.member ? (
-          <>
-            <Text style={styles.coopActive}>✅ Member since day {cooperative.joinDay}</Text>
-            <Text style={styles.coopDetail}>+12% on all sales · -10% seed costs · $400 dues every 30 days</Text>
-            <TouchableOpacity style={styles.leaveBtn} onPress={leaveCooperative}>
-              <Text style={styles.leaveBtnText}>Leave Cooperative</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <Text style={styles.coopDetail}>+12% on all crop, animal & processed sales</Text>
-            <Text style={styles.coopDetail}>-10% on all seed costs</Text>
-            <Text style={styles.coopDetail}>Monthly dues: $400 · Join fee: $500</Text>
-            <TouchableOpacity
-              style={[styles.joinBtn, money < 500 && styles.joinBtnDisabled]}
-              onPress={joinCooperative}
-              disabled={money < 500}
-            >
-              <Text style={styles.joinBtnText}>Join Cooperative ($500)</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
+      {/* Co-operatives */}
+      <CoopsSection />
 
       {/* Futures */}
       <View style={styles.futuresCard}>
@@ -1168,6 +1147,224 @@ function CompetitorsSection() {
   );
 }
 
+// ── Co-op Panels ─────────────────────────────────────────────────────────────
+function CoopPanel({ coopId }: { coopId: CoopId }) {
+  const {
+    coopMemberships, coopStates, day, money,
+    joinCoop, leaveCoop, deliverToCoop, voteAGM, bookCoopEquipment,
+    inventory, animalInventory,
+  } = useGameStore();
+  const [expanded, setExpanded] = React.useState(false);
+  const [shareInput, setShareInput] = React.useState('10');
+
+  const coopState = coopStates[coopId];
+  const membership = coopMemberships[coopId];
+  const currentSeason = getSeason(day);
+  const currentYear = getYear(day);
+  const active = isCoopActive(coopState, currentYear);
+  const suspended = membership ? isMemberSuspended(membership, currentSeason) : false;
+  const availableEquipment = getAvailableEquipment(coopState.equipment, coopState.health);
+
+  const healthColor =
+    coopState.health >= 80 ? '#81c784'
+    : coopState.health >= 60 ? '#aed581'
+    : coopState.health >= 40 ? '#ffb74d'
+    : coopState.health >= 20 ? '#ef5350'
+    : '#b71c1c';
+
+  if (!active) {
+    return (
+      <View style={styles.coopCard}>
+        <Text style={styles.coopName}>{COOP_NAMES[coopId]}</Text>
+        <Text style={[styles.coopDetail, { color: '#ef5350' }]}>
+          Dissolved — reforms in year {coopState.dissolvedUntilYear}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.coopCard}>
+      <TouchableOpacity onPress={() => setExpanded(e => !e)} style={styles.coopHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.coopName}>{COOP_NAMES[coopId]}</Text>
+          <Text style={styles.coopDetail}>{coopState.memberCount} members</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={[styles.coopHealth, { color: healthColor }]}>
+            Health {coopState.health.toFixed(0)}%
+          </Text>
+          <Text style={styles.coopDetail}>{expanded ? '▲' : '▼'}</Text>
+        </View>
+      </TouchableOpacity>
+
+      {expanded && (
+        <View>
+          <View style={styles.healthBarBg}>
+            <View style={[styles.healthBarFill, { width: `${coopState.health}%` as any, backgroundColor: healthColor }]} />
+          </View>
+
+          <Text style={styles.coopSectionLabel}>Terms</Text>
+          <Text style={styles.coopDetail}>Delivery obligation: {coopState.terms.deliveryPct}% of harvest</Text>
+          <Text style={styles.coopDetail}>Floor price: {coopState.terms.floorPct}% of 90-day avg</Text>
+          <Text style={styles.coopDetail}>Annual fee: ${coopState.terms.annualFeePerShare}/share/yr</Text>
+          <Text style={styles.coopDetail}>Dividend: {coopState.terms.dividendPct}% of net profit</Text>
+
+          {membership ? (
+            <View>
+              <Text style={styles.coopSectionLabel}>Your Membership</Text>
+              <Text style={styles.coopDetail}>Shares: {membership.shares} @ ${membership.sharePrice.toFixed(2)}/share</Text>
+              <Text style={styles.coopDetail}>Equity value: ${(membership.shares * membership.sharePrice).toFixed(0)}</Text>
+              {membership.pendingRedemption && (
+                <Text style={[styles.coopDetail, { color: '#ffb74d' }]}>
+                  ⏳ Exit pending since day {membership.pendingRedemption.requestedDay} — processing after 1 season
+                </Text>
+              )}
+              {suspended && (
+                <Text style={[styles.coopDetail, { color: '#ef5350' }]}>
+                  ⛔ Benefits suspended until season {membership.suspendedUntilSeason}
+                </Text>
+              )}
+
+              <Text style={styles.coopSectionLabel}>Delivery Obligation</Text>
+              <Text style={styles.coopDetail}>
+                {membership.seasonDelivered.toFixed(0)} / {membership.seasonObligation.toFixed(0)} units delivered this season
+              </Text>
+              {membership.seasonObligation > 0 && (
+                <View style={styles.healthBarBg}>
+                  <View style={[styles.healthBarFill, {
+                    width: `${Math.min(100, (membership.seasonDelivered / membership.seasonObligation) * 100)}%` as any,
+                    backgroundColor: '#81c784',
+                  }]} />
+                </View>
+              )}
+
+              <Text style={styles.coopSectionLabel}>Pool Prices (this season)</Text>
+              {Object.keys(coopState.poolPrices).length === 0 ? (
+                <Text style={styles.coopDetail}>Pool prices calculated at season start</Text>
+              ) : (
+                Object.entries(coopState.poolPrices).slice(0, 5).map(([itemId, price]) => (
+                  <Text key={itemId} style={styles.coopDetail}>{itemId}: ${(price as number).toFixed(2)}/unit</Text>
+                ))
+              )}
+
+              {!suspended && membership.seasonObligation > membership.seasonDelivered && (
+                <View style={{ marginTop: 8 }}>
+                  {Object.entries(coopState.poolPrices).map(([itemId, price]) => {
+                    const avail = (inventory[itemId] ?? 0) + (animalInventory[itemId] ?? 0);
+                    if (avail <= 0) return null;
+                    const needed = membership.seasonObligation - membership.seasonDelivered;
+                    const vol = Math.min(avail, needed);
+                    return (
+                      <TouchableOpacity
+                        key={itemId}
+                        style={styles.coopDeliverBtn}
+                        onPress={() => deliverToCoop(coopId, itemId, vol)}
+                      >
+                        <Text style={styles.coopDeliverBtnText}>
+                          Deliver {vol.toFixed(0)} {itemId} (${((price as number) * vol).toFixed(0)})
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
+              {coopState.pendingAGM && !coopState.pendingAGM.resolved && (
+                <View style={{ marginTop: 8 }}>
+                  <Text style={styles.coopSectionLabel}>📋 AGM Proposal</Text>
+                  <Text style={styles.coopDetail}>
+                    Proposed changes: {Object.entries(coopState.pendingAGM.changes).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                  </Text>
+                  <Text style={styles.coopDetail}>
+                    Other members: {(coopState.pendingAGM.otherYesPct * 100).toFixed(0)}% likely to vote yes
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                    <TouchableOpacity style={styles.voteYesBtn} onPress={() => voteAGM(coopId, 'yes')}>
+                      <Text style={styles.voteBtnText}>Vote Yes</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.voteNoBtn} onPress={() => voteAGM(coopId, 'no')}>
+                      <Text style={styles.voteBtnText}>Vote No</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+              {coopState.pendingAGM?.resolved && (
+                <Text style={[styles.coopDetail, { color: '#81c784', marginTop: 4 }]}>
+                  ✅ AGM resolved
+                </Text>
+              )}
+
+              <Text style={styles.coopSectionLabel}>Equipment Pool ({availableEquipment.length} available)</Text>
+              {availableEquipment.map(item => {
+                const playerBooked = item.bookings.some(b => b.memberId === 'player' && b.day >= day);
+                const nextDay = nextAvailableDay(item, day + 1);
+                return (
+                  <View key={item.id} style={styles.equipRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.coopDetail}>{item.label} — ${item.usageFeePerDay}/day</Text>
+                      {playerBooked && <Text style={[styles.coopDetail, { color: '#81c784' }]}>Booked ✓</Text>}
+                    </View>
+                    {!playerBooked && !suspended && (
+                      <TouchableOpacity
+                        style={styles.bookBtn}
+                        onPress={() => bookCoopEquipment(coopId, item.id, nextDay)}
+                      >
+                        <Text style={styles.bookBtnText}>Book day {nextDay} (${item.usageFeePerDay})</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+
+              {!membership.pendingRedemption && (
+                <TouchableOpacity style={styles.leaveBtn} onPress={() => leaveCoop(coopId)}>
+                  <Text style={styles.leaveBtnText}>Request Exit (1-season delay)</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <View>
+              <Text style={styles.coopSectionLabel}>Join Co-op</Text>
+              <Text style={styles.coopDetail}>
+                Share price: ${INITIAL_SHARE_PRICES[coopId].toFixed(2)} · Min 10 shares
+              </Text>
+              <TextInput
+                style={styles.shareInput}
+                keyboardType="numeric"
+                value={shareInput}
+                onChangeText={setShareInput}
+                placeholder="Shares to buy"
+                placeholderTextColor="#666"
+              />
+              <TouchableOpacity
+                style={[styles.joinBtn, money < 10 * INITIAL_SHARE_PRICES[coopId] && styles.joinBtnDisabled]}
+                onPress={() => joinCoop(coopId, parseInt(shareInput, 10) || 10)}
+                disabled={money < 10 * INITIAL_SHARE_PRICES[coopId]}
+              >
+                <Text style={styles.joinBtnText}>
+                  Join ({(parseInt(shareInput, 10) || 10)} shares · ${((parseInt(shareInput, 10) || 10) * INITIAL_SHARE_PRICES[coopId]).toFixed(0)})
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function CoopsSection() {
+  return (
+    <View>
+      <Text style={styles.sectionTitle}>🤝 Agricultural Co-operatives</Text>
+      <CoopPanel coopId="grain" />
+      <CoopPanel coopId="horticulture" />
+      <CoopPanel coopId="livestock" />
+    </View>
+  );
+}
+
 // ── Main Screen ──────────────────────────────────────────────────────────────
 type OfficeTab = 'banking' | 'contracts' | 'reputation' | 'milestones' | 'insurance' | 'competitors';
 
@@ -1280,6 +1477,21 @@ const styles = StyleSheet.create({
   joinBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
   leaveBtn: { backgroundColor: '#7f1d1d', borderRadius: R.md, padding: S.sm, alignItems: 'center', marginTop: S.sm },
   leaveBtnText: { color: '#ef9a9a', fontWeight: 'bold', fontSize: F.size.sm },
+  coopName: { color: '#ffffff', fontSize: 15, fontWeight: 'bold', marginBottom: 2 },
+  coopHealth: { fontSize: 13, fontWeight: 'bold' },
+  coopHeader: { flexDirection: 'row', alignItems: 'flex-start' },
+  coopSectionLabel: { color: '#888', fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 4, textTransform: 'uppercase' as const },
+  healthBarBg: { height: 6, backgroundColor: '#333', borderRadius: 3, marginVertical: 6 },
+  healthBarFill: { height: 6, borderRadius: 3 },
+  equipRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  coopDeliverBtn: { backgroundColor: '#1b5e20', borderRadius: 6, padding: 8, marginBottom: 4 },
+  coopDeliverBtnText: { color: '#a5d6a7', fontSize: 13, fontWeight: 'bold' },
+  bookBtn: { backgroundColor: '#0d47a1', borderRadius: 6, padding: 6 },
+  bookBtnText: { color: '#90caf9', fontSize: 11 },
+  voteYesBtn: { flex: 1, backgroundColor: '#1b5e20', borderRadius: 6, padding: 8, alignItems: 'center' as const },
+  voteNoBtn: { flex: 1, backgroundColor: '#7f1d1d', borderRadius: 6, padding: 8, alignItems: 'center' as const },
+  voteBtnText: { color: '#ffffff', fontWeight: 'bold', fontSize: 13 },
+  shareInput: { backgroundColor: '#1a1a2e', color: '#ffffff', borderRadius: 6, padding: 8, marginBottom: 8, fontSize: 15 },
   // Futures
   futuresCard: { backgroundColor: C.bgCard, borderRadius: R.lg, marginHorizontal: S.md, marginBottom: S.sm, padding: 14 },
   futureForm: { marginTop: 10 },
