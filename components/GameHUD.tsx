@@ -8,6 +8,7 @@ import { playSound } from '../engine/sounds';
 import { WORKER_TYPES } from '../data/workerTypes';
 import { MACHINE_TYPES } from '../data/machineTypes';
 import { BUILDING_TYPES } from '../data/buildingTypes';
+import type { CoopId } from '../engine/cooperativeTypes';
 
 const WARN_DAYS = 7;
 const SEASON_DAYS = 90;
@@ -36,6 +37,7 @@ export default function GameHUD() {
     farmName, workers, machines, buildings,
     advanceDay, advanceDays,
     todayWeather, recurringContracts, buyers,
+    coopMemberships,
   } = useGameStore();
 
   const season = getSeason(day);
@@ -77,6 +79,12 @@ export default function GameHUD() {
 
   const weather = todayWeather ? WEATHER_DISPLAY[todayWeather.event] : null;
 
+  const coopBadges: { id: CoopId; label: string }[] = [
+    { id: 'grain', label: 'G' },
+    { id: 'horticulture', label: 'H' },
+    { id: 'livestock', label: 'L' },
+  ];
+
   const fmtMoney = (n: number) => {
     const abs = Math.abs(Math.round(n));
     return abs >= 1000 ? `$${(abs / 1000).toFixed(1)}k` : `$${abs}`;
@@ -103,9 +111,18 @@ export default function GameHUD() {
         {/* Row 2: Stats · Advance · Skip */}
         <View style={styles.row2}>
           {/* Stats */}
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{fmtMoney(money)}</Text>
-            <Text style={styles.statLabel}>CASH</Text>
+          <View style={styles.cashGroup}>
+            <View style={styles.stat}>
+              <Text style={styles.statValue}>{fmtMoney(money)}</Text>
+              <Text style={styles.statLabel}>CASH</Text>
+            </View>
+            {coopBadges.map(({ id, label }) =>
+              (coopMemberships ?? {})[id] ? (
+                <View key={id} style={hudStyles.coopBadge}>
+                  <Text style={hudStyles.coopBadgeText}>{label}</Text>
+                </View>
+              ) : null
+            )}
           </View>
           <View style={styles.divider} />
           <View style={styles.stat}>
@@ -230,6 +247,11 @@ const styles = StyleSheet.create({
   stat: {
     flexDirection: 'column',
   },
+  cashGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
   statValue: {
     color: C.text,
     fontSize: F.size.sm,
@@ -287,4 +309,9 @@ const styles = StyleSheet.create({
     fontSize: F.size.xs,
     fontWeight: F.weight.bold,
   },
+});
+
+const hudStyles = StyleSheet.create({
+  coopBadge: { backgroundColor: '#1565c0', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2, marginLeft: 4 },
+  coopBadgeText: { color: '#ffffff', fontSize: 10, fontWeight: 'bold' },
 });
