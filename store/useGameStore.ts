@@ -420,6 +420,8 @@ export interface AuctionListing {
   animalId?: string;                 // animal (player-listed)
   animalTypeId?: string;             // animal (NPC-generated)
   animalGenes?: AnimalGenes;         // animal
+  animalBreedId?: string;            // animal — breed of the listed animal
+  animalBreedCrossParents?: [string, string]; // animal — F1/backcross display
   animalSex?: 'male' | 'female';           // animal — preserved for withdrawal
   animalBornDay?: number;                   // animal — preserved for withdrawal
   machinePurchasedDay?: number;             // machinery — preserved for withdrawal
@@ -693,6 +695,7 @@ export interface GameState {
   collectAnimalProduction: (animalId: string) => void;
   sellAnimalProduct: (productType: string, units: number) => void;
   breedAnimal: (animalId: string) => void;
+  cullAnimal: (animalId: string) => void;
   treatAnimal: (animalId: string) => void;
   buyMachine: (typeId: string) => void;
   requestLoan: (principal: number, termDays: number, label: string) => void;
@@ -2397,6 +2400,7 @@ export const useGameStore = create<GameState>()(
                 sex: Math.random() < 0.5 ? 'female' : 'male',
                 bornDay: newDay - 30,
                 genes: listing.animalGenes,
+                breedId: listing.animalBreedId,
                 sick: arrivedSickAuction,
                 sicknessDay: arrivedSickAuction ? newDay : undefined,
                 quarantineUntilDay: hasQuarantinePenAuction ? newDay + 14 : undefined,
@@ -2532,21 +2536,43 @@ export const useGameStore = create<GameState>()(
           const eligibleTypes = AT_AUCTION.filter((a: any) => a.productionType !== null);
           for (let i = 0; i < animalCount; i++) {
             const animalType = eligibleTypes[Math.floor(Math.random() * eligibleTypes.length)];
-            // Genes weighted toward A/B (score ~1.1–1.3)
-            const genes: AnimalGenes = {
-              production: 0.9 + Math.random() * 0.5,
-              hardiness:  0.9 + Math.random() * 0.5,
-              growth:     0.9 + Math.random() * 0.5,
-              value:      0.9 + Math.random() * 0.5,
-            };
+            const { BREED_TYPES } = require('../data/breedTypes');
+            const speciesBreeds = (BREED_TYPES as any[]).filter((b: any) => b.animalTypeId === animalType.id);
+
+            const roll = Math.random();
+            const rarityFilter = roll > 0.95 ? 'rare' : roll > 0.70 ? 'uncommon' : 'common';
+            const rarityBreeds = speciesBreeds.filter((b: any) => b.rarity === rarityFilter);
+            const breedPool = rarityBreeds.length > 0 ? rarityBreeds : speciesBreeds;
+            const selectedBreed = breedPool.length > 0
+              ? breedPool[Math.floor(Math.random() * breedPool.length)]
+              : null;
+
+            let genes: AnimalGenes;
+            if (selectedBreed) {
+              const { randomGenesForBreed } = require('../engine/animals');
+              genes = randomGenesForBreed(selectedBreed);
+            } else {
+              genes = {
+                production: 0.9 + Math.random() * 0.5,
+                hardiness:  0.9 + Math.random() * 0.5,
+                growth:     0.9 + Math.random() * 0.5,
+                value:      0.9 + Math.random() * 0.5,
+              };
+            }
             const score = geneScore(genes);
-            const startingBid = Math.round(animalType.buyCost * score * 0.6);
+            const breedBasePrice = selectedBreed ? selectedBreed.auctionBasePrice : animalType.buyCost;
+            const purebredMult = selectedBreed
+              ? (selectedBreed.rarity === 'rare' ? 2.75 : selectedBreed.rarity === 'uncommon' ? 1.5 : 1.2)
+              : 1.0;
+            const startingBid = Math.round(breedBasePrice * score * 0.6 * purebredMult);
+
             updatedListings.push({
               id: `listing_animal_${newDay}_${i}`,
               category: 'animal',
               sellerId: 'npc',
               animalTypeId: animalType.id,
               animalGenes: genes,
+              animalBreedId: selectedBreed?.id,
               startingBid,
               reservePrice: 0,
               currentBid: startingBid,
@@ -4586,6 +4612,46 @@ export const useGameStore = create<GameState>()(
           ],
         });
       },
+      cullAnimal: (animalId) => set(state => {
+        const animal = state.animals.find((a: OwnedAnimal) => a.id === animalId);
+        if (!animal) return {};
+        const { ANIMAL_TYPES } = require('../data/animalTypes');
+        const animalType = ANIMAL_TYPES.find((a: any) => a.id === animal.typeId);
+        if (!animalType) return {};
+
+        const MEAT_SPECIES = new Set(['cerdo', 'conejo', 'vaca', 'oveja', 'cabra', 'pavo', 'bufalo']);
+        let moneyGain = 0;
+
+        if (MEAT_SPECIES.has(animal.typeId)) {
+          const DRESS_YIELDS: Record<string, { weightKg: number; dressPercent: number }> = {
+            vaca:   { weightKg: 550, dressPercent: 0.60 },
+            bufalo: { weightKg: 480, dressPercent: 0.57 },
+            cerdo:  { weightKg: 110, dressPercent: 0.75 },
+            oveja:  { weightKg: 55,  dressPercent: 0.50 },
+            cabra:  { weightKg: 45,  dressPercent: 0.48 },
+            conejo: { weightKg: 2.5, dressPercent: 0.55 },
+            pavo:   { weightKg: 12,  dressPercent: 0.80 },
+          };
+          const spec = DRESS_YIELDS[animal.typeId];
+          if (spec) {
+            const { isMature } = require('../engine/animals');
+            const ageFraction = isMature(animal, animalType, state.day)
+              ? Math.min(1, (state.day - animal.bornDay) / animalType.maxPriceAge)
+              : 0.4;
+            const meatKg = spec.weightKg * spec.dressPercent * ageFraction * (animal.genes?.value ?? 1.0);
+            const meatPrice = (state.prices ?? []).find((p: any) => p.id === 'meat')?.price ?? 4.50;
+            moneyGain = Math.round(meatKg * meatPrice * 0.85);
+          }
+        }
+
+        return {
+          animals: state.animals.filter((a: OwnedAnimal) => a.id !== animalId),
+          money: state.money + moneyGain,
+          salesLog: moneyGain > 0
+            ? [...(state.salesLog ?? []), { day: state.day, amount: moneyGain, category: 'animals' as const }]
+            : state.salesLog,
+        };
+      }),
 
       setBreedingPair: (femaleId, maleId) => {
         set(state => ({
@@ -6718,7 +6784,7 @@ export const useGameStore = create<GameState>()(
         const {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           advanceDay, buyParcel, plantCrop, harvestCrop, sellCrop,
-          buyAnimal, sellAnimal, collectAnimalProduction, sellAnimalProduct, breedAnimal, treatAnimal,
+          buyAnimal, sellAnimal, collectAnimalProduction, sellAnimalProduct, breedAnimal, cullAnimal, treatAnimal,
           buyMachine, requestLoan, repayLoan, depositSavings, withdrawSavings,
           acceptContract, declineContract, deliverCrop, buyProduct, buyBuilding,
           resolveFieldEvent, clearWeeds, fertilizeCrop, listItem, withdrawListing, placeBid, clearDaySummary,
