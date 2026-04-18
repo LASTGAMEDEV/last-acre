@@ -19,6 +19,7 @@ export interface GameEventTemplate {
   durationDays: number; // 0 = one-shot (equipment_failure creates a MachineRepair instead)
   weight: number;       // relative probability
   modifier?: number;    // multiplier for yield/price events; flat cash delta for windfall_subsidy
+  priceShock?: import('../engine/priceEngine').PriceShock;
 }
 
 export const RANDOM_EVENT_TEMPLATES: GameEventTemplate[] = [
@@ -88,5 +89,40 @@ export const RANDOM_EVENT_TEMPLATES: GameEventTemplate[] = [
     title: 'Lucky Harvest Bonus',
     description: 'Exceptional conditions grant a surprise yield bonus on all plots.',
     durationDays: 5, weight: 4, modifier: 1.30,
+  },
+  // ── Black Swan events ────────────────────────────────────────────────────────
+  {
+    id: 'e_bs01', type: 'market_surge', icon: '🦠',
+    title: 'Global Pandemic',
+    description: 'A global health crisis surges demand for all food commodities.',
+    durationDays: 0, weight: 1,
+    priceShock: { commodityId: null, magnitude: 0.35, durationDays: 180, decayRate: 0.006 },
+  },
+  {
+    id: 'e_bs02', type: 'market_surge', icon: '⚔️',
+    title: 'Trade War',
+    description: 'Major trade partners impose export tariffs, cutting export prices.',
+    durationDays: 0, weight: 1,
+    priceShock: { commodityId: null, magnitude: -0.25, durationDays: 120, decayRate: 0.008 },
+  },
+  {
+    id: 'e_bs03', type: 'market_surge', icon: '🌵',
+    title: 'Continental Drought',
+    description: 'A continent-scale drought devastates global grain supplies.',
+    durationDays: 0, weight: 1,
+    priceShock: { commodityId: 'wheat', magnitude: 0.50, durationDays: 90, decayRate: 0.011 },
+  },
+  {
+    id: 'e_bs04', type: 'market_surge', icon: '💱',
+    title: 'Currency Crisis',
+    description: 'A major currency collapse raises import and export prices.',
+    durationDays: 0, weight: 1,
+    priceShock: { commodityId: null, magnitude: 0.30, durationDays: 60, decayRate: 0.017 },
+  },
+  {
+    id: 'e_bs05', type: 'equipment_failure', icon: '🏗️',
+    title: 'Infrastructure Collapse',
+    description: 'Critical transport infrastructure fails, tripling logistics costs.',
+    durationDays: 45, weight: 1, modifier: 0.85,
   },
 ];
