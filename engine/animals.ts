@@ -76,11 +76,11 @@ export function randomGenesForBreed(breed: BreedType): AnimalGenes {
 
 /** F1 cross genes: average of both breed ranges + 5% hybrid vigour bonus. */
 export function crossbreedGenes(motherBreed: BreedType, fatherBreed: BreedType): AnimalGenes {
-  const avg = (a: [number, number], b: [number, number]) =>
-    clamp(
-      ((a[0] + b[0]) / 2 + Math.random() * ((a[1] + b[1]) / 2 - (a[0] + b[0]) / 2)) * 1.05,
-      0.5, 1.5
-    );
+  const avg = (a: [number, number], b: [number, number]) => {
+    const lo = (a[0] + b[0]) / 2;
+    const hi = (a[1] + b[1]) / 2;
+    return clamp((lo + Math.random() * (hi - lo)) * 1.05, 0.5, 1.5);
+  };
   return {
     production: avg(motherBreed.geneRanges.production, fatherBreed.geneRanges.production),
     hardiness:  avg(motherBreed.geneRanges.hardiness,  fatherBreed.geneRanges.hardiness),
@@ -148,7 +148,8 @@ export function getBreedPurebredMultiplier(animal: OwnedAnimal, allBreeds: Breed
     if (!breed) return 1.0;
     if (breed.rarity === 'common')   return 1.2;
     if (breed.rarity === 'uncommon') return 1.5;
-    return 2.75;
+    if (breed.rarity === 'rare')     return 2.75;
+    return 1.0;
   }
   return 1.0;
 }
