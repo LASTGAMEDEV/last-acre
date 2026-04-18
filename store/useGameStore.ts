@@ -6654,7 +6654,38 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'granja-tycoon-save-v5',
+      name: 'granja-tycoon-save-v6',
+      version: 6,
+      migrate: (persistedState: any, version: number) => {
+        if (version < 6) {
+          const old = persistedState as any;
+          const oldCoop = old.cooperative ?? null;
+          let coopMemberships: Partial<Record<CoopId, CoopMembership>> = {};
+          if (oldCoop?.member === true) {
+            coopMemberships.grain = {
+              shares: 10,
+              sharePrice: 80,
+              joinDay: oldCoop.joinDay ?? 1,
+              pendingRedemption: null,
+              offenceHistory: [],
+              seasonDelivered: 0,
+              seasonObligation: 0,
+              suspendedUntilSeason: null,
+            };
+          }
+          return {
+            ...old,
+            cooperative: null,
+            coopMemberships,
+            coopStates: {
+              grain: makeInitialCoopState('grain'),
+              horticulture: makeInitialCoopState('horticulture'),
+              livestock: makeInitialCoopState('livestock'),
+            },
+          };
+        }
+        return persistedState;
+      },
       storage: createJSONStorage(() => {
         try {
           return localStorage;
