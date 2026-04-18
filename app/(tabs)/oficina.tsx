@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
 import { useGameStore, FuturesPosition, SeasonGoal } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F, R } from '../../constants/theme';
+import SubTabBar from '../../components/SubTabBar';
 import HintCard from '../../components/HintCard';
 import { CONTRACT_TEMPLATES } from '../../engine/contracts';
 import { CROP_TYPES, CropType } from '../../data/cropTypes';
@@ -11,6 +12,9 @@ import { LOAN_TIERS, computeCreditScore, creditRating, calculateRate,
          loanTotalOwed, checkEligibility, rollingIncome, timeDepositPayout, timeDepositMatured } from '../../engine/banking';
 import HelpSheet from '../../components/HelpSheet';
 import { NPC_FARM_GROUP, RIVAL_GROUP_NAME } from '../../data/npcFarmGroups';
+import type { CoopId } from '../../engine/cooperativeTypes';
+import { COOP_NAMES, INITIAL_SHARE_PRICES } from '../../engine/cooperativeData';
+import { getAvailableEquipment, nextAvailableDay, isMemberSuspended, getSeason, isCoopActive, getYear } from '../../engine/cooperatives';
 
 const TERM_OPTIONS = [
   { days: 30,  label: '30d' },
@@ -178,7 +182,7 @@ function BankingSection() {
             </View>
             <View style={styles.loanSummaryRow}>
               <Text style={styles.loanSummaryLabel}>Total to repay</Text>
-              <Text style={[styles.loanSummaryValue, { color: '#fff', fontWeight: 'bold' }]}>${Math.round(totalOwed).toLocaleString()}</Text>
+              <Text style={[styles.loanSummaryValue, { color: C.white, fontWeight: 'bold' }]}>${Math.round(totalOwed).toLocaleString()}</Text>
             </View>
             <View style={styles.loanSummaryRow}>
               <Text style={styles.loanSummaryLabel}>Due on day</Text>
@@ -295,9 +299,9 @@ function BankingSection() {
           const statusLabel = loan.defaulted ? 'Defaulted' : onTime ? 'On time' : 'Late';
           const statusIcon = loan.defaulted ? '✗' : onTime ? '✓' : '⚠️';
           return (
-            <View key={loan.id} style={[styles.loanCardDone, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1a1a2e' }]}>
+            <View key={loan.id} style={[styles.loanCardDone, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: C.bg }]}>
               <View>
-                <Text style={[styles.loanCardDoneText, { color: '#888' }]}>{loan.label}</Text>
+                <Text style={[styles.loanCardDoneText, { color: C.textMuted }]}>{loan.label}</Text>
                 <Text style={[styles.loanCardDoneText, { color: '#555' }]}>${loan.principal.toLocaleString()} · due day {loan.payoffDay}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
@@ -404,7 +408,7 @@ function BankingSection() {
                   </View>
                   <View style={styles.loanSummaryRow}>
                     <Text style={styles.loanSummaryLabel}>Total at maturity</Text>
-                    <Text style={[styles.loanSummaryValue, { color: '#fff', fontWeight: 'bold' }]}>${payout.toLocaleString()}</Text>
+                    <Text style={[styles.loanSummaryValue, { color: C.white, fontWeight: 'bold' }]}>${payout.toLocaleString()}</Text>
                   </View>
                   <View style={styles.loanSummaryRow}>
                     <Text style={styles.loanSummaryLabel}>Matures on day</Text>
@@ -619,9 +623,9 @@ function ContractsSection() {
 
 // ── Reputation & Cooperative Section ─────────────────────────────────────────
 function ReputationSection() {
-  const { reputation, cooperative, money, prices, futures, prestige, joinCooperative, leaveCooperative, openFuture } = useGameStore();
+  const { reputation, prices, futures, prestige, openFuture } = useGameStore();
   const rep = reputation ?? 50;
-  const repColor = rep >= 80 ? '#4caf50' : rep >= 60 ? '#ffb74d' : rep >= 40 ? '#e8d5a3' : '#f44336';
+  const repColor = rep >= 80 ? '#4caf50' : rep >= 60 ? '#ffb74d' : rep >= 40 ? C.text : '#f44336';
   const repTier = rep >= 80 ? 'Excellent' : rep >= 65 ? 'Good' : rep >= 40 ? 'Average' : 'Poor';
 
   const [selectedCrop, setSelectedCrop] = React.useState('');
@@ -660,40 +664,16 @@ function ReputationSection() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <Text style={{ color: '#ffb74d', fontSize: 32, fontWeight: 'bold' }}>{prestige}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' }}>Level {prestige} Farmer</Text>
-              <Text style={{ color: '#888', fontSize: 11 }}>+{(prestige ?? 0) * 5}% revenue on all sales</Text>
+              <Text style={{ color: C.text, fontSize: 13, fontWeight: 'bold' }}>Level {prestige} Farmer</Text>
+              <Text style={{ color: C.textMuted, fontSize: 11 }}>+{(prestige ?? 0) * 5}% revenue on all sales</Text>
               <Text style={{ color: '#555', fontSize: 10, marginTop: 2 }}>Earned by completing full years</Text>
             </View>
           </View>
         </View>
       )}
 
-      {/* Cooperative card */}
-      <View style={styles.coopCard}>
-        <Text style={styles.sectionTitle}>🤝 Agricultural Cooperative</Text>
-        {cooperative?.member ? (
-          <>
-            <Text style={styles.coopActive}>✅ Member since day {cooperative.joinDay}</Text>
-            <Text style={styles.coopDetail}>+12% on all sales · -10% seed costs · $400 dues every 30 days</Text>
-            <TouchableOpacity style={styles.leaveBtn} onPress={leaveCooperative}>
-              <Text style={styles.leaveBtnText}>Leave Cooperative</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <Text style={styles.coopDetail}>+12% on all crop, animal & processed sales</Text>
-            <Text style={styles.coopDetail}>-10% on all seed costs</Text>
-            <Text style={styles.coopDetail}>Monthly dues: $400 · Join fee: $500</Text>
-            <TouchableOpacity
-              style={[styles.joinBtn, money < 500 && styles.joinBtnDisabled]}
-              onPress={joinCooperative}
-              disabled={money < 500}
-            >
-              <Text style={styles.joinBtnText}>Join Cooperative ($500)</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
+      {/* Co-operatives */}
+      <CoopsSection />
 
       {/* Futures */}
       <View style={styles.futuresCard}>
@@ -712,7 +692,7 @@ function ReputationSection() {
                   style={[styles.futureChip, selectedCrop === c.id && styles.futureChipActive]}
                   onPress={() => setSelectedCrop(c.id)}
                 >
-                  <Text style={[styles.futureChipText, selectedCrop === c.id && { color: '#fff' }]}>
+                  <Text style={[styles.futureChipText, selectedCrop === c.id && { color: C.white }]}>
                     {c.name} ${price?.price.toFixed(2) ?? '—'}
                   </Text>
                 </TouchableOpacity>
@@ -736,7 +716,7 @@ function ReputationSection() {
                 style={[styles.termChip, futureTerm === t && styles.termChipActive]}
                 onPress={() => setFutureTerm(t)}
               >
-                <Text style={[styles.termChipText, futureTerm === t && { color: '#fff' }]}>{t}d</Text>
+                <Text style={[styles.termChipText, futureTerm === t && { color: C.white }]}>{t}d</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -786,8 +766,8 @@ function SeasonGoalsSection() {
   if (seasonGoals.length === 0) {
     return (
       <View style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
-        <View style={{ backgroundColor: '#16213e', borderRadius: 10, padding: 14 }}>
-          <Text style={{ color: '#888', fontSize: 12, textAlign: 'center' }}>
+        <View style={{ backgroundColor: C.bgCard, borderRadius: 10, padding: 14 }}>
+          <Text style={{ color: C.textMuted, fontSize: 12, textAlign: 'center' }}>
             Seasonal goals appear when a new season begins.
           </Text>
         </View>
@@ -819,7 +799,7 @@ function SeasonGoalsSection() {
 
   return (
     <View style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
-      <Text style={{ color: '#e8d5a3', fontSize: 13, fontWeight: 'bold', marginBottom: 8 }}>
+      <Text style={{ color: C.text, fontSize: 13, fontWeight: 'bold', marginBottom: 8 }}>
         {seasonGoalSeason.charAt(0).toUpperCase() + seasonGoalSeason.slice(1)} Goals
       </Text>
       {seasonGoals.map(goal => {
@@ -827,11 +807,11 @@ function SeasonGoalsSection() {
         const pct = Math.min(1, progress / goal.target);
         const complete = pct >= 1;
         return (
-          <View key={goal.id} style={{ backgroundColor: complete ? '#0f3460' : '#16213e', borderRadius: 10, padding: 14, marginBottom: 10, borderWidth: complete && !goal.claimed ? 1 : 0, borderColor: '#4caf50' }}>
+          <View key={goal.id} style={{ backgroundColor: complete ? '#0f3460' : C.bgCard, borderRadius: 10, padding: 14, marginBottom: 10, borderWidth: complete && !goal.claimed ? 1 : 0, borderColor: '#4caf50' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text style={{ fontSize: 18 }}>{goal.icon}</Text>
-                <Text style={{ color: complete ? '#e8d5a3' : '#aaa', fontSize: 13, fontWeight: 'bold', flex: 1 }}>{goal.label}</Text>
+                <Text style={{ color: complete ? C.text : '#aaa', fontSize: 13, fontWeight: 'bold', flex: 1 }}>{goal.label}</Text>
               </View>
               {goal.claimed ? (
                 <Text style={{ color: '#4caf50', fontSize: 12, fontWeight: 'bold' }}>✓ Claimed</Text>
@@ -840,13 +820,13 @@ function SeasonGoalsSection() {
                   style={{ backgroundColor: '#4caf50', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 5 }}
                   onPress={() => claimSeasonGoalReward(goal.id)}
                 >
-                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Claim +${goal.reward.toLocaleString()}</Text>
+                  <Text style={{ color: C.white, fontSize: 12, fontWeight: 'bold' }}>Claim +${goal.reward.toLocaleString()}</Text>
                 </TouchableOpacity>
               ) : (
-                <Text style={{ color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' }}>+${goal.reward.toLocaleString()}</Text>
+                <Text style={{ color: C.text, fontSize: 12, fontWeight: 'bold' }}>+${goal.reward.toLocaleString()}</Text>
               )}
             </View>
-            <Text style={{ color: '#888', fontSize: 11, marginBottom: 6 }}>{progressLabel(goal, progress)}</Text>
+            <Text style={{ color: C.textMuted, fontSize: 11, marginBottom: 6 }}>{progressLabel(goal, progress)}</Text>
             <View style={{ height: 6, backgroundColor: '#0d1117', borderRadius: 3 }}>
               <View style={{ height: 6, width: `${Math.round(pct * 100)}%` as any, backgroundColor: complete ? '#4caf50' : '#1565c0', borderRadius: 3 }} />
             </View>
@@ -925,52 +905,52 @@ function InsuranceSection() {
       {/* Summary */}
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
         <View style={{ flex: 1, backgroundColor: '#0f3460', borderRadius: 10, padding: 12 }}>
-          <Text style={{ color: '#888', fontSize: 11 }}>Daily premium</Text>
-          <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>${totalPremiumPerDay}/day</Text>
+          <Text style={{ color: C.textMuted, fontSize: 11 }}>Daily premium</Text>
+          <Text style={{ color: C.white, fontSize: 16, fontWeight: 'bold' }}>${totalPremiumPerDay}/day</Text>
         </View>
         <View style={{ flex: 1, backgroundColor: '#0f3460', borderRadius: 10, padding: 12 }}>
-          <Text style={{ color: '#888', fontSize: 11 }}>Total paid out</Text>
+          <Text style={{ color: C.textMuted, fontSize: 11 }}>Total paid out</Text>
           <Text style={{ color: '#81c784', fontSize: 16, fontWeight: 'bold' }}>${totalPayouts.toLocaleString()}</Text>
         </View>
       </View>
 
-      <Text style={{ color: '#888', fontSize: 12, marginBottom: 8 }}>Available policies</Text>
+      <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 8 }}>Available policies</Text>
       {INSURANCE_PLANS.map(plan => {
         const activePolicy = getPolicyForType(plan.type);
         const active = activePolicy !== null;
         return (
-          <View key={plan.type} style={{ backgroundColor: active ? '#0f3460' : '#16213e', borderRadius: 10, padding: 14, marginBottom: 10, borderWidth: active ? 1 : 0, borderColor: '#4fc3f7' }}>
+          <View key={plan.type} style={{ backgroundColor: active ? '#0f3460' : C.bgCard, borderRadius: 10, padding: 14, marginBottom: 10, borderWidth: active ? 1 : 0, borderColor: '#4fc3f7' }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
               <Text style={{ fontSize: 24 }}>{plan.icon}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#e8d5a3', fontSize: 14, fontWeight: 'bold' }}>{plan.name}</Text>
-                <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }}>{plan.description}</Text>
+                <Text style={{ color: C.text, fontSize: 14, fontWeight: 'bold' }}>{plan.name}</Text>
+                <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>{plan.description}</Text>
               </View>
             </View>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
               <View style={{ flex: 1, backgroundColor: '#0a1628', borderRadius: 6, padding: 8 }}>
-                <Text style={{ color: '#888', fontSize: 10 }}>Premium</Text>
-                <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>${plan.premiumPerDay}/day</Text>
+                <Text style={{ color: C.textMuted, fontSize: 10 }}>Premium</Text>
+                <Text style={{ color: C.white, fontSize: 13, fontWeight: 'bold' }}>${plan.premiumPerDay}/day</Text>
               </View>
               <View style={{ flex: 1, backgroundColor: '#0a1628', borderRadius: 6, padding: 8 }}>
-                <Text style={{ color: '#888', fontSize: 10 }}>Coverage</Text>
-                <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{Math.round(plan.coveragePercent * 100)}%</Text>
+                <Text style={{ color: C.textMuted, fontSize: 10 }}>Coverage</Text>
+                <Text style={{ color: C.white, fontSize: 13, fontWeight: 'bold' }}>{Math.round(plan.coveragePercent * 100)}%</Text>
               </View>
               <View style={{ flex: 1, backgroundColor: '#0a1628', borderRadius: 6, padding: 8 }}>
-                <Text style={{ color: '#888', fontSize: 10 }}>Status</Text>
-                <Text style={{ color: active ? '#66bb6a' : '#888', fontSize: 13, fontWeight: 'bold' }}>{active ? '✅ Active' : '—'}</Text>
+                <Text style={{ color: C.textMuted, fontSize: 10 }}>Status</Text>
+                <Text style={{ color: active ? '#66bb6a' : C.textMuted, fontSize: 13, fontWeight: 'bold' }}>{active ? '✅ Active' : '—'}</Text>
               </View>
             </View>
             {active ? (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ color: '#888', fontSize: 11 }}>
+                <Text style={{ color: C.textMuted, fontSize: 11 }}>
                   Since day {activePolicy!.startDay} · ${plan.premiumPerDay * (day - activePolicy!.startDay)} paid
                 </Text>
                 <TouchableOpacity
                   onPress={() => cancelInsurance(activePolicy!.id)}
                   style={{ backgroundColor: '#c62828', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6 }}
                 >
-                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Cancel</Text>
+                  <Text style={{ color: C.white, fontSize: 12, fontWeight: 'bold' }}>Cancel</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -978,7 +958,7 @@ function InsuranceSection() {
                 onPress={() => money >= plan.premiumPerDay && buyInsurance(plan.type)}
                 style={{ backgroundColor: money >= plan.premiumPerDay ? '#1565c0' : '#333', borderRadius: 6, padding: 10, alignItems: 'center' }}
               >
-                <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>
+                <Text style={{ color: C.white, fontSize: 13, fontWeight: 'bold' }}>
                   Activate — ${plan.premiumPerDay}/day
                 </Text>
               </TouchableOpacity>
@@ -989,7 +969,7 @@ function InsuranceSection() {
 
       {recentClaims.length > 0 && (
         <View style={{ marginTop: 8 }}>
-          <Text style={{ color: '#888', fontSize: 12, marginBottom: 8 }}>Recent claims</Text>
+          <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 8 }}>Recent claims</Text>
           {recentClaims.map(c => (
             <View key={c.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#222' }}>
               <Text style={{ color: '#ccc', fontSize: 12 }}>Day {c.day} · {c.description}</Text>
@@ -1038,7 +1018,7 @@ function CompetitorsSection() {
 
   return (
     <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
-      <Text style={{ color: '#888', fontSize: 12, marginBottom: 8 }}>
+      <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 8 }}>
         Rivals apply sell pressure to the market and bid at auction. Watch them expand.
       </Text>
       {npcFarms.map(farm => {
@@ -1048,13 +1028,13 @@ function CompetitorsSection() {
         const farmNews = rivalNews.filter((n: any) => n.detail?.includes(farm.name) || n.title?.includes(farm.name));
         const totalHa = mapFields.filter((f: any) => f.owner === NPC_MAP_OWNER[farm.id]).reduce((s: number, f: any) => s + (f.approximateHa ?? 0), 0);
         return (
-          <View key={farm.id} style={{ backgroundColor: '#16213e', borderRadius: 10, padding: 14, marginBottom: 10 }}>
+          <View key={farm.id} style={{ backgroundColor: C.bgCard, borderRadius: 10, padding: 14, marginBottom: 10 }}>
             <TouchableOpacity onPress={() => setExpandedFarmId(isExpanded ? null : farm.id)} activeOpacity={0.7}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ color: '#e8d5a3', fontSize: 14, fontWeight: 'bold' }}>{farm.name}</Text>
+                  <Text style={{ color: C.text, fontSize: 14, fontWeight: 'bold' }}>{farm.name}</Text>
                   <View style={{ backgroundColor: farm.tier === 3 ? '#c62828' : farm.tier === 2 ? '#f57f17' : '#1b5e20', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>Tier {farm.tier}</Text>
+                    <Text style={{ color: C.white, fontSize: 10, fontWeight: 'bold' }}>Tier {farm.tier}</Text>
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -1068,15 +1048,15 @@ function CompetitorsSection() {
               {/* Stats row */}
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
                 <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
-                  <Text style={{ color: '#888', fontSize: 9 }}>STATUS</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 9 }}>STATUS</Text>
                   <Text style={{ color: wealthColor(farm.wealth), fontSize: 11, fontWeight: 'bold' }}>{wealthTrend(farm.wealth)}</Text>
                 </View>
                 <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
-                  <Text style={{ color: '#888', fontSize: 9 }}>MAP FIELDS</Text>
-                  <Text style={{ color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' }}>{fields} field{fields !== 1 ? 's' : ''} · {Math.round(totalHa)}ha</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 9 }}>MAP FIELDS</Text>
+                  <Text style={{ color: C.text, fontSize: 11, fontWeight: 'bold' }}>{fields} field{fields !== 1 ? 's' : ''} · {Math.round(totalHa)}ha</Text>
                 </View>
                 <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
-                  <Text style={{ color: '#888', fontSize: 9 }}>NEXT SELL</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 9 }}>NEXT SELL</Text>
                   <Text style={{ color: '#ccc', fontSize: 11, fontWeight: 'bold' }}>in {Math.max(0, farm.nextSellDay - day)}d</Text>
                 </View>
               </View>
@@ -1106,18 +1086,18 @@ function CompetitorsSection() {
             {/* Expanded profile */}
             {isExpanded && (
               <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: '#1e2a3a', paddingTop: 10 }}>
-                <Text style={{ color: '#888', fontSize: 11, fontWeight: 'bold', marginBottom: 6, letterSpacing: 0.5 }}>📊 PROFILE</Text>
+                <Text style={{ color: C.textMuted, fontSize: 11, fontWeight: 'bold', marginBottom: 6, letterSpacing: 0.5 }}>📊 PROFILE</Text>
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
                   <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
-                    <Text style={{ color: '#888', fontSize: 9 }}>WEALTH</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 9 }}>WEALTH</Text>
                     <Text style={{ color: wealthColor(farm.wealth), fontSize: 13, fontWeight: 'bold' }}>${Math.round(farm.wealth).toLocaleString()}</Text>
                   </View>
                   <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
-                    <Text style={{ color: '#888', fontSize: 9 }}>SELL INTERVAL</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 9 }}>SELL INTERVAL</Text>
                     <Text style={{ color: '#ccc', fontSize: 13, fontWeight: 'bold' }}>every {farm.sellIntervalDays}d</Text>
                   </View>
                   <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
-                    <Text style={{ color: '#888', fontSize: 9 }}>TIER</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 9 }}>TIER</Text>
                     <Text style={{ color: farm.tier === 3 ? '#ef5350' : farm.tier === 2 ? '#ffb74d' : '#66bb6a', fontSize: 13, fontWeight: 'bold' }}>
                       {farm.tier === 3 ? 'Dominant' : farm.tier === 2 ? 'Growing' : 'Small'}
                     </Text>
@@ -1126,12 +1106,12 @@ function CompetitorsSection() {
 
                 {farmNews.length > 0 && (
                   <View>
-                    <Text style={{ color: '#888', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>📡 Recent Activity</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>📡 Recent Activity</Text>
                     {farmNews.slice(0, 5).map((item: any) => (
                       <View key={item.id} style={{ flexDirection: 'row', gap: 8, paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#1e2a3a' }}>
                         <Text style={{ fontSize: 14 }}>{item.icon}</Text>
                         <View style={{ flex: 1 }}>
-                          <Text style={{ color: '#e8d5a3', fontSize: 11 }}>{item.title}</Text>
+                          <Text style={{ color: C.text, fontSize: 11 }}>{item.title}</Text>
                           <Text style={{ color: '#555', fontSize: 10 }}>Day {item.day}</Text>
                         </View>
                       </View>
@@ -1150,19 +1130,237 @@ function CompetitorsSection() {
       {/* Rival Intel feed */}
       {rivalNews.length > 0 && (
         <View style={{ marginTop: 16 }}>
-          <Text style={{ color: '#888', fontSize: 11, fontWeight: 'bold', marginBottom: 8, letterSpacing: 0.5 }}>📡 RIVAL INTEL</Text>
+          <Text style={{ color: C.textMuted, fontSize: 11, fontWeight: 'bold', marginBottom: 8, letterSpacing: 0.5 }}>📡 RIVAL INTEL</Text>
           {rivalNews.slice(0, 10).map(item => (
             <View key={item.id} style={{ flexDirection: 'row', gap: 10, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#1e2a3a', alignItems: 'flex-start' }}>
               <Text style={{ fontSize: 16 }}>{item.icon}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' }}>{item.title}</Text>
-                <Text style={{ color: '#666', fontSize: 10, marginTop: 2 }}>{item.detail}</Text>
+                <Text style={{ color: C.text, fontSize: 11, fontWeight: 'bold' }}>{item.title}</Text>
+                <Text style={{ color: C.textFaint, fontSize: 10, marginTop: 2 }}>{item.detail}</Text>
               </View>
               <Text style={{ color: '#444', fontSize: 10 }}>d{item.day}</Text>
             </View>
           ))}
         </View>
       )}
+    </View>
+  );
+}
+
+// ── Co-op Panels ─────────────────────────────────────────────────────────────
+function CoopPanel({ coopId }: { coopId: CoopId }) {
+  const {
+    coopMemberships, coopStates, day, money,
+    joinCoop, leaveCoop, deliverToCoop, voteAGM, bookCoopEquipment,
+    inventory, animalInventory,
+  } = useGameStore();
+  const [expanded, setExpanded] = React.useState(false);
+  const [shareInput, setShareInput] = React.useState('10');
+
+  const coopState = coopStates[coopId];
+  const membership = coopMemberships[coopId];
+  const currentSeason = getSeason(day);
+  const currentYear = getYear(day);
+  const active = isCoopActive(coopState, currentYear);
+  const suspended = membership ? isMemberSuspended(membership, currentSeason) : false;
+  const availableEquipment = getAvailableEquipment(coopState.equipment, coopState.health);
+
+  const healthColor =
+    coopState.health >= 80 ? '#81c784'
+    : coopState.health >= 60 ? '#aed581'
+    : coopState.health >= 40 ? '#ffb74d'
+    : coopState.health >= 20 ? '#ef5350'
+    : '#b71c1c';
+
+  if (!active) {
+    return (
+      <View style={styles.coopCard}>
+        <Text style={styles.coopName}>{COOP_NAMES[coopId]}</Text>
+        <Text style={[styles.coopDetail, { color: '#ef5350' }]}>
+          Dissolved — reforms in year {coopState.dissolvedUntilYear}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.coopCard}>
+      <TouchableOpacity onPress={() => setExpanded(e => !e)} style={styles.coopHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.coopName}>{COOP_NAMES[coopId]}</Text>
+          <Text style={styles.coopDetail}>{coopState.memberCount} members</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={[styles.coopHealth, { color: healthColor }]}>
+            Health {coopState.health.toFixed(0)}%
+          </Text>
+          <Text style={styles.coopDetail}>{expanded ? '▲' : '▼'}</Text>
+        </View>
+      </TouchableOpacity>
+
+      {expanded && (
+        <View>
+          <View style={styles.healthBarBg}>
+            <View style={[styles.healthBarFill, { width: `${coopState.health}%` as any, backgroundColor: healthColor }]} />
+          </View>
+
+          <Text style={styles.coopSectionLabel}>Terms</Text>
+          <Text style={styles.coopDetail}>Delivery obligation: {coopState.terms.deliveryPct}% of harvest</Text>
+          <Text style={styles.coopDetail}>Floor price: {coopState.terms.floorPct}% of 90-day avg</Text>
+          <Text style={styles.coopDetail}>Annual fee: ${coopState.terms.annualFeePerShare}/share/yr</Text>
+          <Text style={styles.coopDetail}>Dividend: {coopState.terms.dividendPct}% of net profit</Text>
+
+          {membership ? (
+            <View>
+              <Text style={styles.coopSectionLabel}>Your Membership</Text>
+              <Text style={styles.coopDetail}>Shares: {membership.shares} @ ${membership.sharePrice.toFixed(2)}/share</Text>
+              <Text style={styles.coopDetail}>Equity value: ${(membership.shares * membership.sharePrice).toFixed(0)}</Text>
+              {membership.pendingRedemption && (
+                <Text style={[styles.coopDetail, { color: '#ffb74d' }]}>
+                  ⏳ Exit pending since day {membership.pendingRedemption.requestedDay} — processing after 1 season
+                </Text>
+              )}
+              {suspended && (
+                <Text style={[styles.coopDetail, { color: '#ef5350' }]}>
+                  ⛔ Benefits suspended until season {membership.suspendedUntilSeason}
+                </Text>
+              )}
+
+              <Text style={styles.coopSectionLabel}>Delivery Obligation</Text>
+              <Text style={styles.coopDetail}>
+                {membership.seasonDelivered.toFixed(0)} / {membership.seasonObligation.toFixed(0)} units delivered this season
+              </Text>
+              {membership.seasonObligation > 0 && (
+                <View style={styles.healthBarBg}>
+                  <View style={[styles.healthBarFill, {
+                    width: `${Math.min(100, (membership.seasonDelivered / membership.seasonObligation) * 100)}%` as any,
+                    backgroundColor: '#81c784',
+                  }]} />
+                </View>
+              )}
+
+              <Text style={styles.coopSectionLabel}>Pool Prices (this season)</Text>
+              {Object.keys(coopState.poolPrices).length === 0 ? (
+                <Text style={styles.coopDetail}>Pool prices calculated at season start</Text>
+              ) : (
+                Object.entries(coopState.poolPrices).slice(0, 5).map(([itemId, price]) => (
+                  <Text key={itemId} style={styles.coopDetail}>{itemId}: ${(price as number).toFixed(2)}/unit</Text>
+                ))
+              )}
+
+              {!suspended && membership.seasonObligation > membership.seasonDelivered && (
+                <View style={{ marginTop: 8 }}>
+                  {Object.entries(coopState.poolPrices).map(([itemId, price]) => {
+                    const avail = (inventory[itemId] ?? 0) + (animalInventory[itemId] ?? 0);
+                    if (avail <= 0) return null;
+                    const needed = membership.seasonObligation - membership.seasonDelivered;
+                    const vol = Math.min(avail, needed);
+                    return (
+                      <TouchableOpacity
+                        key={itemId}
+                        style={styles.coopDeliverBtn}
+                        onPress={() => deliverToCoop(coopId, itemId, vol)}
+                      >
+                        <Text style={styles.coopDeliverBtnText}>
+                          Deliver {vol.toFixed(0)} {itemId} (${((price as number) * vol).toFixed(0)})
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
+              {coopState.pendingAGM && !coopState.pendingAGM.resolved && (
+                <View style={{ marginTop: 8 }}>
+                  <Text style={styles.coopSectionLabel}>📋 AGM Proposal</Text>
+                  <Text style={styles.coopDetail}>
+                    Proposed changes: {Object.entries(coopState.pendingAGM.changes).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                  </Text>
+                  <Text style={styles.coopDetail}>
+                    Other members: {(coopState.pendingAGM.otherYesPct * 100).toFixed(0)}% likely to vote yes
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                    <TouchableOpacity style={styles.voteYesBtn} onPress={() => voteAGM(coopId, 'yes')}>
+                      <Text style={styles.voteBtnText}>Vote Yes</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.voteNoBtn} onPress={() => voteAGM(coopId, 'no')}>
+                      <Text style={styles.voteBtnText}>Vote No</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+              {coopState.pendingAGM?.resolved && (
+                <Text style={[styles.coopDetail, { color: '#81c784', marginTop: 4 }]}>
+                  ✅ AGM resolved
+                </Text>
+              )}
+
+              <Text style={styles.coopSectionLabel}>Equipment Pool ({availableEquipment.length} available)</Text>
+              {availableEquipment.map(item => {
+                const playerBooked = item.bookings.some(b => b.memberId === 'player' && b.day >= day);
+                const nextDay = nextAvailableDay(item, day + 1);
+                return (
+                  <View key={item.id} style={styles.equipRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.coopDetail}>{item.label} — ${item.usageFeePerDay}/day</Text>
+                      {playerBooked && <Text style={[styles.coopDetail, { color: '#81c784' }]}>Booked ✓</Text>}
+                    </View>
+                    {!playerBooked && !suspended && (
+                      <TouchableOpacity
+                        style={styles.bookBtn}
+                        onPress={() => bookCoopEquipment(coopId, item.id, nextDay)}
+                      >
+                        <Text style={styles.bookBtnText}>Book day {nextDay} (${item.usageFeePerDay})</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+
+              {!membership.pendingRedemption && (
+                <TouchableOpacity style={styles.leaveBtn} onPress={() => leaveCoop(coopId)}>
+                  <Text style={styles.leaveBtnText}>Request Exit (1-season delay)</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <View>
+              <Text style={styles.coopSectionLabel}>Join Co-op</Text>
+              <Text style={styles.coopDetail}>
+                Share price: ${INITIAL_SHARE_PRICES[coopId].toFixed(2)} · Min 10 shares
+              </Text>
+              <TextInput
+                style={styles.shareInput}
+                keyboardType="numeric"
+                value={shareInput}
+                onChangeText={setShareInput}
+                placeholder="Shares to buy"
+                placeholderTextColor="#666"
+              />
+              <TouchableOpacity
+                style={[styles.joinBtn, money < 10 * INITIAL_SHARE_PRICES[coopId] && styles.joinBtnDisabled]}
+                onPress={() => joinCoop(coopId, parseInt(shareInput, 10) || 10)}
+                disabled={money < 10 * INITIAL_SHARE_PRICES[coopId]}
+              >
+                <Text style={styles.joinBtnText}>
+                  Join ({(parseInt(shareInput, 10) || 10)} shares · ${((parseInt(shareInput, 10) || 10) * INITIAL_SHARE_PRICES[coopId]).toFixed(0)})
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function CoopsSection() {
+  return (
+    <View>
+      <Text style={styles.sectionTitle}>🤝 Agricultural Co-operatives</Text>
+      <CoopPanel coopId="grain" />
+      <CoopPanel coopId="horticulture" />
+      <CoopPanel coopId="livestock" />
     </View>
   );
 }
@@ -1178,7 +1376,7 @@ export default function OficinaScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="My Office" />
+      <Text style={styles.screenTitle}>My Office</Text>
       {activeLoans.length === 0 && (
         <HintCard id="hint_banking" title="Banking & Loans" body="Need capital? The Banking tab lets you take loans at rates based on your credit score. Repay on time to unlock larger tiers." />
       )}
@@ -1210,27 +1408,18 @@ export default function OficinaScreen() {
         </View>
       </View>
 
-      {/* Tab bar */}
-      <View style={styles.tabBar}>
-        {([
+      <SubTabBar
+        tabs={[
           { id: 'banking',     label: '🏦 Bank' },
           { id: 'contracts',   label: '📋 Contracts' },
           { id: 'reputation',  label: '⭐ Farm' },
           { id: 'milestones',  label: '🏆 Goals' },
           { id: 'insurance',   label: '🌦️ Insurance' },
           { id: 'competitors', label: '🏭 Rivals' },
-        ] as { id: OfficeTab; label: string }[]).map(tab => (
-          <TouchableOpacity
-            key={tab.id}
-            style={[styles.tabBtn, activeTab === tab.id && styles.tabBtnActive]}
-            onPress={() => setActiveTab(tab.id)}
-          >
-            <Text style={[styles.tabBtnText, activeTab === tab.id && styles.tabBtnTextActive]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+        ]}
+        active={activeTab}
+        onSelect={id => setActiveTab(id as OfficeTab)}
+      />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         {activeTab === 'banking'     && <BankingSection />}
@@ -1245,181 +1434,199 @@ export default function OficinaScreen() {
 }
 
 const negStyles = StyleSheet.create({
-  negotiateBtn:     { flex: 1, backgroundColor: '#1a3a5c', borderRadius: 8, paddingVertical: 8, alignItems: 'center', marginHorizontal: 3 },
+  negotiateBtn:     { flex: 1, backgroundColor: '#1a3a5c', borderRadius: R.md, paddingVertical: S.sm, alignItems: 'center', marginHorizontal: 3 },
   negotiateBtnText: { color: '#64b5f6', fontSize: 11, fontWeight: 'bold' },
-  negotiateBox:     { backgroundColor: '#0d2137', borderRadius: 8, padding: 10, marginTop: 8, gap: 6 },
+  negotiateBox:     { backgroundColor: '#0d2137', borderRadius: R.md, padding: 10, marginTop: S.sm, gap: 6 },
   negotiateTitle:   { color: '#90caf9', fontSize: 11, fontWeight: 'bold', marginBottom: 2 },
-  counterBtn:       { backgroundColor: '#1a3a5c', borderRadius: 7, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  counterBtnText:   { color: '#e3f2fd', fontSize: 12, fontWeight: 'bold' },
-  counterBtnSub:    { color: '#64b5f6', fontSize: 10 },
+  counterBtn:       { backgroundColor: '#1a3a5c', borderRadius: 7, paddingHorizontal: 10, paddingVertical: S.sm, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  counterBtnText:   { color: '#e3f2fd', fontSize: F.size.sm, fontWeight: 'bold' },
+  counterBtnSub:    { color: '#64b5f6', fontSize: F.size.xs },
   cancelBtn:        { alignItems: 'center', paddingVertical: 6 },
   cancelBtnText:    { color: '#555', fontSize: 11 },
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
+  container: { flex: 1, backgroundColor: C.bg },
 
   // Balance card
-  balanceCard: { backgroundColor: '#0f3460', borderRadius: 12, marginHorizontal: 12, marginBottom: 8, padding: 14 },
+  balanceCard: { backgroundColor: '#0f3460', borderRadius: R.lg, marginHorizontal: S.md, marginBottom: S.sm, padding: 14 },
   balanceRow: { flexDirection: 'row', alignItems: 'center' },
   balanceItem: { flex: 1, alignItems: 'center' },
-  balanceLabel: { color: '#888', fontSize: 11, marginBottom: 2 },
+  balanceLabel: { color: C.textMuted, fontSize: 11, marginBottom: 2 },
   balanceMoney: { color: '#4caf50', fontSize: 26, fontWeight: 'bold' },
   balanceSavings: { color: '#64b5f6', fontSize: 26, fontWeight: 'bold' },
-  balanceDivider: { width: 1, height: 40, backgroundColor: '#1a3a6a', marginHorizontal: 12 },
+  balanceDivider: { width: 1, height: 40, backgroundColor: '#1a3a6a', marginHorizontal: S.md },
 
   // Tab bar
-  tabBar: { flexDirection: 'row', marginHorizontal: 12, marginBottom: 8, backgroundColor: '#0d1117', borderRadius: 10, padding: 4 },
-  tabBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  tabBtnActive: { backgroundColor: '#0f3460' },
-  tabBtnText: { color: '#555', fontSize: 13, fontWeight: 'bold' },
-  tabBtnTextActive: { color: '#e8d5a3' },
 
   // Reputation
-  repCard: { backgroundColor: '#16213e', borderRadius: 12, margin: 12, padding: 14 },
-  repRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  repScore: { fontSize: 48, fontWeight: 'bold', marginRight: 16 },
+  repCard: { backgroundColor: C.bgCard, borderRadius: R.lg, margin: S.md, padding: 14 },
+  repRow: { flexDirection: 'row', alignItems: 'center', marginBottom: S.sm },
+  repScore: { fontSize: 48, fontWeight: 'bold', marginRight: S.lg },
   repInfo: { flex: 1 },
-  repTier: { fontSize: 16, fontWeight: 'bold', marginBottom: 2 },
-  repEffect: { color: '#888', fontSize: 11, marginBottom: 1 },
+  repTier: { fontSize: F.size.xl, fontWeight: 'bold', marginBottom: 2 },
+  repEffect: { color: C.textMuted, fontSize: 11, marginBottom: 1 },
   repBar: { height: 6, backgroundColor: '#0d1117', borderRadius: 3, overflow: 'hidden' },
   repFill: { height: 6, borderRadius: 3 },
   // Cooperative
-  coopCard: { backgroundColor: '#16213e', borderRadius: 12, marginHorizontal: 12, marginBottom: 8, padding: 14 },
-  coopActive: { color: '#81c784', fontSize: 13, fontWeight: 'bold', marginBottom: 4 },
-  coopDetail: { color: '#888', fontSize: 12, marginBottom: 6 },
-  joinBtn: { backgroundColor: '#1565c0', borderRadius: 8, padding: 10, alignItems: 'center', marginTop: 4 },
+  coopCard: { backgroundColor: C.bgCard, borderRadius: R.lg, marginHorizontal: S.md, marginBottom: S.sm, padding: 14 },
+  coopActive: { color: '#81c784', fontSize: F.size.md, fontWeight: 'bold', marginBottom: S.xs },
+  coopDetail: { color: C.textMuted, fontSize: F.size.sm, marginBottom: 6 },
+  joinBtn: { backgroundColor: '#1565c0', borderRadius: R.md, padding: 10, alignItems: 'center', marginTop: S.xs },
   joinBtnDisabled: { backgroundColor: '#333', opacity: 0.5 },
-  joinBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  leaveBtn: { backgroundColor: '#7f1d1d', borderRadius: 8, padding: 8, alignItems: 'center', marginTop: 8 },
-  leaveBtnText: { color: '#ef9a9a', fontWeight: 'bold', fontSize: 12 },
+  joinBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
+  leaveBtn: { backgroundColor: '#7f1d1d', borderRadius: R.md, padding: S.sm, alignItems: 'center', marginTop: S.sm },
+  leaveBtnText: { color: '#ef9a9a', fontWeight: 'bold', fontSize: F.size.sm },
+  coopName: { color: '#ffffff', fontSize: 15, fontWeight: 'bold', marginBottom: 2 },
+  coopHealth: { fontSize: 13, fontWeight: 'bold' },
+  coopHeader: { flexDirection: 'row', alignItems: 'flex-start' },
+  coopSectionLabel: { color: '#888', fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 4, textTransform: 'uppercase' as const },
+  healthBarBg: { height: 6, backgroundColor: '#333', borderRadius: 3, marginVertical: 6 },
+  healthBarFill: { height: 6, borderRadius: 3 },
+  equipRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  coopDeliverBtn: { backgroundColor: '#1b5e20', borderRadius: 6, padding: 8, marginBottom: 4 },
+  coopDeliverBtnText: { color: '#a5d6a7', fontSize: 13, fontWeight: 'bold' },
+  bookBtn: { backgroundColor: '#0d47a1', borderRadius: 6, padding: 6 },
+  bookBtnText: { color: '#90caf9', fontSize: 11 },
+  voteYesBtn: { flex: 1, backgroundColor: '#1b5e20', borderRadius: 6, padding: 8, alignItems: 'center' as const },
+  voteNoBtn: { flex: 1, backgroundColor: '#7f1d1d', borderRadius: 6, padding: 8, alignItems: 'center' as const },
+  voteBtnText: { color: '#ffffff', fontWeight: 'bold', fontSize: 13 },
+  shareInput: { backgroundColor: '#1a1a2e', color: '#ffffff', borderRadius: 6, padding: 8, marginBottom: 8, fontSize: 15 },
   // Futures
-  futuresCard: { backgroundColor: '#16213e', borderRadius: 12, marginHorizontal: 12, marginBottom: 8, padding: 14 },
+  futuresCard: { backgroundColor: C.bgCard, borderRadius: R.lg, marginHorizontal: S.md, marginBottom: S.sm, padding: 14 },
   futureForm: { marginTop: 10 },
-  futureFormLabel: { color: '#888', fontSize: 11, marginBottom: 4, fontWeight: 'bold' },
-  futureInput: { backgroundColor: '#0d1117', color: '#fff', borderRadius: 8, padding: 10, marginBottom: 8, fontSize: 14 },
-  futureTermRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  termChip: { backgroundColor: '#0d1117', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 6 },
+  futureFormLabel: { color: C.textMuted, fontSize: 11, marginBottom: S.xs, fontWeight: 'bold' },
+  futureInput: { backgroundColor: '#0d1117', color: C.white, borderRadius: R.md, padding: 10, marginBottom: S.sm, fontSize: F.size.lg },
+  futureTermRow: { flexDirection: 'row', gap: 8, marginBottom: S.sm },
+  termChip: { backgroundColor: '#0d1117', borderRadius: R.md, paddingHorizontal: S.lg, paddingVertical: 6 },
   termChipActive: { backgroundColor: '#1565c0' },
-  termChipText: { color: '#888', fontWeight: 'bold', fontSize: 13 },
-  openFutureBtn: { backgroundColor: '#2e7d32', borderRadius: 8, padding: 10, alignItems: 'center' },
-  futureChip: { backgroundColor: '#0d1117', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, marginRight: 6 },
+  termChipText: { color: C.textMuted, fontWeight: 'bold', fontSize: F.size.md },
+  openFutureBtn: { backgroundColor: '#2e7d32', borderRadius: R.md, padding: 10, alignItems: 'center' },
+  futureChip: { backgroundColor: '#0d1117', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 5, marginRight: 6 },
   futureChipActive: { backgroundColor: '#1565c0' },
-  futureChipText: { color: '#888', fontSize: 11 },
-  futureRow: { backgroundColor: '#0d1117', borderRadius: 8, padding: 10, marginBottom: 4 },
-  futureCrop: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
-  futureDetail: { color: '#888', fontSize: 11, marginTop: 2 },
+  futureChipText: { color: C.textMuted, fontSize: 11 },
+  futureRow: { backgroundColor: '#0d1117', borderRadius: R.md, padding: 10, marginBottom: S.xs },
+  futureCrop: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  futureDetail: { color: C.textMuted, fontSize: 11, marginTop: 2 },
 
   // Credit card
-  creditCard: { backgroundColor: '#16213e', borderRadius: 12, margin: 12, padding: 14 },
-  creditRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  creditLabel: { color: '#888', fontSize: 11, marginBottom: 4 },
+  creditCard: { backgroundColor: C.bgCard, borderRadius: R.lg, margin: S.md, padding: 14 },
+  creditRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: S.md },
+  creditLabel: { color: C.textMuted, fontSize: 11, marginBottom: S.xs },
   creditScore: { fontSize: 36, fontWeight: 'bold' },
-  creditRating: { fontSize: 13, fontWeight: 'bold' },
+  creditRating: { fontSize: F.size.md, fontWeight: 'bold' },
   creditStats: { gap: 6 },
   creditStat: { flexDirection: 'row', justifyContent: 'space-between', gap: 16 },
-  creditStatLabel: { color: '#666', fontSize: 11 },
-  creditStatValue: { color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' },
-  scoreBarBg: { height: 6, backgroundColor: '#0d1117', borderRadius: 3, marginBottom: 4 },
+  creditStatLabel: { color: C.textFaint, fontSize: 11 },
+  creditStatValue: { color: C.text, fontSize: 11, fontWeight: 'bold' },
+  scoreBarBg: { height: 6, backgroundColor: '#0d1117', borderRadius: 3, marginBottom: S.xs },
   scoreBarFill: { height: 6, borderRadius: 3 },
   scoreBarLabels: { flexDirection: 'row', justifyContent: 'space-between' },
   scoreBarTick: { color: '#444', fontSize: 9 },
 
   // Sections
-  section: { backgroundColor: '#16213e', borderRadius: 12, margin: 12, padding: 14 },
-  sectionTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 15, marginBottom: 10 },
-  emptyText: { color: '#555', fontSize: 12 },
-  apr: { color: '#888', fontSize: 12, fontWeight: 'normal' },
+  section: { backgroundColor: C.bgCard, borderRadius: R.lg, margin: S.md, padding: 14 },
+  sectionTitle: { color: C.text, fontWeight: 'bold', fontSize: 15, marginBottom: 10 },
+  emptyText: { color: '#555', fontSize: F.size.sm },
+  apr: { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'normal' },
 
   // Loan form
-  fieldLabel: { color: '#888', fontSize: 11, marginBottom: 6, marginTop: 8 },
-  input: { backgroundColor: '#0d1117', borderRadius: 8, borderWidth: 1, borderColor: '#2a2a4a', color: '#e8d5a3', padding: 10, fontSize: 14, marginBottom: 4 },
-  quickAmtBtn: { backgroundColor: '#0d1117', borderRadius: 8, borderWidth: 1, borderColor: '#2a2a4a', paddingHorizontal: 14, paddingVertical: 8, marginRight: 8 },
-  quickAmtBtnActive: { backgroundColor: '#0f3460', borderColor: '#e8d5a3' },
-  quickAmtText: { color: '#666', fontWeight: 'bold', fontSize: 13 },
-  quickAmtTextActive: { color: '#e8d5a3' },
-  termRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
-  termBtn: { flex: 1, backgroundColor: '#0d1117', borderRadius: 8, borderWidth: 1, borderColor: '#2a2a4a', padding: 8, alignItems: 'center' },
-  termBtnActive: { backgroundColor: '#0f3460', borderColor: '#e8d5a3' },
-  termBtnText: { color: '#666', fontSize: 12, fontWeight: 'bold' },
-  termBtnTextActive: { color: '#e8d5a3' },
-  loanSummary: { backgroundColor: '#0d1117', borderRadius: 8, padding: 12, marginTop: 8 },
-  loanSummaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  loanSummaryLabel: { color: '#888', fontSize: 12 },
-  loanSummaryValue: { color: '#aaa', fontSize: 12 },
-  eligibilityBox: { borderRadius: 8, padding: 10, marginTop: 8, marginBottom: 6 },
+  fieldLabel: { color: C.textMuted, fontSize: 11, marginBottom: 6, marginTop: S.sm },
+  input: { backgroundColor: '#0d1117', borderRadius: R.md, borderWidth: 1, borderColor: '#2a2a4a', color: C.text, padding: 10, fontSize: F.size.lg, marginBottom: S.xs },
+  quickAmtBtn: { backgroundColor: '#0d1117', borderRadius: R.md, borderWidth: 1, borderColor: '#2a2a4a', paddingHorizontal: 14, paddingVertical: S.sm, marginRight: S.sm },
+  quickAmtBtnActive: { backgroundColor: '#0f3460', borderColor: C.text },
+  quickAmtText: { color: C.textFaint, fontWeight: 'bold', fontSize: F.size.md },
+  quickAmtTextActive: { color: C.text },
+  termRow: { flexDirection: 'row', gap: 8, marginBottom: S.xs },
+  termBtn: { flex: 1, backgroundColor: '#0d1117', borderRadius: R.md, borderWidth: 1, borderColor: '#2a2a4a', padding: S.sm, alignItems: 'center' },
+  termBtnActive: { backgroundColor: '#0f3460', borderColor: C.text },
+  termBtnText: { color: C.textFaint, fontSize: F.size.sm, fontWeight: 'bold' },
+  termBtnTextActive: { color: C.text },
+  loanSummary: { backgroundColor: '#0d1117', borderRadius: R.md, padding: S.md, marginTop: S.sm },
+  loanSummaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: S.xs },
+  loanSummaryLabel: { color: C.textMuted, fontSize: F.size.sm },
+  loanSummaryValue: { color: '#aaa', fontSize: F.size.sm },
+  eligibilityBox: { borderRadius: R.md, padding: 10, marginTop: S.sm, marginBottom: 6 },
   eligOk: { backgroundColor: '#1b5e20' },
   eligNo: { backgroundColor: '#4a1515' },
-  eligibilityText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  requestBtn: { backgroundColor: '#1565c0', borderRadius: 8, padding: 12, alignItems: 'center', marginTop: 4 },
+  eligibilityText: { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
+  requestBtn: { backgroundColor: '#1565c0', borderRadius: R.md, padding: S.md, alignItems: 'center', marginTop: S.xs },
   requestBtnDisabled: { backgroundColor: '#333' },
-  requestBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  tiersRow: { flexDirection: 'row', gap: 6, marginTop: 4 },
-  tierRef: { flex: 1, backgroundColor: '#0d1117', borderRadius: 8, padding: 8, alignItems: 'center' },
-  tierRefName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 11 },
-  tierRefRate: { color: '#64b5f6', fontSize: 10 },
-  tierRefIncome: { color: '#666', fontSize: 9, textAlign: 'center' },
+  requestBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.lg },
+  tiersRow: { flexDirection: 'row', gap: 6, marginTop: S.xs },
+  tierRef: { flex: 1, backgroundColor: '#0d1117', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
+  tierRefName: { color: C.text, fontWeight: 'bold', fontSize: 11 },
+  tierRefRate: { color: '#64b5f6', fontSize: F.size.xs },
+  tierRefIncome: { color: C.textFaint, fontSize: 9, textAlign: 'center' },
 
   // Active loans
-  loanCard: { backgroundColor: '#0f3460', borderRadius: 10, padding: 12, marginBottom: 8 },
+  loanCard: { backgroundColor: '#0f3460', borderRadius: 10, padding: S.md, marginBottom: S.sm },
   loanCardOverdue: { borderWidth: 1, borderColor: '#f44336' },
-  loanCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  loanCardTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
-  overdueTag: { backgroundColor: '#f44336', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  loanCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: S.sm },
+  loanCardTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  overdueTag: { backgroundColor: '#f44336', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2 },
   loanCardDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   loanDetail: { minWidth: '40%' },
-  loanDetailLabel: { color: '#666', fontSize: 10 },
-  loanDetailValue: { color: '#ccc', fontSize: 13, fontWeight: 'bold' },
-  payBtn: { backgroundColor: '#2e7d32', borderRadius: 8, padding: 9, alignItems: 'center' },
-  deliverBtn: { backgroundColor: '#1565c0', borderRadius: 8, padding: 9, alignItems: 'center', marginTop: 8 },
+  loanDetailLabel: { color: C.textFaint, fontSize: F.size.xs },
+  loanDetailValue: { color: '#ccc', fontSize: F.size.md, fontWeight: 'bold' },
+  payBtn: { backgroundColor: '#2e7d32', borderRadius: R.md, padding: 9, alignItems: 'center' },
+  deliverBtn: { backgroundColor: '#1565c0', borderRadius: R.md, padding: 9, alignItems: 'center', marginTop: S.sm },
   payBtnDisabled: { backgroundColor: '#333' },
-  payBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  extendRow: { marginTop: 8 },
-  extendLabel: { color: '#888', fontSize: 11, marginBottom: 4 },
+  payBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
+  extendRow: { marginTop: S.sm },
+  extendLabel: { color: C.textMuted, fontSize: 11, marginBottom: S.xs },
   extendBtns: { flexDirection: 'row', gap: 6 },
-  extendBtn: { backgroundColor: '#1a2a40', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: '#546e7a' },
+  extendBtn: { backgroundColor: '#1a2a40', borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: '#546e7a' },
   extendBtnDisabled: { opacity: 0.4 },
-  extendBtnText: { color: '#90caf9', fontSize: 12, fontWeight: 'bold' },
+  extendBtnText: { color: '#90caf9', fontSize: F.size.sm, fontWeight: 'bold' },
   renegotiatedTag: { color: '#546e7a', fontSize: 11, marginTop: 6, textAlign: 'center' },
-  historyTitle: { color: '#555', fontSize: 11, marginTop: 8, marginBottom: 4 },
-  loanCardDone: { paddingVertical: 4 },
-  loanCardDoneText: { color: '#555', fontSize: 12 },
+  historyTitle: { color: '#555', fontSize: 11, marginTop: S.sm, marginBottom: S.xs },
+  loanCardDone: { paddingVertical: S.xs },
+  loanCardDoneText: { color: '#555', fontSize: F.size.sm },
 
   // Savings
   savingsBalance: { color: '#64b5f6', fontSize: 28, fontWeight: 'bold', marginBottom: 10 },
-  savingsBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
+  savingsBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: S.sm },
   savingsBtnPair: { flexDirection: 'row', gap: 4 },
-  savBtn: { backgroundColor: '#1565c0', borderRadius: 8, padding: 8, minWidth: 52, alignItems: 'center' },
-  savBtnOut: { backgroundColor: '#4a1515', borderRadius: 8, padding: 8, minWidth: 52, alignItems: 'center' },
+  savBtn: { backgroundColor: '#1565c0', borderRadius: R.md, padding: S.sm, minWidth: 52, alignItems: 'center' },
+  savBtnOut: { backgroundColor: '#4a1515', borderRadius: R.md, padding: S.sm, minWidth: 52, alignItems: 'center' },
   savBtnDisabled: { backgroundColor: '#333' },
-  savBtnText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  savBtnText: { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
   savingsCustomRow: { flexDirection: 'row', gap: 8 },
-  resetBtn: { backgroundColor: '#7f2020', borderRadius: 8, padding: 12, alignItems: 'center' },
-  resetBtnText: { color: '#ffcdd2', fontWeight: 'bold', fontSize: 14 },
+  resetBtn: { backgroundColor: '#7f2020', borderRadius: R.md, padding: S.md, alignItems: 'center' },
+  resetBtnText: { color: '#ffcdd2', fontWeight: 'bold', fontSize: F.size.lg },
 
   // Contracts
-  contractCard: { backgroundColor: '#0f3460', borderRadius: 10, padding: 12, marginBottom: 8 },
-  contractTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14 },
-  contractDetail: { color: '#aaa', fontSize: 12, marginTop: 2 },
-  progressBar: { height: 6, backgroundColor: '#0d1117', borderRadius: 3, marginTop: 8, marginBottom: 4 },
+  contractCard: { backgroundColor: '#0f3460', borderRadius: 10, padding: S.md, marginBottom: S.sm },
+  contractTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
+  contractDetail: { color: '#aaa', fontSize: F.size.sm, marginTop: 2 },
+  progressBar: { height: 6, backgroundColor: '#0d1117', borderRadius: 3, marginTop: S.sm, marginBottom: S.xs },
   progressFill: { height: 6, backgroundColor: '#4caf50', borderRadius: 3 },
-  progressLabel: { color: '#666', fontSize: 10 },
-  offerCard: { backgroundColor: '#1b3a4b', borderRadius: 8, padding: 12, marginBottom: 10 },
-  offerName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 4 },
-  offerDetail: { color: '#aaa', fontSize: 12, marginBottom: 2 },
+  progressLabel: { color: C.textFaint, fontSize: F.size.xs },
+  offerCard: { backgroundColor: '#1b3a4b', borderRadius: R.md, padding: S.md, marginBottom: 10 },
+  offerName: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: S.xs },
+  offerDetail: { color: '#aaa', fontSize: F.size.sm, marginBottom: 2 },
   offerBtns: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  acceptBtn: { flex: 1, backgroundColor: '#2e7d32', borderRadius: 8, padding: 9, alignItems: 'center' },
-  acceptBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  declineBtn: { flex: 1, backgroundColor: '#4a1515', borderRadius: 8, padding: 9, alignItems: 'center', borderWidth: 1, borderColor: '#7f2020' },
-  declineBtnText: { color: '#ef9a9a', fontWeight: 'bold', fontSize: 13 },
+  acceptBtn: { flex: 1, backgroundColor: '#2e7d32', borderRadius: R.md, padding: 9, alignItems: 'center' },
+  acceptBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
+  declineBtn: { flex: 1, backgroundColor: '#4a1515', borderRadius: R.md, padding: 9, alignItems: 'center', borderWidth: 1, borderColor: '#7f2020' },
+  declineBtnText: { color: '#ef9a9a', fontWeight: 'bold', fontSize: F.size.md },
 
   // Milestones
-  milestoneContainer: { paddingHorizontal: 12, paddingTop: 12 },
-  milestoneRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
+  milestoneContainer: { paddingHorizontal: S.md, paddingTop: S.md },
+  milestoneRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider },
   milestoneLocked: { opacity: 0.6 },
-  milestoneIcon: { fontSize: 22, width: 36, textAlign: 'center' },
-  milestoneInfo: { flex: 1, marginLeft: 8 },
-  milestoneTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
-  milestoneDesc: { color: '#666', fontSize: 11, marginTop: 1 },
-  milestoneDone: { color: '#4caf50', fontWeight: 'bold', fontSize: 16, marginLeft: 8 },
+  milestoneIcon: { fontSize: F.size.title, width: 36, textAlign: 'center' },
+  milestoneInfo: { flex: 1, marginLeft: S.sm },
+  milestoneTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  milestoneDesc: { color: C.textFaint, fontSize: 11, marginTop: 1 },
+  milestoneDone: { color: '#4caf50', fontWeight: 'bold', fontSize: F.size.xl, marginLeft: S.sm },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
 });

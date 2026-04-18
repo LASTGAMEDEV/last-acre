@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F, R } from '../../constants/theme';
+import SubTabBar from '../../components/SubTabBar';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { PRODUCT_TYPES, CATEGORY_LABELS, ProductCategory } from '../../data/productTypes';
 import { BUILDING_TYPES, BUILDING_CATEGORY_LABELS, BuildingCategory, PRODUCTION_EQUIPMENT } from '../../data/buildingTypes';
@@ -199,7 +200,7 @@ function BuildingsTab() {
             {/* Equipment for owned production buildings */}
             {cat === 'production' && (productionBuildings ?? []).length > 0 && (
               <View style={{ marginTop: 12 }}>
-                <Text style={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>
+                <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>
                   Building Equipment
                 </Text>
                 {PRODUCTION_EQUIPMENT.map(eq => {
@@ -215,7 +216,7 @@ function BuildingsTab() {
                   const canAffordEq = money >= eq.cost;
                   return (
                     <View key={eq.id} style={{ backgroundColor: '#0d1b2a', borderRadius: 8, padding: 12, marginBottom: 8 }}>
-                      <Text style={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 }}>{eq.name}</Text>
+                      <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 13 }}>{eq.name}</Text>
                       <Text style={{ color: '#aaa', fontSize: 11, marginVertical: 4 }}>{eq.effectLabel}</Text>
                       <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 8 }}>
                         For: {bt2?.name ?? fitsOwnedBuilding.buildingTypeId}
@@ -369,20 +370,20 @@ function MachineryTab() {
 }
 
 const mStyles = StyleSheet.create({
-  sectionBar:        { flexGrow: 0, paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#333' },
-  sectionBtn:        { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, marginRight: 8, backgroundColor: '#1a1a2e' },
+  sectionBar:        { flexGrow: 0, paddingHorizontal: S.md, paddingVertical: S.sm, borderBottomWidth: 1, borderBottomColor: '#333' },
+  sectionBtn:        { paddingHorizontal: 14, paddingVertical: 6, borderRadius: R.xl, marginRight: S.sm, backgroundColor: C.bg },
   sectionBtnActive:  { backgroundColor: '#2e7d32' },
-  sectionBtnText:    { color: '#aaa', fontSize: 12 },
-  sectionBtnTextActive: { color: '#fff', fontWeight: 'bold' },
-  sectionHeader:     { color: '#e8d5a3', fontSize: 14, fontWeight: 'bold', marginTop: 16, marginBottom: 8, paddingHorizontal: 12 },
-  card:              { backgroundColor: '#16213e', borderRadius: 10, margin: 8, padding: 12 },
+  sectionBtnText:    { color: '#aaa', fontSize: F.size.sm },
+  sectionBtnTextActive: { color: C.white, fontWeight: 'bold' },
+  sectionHeader:     { color: C.text, fontSize: F.size.lg, fontWeight: 'bold', marginTop: S.lg, marginBottom: S.sm, paddingHorizontal: S.md },
+  card:              { backgroundColor: C.bgCard, borderRadius: 10, margin: S.sm, padding: S.md },
   cardHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  cardName:          { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  ownedPill:         { backgroundColor: '#1b5e20', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, color: '#81c784', fontSize: 11 },
-  cardDetail:        { color: '#aaa', fontSize: 12, marginBottom: 3 },
-  buyBtn:            { backgroundColor: '#2e7d32', borderRadius: 8, padding: 10, alignItems: 'center', marginTop: 8 },
+  cardName:          { color: C.white, fontWeight: 'bold', fontSize: F.size.lg },
+  ownedPill:         { backgroundColor: '#1b5e20', borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: 2, color: '#81c784', fontSize: 11 },
+  cardDetail:        { color: '#aaa', fontSize: F.size.sm, marginBottom: 3 },
+  buyBtn:            { backgroundColor: '#2e7d32', borderRadius: R.md, padding: 10, alignItems: 'center', marginTop: S.sm },
   buyBtnDisabled:    { backgroundColor: '#333' },
-  buyBtnText:        { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  buyBtnText:        { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
 });
 
 // ── Main Screen ─────────────────────────────────────────────────────────────
@@ -391,27 +392,18 @@ export default function TiendaScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Shop" />
+      <Text style={styles.screenTitle}>Shop</Text>
 
-      {/* Sub-tab bar */}
-      <View style={styles.tabBar}>
-        {([
+      <SubTabBar
+        tabs={[
           { id: 'seeds',     label: '🌾 Seeds' },
           { id: 'products',  label: '🧪 Products' },
           { id: 'buildings', label: '🏗️ Buildings' },
-          { id: 'machinery',  label: '🚜 Machinery' },
-        ] as { id: ShopTab; label: string }[]).map(tab => (
-          <TouchableOpacity
-            key={tab.id}
-            style={[styles.tabBtn, activeTab === tab.id && styles.tabBtnActive]}
-            onPress={() => setActiveTab(tab.id)}
-          >
-            <Text style={[styles.tabBtnText, activeTab === tab.id && styles.tabBtnTextActive]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+          { id: 'machinery', label: '🚜 Machinery' },
+        ]}
+        active={activeTab}
+        onSelect={id => setActiveTab(id as ShopTab)}
+      />
 
       {activeTab === 'seeds'     && <SeedsTab />}
       {activeTab === 'products'  && <ProductsTab />}
@@ -422,58 +414,61 @@ export default function TiendaScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
-  header: { paddingHorizontal: 16, marginBottom: 8 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#e8d5a3' },
+  container: { flex: 1, backgroundColor: C.bg },
+  header: { paddingHorizontal: S.lg, marginBottom: S.sm },
+  title: { fontSize: F.size.title, fontWeight: 'bold', color: C.text },
 
   // Sub-tab bar
-  tabBar: { flexDirection: 'row', marginHorizontal: 12, marginBottom: 8, backgroundColor: '#0d1117', borderRadius: 10, padding: 4 },
-  tabBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  tabBtnActive: { backgroundColor: '#0f3460' },
-  tabBtnText: { color: '#555', fontSize: 12, fontWeight: 'bold' },
-  tabBtnTextActive: { color: '#e8d5a3' },
 
-  list: { paddingHorizontal: 8 },
+  list: { paddingHorizontal: S.sm },
 
   // Seeds
-  seedCard: { backgroundColor: '#16213e', borderRadius: 10, padding: 12, margin: 6, flex: 1, borderLeftWidth: 3, borderLeftColor: '#333' },
-  cardSelected: { borderWidth: 2, borderColor: '#e8d5a3' },
-  tierBadge: { alignSelf: 'flex-start', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 4 },
-  tierText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  cropName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 4 },
+  seedCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, margin: 6, flex: 1, borderLeftWidth: 3, borderLeftColor: '#333' },
+  cardSelected: { borderWidth: 2, borderColor: C.text },
+  tierBadge: { alignSelf: 'flex-start', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2, marginBottom: S.xs },
+  tierText: { color: C.white, fontSize: 11, fontWeight: 'bold' },
+  cropName: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: S.xs },
   detail: { color: '#aaa', fontSize: 11, marginBottom: 1 },
-  plantPanel: { backgroundColor: '#0f3460', padding: 12, borderTopWidth: 1, borderTopColor: '#333' },
-  plantTitle: { color: '#e8d5a3', fontWeight: 'bold', marginBottom: 8, fontSize: 13 },
-  noParcel: { color: '#888' },
-  parcelBtn: { backgroundColor: '#2e7d32', borderRadius: 8, padding: 10, marginRight: 8, alignItems: 'center', minWidth: 80 },
+  plantPanel: { backgroundColor: '#0f3460', padding: S.md, borderTopWidth: 1, borderTopColor: '#333' },
+  plantTitle: { color: C.text, fontWeight: 'bold', marginBottom: S.sm, fontSize: F.size.md },
+  noParcel: { color: C.textMuted },
+  parcelBtn: { backgroundColor: '#2e7d32', borderRadius: R.md, padding: 10, marginRight: S.sm, alignItems: 'center', minWidth: 80 },
   btnDisabled: { backgroundColor: '#333' },
-  parcelBtnText: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
+  parcelBtnText: { color: C.white, fontSize: F.size.md, fontWeight: 'bold' },
   parcelBtnCost: { color: '#a5d6a7', fontSize: 11 },
 
   // Products
-  categorySection: { marginBottom: 16 },
-  categoryTitle: { color: '#888', fontSize: 12, fontWeight: 'bold', paddingHorizontal: 8, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
-  productCard: { backgroundColor: '#16213e', borderRadius: 10, padding: 12, marginHorizontal: 0, marginBottom: 6, flexDirection: 'row', alignItems: 'center' },
-  productInfo: { flex: 1, marginRight: 12 },
-  productName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
+  categorySection: { marginBottom: S.lg },
+  categoryTitle: { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'bold', paddingHorizontal: S.sm, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+  productCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginHorizontal: 0, marginBottom: 6, flexDirection: 'row', alignItems: 'center' },
+  productInfo: { flex: 1, marginRight: S.md },
+  productName: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
   productEffect: { color: '#81c784', fontSize: 11, marginTop: 2 },
-  productPack: { color: '#666', fontSize: 11, marginTop: 3 },
+  productPack: { color: C.textFaint, fontSize: 11, marginTop: 3 },
   productRight: { alignItems: 'center', gap: 6 },
   ownedCount: { color: '#4caf50', fontSize: 11, fontWeight: 'bold' },
-  buyBtn: { backgroundColor: '#1565c0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
+  buyBtn: { backgroundColor: '#1565c0', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: 7 },
   buyBtnDisabled: { backgroundColor: '#333' },
-  buyBtnText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
+  buyBtnText: { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
 
   // Buildings
   buildingGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  buildingCard: { backgroundColor: '#16213e', borderRadius: 10, padding: 12, margin: 5, width: '47%' },
-  buildingName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13, marginBottom: 4 },
+  buildingCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, margin: 5, width: '47%' },
+  buildingName: { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: S.xs },
   buildingCapacity: { color: '#64b5f6', fontSize: 11, marginBottom: 2 },
-  buildingEffect: { color: '#aaa', fontSize: 11, marginBottom: 4 },
-  buildingMaint: { color: '#ef9a9a', fontSize: 10, marginBottom: 6 },
+  buildingEffect: { color: '#aaa', fontSize: 11, marginBottom: S.xs },
+  buildingMaint: { color: '#ef9a9a', fontSize: F.size.xs, marginBottom: 6 },
   buildingFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   ownedBadge: { color: '#81c784', fontSize: 11, fontWeight: 'bold' },
-  buildBtn: { backgroundColor: '#2e7d32', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5 },
+  buildBtn: { backgroundColor: '#2e7d32', borderRadius: R.sm, paddingHorizontal: S.sm, paddingVertical: 5 },
   buildBtnDisabled: { backgroundColor: '#333' },
-  buildBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  buildBtnText: { color: C.white, fontSize: 11, fontWeight: 'bold' },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
 });

@@ -21,6 +21,9 @@ export interface PlantedCrop {
   hectares: number;
   fertilized: boolean;
   appliedFertilizerBonus?: number; // set by mid-growth fertilizeCrop; undefined = use cropType.fertilizerBonus
+  frostDamage?: number;    // 0–1 accumulated; ≥1.0 = crop killed
+  droughtStress?: number;  // 0–1 accumulated
+  moistureLevel?: number;  // 0–1 soil moisture; default 0.7
 }
 
 export function isReady(crop: PlantedCrop, cropType: CropType, currentDay: number): boolean {
@@ -30,16 +33,174 @@ export function isReady(crop: PlantedCrop, cropType: CropType, currentDay: numbe
 export function harvestAmount(
   crop: PlantedCrop,
   cropType: CropType,
-  fertility: number,          // 1–25 scale → 0.5–1.0
+  soil: SoilStats,            // replaces fertility: number
   climateModifier: number,    // 0.6–1.2
   hasWeeds: boolean,
   machineYieldBonus: number,  // 1.0 = no machine, 1.1+ = from owned machines
+  frostDamage = 0,
+  droughtStress = 0,
 ): number {
-  const fertilityMod = 0.5 + (fertility / 25) * 0.5;
+  const soilMod     = computeSoilYieldModifier(soil);
   const fertilizerMod = crop.fertilized
     ? (crop.appliedFertilizerBonus ?? cropType.fertilizerBonus)
     : 1.0;
-  const weedMod = hasWeeds ? 0.75 : 1.0;
+  const weedMod     = hasWeeds ? 0.75 : 1.0;
+  const frostMod    = Math.max(0, 1 - frostDamage * 0.7);
+  const droughtMod  = Math.max(0, 1 - droughtStress * 0.8);
 
-  return crop.hectares * cropType.baseYield * fertilityMod * fertilizerMod * weedMod * climateModifier * machineYieldBonus;
+  return (
+    crop.hectares *
+    cropType.baseYield *
+    soilMod *
+    fertilizerMod *
+    weedMod *
+    climateModifier *
+    machineYieldBonus *
+    frostMod *
+    droughtMod
+  );
+}
+
+// ─── Soil System ─────────────────────────────────────────────────────────────
+
+export interface SoilStats {
+  nitrogen: number;       // 0–100, optimal 60–80
+  organicMatter: number;  // 0–10, optimal 4–7
+  compaction: number;     // 0–100, optimal 0–25 (lower = better)
+  pH: number;             // 4.0–8.5, optimal 6.0–7.0
+  microbialLife: number;  // 0–100, optimal 60–100
+}
+
+export const SOIL_DEFAULTS: SoilStats = {
+  nitrogen: 65,
+  organicMatter: 4.5,
+  compaction: 20,
+  pH: 6.5,
+  microbialLife: 70,
+};
+
+/**
+ * Returns a yield multiplier (0.3–1.2) based on all 5 soil dimensions.
+ * Modifiers stack multiplicatively. A perfectly managed parcel can reach 1.2.
+ */
+export function computeSoilYieldModifier(soil: SoilStats): number {
+  // Nitrogen: optimal 60–80, penalise outside that range
+  const nMod =
+    soil.nitrogen < 40
+      ? 0.6 + (soil.nitrogen / 40) * 0.4        // 0.6 at 0, 1.0 at 40
+      : soil.nitrogen > 90
+      ? 0.85                                     // excess nitrogen = slight penalty
+      : 1.0 + Math.max(0, Math.min((soil.nitrogen - 60) / 200, 0.10)); // +0–10% in 60–80 range; neutral 40–60
+
+  // Organic matter: optimal ≥ 4%; below 2% penalised
+  const omMod =
+    soil.organicMatter < 2
+      ? 0.75 + (soil.organicMatter / 2) * 0.25  // 0.75 at 0%, 1.0 at 2%
+      : 1.0 + Math.max(0, Math.min((soil.organicMatter - 4) / 40, 0.05)); // +0–5% above 4%; neutral 2–4%
+
+  // Compaction: 0 = best, 100 = worst
+  const compMod =
+    soil.compaction > 50
+      ? 1.0 - ((soil.compaction - 50) / 50) * 0.30 // −30% at 100
+      : 1.0;
+
+  // pH: optimal 6.0–7.0; outside 5.5–7.5 penalised
+  const pHDev = Math.max(0, Math.abs(soil.pH - 6.5) - 1.0); // deviation beyond ±1.0 (outside 5.5–7.5)
+  const pHMod = Math.max(0.80, 1.0 - pHDev * 0.20);
+
+  // Microbial life: below 30 penalised; above 60 slight bonus
+  const microMod =
+    soil.microbialLife < 30
+      ? 0.85 + (soil.microbialLife / 30) * 0.15 // 0.85 at 0, 1.0 at 30
+      : Math.max(1.0, 1.0 + Math.min((soil.microbialLife - 60) / 400, 0.05)); // +0–5% above 60; neutral 30–60
+
+  return Math.max(0.3, nMod * omMod * compMod * pHMod * microMod);
+}
+
+export interface SoilTickParams {
+  /** cropId currently growing, or null if fallow */
+  activeCropId: string | null;
+  /** true if a crop was harvested TODAY on this parcel */
+  harvestedToday: boolean;
+  /** true if any machinery operated on this parcel today */
+  machineryUsedToday: boolean;
+  /** true if today's rainfall was heavy (≥ 8 mm simulated) */
+  heavyRainToday: boolean;
+  /** true if a pesticide was applied to this parcel today */
+  pesticideAppliedToday: boolean;
+  /** true if manure/compost was applied today */
+  manureAppliedToday: boolean;
+  /** true if subsoiler attachment was used today */
+  subsoilerUsedToday: boolean;
+}
+
+/**
+ * Pure daily soil tick. Returns a new SoilStats object.
+ * Called once per owned parcel per advanceDay() call.
+ */
+export function advanceSoilStats(
+  soil: SoilStats,
+  params: SoilTickParams,
+  cropNitrogenDemand: number, // nitrogenDemand from CropType, 0 if fallow
+): SoilStats {
+  let { nitrogen, organicMatter, compaction, pH, microbialLife } = soil;
+
+  // ── Nitrogen ──
+  if (params.activeCropId) {
+    nitrogen -= cropNitrogenDemand / 90; // spread demand over ~1 season of growth
+  }
+  if (params.heavyRainToday) {
+    nitrogen -= 1.5; // runoff loss
+  }
+  if (params.harvestedToday) {
+    nitrogen -= cropNitrogenDemand * 0.5; // burst loss at harvest
+  }
+  // Fallow recovery (very slow natural mineralisation)
+  if (!params.activeCropId) {
+    nitrogen += 0.1;
+  }
+
+  // ── Organic Matter ──
+  if (params.activeCropId) {
+    organicMatter -= 0.004; // slow depletion during active crop
+  }
+  if (!params.activeCropId) {
+    organicMatter += 0.003; // slow natural accumulation when fallow
+  }
+  if (params.manureAppliedToday) {
+    organicMatter += 0.5;
+  }
+
+  // ── Compaction ──
+  if (params.machineryUsedToday) {
+    compaction += 2;
+  }
+  if (!params.activeCropId && !params.machineryUsedToday) {
+    compaction -= 0.5; // fallow recovery via freeze-thaw etc.
+  }
+  if (params.subsoilerUsedToday) {
+    compaction -= 18;
+  }
+
+  // ── pH ── (drifts very slowly; lime/sulfur handled by applySoilAmendment action)
+  if (params.heavyRainToday) {
+    pH -= 0.005; // leaching slightly acidifies
+  }
+
+  // ── Microbial Life ──
+  if (params.pesticideAppliedToday) {
+    microbialLife -= 10;
+  }
+  // Follows organic matter: tends toward organicMatter * 12 over time
+  const microTarget = Math.min(100, organicMatter * 12);
+  microbialLife += (microTarget - microbialLife) * 0.01; // 1% convergence per day
+
+  // Clamp all values
+  return {
+    nitrogen:     Math.max(0, Math.min(100, nitrogen)),
+    organicMatter: Math.max(0, Math.min(10, organicMatter)),
+    compaction:   Math.max(0, Math.min(100, compaction)),
+    pH:           Math.max(4.0, Math.min(8.5, pH)),
+    microbialLife: Math.max(0, Math.min(100, microbialLife)),
+  };
 }

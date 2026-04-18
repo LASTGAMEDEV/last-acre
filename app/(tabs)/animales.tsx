@@ -5,11 +5,13 @@ import HintCard from '../../components/HintCard';
 import DispatchModal from '../../components/DispatchModal';
 import { useGameStore } from '../../store/useGameStore';
 import { DeliveryCargo, LIVESTOCK_TRAILER_IDS, ProductionBuildingState } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F, R } from '../../constants/theme';
+import SubTabBar from '../../components/SubTabBar';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
-import { sellValue, isMature, canBreed, TRAIT_ICONS, TRAIT_DESC, AnimalGenes, OwnedAnimal, getLactationState, lactationDaysRemaining, dryDaysRemaining, LACTATION_PARAMS, getSeasonMultiplier, GRAIN_CROP_IDS } from '../../engine/animals';
+import { sellValue, isMature, canBreed, TRAIT_ICONS, TRAIT_DESC, AnimalGenes, OwnedAnimal, getLactationState, lactationDaysRemaining, dryDaysRemaining, LACTATION_PARAMS, getSeasonMultiplier, GRAIN_CROP_IDS, getBreedDisplayName } from '../../engine/animals';
+import { BREED_TYPES } from '../../data/breedTypes';
 import { ENCLOSURE_BUILDINGS } from '../../constants/enclosures';
 import HelpSheet from '../../components/HelpSheet';
 import { DAIRY_SPECIES } from '../../engine/productionBuildings';
@@ -137,11 +139,11 @@ function GeneBar({ label, value }: { label: string; value: number }) {
 }
 
 const gbStyles = StyleSheet.create({
-  row:    { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  label:  { color: '#888', fontSize: 10, width: 70 },
-  barBg:  { flex: 1, height: 5, backgroundColor: '#1a1a2e', borderRadius: 3, marginHorizontal: 6 },
+  row:    { flexDirection: 'row', alignItems: 'center', marginBottom: S.xs },
+  label:  { color: C.textMuted, fontSize: F.size.xs, width: 70 },
+  barBg:  { flex: 1, height: 5, backgroundColor: C.bg, borderRadius: 3, marginHorizontal: 6 },
   barFill:{ height: 5, borderRadius: 3 },
-  grade:  { fontSize: 10, width: 52, textAlign: 'right', fontWeight: 'bold' },
+  grade:  { fontSize: F.size.xs, width: 52, textAlign: 'right', fontWeight: 'bold' },
 });
 
 function getEnclosureCapacity(buildings: string[], enclosureType: string): number {
@@ -156,7 +158,7 @@ function getEnclosureCapacity(buildings: string[], enclosureType: string): numbe
 export default function AnimalesScreen() {
   const {
     money, animals, animalInventory, day, buildings, activeFair,
-    buyAnimal, sellAnimal, collectAnimalProduction, sellAnimalProduct, breedAnimal,
+    cullAnimal, sellAnimal, collectAnimalProduction, sellAnimalProduct, breedAnimal,
     treatAnimal, collectAllProduction,
     breedingPairs, setBreedingPair, clearBreedingPair,
     animalPrices, upgradeAnimalGene,
@@ -204,7 +206,7 @@ export default function AnimalesScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Animals" />
+      <Text style={styles.screenTitle}>Animals</Text>
 
       {animals.length === 0 && (
         <HintCard id="hint_animals" title="Start your livestock" body="Animals produce eggs, milk, honey, wool, and meat every day. Buy a chicken coop from the Shop first, then purchase hens from this screen." />
@@ -222,20 +224,14 @@ export default function AnimalesScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Herd / Results tab bar */}
-      <View style={showStyles.tabBar}>
-        {(['herd', 'results'] as AnimalTab[]).map(t => (
-          <TouchableOpacity
-            key={t}
-            style={[showStyles.tabBtn, animalTab === t && showStyles.tabBtnActive]}
-            onPress={() => setAnimalTab(t)}
-          >
-            <Text style={[showStyles.tabText, animalTab === t && showStyles.tabTextActive]}>
-              {t === 'herd' ? 'My Herd' : `Show Results${(showResults ?? []).length ? ` (${(showResults ?? []).length})` : ''}`}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <SubTabBar
+        tabs={[
+          { id: 'herd',    label: 'My Herd' },
+          { id: 'results', label: `Show Results${(showResults ?? []).length ? ` (${(showResults ?? []).length})` : ''}` },
+        ]}
+        active={animalTab}
+        onSelect={id => setAnimalTab(id as AnimalTab)}
+      />
 
       {animalTab === 'herd' && <>
       {/* Farm Fair banner */}
@@ -247,8 +243,8 @@ export default function AnimalesScreen() {
       )}
 
       {/* Feed Stock */}
-      {hasFeedAnimals && <View style={{ backgroundColor: '#16213e', borderRadius: 10, marginHorizontal: 8, marginBottom: 8, padding: 12 }}>
-        <Text style={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 8 }}>Feed Stock</Text>
+      {hasFeedAnimals && <View style={{ backgroundColor: C.bgCard, borderRadius: 10, marginHorizontal: 8, marginBottom: 8, padding: 12 }}>
+        <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 14, marginBottom: 8 }}>Feed Stock</Text>
         <View style={{ flexDirection: 'row', gap: 16, marginBottom: 8 }}>
           <View style={{ flex: 1 }}>
             <Text style={{ color: '#aaa', fontSize: 11 }}>🌾 Grain</Text>
@@ -275,7 +271,7 @@ export default function AnimalesScreen() {
             onPress={feedAnimals}
             disabled={animalsManuallyFed}
           >
-            <Text style={{ color: '#fff', fontWeight: 'bold' }}>{animalsManuallyFed ? '✓ Fed for today' : 'Feed Animals Today'}</Text>
+            <Text style={{ color: C.white, fontWeight: 'bold' }}>{animalsManuallyFed ? '✓ Fed for today' : 'Feed Animals Today'}</Text>
             <Text style={{ color: '#a5d6a7', fontSize: 11 }}>Hire an animal keeper to automate this</Text>
           </TouchableOpacity>
         )}
@@ -375,6 +371,9 @@ export default function AnimalesScreen() {
                 <Text style={styles.animalName}>{type.name}</Text>
                 <Text style={[styles.sexBadge, { color: sexColor }]}>{sexIcon}</Text>
               </View>
+              <Text style={{ color: '#8bc34a', fontSize: 11, marginBottom: 2 }}>
+                {getBreedDisplayName(item, BREED_TYPES)}
+              </Text>
               <Text style={styles.detail}>
                 Age: {age}d {mature ? (isOld ? '👴 Old' : '✅') : '🌱'}
               </Text>
@@ -641,6 +640,21 @@ export default function AnimalesScreen() {
                   <Text style={styles.btnText}>🐄 Sell Live</Text>
                 </TouchableOpacity>
               )}
+              <TouchableOpacity
+                style={{ backgroundColor: '#8b1a1a', padding: 6, borderRadius: 6, marginTop: 4 }}
+                onPress={() => {
+                  Alert.alert(
+                    'Cull Animal?',
+                    `Send ${type.name} to processing? This cannot be undone.`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Cull', style: 'destructive', onPress: () => cullAnimal(item.id) },
+                    ]
+                  );
+                }}
+              >
+                <Text style={{ color: '#fff', fontSize: 11, textAlign: 'center' }}>🔪 Cull for Meat</Text>
+              </TouchableOpacity>
               {item.sex === 'male' && (buildings ?? []).includes('bld_sire_pen') && (() => {
                 const isSire = (sirePenAnimalIds ?? []).includes(item.id);
                 return (
@@ -652,7 +666,7 @@ export default function AnimalesScreen() {
                         : designateAsSire(item.id)
                     }
                   >
-                    <Text style={{ color: '#fff', fontSize: 11 }}>
+                    <Text style={{ color: C.white, fontSize: 11 }}>
                       {isSire ? '♂ Remove from Sire Pen' : '♂ Designate as Sire'}
                     </Text>
                   </TouchableOpacity>
@@ -664,82 +678,17 @@ export default function AnimalesScreen() {
         ListEmptyComponent={<Text style={styles.empty}>You have no animals yet.</Text>}
       />
 
-      {/* Buy animals */}
-      <Text style={styles.sectionLabel}>Buy animals</Text>
-      <FlatList
-        data={ANIMAL_TYPES}
-        keyExtractor={t => t.id}
-        numColumns={2}
-        style={styles.list}
-        renderItem={({ item }) => {
-          const capacity = getEnclosureCapacity(buildings, item.enclosureType);
-          // Species isolation: find what species currently occupies this enclosure type
-          const enclosureOccupant = animals.find(a => {
-            const at = ANIMAL_TYPES.find(t => t.id === a.typeId);
-            return at?.enclosureType === item.enclosureType;
-          });
-          const occupantType = enclosureOccupant
-            ? ANIMAL_TYPES.find(t => t.id === enclosureOccupant.typeId)
-            : null;
-          const blockedBySpecies = !!occupantType && occupantType.id !== item.id;
-          const occupied = animals.filter(a => a.typeId === item.id).length;
-          const noRoom = capacity === 0 || occupied >= capacity || blockedBySpecies;
-          const femaleCost = Math.round(item.buyCost * fairMult);
-          const maleCost = Math.round(item.buyCost * fairMult * 0.7);
-          // Bees are always female (hive)
-          const isBee = item.id === 'abeja';
-          return (
-            <View style={[styles.buyCard, activeFair ? styles.buyCardFair : null]}>
-              <Text style={styles.animalName}>{item.name}</Text>
-              {item.productionType && <Text style={styles.detail}>📦 {item.productionType}</Text>}
-              <Text style={[styles.capacityText, noRoom && styles.capacityFull]}>
-                {capacity === 0
-                  ? '🏗️ No enclosure'
-                  : blockedBySpecies
-                    ? `🚫 ${occupantType!.name}s here`
-                    : `${occupied}/${capacity} housed`}
-              </Text>
-              <WelfareBadge score={animalWelfareScores?.[item.id]} />
-              <BuildingStatusLine animalTypeId={item.id} productionBuildings={productionBuildings ?? []} />
-              <MilkGradeBadge animalTypeId={item.id} milkGrades={milkGrades ?? {}} />
-              <View style={styles.sexBtnRow}>
-                {!isBee && (
-                  <TouchableOpacity
-                    style={[styles.sexBtnM, (noRoom || money < maleCost) && styles.buyCardDisabled]}
-                    onPress={() => buyAnimal(item.id, 'male')}
-                    disabled={noRoom || money < maleCost}
-                  >
-                    <Text style={styles.sexBtnLabel}>♂</Text>
-                    {activeFair ? (
-                      <View style={styles.priceRow}>
-                        <Text style={styles.priceOriginal}>${Math.round(item.buyCost * 0.7).toLocaleString()}</Text>
-                        <Text style={styles.priceFairSm}>${maleCost.toLocaleString()}</Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.sexBtnPrice}>${maleCost.toLocaleString()}</Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={[styles.sexBtnF, (noRoom || money < femaleCost) && styles.buyCardDisabled, isBee && { flex: 1 }]}
-                  onPress={() => buyAnimal(item.id, 'female')}
-                  disabled={noRoom || money < femaleCost}
-                >
-                  <Text style={styles.sexBtnLabel}>{isBee ? '🐝' : '♀'}</Text>
-                  {activeFair ? (
-                    <View style={styles.priceRow}>
-                      <Text style={styles.priceOriginal}>${item.buyCost.toLocaleString()}</Text>
-                      <Text style={styles.priceFairSm}>${femaleCost.toLocaleString()}</Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.sexBtnPrice}>${femaleCost.toLocaleString()}</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        }}
-      />
+      {/* Buy animals — auction only */}
+      <View style={{ margin: 12, padding: 14, backgroundColor: '#1a2a1a', borderRadius: 10, borderWidth: 1, borderColor: '#2d4a2d' }}>
+        <Text style={{ color: '#8bc34a', fontSize: 14, fontWeight: '600', marginBottom: 6 }}>
+          🏷️ Buy Animals at Auction
+        </Text>
+        <Text style={{ color: '#aaa', fontSize: 12, lineHeight: 18 }}>
+          Animals can only be purchased at auction. Go to the{' '}
+          <Text style={{ color: '#8bc34a', fontWeight: '600' }}>Subasta</Text>
+          {' '}tab to bid on livestock — new lots appear every 7 days with real breed information.
+        </Text>
+      </View>
       </>}
 
       {animalTab === 'results' && (
@@ -783,105 +732,108 @@ export default function AnimalesScreen() {
 }
 
 const showStyles = StyleSheet.create({
-  banner:          { backgroundColor: '#3a2800', borderBottomWidth: 1, borderBottomColor: '#7a5c00', paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  bannerText:      { color: '#ffd700', fontSize: 12, flex: 1 },
-  bannerCta:       { color: '#ffb74d', fontSize: 12, fontWeight: 'bold' },
-  tabBar:          { flexDirection: 'row', backgroundColor: '#0f1e0f', borderBottomWidth: 1, borderBottomColor: '#1e3a1e' },
-  tabBtn:          { flex: 1, paddingVertical: 10, alignItems: 'center' },
-  tabBtnActive:    { borderBottomWidth: 2, borderBottomColor: '#ffd700' },
-  tabText:         { color: '#555', fontSize: 13 },
-  tabTextActive:   { color: '#ffd700', fontWeight: 'bold' },
-  emptyResults:    { color: '#555', textAlign: 'center', marginTop: 40, fontSize: 13 },
-  resultCard:      { margin: 10, backgroundColor: '#1a2a1a', borderRadius: 8, padding: 12 },
-  resultHeader:    { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  resultSeason:    { color: '#888', fontSize: 11 },
-  resultPlacement: { fontSize: 13, fontWeight: 'bold' },
-  resultAnimal:    { color: '#e8d5a3', fontSize: 13, marginBottom: 2 },
+  banner:          { backgroundColor: '#3a2800', borderBottomWidth: 1, borderBottomColor: '#7a5c00', paddingHorizontal: 14, paddingVertical: S.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  bannerText:      { color: '#ffd700', fontSize: F.size.sm, flex: 1 },
+  bannerCta:       { color: '#ffb74d', fontSize: F.size.sm, fontWeight: 'bold' },
+  emptyResults:    { color: '#555', textAlign: 'center', marginTop: 40, fontSize: F.size.md },
+  resultCard:      { margin: 10, backgroundColor: '#1a2a1a', borderRadius: R.md, padding: S.md },
+  resultHeader:    { flexDirection: 'row', justifyContent: 'space-between', marginBottom: S.xs },
+  resultSeason:    { color: C.textMuted, fontSize: 11 },
+  resultPlacement: { fontSize: F.size.md, fontWeight: 'bold' },
+  resultAnimal:    { color: C.text, fontSize: F.size.md, marginBottom: 2 },
   resultScore:     { color: '#aaa', fontSize: 11 },
-  resultNpc:       { color: '#555', fontSize: 10, marginTop: 1 },
-  resultPrize:     { color: '#4caf50', fontSize: 12, fontWeight: 'bold', marginTop: 4 },
+  resultNpc:       { color: '#555', fontSize: F.size.xs, marginTop: 1 },
+  resultPrize:     { color: '#4caf50', fontSize: F.size.sm, fontWeight: 'bold', marginTop: S.xs },
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
-  sectionLabel: { color: '#888', fontSize: 13, paddingHorizontal: 16, marginTop: 6, marginBottom: 4 },
-  list: { paddingHorizontal: 8 },
-  empty: { color: '#555', padding: 16 },
+  container: { flex: 1, backgroundColor: C.bg },
+  sectionLabel: { color: C.textMuted, fontSize: F.size.md, paddingHorizontal: S.lg, marginTop: 6, marginBottom: S.xs },
+  list: { paddingHorizontal: S.sm },
+  empty: { color: '#555', padding: S.lg },
 
-  inventorySection: { paddingHorizontal: 8, marginBottom: 4 },
+  inventorySection: { paddingHorizontal: S.sm, marginBottom: S.xs },
   inventoryRow: { flexDirection: 'row', flexWrap: 'wrap' },
-  inventoryCard: { backgroundColor: '#0f3460', borderRadius: 10, padding: 10, margin: 4, minWidth: 120 },
-  inventoryName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13, marginBottom: 2 },
-  inventoryQty: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-  inventoryPrice: { color: '#888', fontSize: 11, marginTop: 2, marginBottom: 4 },
-  sellProductBtn: { backgroundColor: '#2e7d32', borderRadius: 6, padding: 6, alignItems: 'center' },
-  sellProductBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  inventoryCard: { backgroundColor: '#0f3460', borderRadius: 10, padding: 10, margin: S.xs, minWidth: 120 },
+  inventoryName: { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: 2 },
+  inventoryQty: { color: C.white, fontSize: 15, fontWeight: 'bold' },
+  inventoryPrice: { color: C.textMuted, fontSize: 11, marginTop: 2, marginBottom: S.xs },
+  sellProductBtn: { backgroundColor: '#2e7d32', borderRadius: R.sm, padding: 6, alignItems: 'center' },
+  sellProductBtnText: { color: C.white, fontSize: 11, fontWeight: 'bold' },
 
-  card: { backgroundColor: '#16213e', borderRadius: 10, padding: 12, marginRight: 10, width: 140 },
+  card: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginRight: 10, width: 140 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
-  sexBadge: { fontSize: 16, fontWeight: 'bold' },
-  animalName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14 },
-  detail: { color: '#aaa', fontSize: 12, marginTop: 2 },
-  collectBtn: { backgroundColor: '#1565c0', borderRadius: 6, padding: 5, marginTop: 6 },
-  breedBtn: { backgroundColor: '#6a1b9a', borderRadius: 6, padding: 5, marginTop: 4 },
+  sexBadge: { fontSize: F.size.xl, fontWeight: 'bold' },
+  animalName: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
+  detail: { color: '#aaa', fontSize: F.size.sm, marginTop: 2 },
+  collectBtn: { backgroundColor: '#1565c0', borderRadius: R.sm, padding: 5, marginTop: 6 },
+  breedBtn: { backgroundColor: '#6a1b9a', borderRadius: R.sm, padding: 5, marginTop: S.xs },
   breedBtnDisabled: { backgroundColor: '#333' },
-  sellBtn: { backgroundColor: '#b71c1c', borderRadius: 6, padding: 5, marginTop: 4 },
-  btnText: { color: '#fff', fontSize: 11, textAlign: 'center' },
-  buyCard: { backgroundColor: '#16213e', borderRadius: 10, padding: 12, margin: 6, flex: 1 },
+  sellBtn: { backgroundColor: '#b71c1c', borderRadius: R.sm, padding: 5, marginTop: S.xs },
+  btnText: { color: C.white, fontSize: 11, textAlign: 'center' },
+  buyCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, margin: 6, flex: 1 },
   buyCardDisabled: { opacity: 0.4 },
   buyCardFair: { borderWidth: 1, borderColor: '#c8860a' },
-  capacityText: { color: '#888', fontSize: 11, marginTop: 4 },
+  capacityText: { color: C.textMuted, fontSize: 11, marginTop: S.xs },
   capacityFull: { color: '#ef9a9a' },
   sexBtnRow: { flexDirection: 'row', gap: 4, marginTop: 6 },
-  sexBtnM: { flex: 1, backgroundColor: '#1565c0', borderRadius: 6, padding: 5, alignItems: 'center' },
-  sexBtnF: { flex: 1, backgroundColor: '#880e4f', borderRadius: 6, padding: 5, alignItems: 'center' },
-  sexBtnLabel: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  sexBtnPrice: { color: '#ddd', fontSize: 10, marginTop: 1 },
+  sexBtnM: { flex: 1, backgroundColor: '#1565c0', borderRadius: R.sm, padding: 5, alignItems: 'center' },
+  sexBtnF: { flex: 1, backgroundColor: '#880e4f', borderRadius: R.sm, padding: 5, alignItems: 'center' },
+  sexBtnLabel: { color: C.white, fontSize: F.size.lg, fontWeight: 'bold' },
+  sexBtnPrice: { color: '#ddd', fontSize: F.size.xs, marginTop: 1 },
   priceFairSm: { color: '#81c784', fontWeight: 'bold', fontSize: 11 },
 
   cardSick: { borderWidth: 1, borderColor: '#f44336' },
-  geneRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  geneText: { fontSize: 10, fontWeight: 'bold' },
-  traitRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 },
-  traitBadge: { backgroundColor: '#1a1050', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2, borderWidth: 1, borderColor: '#7c4dff' },
+  geneRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: S.xs },
+  geneText: { fontSize: F.size.xs, fontWeight: 'bold' },
+  traitRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: S.xs },
+  traitBadge: { backgroundColor: '#1a1050', borderRadius: R.sm, paddingHorizontal: 5, paddingVertical: 2, borderWidth: 1, borderColor: '#7c4dff' },
   traitText: { color: '#b39ddb', fontSize: 9, fontWeight: 'bold' },
-  sickRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
-  sickText: { color: '#f44336', fontSize: 12, fontWeight: 'bold' },
-  treatBtn: { backgroundColor: '#b71c1c', borderRadius: 6, padding: 5 },
-  batchCollectBtn: { backgroundColor: '#1565c0', borderRadius: 8, marginHorizontal: 8, marginBottom: 6, padding: 10, alignItems: 'center' },
-  batchCollectText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  fairBanner: { backgroundColor: '#3a2a00', borderRadius: 10, marginHorizontal: 8, marginBottom: 8, padding: 10, borderLeftWidth: 3, borderLeftColor: '#c8860a' },
-  fairTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14 },
-  fairSub: { color: '#c8860a', fontSize: 12, marginTop: 2 },
+  sickRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: S.xs },
+  sickText: { color: '#f44336', fontSize: F.size.sm, fontWeight: 'bold' },
+  treatBtn: { backgroundColor: '#b71c1c', borderRadius: R.sm, padding: 5 },
+  batchCollectBtn: { backgroundColor: '#1565c0', borderRadius: R.md, marginHorizontal: S.sm, marginBottom: 6, padding: 10, alignItems: 'center' },
+  batchCollectText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
+  fairBanner: { backgroundColor: '#3a2a00', borderRadius: 10, marginHorizontal: S.sm, marginBottom: S.sm, padding: 10, borderLeftWidth: 3, borderLeftColor: '#c8860a' },
+  fairTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
+  fairSub: { color: '#c8860a', fontSize: F.size.sm, marginTop: 2 },
 
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
-  priceOriginal: { color: '#666', fontSize: 11, textDecorationLine: 'line-through' },
-  priceFair: { color: '#81c784', fontWeight: 'bold', fontSize: 13 },
+  priceOriginal: { color: C.textFaint, fontSize: 11, textDecorationLine: 'line-through' },
+  priceFair: { color: '#81c784', fontWeight: 'bold', fontSize: F.size.md },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
 });
 
 const genStyles = StyleSheet.create({
-  toggleBtn:      { paddingVertical: 4, alignSelf: 'flex-start' },
+  toggleBtn:      { paddingVertical: S.xs, alignSelf: 'flex-start' },
   toggleBtnText:  { color: '#4fc3f7', fontSize: 11 },
-  panel:          { backgroundColor: '#0a1628', borderRadius: 8, padding: 10, marginTop: 6 },
-  panelHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  panelTitle:     { color: '#e8d5a3', fontWeight: 'bold', fontSize: 12 },
-  gradeBadge:     { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
+  panel:          { backgroundColor: '#0a1628', borderRadius: R.md, padding: 10, marginTop: 6 },
+  panelHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: S.sm },
+  panelTitle:     { color: C.text, fontWeight: 'bold', fontSize: F.size.sm },
+  gradeBadge:     { borderRadius: R.sm, paddingHorizontal: S.sm, paddingVertical: 3, borderWidth: 1 },
   gradeBadgeText: { fontSize: 11, fontWeight: 'bold' },
 });
 
 const bpStyles = StyleSheet.create({
-  maleChip:         { backgroundColor: '#16213e', borderRadius: 8, padding: 8, marginRight: 6, alignItems: 'center', minWidth: 60 },
+  maleChip:         { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.sm, marginRight: 6, alignItems: 'center', minWidth: 60 },
   maleChipSelected: { backgroundColor: '#0f3460', borderWidth: 1, borderColor: '#4fc3f7' },
-  maleName:         { color: '#aaa', fontSize: 10 },
-  maleGrade:        { fontSize: 12, fontWeight: 'bold', marginTop: 2 },
-  prediction:       { backgroundColor: '#0a1628', borderRadius: 6, padding: 8, marginTop: 8, borderLeftWidth: 3, borderLeftColor: '#ffd700' },
-  predLabel:        { color: '#ffd700', fontSize: 10, fontWeight: 'bold' },
+  maleName:         { color: '#aaa', fontSize: F.size.xs },
+  maleGrade:        { fontSize: F.size.sm, fontWeight: 'bold', marginTop: 2 },
+  prediction:       { backgroundColor: '#0a1628', borderRadius: R.sm, padding: S.sm, marginTop: S.sm, borderLeftWidth: 3, borderLeftColor: '#ffd700' },
+  predLabel:        { color: '#ffd700', fontSize: F.size.xs, fontWeight: 'bold' },
   predChip:         { fontSize: 11, fontWeight: 'bold' },
 });
 
 const upgradeStyles = StyleSheet.create({
   row:                { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
-  upgradeBtn:         { backgroundColor: '#1a3a1a', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 4, marginLeft: 6, alignItems: 'center', minWidth: 48 },
+  upgradeBtn:         { backgroundColor: '#1a3a1a', borderRadius: R.sm, paddingHorizontal: 7, paddingVertical: S.xs, marginLeft: 6, alignItems: 'center', minWidth: 48 },
   upgradeBtnDisabled: { backgroundColor: '#1a1a1a', opacity: 0.5 },
   upgradeBtnText:     { color: '#66bb6a', fontSize: 9, fontWeight: 'bold', textAlign: 'center' },
 });
@@ -889,9 +841,9 @@ const upgradeStyles = StyleSheet.create({
 const ltStyles = StyleSheet.create({
   tree:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
   col:         { gap: 4 },
-  chip:        { backgroundColor: '#16213e', borderRadius: 6, padding: 6, alignItems: 'center', minWidth: 52 },
+  chip:        { backgroundColor: C.bgCard, borderRadius: R.sm, padding: 6, alignItems: 'center', minWidth: 52 },
   chipSelf:    { backgroundColor: '#0f3460', borderWidth: 1, borderColor: '#4fc3f7' },
-  chipLabel:   { color: '#888', fontSize: 9 },
-  chipGrade:   { fontSize: 12, fontWeight: 'bold', marginTop: 1 },
+  chipLabel:   { color: C.textMuted, fontSize: 9 },
+  chipGrade:   { fontSize: F.size.sm, fontWeight: 'bold', marginTop: 1 },
   chipUnknown: { color: '#444', fontSize: 9 },
 });

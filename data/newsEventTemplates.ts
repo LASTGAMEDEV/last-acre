@@ -4,6 +4,7 @@ export interface NewsEventTemplate {
   cropId: string | null; // null = all crops affected
   modifier: number;      // 1.3 = +30%, 0.7 = -30%
   durationDays: number;
+  priceShock?: import('../engine/priceEngine').PriceShock;
 }
 
 export const NEWS_TEMPLATES: NewsEventTemplate[] = [
@@ -29,4 +30,9 @@ export const NEWS_TEMPLATES: NewsEventTemplate[] = [
   { id: 'n18', headline: '🌾 European wheat surplus pressures markets',              cropId: 'wheat',     modifier: 0.80, durationDays: 9  },
   { id: 'n19', headline: '🐛 Worm infestation damages regional corn crops',          cropId: 'corn',      modifier: 1.28, durationDays: 7  },
   { id: 'n20', headline: '☀️ Perfect summer floods sunflower supply',                cropId: 'sunflower', modifier: 0.82, durationDays: 8  },
+  { id: 'n21', headline: '🐝 Bee colony collapse disorder spreads globally', cropId: 'honey', modifier: 1.0, durationDays: 0, priceShock: { commodityId: 'honey', magnitude: 0.30, durationDays: 120, decayRate: 0.008 } },
+  { id: 'n22', headline: '❄️ Cold snap destroys vanilla crops in tropics', cropId: 'vanilla', modifier: 1.0, durationDays: 0, priceShock: { commodityId: 'vanilla', magnitude: 0.40, durationDays: 90, decayRate: 0.011 } },
+  { id: 'n23', headline: '🌵 Severe drought hits corn-growing regions', cropId: 'corn', modifier: 1.0, durationDays: 0, priceShock: { commodityId: 'corn', magnitude: 0.25, durationDays: 60, decayRate: 0.017 } },
+  { id: 'n24', headline: '⛽ Fuel price spike drives up all farm costs', cropId: null, modifier: 1.0, durationDays: 0, priceShock: { commodityId: null, magnitude: 0.06, durationDays: 90, decayRate: 0.011 } },
+  { id: 'n25', headline: '🚢 Port strike blocks grain exports for a month', cropId: 'wheat', modifier: 0.85, durationDays: 30 },
 ];

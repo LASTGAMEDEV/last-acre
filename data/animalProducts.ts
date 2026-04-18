@@ -6,10 +6,10 @@ export interface AnimalProductInfo {
 }
 
 export const ANIMAL_PRODUCTS: AnimalProductInfo[] = [
-  { productType: 'eggs', name: 'Eggs',        unit: 'ud', basePrice: 3.50 },
-  { productType: 'milk',  name: 'Milk',   unit: 'L',  basePrice: 0.90 },
-  { productType: 'honey', name: 'Honey',  unit: 'kg', basePrice: 25.0 },
-  { productType: 'wool', name: 'Wool',         unit: 'kg', basePrice: 42.0 },
-  { productType: 'meat', name: 'Meat',         unit: 'kg', basePrice: 14.0 },
-  { productType: 'cream', name: 'Cream', unit: 'L',  basePrice: 4.50 },
+  { productType: 'eggs', name: 'Eggs',        unit: 'ud', basePrice: 0.18 },
+  { productType: 'milk',  name: 'Milk',   unit: 'L',  basePrice: 0.45 },
+  { productType: 'honey', name: 'Honey',  unit: 'kg', basePrice: 8.50 },
+  { productType: 'wool', name: 'Wool',         unit: 'kg', basePrice: 3.20 },
+  { productType: 'meat', name: 'Meat',         unit: 'kg', basePrice: 4.50 },
+  { productType: 'cream', name: 'Cream', unit: 'L',  basePrice: 2.80 },
 ];

@@ -1,0 +1,86 @@
+<h2>World Map — Feature Ideas</h2>
+<p class="subtitle">You asked for suggestions — pick any that feel right for the game</p>
+
+<div class="section">
+  <h3>🗺️ Core Map (what you described)</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+    <div style="background:#0f3460;border-radius:8px;padding:10px;">🟦 <strong>Your fields</strong> — owned parcels, crop status visible</div>
+    <div style="background:#0f3460;border-radius:8px;padding:10px;">🟩 <strong>For sale</strong> — unowned parcels on the market</div>
+    <div style="background:#0f3460;border-radius:8px;padding:10px;">🟥 <strong>Competitor fields</strong> — AI farmers who own land</div>
+    <div style="background:#0f3460;border-radius:8px;padding:10px;">🌽 <strong>Crop icons</strong> — see what's growing in each parcel</div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Pick the extra features you want 👇</h3>
+  <p class="subtitle">Select all that appeal to you</p>
+  <div class="options" data-multiselect>
+
+    <div class="option" data-choice="competitors" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>🤠 AI Competitor Farmers</h3>
+        <p>Named rival farmers who buy land, plant crops, and compete for parcels. They can outbid you at auctions and expand over time.</p>
+      </div>
+    </div>
+
+    <div class="option" data-choice="land-value" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>📈 Land Value Fluctuations</h3>
+        <p>Parcel prices shift based on surrounding activity — a competitor buying nearby raises prices. Being first in a region keeps it cheap.</p>
+      </div>
+    </div>
+
+    <div class="option" data-choice="terrain" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>🏔️ Terrain & Regions</h3>
+        <p>The map is divided into named regions (River Valley, Highlands, Plains). Each region has a climate flavor that favors certain crops.</p>
+      </div>
+    </div>
+
+    <div class="option" data-choice="adjacency" onclick="toggleSelect(this)">
+      <div class="letter">D</div>
+      <div class="content">
+        <h3>🔗 Adjacency Bonuses</h3>
+        <p>Owning neighboring parcels gives a small yield or efficiency bonus — rewards consolidating your farm into a contiguous block.</p>
+      </div>
+    </div>
+
+    <div class="option" data-choice="infrastructure" onclick="toggleSelect(this)">
+      <div class="letter">E</div>
+      <div class="content">
+        <h3>🏗️ Infrastructure Visible on Map</h3>
+        <p>Roads, silos, and water sources shown as map icons. Distance from a road affects transport cost.</p>
+      </div>
+    </div>
+
+    <div class="option" data-choice="events" onclick="toggleSelect(this)">
+      <div class="letter">F</div>
+      <div class="content">
+        <h3>⚠️ Event Zones</h3>
+        <p>Drought, flood, or pest outbreaks affect a region of the map — not just one parcel. You can see the spreading zone before it hits you.</p>
+      </div>
+    </div>
+
+    <div class="option" data-choice="fog" onclick="toggleSelect(this)">
+      <div class="letter">G</div>
+      <div class="content">
+        <h3>🌫️ Fog of War / Scouting</h3>
+        <p>Distant regions start hidden. Buy a scout report to reveal what's available, or build a watchtower to see further.</p>
+      </div>
+    </div>
+
+    <div class="option" data-choice="market-route" onclick="toggleSelect(this)">
+      <div class="letter">H</div>
+      <div class="content">
+        <h3>🚛 Distance to Market</h3>
+        <p>Fields far from town cost more to transport. Build roads or buy nearby to cut transport costs shown on the map.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<p style="color:#888;font-size:12px;margin-top:16px;">Select as many as you like, then tell me in the terminal which ones to include.</p>

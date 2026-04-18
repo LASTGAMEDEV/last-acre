@@ -1,4 +1,5 @@
 import { AnimalType } from '../data/animalTypes';
+import { BreedType } from '../data/breedTypes';
 
 export const GRAIN_CROP_IDS = ['wheat', 'corn', 'barley', 'oats', 'sorghum'];
 
@@ -61,6 +62,98 @@ export function breedGenes(
   };
 }
 
+/** Sample random genes within a breed's gene ranges. */
+export function randomGenesForBreed(breed: BreedType): AnimalGenes {
+  const r = (range: [number, number]) =>
+    clamp(range[0] + Math.random() * (range[1] - range[0]), 0.5, 1.5);
+  return {
+    production: r(breed.geneRanges.production),
+    hardiness:  r(breed.geneRanges.hardiness),
+    growth:     r(breed.geneRanges.growth),
+    value:      r(breed.geneRanges.value),
+  };
+}
+
+/** F1 cross genes: average of both breed ranges + 5% hybrid vigour bonus. */
+export function crossbreedGenes(motherBreed: BreedType, fatherBreed: BreedType): AnimalGenes {
+  const avg = (a: [number, number], b: [number, number]) => {
+    const lo = (a[0] + b[0]) / 2;
+    const hi = (a[1] + b[1]) / 2;
+    return clamp((lo + Math.random() * (hi - lo)) * 1.05, 0.5, 1.5);
+  };
+  return {
+    production: avg(motherBreed.geneRanges.production, fatherBreed.geneRanges.production),
+    hardiness:  avg(motherBreed.geneRanges.hardiness,  fatherBreed.geneRanges.hardiness),
+    growth:     avg(motherBreed.geneRanges.growth,     fatherBreed.geneRanges.growth),
+    value:      avg(motherBreed.geneRanges.value,      fatherBreed.geneRanges.value),
+  };
+}
+
+/**
+ * Breed-aware gene inheritance. Call this from breedAnimal() instead of breedGenes().
+ */
+export function breedAnimalGenes(
+  mother: OwnedAnimal | undefined,
+  father: OwnedAnimal | undefined,
+  allBreeds: BreedType[],
+): AnimalGenes {
+  const motherBreed = mother?.breedId ? allBreeds.find(b => b.id === mother.breedId) : undefined;
+  const fatherBreed = father?.breedId ? allBreeds.find(b => b.id === father.breedId) : undefined;
+
+  if (motherBreed && fatherBreed) {
+    if (motherBreed.id === fatherBreed.id) {
+      return randomGenesForBreed(motherBreed);
+    }
+    return crossbreedGenes(motherBreed, fatherBreed);
+  }
+
+  const mg = mother?.genes ?? randomGenes();
+  const fg = father?.genes ?? randomGenes();
+  const mutate = (a: number, b: number) =>
+    clamp((a + b) / 2 + (Math.random() - 0.5) * 0.12, 0.5, 1.5);
+  return {
+    production: mutate(mg.production, fg.production),
+    hardiness:  mutate(mg.hardiness,  fg.hardiness),
+    growth:     mutate(mg.growth,     fg.growth),
+    value:      mutate(mg.value,      fg.value),
+  };
+}
+
+/** Returns a display name for an animal's breed. */
+export function getBreedDisplayName(animal: OwnedAnimal, allBreeds: BreedType[]): string {
+  if (animal.breedId) {
+    return allBreeds.find(b => b.id === animal.breedId)?.name ?? 'Unknown';
+  }
+  if (animal.crossbreedParents) {
+    const [mId, fId] = animal.crossbreedParents;
+    const mName = allBreeds.find(b => b.id === mId)?.name;
+    const fName = allBreeds.find(b => b.id === fId)?.name;
+    if (mName && fName) return `${mName} × ${fName}`;
+  }
+  return 'Mixed';
+}
+
+/**
+ * Returns the auction price multiplier for a purebred/crossbred animal.
+ */
+export function getBreedPurebredMultiplier(animal: OwnedAnimal, allBreeds: BreedType[]): number {
+  if (animal.crossbreedParents) {
+    const [mId, fId] = animal.crossbreedParents;
+    const mBreed = allBreeds.find(b => b.id === mId);
+    const fBreed = allBreeds.find(b => b.id === fId);
+    return mBreed && fBreed ? 1.3 : 1.1;
+  }
+  if (animal.breedId) {
+    const breed = allBreeds.find(b => b.id === animal.breedId);
+    if (!breed) return 1.0;
+    if (breed.rarity === 'common')   return 1.2;
+    if (breed.rarity === 'uncommon') return 1.5;
+    if (breed.rarity === 'rare')     return 2.75;
+    return 1.0;
+  }
+  return 1.0;
+}
+
 /** Average of all four genes — used for grading. */
 export function geneScore(genes: AnimalGenes): number {
   return (genes.production + genes.hardiness + genes.growth + genes.value) / 4;
@@ -81,6 +174,8 @@ export interface OwnedAnimal {
   genes?: AnimalGenes;    // undefined on old saves → use 1.0 defaults
   parentIds?: [string, string];                      // [motherId, fatherId]
   grandparentIds?: [string, string, string, string]; // [MM, MF, FM, FF]
+  breedId?: string;
+  crossbreedParents?: [string, string];
   lactationStartDay?: number;  // day she last gave birth (cows & goats only)
   quarantineUntilDay?: number;    // day quarantine ends; undefined = not in quarantine
   inIsolation?: boolean;          // true = moved to sick bay; excluded from disease spread

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore, OwnedWorker } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F, R } from '../../constants/theme';
 import HintCard from '../../components/HintCard';
 import { WORKER_TYPES, WorkerType, WorkerRole } from '../../data/workerTypes';
 
@@ -71,7 +71,7 @@ export default function TrabajadoresScreen() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <ScreenHeader title="Staff" />
+      <Text style={styles.screenTitle}>Staff</Text>
       {activeWorkers.length === 0 && (
         <HintCard id="hint_workers" title="Hire workers to automate tasks" body="Field Workers harvest automatically, Animal Keepers collect daily production, and Agronomists boost crop yield. Each worker costs a daily wage deducted at midnight." />
       )}
@@ -117,6 +117,20 @@ export default function TrabajadoresScreen() {
         </View>
       )}
 
+      {/* Water department */}
+      {(() => {
+        const hydroType = WORKER_TYPES.find(t => t.id === 'hydrogeologist');
+        if (!hydroType) return null;
+        return (
+          <View style={styles.deptSection}>
+            <Text style={styles.deptLabel}>💧 Water</Text>
+            <View style={styles.cardRow}>
+              {renderCard(hydroType)}
+            </View>
+          </View>
+        );
+      })()}
+
       {/* Active staff */}
       <Text style={styles.sectionLabel}>Active Staff ({activeWorkers.length})</Text>
       {activeWorkers.length === 0 ? (
@@ -149,38 +163,46 @@ export default function TrabajadoresScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:         { flex: 1, backgroundColor: '#1a1a2e' },
-  sectionLabel:      { color: '#888', fontSize: 13, paddingHorizontal: 16, marginTop: 16, marginBottom: 6 },
-  empty:             { color: '#555', padding: 16 },
+  container:         { flex: 1, backgroundColor: C.bg },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
+  sectionLabel:      { color: C.textMuted, fontSize: F.size.md, paddingHorizontal: S.lg, marginTop: S.lg, marginBottom: 6 },
+  empty:             { color: '#555', padding: S.lg },
 
-  wageBanner:        { backgroundColor: '#1e2a3a', marginHorizontal: 12, marginTop: 8, borderRadius: 10, padding: 10 },
-  wageText:          { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
+  wageBanner:        { backgroundColor: '#1e2a3a', marginHorizontal: S.md, marginTop: S.sm, borderRadius: 10, padding: 10 },
+  wageText:          { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
 
-  deptSection:       { marginTop: 16, paddingHorizontal: 8 },
-  deptLabel:         { color: '#aaa', fontSize: 13, fontWeight: 'bold', marginBottom: 8, paddingHorizontal: 4 },
+  deptSection:       { marginTop: S.lg, paddingHorizontal: S.sm },
+  deptLabel:         { color: '#aaa', fontSize: F.size.md, fontWeight: 'bold', marginBottom: S.sm, paddingHorizontal: S.xs },
 
   cardRow:           { flexDirection: 'row', gap: 8 },
-  card:              { flex: 1, backgroundColor: '#16213e', borderRadius: 12, padding: 12 },
+  card:              { flex: 1, backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md },
   cardSpecialist:    { backgroundColor: '#1a2744', borderWidth: 1, borderColor: '#2d4a8a' },
   cardLocked:        { opacity: 0.55 },
-  cardIcon:          { fontSize: 26, marginBottom: 4 },
-  cardName:          { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13, marginBottom: 2 },
+  cardIcon:          { fontSize: 26, marginBottom: S.xs },
+  cardName:          { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: 2 },
   cardNameSpecialist:{ color: '#7eb8f7' },
-  cardDesc:          { color: '#888', fontSize: 11, marginBottom: 4, lineHeight: 15 },
-  cardWage:          { color: '#81c784', fontWeight: 'bold', fontSize: 12, marginBottom: 4 },
-  lockNote:          { color: '#666', fontSize: 10, fontStyle: 'italic', marginBottom: 4 },
-  cardBottom:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
-  cardCount:         { color: '#666', fontSize: 11 },
-  hireBtn:           { backgroundColor: '#1565c0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  cardDesc:          { color: C.textMuted, fontSize: 11, marginBottom: S.xs, lineHeight: 15 },
+  cardWage:          { color: '#81c784', fontWeight: 'bold', fontSize: F.size.sm, marginBottom: S.xs },
+  lockNote:          { color: C.textFaint, fontSize: F.size.xs, fontStyle: 'italic', marginBottom: S.xs },
+  cardBottom:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: S.xs },
+  cardCount:         { color: C.textFaint, fontSize: 11 },
+  hireBtn:           { backgroundColor: '#1565c0', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 5 },
   hireBtnDisabled:   { backgroundColor: '#333' },
-  hireBtnText:       { color: '#fff', fontWeight: 'bold', fontSize: 11 },
+  hireBtnText:       { color: C.white, fontWeight: 'bold', fontSize: 11 },
 
-  staffList:         { paddingHorizontal: 12 },
-  staffCard:         { flexDirection: 'row', alignItems: 'center', backgroundColor: '#16213e', borderRadius: 10, padding: 12, marginBottom: 8 },
-  staffIcon:         { fontSize: 22, marginRight: 12 },
+  staffList:         { paddingHorizontal: S.md },
+  staffCard:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginBottom: S.sm },
+  staffIcon:         { fontSize: F.size.title, marginRight: S.md },
   staffInfo:         { flex: 1 },
-  staffName:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
-  staffDays:         { color: '#888', fontSize: 11, marginTop: 2 },
-  fireBtn:           { backgroundColor: '#b71c1c', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  fireBtnText:       { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  staffName:         { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  staffDays:         { color: C.textMuted, fontSize: 11, marginTop: 2 },
+  fireBtn:           { backgroundColor: '#b71c1c', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6 },
+  fireBtnText:       { color: C.white, fontWeight: 'bold', fontSize: F.size.sm },
 });

@@ -12,7 +12,8 @@ export type WorkerRole =
   | 'processor'
   | 'supervisor'
   | 'vet'
-  | 'truck_driver';
+  | 'truck_driver'
+  | 'hydrogeologist';
 
 export interface WorkerType {
   id: WorkerRole;
@@ -32,7 +33,7 @@ export const WORKER_TYPES: WorkerType[] = [
     id: 'field_worker',
     name: 'Field Worker',
     icon: '👨‍🌾',
-    dailyWage: 50,
+    dailyWage: 120,
     maxCount: 5,
     department: 'fields',
     tier: 'basic',
@@ -42,7 +43,7 @@ export const WORKER_TYPES: WorkerType[] = [
     id: 'agronomist',
     name: 'Agronomist',
     icon: '🌱',
-    dailyWage: 120,
+    dailyWage: 250,
     maxCount: 2,
     department: 'fields',
     tier: 'specialist',
@@ -53,7 +54,7 @@ export const WORKER_TYPES: WorkerType[] = [
     id: 'botanist',
     name: 'Botanist',
     icon: '🌿',
-    dailyWage: 110,
+    dailyWage: 240,
     maxCount: 2,
     department: 'fields',
     tier: 'specialist',
@@ -66,7 +67,7 @@ export const WORKER_TYPES: WorkerType[] = [
     id: 'animal_keeper',
     name: 'Animal Keeper',
     icon: '🤠',
-    dailyWage: 40,
+    dailyWage: 120,
     maxCount: 3,
     department: 'animals',
     tier: 'basic',
@@ -76,7 +77,7 @@ export const WORKER_TYPES: WorkerType[] = [
     id: 'zootechnician',
     name: 'Zootechnician',
     icon: '🐄',
-    dailyWage: 100,
+    dailyWage: 220,
     maxCount: 2,
     department: 'animals',
     tier: 'specialist',
@@ -89,7 +90,7 @@ export const WORKER_TYPES: WorkerType[] = [
     id: 'mechanic',
     name: 'Mechanic',
     icon: '🔧',
-    dailyWage: 70,
+    dailyWage: 180,
     maxCount: 2,
     department: 'machinery',
     tier: 'basic',
@@ -99,7 +100,7 @@ export const WORKER_TYPES: WorkerType[] = [
     id: 'engineer',
     name: 'Engineer',
     icon: '⚙️',
-    dailyWage: 150,
+    dailyWage: 350,
     maxCount: 1,
     department: 'machinery',
     tier: 'specialist',
@@ -112,7 +113,7 @@ export const WORKER_TYPES: WorkerType[] = [
     id: 'processor',
     name: 'Processor',
     icon: '🏭',
-    dailyWage: 60,
+    dailyWage: 130,
     maxCount: 3,
     department: 'processing',
     tier: 'basic',
@@ -122,7 +123,7 @@ export const WORKER_TYPES: WorkerType[] = [
     id: 'supervisor',
     name: 'Supervisor',
     icon: '📋',
-    dailyWage: 130,
+    dailyWage: 280,
     maxCount: 1,
     department: 'processing',
     tier: 'specialist',
@@ -135,7 +136,7 @@ export const WORKER_TYPES: WorkerType[] = [
     id: 'vet',
     name: 'Veterinarian',
     icon: '👨‍⚕️',
-    dailyWage: 80,
+    dailyWage: 500,
     maxCount: 2,
     department: null,
     tier: 'standalone',
@@ -147,10 +148,22 @@ export const WORKER_TYPES: WorkerType[] = [
     id: 'truck_driver',
     name: 'Truck Driver',
     icon: '🚛',
-    dailyWage: 55,
+    dailyWage: 160,
     maxCount: 2,
     department: 'transport',
     tier: 'basic',
     description: 'Handles deliveries to local, city, and export markets. Required to self-dispatch — without one, deliveries go through a contractor at 12% fee.',
+  },
+
+  // ── Water ────────────────────────────────────────────────────────────────────
+  {
+    id: 'hydrogeologist',
+    name: 'Hydrogeologist',
+    icon: '🔍',
+    dailyWage: 500,
+    maxCount: 1,
+    department: null,
+    tier: 'standalone',
+    description: 'Surveys parcels for well placement. Assign to a parcel to begin survey (5–10 days). One parcel at a time.',
   },
 ];

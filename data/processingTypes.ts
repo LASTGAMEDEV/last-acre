@@ -26,34 +26,34 @@ export interface ProcessingRecipe {
 // ── Processed products ────────────────────────────────────────────────────────
 export const PROCESSED_PRODUCTS: ProcessedProduct[] = [
   // Flour Mill
-  { id: 'harina_trigo',  name: 'Wheat Flour',     unit: 'kg', basePrice: 45 },
-  { id: 'polenta',       name: 'Polenta',          unit: 'kg', basePrice: 38 },
-  { id: 'malta',         name: 'Barley Malt',      unit: 'kg', basePrice: 40 },
-  { id: 'copos_avena',   name: 'Oat Flakes',       unit: 'kg', basePrice: 38 },
-  { id: 'harina_arroz',  name: 'Rice Flour',       unit: 'kg', basePrice: 48 },
+  { id: 'harina_trigo',  name: 'Wheat Flour',     unit: 'kg', basePrice: 0.55 },
+  { id: 'polenta',       name: 'Polenta',          unit: 'kg', basePrice: 0.60 },
+  { id: 'malta',         name: 'Barley Malt',      unit: 'kg', basePrice: 0.65 },
+  { id: 'copos_avena',   name: 'Oat Flakes',       unit: 'kg', basePrice: 0.70 },
+  { id: 'harina_arroz',  name: 'Rice Flour',       unit: 'kg', basePrice: 1.05 },
   // Oil Press
-  { id: 'aceite_girasol', name: 'Sunflower Oil',   unit: 'L', basePrice: 200 },
-  { id: 'aceite_colza',   name: 'Rapeseed Oil',    unit: 'L', basePrice: 210 },
-  { id: 'aceite_canola',  name: 'Canola Oil',      unit: 'L', basePrice: 215 },
-  { id: 'aceite_soja',    name: 'Soy Oil',         unit: 'L', basePrice: 155 },
+  { id: 'aceite_girasol', name: 'Sunflower Oil',   unit: 'L', basePrice: 1.80 },
+  { id: 'aceite_colza',   name: 'Rapeseed Oil',    unit: 'L', basePrice: 1.90 },
+  { id: 'aceite_canola',  name: 'Canola Oil',      unit: 'L', basePrice: 1.95 },
+  { id: 'aceite_soja',    name: 'Soy Oil',         unit: 'L', basePrice: 2.50 },
   // Dairy Plant
-  { id: 'queso',          name: 'Cheese',          unit: 'kg', basePrice: 22 },
-  { id: 'mantequilla',    name: 'Butter',          unit: 'kg', basePrice: 55 },
-  { id: 'pasta_huevo',    name: 'Egg Pasta',       unit: 'kg', basePrice: 55 },
+  { id: 'queso',          name: 'Cheese',          unit: 'kg', basePrice: 12.00 },
+  { id: 'mantequilla',    name: 'Butter',          unit: 'kg', basePrice: 8.50 },
+  { id: 'pasta_huevo',    name: 'Egg Pasta',       unit: 'kg', basePrice: 3.50 },
   // Agricultural Processor
-  { id: 'azucar',         name: 'Sugar',           unit: 'kg', basePrice: 82 },
-  { id: 'etanol',         name: 'Ethanol',         unit: 'L',  basePrice: 80 },
-  { id: 'fibra_algodon',  name: 'Cotton Fiber',    unit: 'kg', basePrice: 195 },
-  { id: 'tejido_lana',    name: 'Wool Fabric',     unit: 'kg', basePrice: 120 },
-  { id: 'embutidos',      name: 'Cold Cuts',       unit: 'kg', basePrice: 38 },
+  { id: 'azucar',         name: 'Sugar',           unit: 'kg', basePrice: 0.55 },
+  { id: 'etanol',         name: 'Ethanol',         unit: 'L',  basePrice: 0.65 },
+  { id: 'fibra_algodon',  name: 'Cotton Fiber',    unit: 'kg', basePrice: 4.80 },
+  { id: 'tejido_lana',    name: 'Wool Fabric',     unit: 'kg', basePrice: 8.00 },
+  { id: 'embutidos',      name: 'Cold Cuts',       unit: 'kg', basePrice: 9.50 },
   // Winery
-  { id: 'vino',               name: 'Wine',            unit: 'L',  basePrice: 320 },
+  { id: 'vino',               name: 'Wine',            unit: 'L',  basePrice: 5.00 },
   // Oil Press (new)
-  { id: 'aceite_oliva',       name: 'Olive Oil',       unit: 'L',  basePrice: 380 },
+  { id: 'aceite_oliva',       name: 'Olive Oil',       unit: 'L',  basePrice: 7.50 },
   // Agricultural Processor (new)
-  { id: 'mermelada',          name: 'Strawberry Jam',  unit: 'kg', basePrice: 120 },
-  { id: 'almendras_tostadas', name: 'Roasted Almonds', unit: 'kg', basePrice: 220 },
-  { id: 'tomate_triturado',   name: 'Tomato Paste',    unit: 'kg', basePrice: 95  },
+  { id: 'mermelada',          name: 'Strawberry Jam',  unit: 'kg', basePrice: 4.50 },
+  { id: 'almendras_tostadas', name: 'Roasted Almonds', unit: 'kg', basePrice: 9.00 },
+  { id: 'tomate_triturado',   name: 'Tomato Paste',    unit: 'kg', basePrice: 1.20  },
 ];
 
 // ── Recipes ───────────────────────────────────────────────────────────────────

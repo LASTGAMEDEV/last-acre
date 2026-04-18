@@ -1,0 +1,263 @@
+<h2>World Map — Realistic Fields</h2>
+<p class="subtitle">Irregular connected parcels, organic terrain — tap a field</p>
+
+<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+
+  <!-- MAP -->
+  <div style="flex:1;min-width:300px;">
+    <svg id="worldmap" viewBox="0 0 500 500" style="width:100%;max-width:520px;border-radius:10px;" xmlns="http://www.w3.org/2000/svg">
+
+      <!-- Base terrain -->
+      <rect width="500" height="500" fill="#2d5a1b"/>
+
+      <!-- Terrain variation — subtle dark patches -->
+      <ellipse cx="60" cy="200" rx="55" ry="40" fill="#245016" opacity="0.5"/>
+      <ellipse cx="440" cy="420" rx="65" ry="50" fill="#245016" opacity="0.4"/>
+      <ellipse cx="260" cy="450" rx="50" ry="35" fill="#265218" opacity="0.3"/>
+      <ellipse cx="380" cy="60" rx="45" ry="30" fill="#245016" opacity="0.3"/>
+      <ellipse cx="95" cy="440" rx="40" ry="28" fill="#24500e" opacity="0.4"/>
+
+      <!-- FIELDS — player owned (green tint) -->
+      <!-- F1: large NW field -->
+      <polygon id="f1" points="0,0 182,0 174,48 162,125 144,182 74,168 0,148"
+        fill="#1b5e20" stroke="#43a047" stroke-width="2.5" opacity="0.92" style="cursor:pointer"
+        onclick="selectField('f1')"/>
+      <!-- F6: W-middle field -->
+      <polygon id="f6" points="0,148 74,168 144,182 155,280 0,280"
+        fill="#1b5e20" stroke="#43a047" stroke-width="2.5" opacity="0.92" style="cursor:pointer"
+        onclick="selectField('f6')"/>
+      <!-- F13: center-lower field (ready to harvest!) -->
+      <polygon id="f13" points="155,280 215,255 285,242 318,280 318,380 210,375 162,368"
+        fill="#33691e" stroke="#76c442" stroke-width="2.5" opacity="0.95" style="cursor:pointer"
+        onclick="selectField('f13')"/>
+
+      <!-- FIELDS — competitor A (dark red - Hacienda Rivera) -->
+      <!-- F2: large N-center -->
+      <polygon id="f2" points="182,0 318,0 315,88 255,135 188,120 174,48"
+        fill="#3d0808" stroke="#b71c1c" stroke-width="2.5" opacity="0.92" style="cursor:pointer"
+        onclick="selectField('f2')"/>
+      <!-- F4: E-upper -->
+      <polygon id="f4" points="315,88 380,118 500,98 500,208 392,215 315,185"
+        fill="#3d0808" stroke="#b71c1c" stroke-width="2.5" opacity="0.92" style="cursor:pointer"
+        onclick="selectField('f4')"/>
+
+      <!-- FIELDS — competitor B (dark indigo - Granja del Norte) -->
+      <!-- F17: SW lower -->
+      <polygon id="f17" points="0,372 72,378 162,368 168,500 0,500"
+        fill="#1a0a3d" stroke="#5c35c5" stroke-width="2.5" opacity="0.92" style="cursor:pointer"
+        onclick="selectField('f17')"/>
+      <!-- F20: SE upper -->
+      <polygon id="f20" points="318,280 500,280 500,380 318,380"
+        fill="#1a0a3d" stroke="#5c35c5" stroke-width="2.5" opacity="0.92" style="cursor:pointer"
+        onclick="selectField('f20')"/>
+
+      <!-- FIELDS — for sale (dark gold outline) -->
+      <!-- F3: NE -->
+      <polygon id="f3" points="318,0 500,0 500,98 380,118 315,88"
+        fill="#1c1800" stroke="#f9a825" stroke-width="2.5" opacity="0.92" style="cursor:pointer"
+        onclick="selectField('f3')"/>
+      <!-- F11: W-lower -->
+      <polygon id="f11" points="0,280 155,280 162,368 72,378 0,372"
+        fill="#1c1800" stroke="#f9a825" stroke-width="2.5" opacity="0.92" style="cursor:pointer"
+        onclick="selectField('f11')"/>
+      <!-- F26: center-bottom -->
+      <polygon id="f26" points="162,368 210,375 318,380 318,500 168,500"
+        fill="#1c1800" stroke="#f9a825" stroke-width="2.5" opacity="0.92" style="cursor:pointer"
+        onclick="selectField('f26')"/>
+
+      <!-- FIELDS — unowned/empty (dark brown) -->
+      <!-- F5: center -->
+      <polygon id="f5" points="188,120 255,135 315,185 285,242 215,255 155,280 144,182 162,125"
+        fill="#2c1f0e" stroke="#5d4037" stroke-width="2" opacity="0.88" style="cursor:pointer"
+        onclick="selectField('f5')"/>
+      <!-- F8: E-middle -->
+      <polygon id="f8" points="315,185 392,215 500,208 500,280 318,280"
+        fill="#2c1f0e" stroke="#5d4037" stroke-width="2" opacity="0.88" style="cursor:pointer"
+        onclick="selectField('f8')"/>
+      <!-- F31: SE-lower -->
+      <polygon id="f31" points="318,380 500,380 500,500 318,500"
+        fill="#2c1f0e" stroke="#5d4037" stroke-width="2" opacity="0.88" style="cursor:pointer"
+        onclick="selectField('f31')"/>
+
+      <!-- RIVER — drawn on top of fields -->
+      <!-- River body -->
+      <path d="M 182,0 C 178,70 168,150 160,220 C 152,280 148,340 158,400 C 164,440 168,470 170,500"
+            stroke="#1565c0" stroke-width="20" fill="none" stroke-linecap="round" opacity="0.9"/>
+      <!-- River shimmer -->
+      <path d="M 182,0 C 178,70 168,150 160,220 C 152,280 148,340 158,400 C 164,440 168,470 170,500"
+            stroke="#90caf9" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.35"/>
+
+      <!-- Lake (widens from river) -->
+      <ellipse cx="108" cy="310" rx="52" ry="40" fill="#1565c0" opacity="0.9"/>
+      <ellipse cx="108" cy="310" rx="50" ry="38" fill="#42a5f5" opacity="0.2"/>
+
+      <!-- ROADS -->
+      <!-- Main horizontal road -->
+      <line x1="0" y1="280" x2="500" y2="280" stroke="#555" stroke-width="6" opacity="0.8"/>
+      <line x1="0" y1="280" x2="500" y2="280" stroke="#888" stroke-width="2" stroke-dasharray="18,10" opacity="0.5"/>
+      <!-- Right vertical road -->
+      <line x1="318" y1="0" x2="318" y2="500" stroke="#555" stroke-width="4" opacity="0.6"/>
+      <!-- Dirt path top-left -->
+      <path d="M 0,148 Q 38,155 74,168" stroke="#6d4c41" stroke-width="3" fill="none" opacity="0.5"/>
+      <!-- Dirt path mid -->
+      <path d="M 162,368 Q 185,370 210,375" stroke="#6d4c41" stroke-width="3" fill="none" opacity="0.5"/>
+
+      <!-- TOWN (at road intersection, east of river) -->
+      <rect x="218" y="268" width="75" height="50" rx="4" fill="#37474f" opacity="0.75"/>
+      <rect x="222" y="272" width="13" height="9" rx="1" fill="#607d8b"/>
+      <rect x="238" y="272" width="13" height="9" rx="1" fill="#607d8b"/>
+      <rect x="254" y="272" width="13" height="9" rx="1" fill="#607d8b"/>
+      <rect x="270" y="272" width="13" height="9" rx="1" fill="#607d8b"/>
+      <rect x="222" y="285" width="13" height="9" rx="1" fill="#607d8b"/>
+      <rect x="238" y="285" width="13" height="9" rx="1" fill="#607d8b"/>
+      <rect x="254" y="285" width="13" height="9" rx="1" fill="#607d8b"/>
+      <rect x="270" y="285" width="13" height="9" rx="1" fill="#607d8b"/>
+      <!-- Market icon -->
+      <text x="256" y="308" font-size="13" text-anchor="middle">🏪</text>
+      <text x="256" y="320" fill="#aaa" font-size="7" text-anchor="middle" font-family="monospace">MARKET</text>
+
+      <!-- LANDMARKS -->
+      <!-- Old Mill (near river middle-right) -->
+      <text x="345" y="242" font-size="16" text-anchor="middle">🏚️</text>
+      <text x="345" y="254" fill="#c8a96e" font-size="7" text-anchor="middle" font-family="monospace">Old Mill</text>
+      <!-- Grain Elevator -->
+      <text x="460" y="350" font-size="16" text-anchor="middle">🏗️</text>
+      <text x="460" y="362" fill="#c8a96e" font-size="7" text-anchor="middle" font-family="monospace">Elevator</text>
+      <!-- Bridge over river -->
+      <rect x="150" y="275" width="30" height="10" rx="2" fill="#795548" opacity="0.85"/>
+      <text x="165" y="283" fill="#d7ccc8" font-size="6" text-anchor="middle" font-family="monospace">BRIDGE</text>
+
+      <!-- CROP ICONS on owned fields -->
+      <text x="82" y="85"  font-size="22" text-anchor="middle">🌽</text>
+      <text x="72" y="218" font-size="20" text-anchor="middle">🌾</text>
+      <text x="232" y="325" font-size="20" text-anchor="middle">🥕</text>
+      <!-- Competitor crops -->
+      <text x="240" y="72" font-size="20" text-anchor="middle">🌾</text>
+      <text x="408" y="155" font-size="18" text-anchor="middle">🌽</text>
+      <text x="72" y="430" font-size="18" text-anchor="middle">🌻</text>
+      <text x="410" y="328" font-size="18" text-anchor="middle">🥬</text>
+
+      <!-- FIELD NUMBERS -->
+      <text x="82"  y="130" fill="#a5d6a7" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">1</text>
+      <text x="240" y="108" fill="#ef9a9a" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">2</text>
+      <text x="412" y="48"  fill="#ffe082" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">3 FOR SALE</text>
+      <text x="408" y="195" fill="#ef9a9a" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">4</text>
+      <text x="220" y="215" fill="#bcaaa4" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">5</text>
+      <text x="72"  y="258" fill="#a5d6a7" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">6 ✓</text>
+      <text x="406" y="248" fill="#bcaaa4" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">8</text>
+      <text x="72"  y="352" fill="#ffe082" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">11 FOR SALE</text>
+      <text x="232" y="360" fill="#a5d6a7" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">13</text>
+      <text x="72"  y="465" fill="#b39ddb" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">17</text>
+      <text x="410" y="335" fill="#b39ddb" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">20</text>
+      <text x="240" y="445" fill="#ffe082" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">26 FOR SALE</text>
+      <text x="410" y="445" fill="#bcaaa4" font-size="10" text-anchor="middle" font-family="monospace" font-weight="bold">31</text>
+
+      <!-- INFO PINS on for-sale fields -->
+      <circle cx="412" cy="30" r="7" fill="#f9a825" opacity="0.9"/>
+      <text x="412" y="34" fill="#1a1400" font-size="8" text-anchor="middle" font-weight="bold">$</text>
+      <circle cx="50"  cy="288" r="7" fill="#f9a825" opacity="0.9"/>
+      <text x="50"  y="292" fill="#1a1400" font-size="8" text-anchor="middle" font-weight="bold">$</text>
+      <circle cx="240" cy="415" r="7" fill="#f9a825" opacity="0.9"/>
+      <text x="240" y="419" fill="#1a1400" font-size="8" text-anchor="middle" font-weight="bold">$</text>
+
+      <!-- Selection highlight -->
+      <polygon id="sel-overlay" points="0,0" fill="rgba(255,255,255,0.12)" stroke="white" stroke-width="3" opacity="0" pointer-events="none"/>
+    </svg>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div style="width:175px;flex-shrink:0;">
+    <!-- Legend -->
+    <div style="background:#16213e;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;">
+      <div style="color:#e8d5a3;font-weight:bold;margin-bottom:7px;font-size:11px;">LEGEND</div>
+      <div style="line-height:2.2;color:#aaa;">
+        <div><span style="color:#43a047;font-size:14px;">█</span> Your farm</div>
+        <div><span style="color:#76c442;font-size:14px;">█</span> Ready to harvest</div>
+        <div><span style="color:#b71c1c;font-size:14px;">█</span> Hacienda Rivera</div>
+        <div><span style="color:#5c35c5;font-size:14px;">█</span> Granja del Norte</div>
+        <div><span style="color:#f9a825;font-size:14px;">█</span> For sale</div>
+        <div><span style="color:#5d4037;font-size:14px;">█</span> Unowned</div>
+        <div><span style="color:#1565c0;font-size:14px;">█</span> Water</div>
+      </div>
+    </div>
+    <!-- Detail panel -->
+    <div id="detail" style="background:#16213e;border-radius:8px;padding:10px;min-height:130px;">
+      <div style="color:#444;font-size:11px;text-align:center;padding-top:30px;">Tap a field</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const fields = {
+  f1:  { name:'Field 1',  owner:'yours',      competitor:null,               crop:'🌽 Corn',      ha:'5 ha', fertility:'♦ 21/25', status:'Growing · 4d left' },
+  f2:  { name:'Field 2',  owner:'rival-a',    competitor:'Hacienda Rivera',  crop:'🌾 Wheat',     ha:'8 ha', fertility:'♦ 22/25', status:null },
+  f3:  { name:'Field 3',  owner:'forsale',    competitor:null,               crop:null,           ha:'5 ha', fertility:'♦ 19/25', price:'$68,000', soil:'Loamy' },
+  f4:  { name:'Field 4',  owner:'rival-a',    competitor:'Hacienda Rivera',  crop:'🌽 Corn',      ha:'3 ha', fertility:'♦ 17/25', status:null },
+  f5:  { name:'Field 5',  owner:'unowned',    competitor:null,               crop:null,           ha:'4 ha', fertility:'♦ 14/25', status:null },
+  f6:  { name:'Field 6',  owner:'yours-ready',competitor:null,               crop:'🌾 Wheat',     ha:'2 ha', fertility:'♦ 18/25', status:'✅ Ready to harvest!' },
+  f8:  { name:'Field 8',  owner:'unowned',    competitor:null,               crop:null,           ha:'2 ha', fertility:'♦ 11/25', status:null },
+  f11: { name:'Field 11', owner:'forsale',    competitor:null,               crop:null,           ha:'2 ha', fertility:'♦ 12/25', price:'$28,000', soil:'Sandy' },
+  f13: { name:'Field 13', owner:'yours',      competitor:null,               crop:'🥕 Carrot',    ha:'3 ha', fertility:'♦ 16/25', status:'Growing · 2d left' },
+  f17: { name:'Field 17', owner:'rival-b',    competitor:'Granja del Norte', crop:'🌻 Sunflower', ha:'3 ha', fertility:'♦ 10/25', status:null },
+  f20: { name:'Field 20', owner:'rival-b',    competitor:'Granja del Norte', crop:'🥬 Lettuce',   ha:'5 ha', fertility:'♦ 15/25', status:null },
+  f26: { name:'Field 26', owner:'forsale',    competitor:null,               crop:null,           ha:'3 ha', fertility:'♦ 16/25', price:'$42,000', soil:'Clay' },
+  f31: { name:'Field 31', owner:'unowned',    competitor:null,               crop:null,           ha:'5 ha', fertility:'♦ 13/25', status:null },
+};
+
+const pts = {
+  f1:'0,0 182,0 174,48 162,125 144,182 74,168 0,148',
+  f2:'182,0 318,0 315,88 255,135 188,120 174,48',
+  f3:'318,0 500,0 500,98 380,118 315,88',
+  f4:'315,88 380,118 500,98 500,208 392,215 315,185',
+  f5:'188,120 255,135 315,185 285,242 215,255 155,280 144,182 162,125',
+  f6:'0,148 74,168 144,182 155,280 0,280',
+  f8:'315,185 392,215 500,208 500,280 318,280',
+  f11:'0,280 155,280 162,368 72,378 0,372',
+  f13:'155,280 215,255 285,242 318,280 318,380 210,375 162,368',
+  f17:'0,372 72,378 162,368 168,500 0,500',
+  f20:'318,280 500,280 500,380 318,380',
+  f26:'162,368 210,375 318,380 318,500 168,500',
+  f31:'318,380 500,380 500,500 318,500',
+};
+
+let selected = null;
+
+function selectField(id) {
+  const f = fields[id];
+  if (!f) return;
+
+  // highlight
+  document.getElementById('sel-overlay').setAttribute('points', pts[id]);
+  document.getElementById('sel-overlay').setAttribute('opacity', '1');
+
+  // build panel
+  const d = document.getElementById('detail');
+  const colorMap = { 'yours':'#43a047','yours-ready':'#76c442','rival-a':'#e53935','rival-b':'#5c35c5','forsale':'#f9a825','unowned':'#8d6e63' };
+  const labelMap = { 'yours':'Your Field','yours-ready':'Your Field','rival-a':'Hacienda Rivera','rival-b':'Granja del Norte','forsale':'For Sale','unowned':'Unowned' };
+  const col = colorMap[f.owner];
+  const lbl = labelMap[f.owner];
+
+  let body = `<div style="color:${col};font-size:10px;font-weight:bold;margin-bottom:3px;">${lbl}</div>
+    <div style="color:white;font-weight:bold;font-size:13px;margin-bottom:8px;">${f.name}</div>
+    <div style="background:#0f3460;border-radius:6px;padding:7px;font-size:10px;line-height:1.9;">`;
+
+  if (f.crop) body += `<div style="color:#aaa;">Crop: ${f.crop}</div>`;
+  if (f.status) body += `<div style="color:${f.owner==='yours-ready'?'#76c442':'#ffb74d'};">${f.status}</div>`;
+  body += `<div style="color:#aaa;">Size: ${f.ha}</div>`;
+  body += `<div style="color:#aaa;">Fertility: ${f.fertility}</div>`;
+  if (f.price) body += `<div style="color:#f9a825;font-weight:bold;">${f.price}</div>`;
+  if (f.soil) body += `<div style="color:#aaa;">Soil: ${f.soil}</div>`;
+  body += `</div>`;
+
+  if (f.owner === 'yours' || f.owner === 'yours-ready') {
+    body += `<button style="width:100%;background:#1b5e20;color:white;border:none;border-radius:6px;padding:6px;margin-top:6px;font-size:11px;cursor:pointer;">${f.owner==='yours-ready'?'Harvest Now →':'View Field →'}</button>`;
+  } else if (f.owner === 'forsale') {
+    body += `<button style="width:100%;background:#e65100;color:white;border:none;border-radius:6px;padding:6px;margin-top:6px;font-size:11px;cursor:pointer;">Buy Field</button>`;
+  }
+
+  d.innerHTML = body;
+  selected = id;
+}
+</script>
+
+<p style="color:#888;font-size:12px;margin-top:10px;">Fields are irregular, connected, share borders. River runs through the terrain. Does this feel closer to what you're picturing? Any adjustments?</p>

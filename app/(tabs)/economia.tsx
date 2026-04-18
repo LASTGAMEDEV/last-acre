@@ -1,22 +1,37 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput, Modal } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { playSound } from '../../engine/sounds';
 import Svg, { Polyline, Line, Text as SvgText, Rect, G, Circle } from 'react-native-svg';
 import { useGameStore } from '../../store/useGameStore';
 import DispatchModal from '../../components/DispatchModal';
 import { DeliveryCargo, COLD_CARGO_IDS, BULK_LIQUID_IDS } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F, R } from '../../constants/theme';
+import SubTabBar from '../../components/SubTabBar';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { MARKET_REGIONS, MarketId } from '../../data/marketRegions';
 import { sellRevenue, computeSellPressureModifier, sellPressureDuration } from '../../engine/market';
 import { getSeason } from '../../engine/climate';
+import {
+  Buyer,
+  RecurringContract,
+  BUYER_TIER_CONFIG,
+  getBuyerPriceBonus,
+  BuyerTier,
+} from '../../engine/contracts';
 import HelpSheet from '../../components/HelpSheet';
 import HintCard from '../../components/HintCard';
 import RevenueChart, { RevenueChartDataPoint } from '../../components/RevenueChart';
 
 const TIER_COLORS: Record<CropTier, string> = {
   D: '#9e9e9e', C: '#4caf50', B: '#2196f3', A: '#9c27b0', S: '#ff9800',
+};
+
+const BUYER_TIER_COLORS: Record<BuyerTier, string> = {
+  new:       '#37474f',
+  regular:   '#1565c0',
+  preferred: '#6a1fa3',
+  exclusive: '#b8860b',
 };
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -133,12 +148,12 @@ function PriceChart({ history, basePrice }: { history: number[]; basePrice: numb
       <Rect x={PAD.left} y={PAD.top} width={w} height={h} fill="#0a1628" rx={4} />
       <Line x1={PAD.left} y1={baseY} x2={PAD.left + w} y2={baseY} stroke="#444" strokeWidth={1} strokeDasharray="4,3" />
       {yLabels.map((v, i) => (
-        <SvgText key={i} x={PAD.left - 4} y={toY(v) + 4} fontSize={9} fill="#666" textAnchor="end">
+        <SvgText key={i} x={PAD.left - 4} y={toY(v) + 4} fontSize={9} fill={C.textFaint} textAnchor="end">
           ${v.toFixed(0)}
         </SvgText>
       ))}
       {[0, Math.floor((history.length - 1) / 2), history.length - 1].map(idx => (
-        <SvgText key={idx} x={toX(idx)} y={CHART_H - 6} fontSize={9} fill="#666" textAnchor="middle">
+        <SvgText key={idx} x={toX(idx)} y={CHART_H - 6} fontSize={9} fill={C.textFaint} textAnchor="middle">
           -{history.length - 1 - idx}d
         </SvgText>
       ))}
@@ -146,15 +161,15 @@ function PriceChart({ history, basePrice }: { history: number[]; basePrice: numb
       {history.length >= MA_WINDOW && (
         <Polyline points={maPointsStr} fill="none" stroke="#ffd54f" strokeWidth={1.5} strokeDasharray="5,3" opacity={0.8} />
       )}
-      <Circle cx={lastX} cy={lastY} r={4} fill={up ? '#4caf50' : '#ef5350'} stroke="#fff" strokeWidth={1} />
+      <Circle cx={lastX} cy={lastY} r={4} fill={up ? '#4caf50' : '#ef5350'} stroke={C.white} strokeWidth={1} />
     </Svg>
   );
 }
 
-type EcoTab = 'market' | 'autosell' | 'stats' | 'futures' | 'orders';
+type EcoTab = 'market' | 'autosell' | 'stats' | 'futures' | 'orders' | 'supply';
 
 export default function EconomiaScreen() {
-  const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture, priceAlerts, addPriceAlert, removePriceAlert, money, marketOrders, placeMarketOrder, cancelMarketOrder, selectedMarket, setSelectedMarket, hapticEnabled } = useGameStore();
+  const { prices, priceHistory, inventory, sellCrop, newsEvents, day, salesLog, totalRevenue, autoSell, setAutoSell, prestige, sellPressures, futures, openFuture, priceAlerts, addPriceAlert, removePriceAlert, money, marketOrders, placeMarketOrder, cancelMarketOrder, selectedMarket, setSelectedMarket, hapticEnabled, buyers, recurringContracts, reputation, signRecurringContract, deliverToRecurringContract, cancelRecurringContract } = useGameStore();
   const [selectedCrop, setSelectedCrop] = useState<string>(CROP_TYPES[0].id);
   const [ecoTab, setEcoTab] = useState<EcoTab>('market');
   const [dispatchVisible, setDispatchVisible] = useState(false);
@@ -174,6 +189,17 @@ export default function EconomiaScreen() {
   const [orderQty, setOrderQty] = useState('');
   const [orderTargetPrice, setOrderTargetPrice] = useState('');
   const [orderTerm, setOrderTerm] = useState<7 | 14 | 30>(7);
+
+  // Supply tab modal state
+  const [signModalVisible, setSignModalVisible] = useState(false);
+  const [signingBuyerId, setSigningBuyerId] = useState<string | null>(null);
+  const [signCropId, setSignCropId] = useState<string>('');
+  const [signAmount, setSignAmount] = useState<string>('');
+  const [signFrequency, setSignFrequency] = useState<7 | 14 | 30>(14);
+  const [signDuration, setSignDuration] = useState<number>(1);
+  const [deliverModalVisible, setDeliverModalVisible] = useState(false);
+  const [deliveringContractId, setDeliveringContractId] = useState<string | null>(null);
+  const [deliverAmount, setDeliverAmount] = useState<string>('');
 
   useEffect(() => {
     return () => {
@@ -271,23 +297,35 @@ export default function EconomiaScreen() {
     .map(crop => ({ crop, qty: Math.round(inventory[crop.id] ?? 0), price: prices.find(p => p.cropId === crop.id)?.price ?? crop.basePrice }))
     .filter(x => x.qty > 0);
 
+  function isBuyerAvailable(buyer: Buyer): boolean {
+    if (day < buyer.unlockedDay) return false;
+    if (buyer.requiresReputation && (reputation ?? 0) < buyer.requiresReputation) return false;
+    return true;
+  }
+
+  function activeBuyerContract(buyerId: string): RecurringContract | undefined {
+    return (recurringContracts ?? []).find((c) => c.buyerId === buyerId && c.active);
+  }
+
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Economy" />
+      <Text style={styles.screenTitle}>Economy</Text>
       {Object.values(inventory).reduce((a, b) => a + b, 0) > 0 && money < 5000 && (
         <HintCard id="hint_sell" title="You have crops to sell!" body="Your inventory has stock but funds are low. Go to the Market tab, select a crop, and tap Sell All to convert it to cash." />
       )}
 
-      {/* Tab bar */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={{ flexDirection: 'row' }}>
-        {(['market', 'autosell', 'stats', 'futures', 'orders'] as EcoTab[]).map(t => (
-          <TouchableOpacity key={t} style={[styles.tabBtn, ecoTab === t && styles.tabBtnActive]} onPress={() => setEcoTab(t)}>
-            <Text style={[styles.tabBtnText, ecoTab === t && styles.tabBtnTextActive]}>
-              {t === 'market' ? '📈 Market' : t === 'autosell' ? '🤖 Auto-Sell' : t === 'stats' ? '📊 Stats' : t === 'futures' ? '📉 Futures' : '📋 Orders'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <SubTabBar
+        tabs={[
+          { id: 'market',   label: '📈 Market' },
+          { id: 'autosell', label: '🤖 Auto-Sell' },
+          { id: 'stats',    label: '📊 Stats' },
+          { id: 'futures',  label: '📉 Futures' },
+          { id: 'orders',   label: '📋 Orders' },
+          { id: 'supply',   label: '🤝 Supply' },
+        ]}
+        active={ecoTab}
+        onSelect={id => setEcoTab(id as EcoTab)}
+      />
 
       {/* AUTO-SELL TAB */}
       {ecoTab === 'autosell' && (
@@ -702,6 +740,132 @@ export default function EconomiaScreen() {
         );
       })()}
 
+      {/* ── SUPPLY TAB ── */}
+      {ecoTab === 'supply' && (
+        <ScrollView style={styles.tabScroll} showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ padding: S.md, paddingBottom: 40 }}>
+
+          <Text style={styles.sectionHeader}>Recurring Buyers</Text>
+          <Text style={[styles.sectionSubtitle, { marginBottom: S.md }]}>
+            Consistent deliveries build streaks and unlock better prices and larger orders.
+          </Text>
+
+          {(buyers ?? []).map((buyer) => {
+            const available = isBuyerAvailable(buyer);
+            const activeContract = activeBuyerContract(buyer.id);
+            const tierCfg = BUYER_TIER_CONFIG[buyer.tier];
+            const priceBonus = getBuyerPriceBonus(buyer);
+            const nextTierEntry = (['new','regular','preferred','exclusive'] as BuyerTier[])
+              .find((t) => BUYER_TIER_CONFIG[t].deliveryGate > buyer.totalDeliveries);
+            const gateToNext = nextTierEntry
+              ? BUYER_TIER_CONFIG[nextTierEntry].deliveryGate - buyer.totalDeliveries
+              : 0;
+
+            return (
+              <View key={buyer.id} style={[styles.card, !available && { opacity: 0.45 }]}>
+                {/* Header */}
+                <View style={styles.rowBetween}>
+                  <View style={styles.rowInline}>
+                    <Text style={styles.buyerEmoji}>{buyer.emoji}</Text>
+                    <Text style={styles.cardTitle}>{buyer.name}</Text>
+                  </View>
+                  <View style={[styles.tierBadge, { backgroundColor: BUYER_TIER_COLORS[buyer.tier] }]}>
+                    <Text style={styles.tierBadgeText}>{tierCfg.emoji} {tierCfg.label}</Text>
+                  </View>
+                </View>
+
+                {/* Accepted crops */}
+                <Text style={styles.buyerCropLabel}>
+                  Accepts: {buyer.cropIds[0] === 'any' ? 'Any crop' : buyer.cropIds.join(', ')}
+                </Text>
+
+                {/* Tier stats */}
+                <View style={[styles.rowInline, { gap: S.md, marginTop: S.xs }]}>
+                  <Text style={styles.buyerStat}>+{Math.round(priceBonus * 100)}% price</Text>
+                  <Text style={styles.buyerStat}>
+                    Max {tierCfg.maxOrderKg === Infinity ? 'Unlimited' : `${tierCfg.maxOrderKg} kg`}
+                  </Text>
+                  {gateToNext > 0 && (
+                    <Text style={styles.buyerStat}>{gateToNext} more to upgrade</Text>
+                  )}
+                </View>
+
+                {/* Streak pips */}
+                {buyer.deliveryStreak > 0 && (
+                  <View style={[styles.rowInline, { gap: 4, marginTop: S.xs, flexWrap: 'wrap' }]}>
+                    {Array.from({ length: Math.min(buyer.deliveryStreak, 15) }).map((_, i) => (
+                      <View key={i} style={styles.streakPip} />
+                    ))}
+                    <Text style={[styles.buyerStat, { marginLeft: 4 }]}>
+                      {buyer.deliveryStreak} streak
+                    </Text>
+                  </View>
+                )}
+
+                {/* Lock reason */}
+                {!available && (
+                  <Text style={styles.lockedReason}>
+                    {day < buyer.unlockedDay
+                      ? `Unlocks day ${buyer.unlockedDay}`
+                      : `Requires ${buyer.requiresReputation} reputation`}
+                  </Text>
+                )}
+
+                {/* Active contract summary */}
+                {activeContract && (
+                  <View style={styles.activeContractChip}>
+                    <Text style={styles.activeContractText}>
+                      📦 {activeContract.cropId} · {activeContract.amountPerDelivery} kg
+                      {' '}· Next: day {activeContract.nextDeliveryDay}
+                      {activeContract.graceDaysRemaining > 0
+                        ? ` (+${activeContract.graceDaysRemaining}d grace)`
+                        : ''}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Actions */}
+                {available && (
+                  <View style={[styles.rowInline, { gap: S.sm, marginTop: S.sm }]}>
+                    {!activeContract ? (
+                      <TouchableOpacity
+                        style={[styles.actionBtn, { backgroundColor: C.green }]}
+                        onPress={() => {
+                          setSigningBuyerId(buyer.id);
+                          setSignCropId(buyer.cropIds[0] === 'any' ? CROP_TYPES[0].id : buyer.cropIds[0]);
+                          setSignModalVisible(true);
+                        }}
+                      >
+                        <Text style={styles.actionBtnText}>Sign Contract</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, { flex: 1, backgroundColor: C.green }]}
+                          onPress={() => {
+                            setDeliveringContractId(activeContract.id);
+                            setDeliverAmount(String(activeContract.amountPerDelivery));
+                            setDeliverModalVisible(true);
+                          }}
+                        >
+                          <Text style={styles.actionBtnText}>Deliver</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, { flex: 1, backgroundColor: '#5c1a1a' }]}
+                          onPress={() => cancelRecurringContract(activeContract.id)}
+                        >
+                          <Text style={[styles.actionBtnText, { color: '#ef9a9a' }]}>Cancel</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
+
       {/* MARKET TAB */}
       {ecoTab === 'market' && <>
       {/* News ticker */}
@@ -757,7 +921,7 @@ export default function EconomiaScreen() {
               ? hist[hist.length - 1] - hist[hist.length - 4 < 0 ? 0 : hist.length - 4]
               : 0;
             const trendIcon = recentTrend > 0.5 ? '↗' : recentTrend < -0.5 ? '↘' : '→';
-            const trendColor = recentTrend > 0.5 ? '#66bb6a' : recentTrend < -0.5 ? '#ef5350' : '#888';
+            const trendColor = recentTrend > 0.5 ? '#66bb6a' : recentTrend < -0.5 ? '#ef5350' : C.textMuted;
             return (
               <TouchableOpacity
                 key={crop.id}
@@ -814,7 +978,7 @@ export default function EconomiaScreen() {
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>BASE</Text>
-              <Text style={[styles.statValue, { color: '#888' }]}>${selected.basePrice.toFixed(2)}</Text>
+              <Text style={[styles.statValue, { color: C.textMuted }]}>${selected.basePrice.toFixed(2)}</Text>
             </View>
           </View>
 
@@ -1037,224 +1201,456 @@ export default function EconomiaScreen() {
           setDispatchVisible(false);
         }}
       />
+
+      {/* ── Sign Contract Modal ── */}
+      <Modal
+        visible={signModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSignModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            {(() => {
+              const buyer = (buyers ?? []).find((b) => b.id === signingBuyerId);
+              if (!buyer) return null;
+              const tierCfg = BUYER_TIER_CONFIG[buyer.tier];
+              const acceptedCrops =
+                buyer.cropIds[0] === 'any'
+                  ? CROP_TYPES.map((ct) => ct.id)
+                  : buyer.cropIds;
+
+              return (
+                <>
+                  <Text style={styles.modalTitle}>
+                    {buyer.emoji} Sign Contract — {buyer.name}
+                  </Text>
+                  <Text style={styles.modalSub}>
+                    {tierCfg.emoji} {tierCfg.label} · +{Math.round(getBuyerPriceBonus(buyer) * 100)}% price bonus
+                  </Text>
+
+                  <Text style={styles.formLabel}>Crop</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                    style={{ marginBottom: S.sm }}>
+                    {acceptedCrops.map((id) => (
+                      <TouchableOpacity
+                        key={id}
+                        style={[styles.supplyChip, signCropId === id && styles.supplyChipActive]}
+                        onPress={() => setSignCropId(id)}
+                      >
+                        <Text style={[styles.supplyChipText, signCropId === id && { color: C.white }]}>
+                          {CROP_TYPES.find((ct) => ct.id === id)?.name ?? id}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  <Text style={styles.formLabel}>
+                    Amount per delivery (kg)
+                    {tierCfg.maxOrderKg !== Infinity ? ` — max ${tierCfg.maxOrderKg}` : ''}
+                  </Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={signAmount}
+                    onChangeText={setSignAmount}
+                    keyboardType="numeric"
+                    placeholder="e.g. 200"
+                    placeholderTextColor={C.textFaint}
+                  />
+
+                  <Text style={styles.formLabel}>Delivery frequency</Text>
+                  <View style={[styles.rowInline, { gap: S.sm, marginBottom: S.sm }]}>
+                    {([7, 14, 30] as const).map((f) => (
+                      <TouchableOpacity
+                        key={f}
+                        style={[styles.supplyChip, { flex: 1 }, signFrequency === f && styles.supplyChipActive]}
+                        onPress={() => setSignFrequency(f)}
+                      >
+                        <Text style={[styles.supplyChipText, signFrequency === f && { color: C.white }]}>
+                          {f === 7 ? 'Weekly' : f === 14 ? 'Biweekly' : 'Monthly'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={styles.formLabel}>Duration (seasons)</Text>
+                  <View style={[styles.rowInline, { gap: S.sm, marginBottom: S.md }]}>
+                    {[1, 2, 3, 4].map((d) => (
+                      <TouchableOpacity
+                        key={d}
+                        style={[styles.supplyChip, { flex: 1 }, signDuration === d && styles.supplyChipActive]}
+                        onPress={() => setSignDuration(d)}
+                      >
+                        <Text style={[styles.supplyChipText, signDuration === d && { color: C.white }]}>
+                          {d}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <View style={[styles.rowInline, { gap: S.sm }]}>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { flex: 1, backgroundColor: C.green }]}
+                      onPress={() => {
+                        const amt = Number(signAmount);
+                        if (!signCropId || !amt || amt <= 0) return;
+                        if (tierCfg.maxOrderKg !== Infinity && amt > tierCfg.maxOrderKg) return;
+                        signRecurringContract(
+                          signingBuyerId!, signCropId, amt, signFrequency, signDuration,
+                        );
+                        setSignModalVisible(false);
+                        setSignAmount('');
+                      }}
+                    >
+                      <Text style={styles.actionBtnText}>Confirm</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { flex: 1, backgroundColor: C.bgCard }]}
+                      onPress={() => setSignModalVisible(false)}
+                    >
+                      <Text style={[styles.actionBtnText, { color: C.textMuted }]}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              );
+            })()}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Deliver Modal ── */}
+      <Modal
+        visible={deliverModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDeliverModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            {(() => {
+              const contract = (recurringContracts ?? []).find((c) => c.id === deliveringContractId);
+              if (!contract) return null;
+              const buyer = (buyers ?? []).find((b) => b.id === contract.buyerId);
+              if (!buyer) return null;
+              const inStock = inventory[contract.cropId] ?? 0;
+              const cropType = CROP_TYPES.find((ct) => ct.id === contract.cropId);
+              const basePrice = cropType?.basePrice ?? 1;
+              const previewAmt = Math.min(Number(deliverAmount) || 0, inStock);
+              const previewRevenue = previewAmt * basePrice * (1 + contract.priceBonus);
+              const threshold80 = Math.ceil(contract.amountPerDelivery * 0.8);
+              const isOnTime = previewAmt >= threshold80;
+
+              return (
+                <>
+                  <Text style={styles.modalTitle}>
+                    {buyer.emoji} Deliver to {buyer.name}
+                  </Text>
+                  <Text style={styles.modalSub}>
+                    Required: {contract.amountPerDelivery} kg {contract.cropId}
+                    {' '}(≥{threshold80} kg counts as on-time)
+                  </Text>
+                  <Text style={styles.modalSub}>
+                    In stock: {inStock.toLocaleString()} kg · +{Math.round(contract.priceBonus * 100)}% bonus
+                  </Text>
+
+                  <Text style={styles.formLabel}>Amount to deliver (kg)</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={deliverAmount}
+                    onChangeText={setDeliverAmount}
+                    keyboardType="numeric"
+                    placeholder={String(contract.amountPerDelivery)}
+                    placeholderTextColor={C.textFaint}
+                  />
+
+                  {previewAmt > 0 && (
+                    <Text style={[styles.modalSub, { color: isOnTime ? '#81c784' : '#ef9a9a', marginBottom: S.sm }]}>
+                      Revenue: ${previewRevenue.toFixed(0)}
+                      {isOnTime ? ' ✓ On-time' : ' ⚠️ Below 80% — counts as missed'}
+                    </Text>
+                  )}
+
+                  <View style={[styles.rowInline, { gap: S.sm }]}>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { flex: 1, backgroundColor: C.green }]}
+                      onPress={() => {
+                        const amt = Number(deliverAmount);
+                        if (!amt || amt <= 0) return;
+                        deliverToRecurringContract(contract.id, amt);
+                        setDeliverModalVisible(false);
+                        setDeliverAmount('');
+                      }}
+                    >
+                      <Text style={styles.actionBtnText}>Deliver</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { flex: 1, backgroundColor: C.bgCard }]}
+                      onPress={() => setDeliverModalVisible(false)}
+                    >
+                      <Text style={[styles.actionBtnText, { color: C.textMuted }]}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              );
+            })()}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
+  container: { flex: 1, backgroundColor: C.bg },
 
-  ticker: { maxHeight: 44, marginBottom: 4 },
+  ticker: { maxHeight: 44, marginBottom: S.xs },
   tickerContent: { paddingHorizontal: 10, gap: 8, alignItems: 'center' },
-  tickerItem: { flexDirection: 'row', alignItems: 'center', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, gap: 6 },
+  tickerItem: { flexDirection: 'row', alignItems: 'center', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6, gap: 6 },
   tickerBull: { backgroundColor: '#1b3a1b' },
   tickerBear: { backgroundColor: '#3a1b1b' },
-  tickerText: { color: '#e8d5a3', fontSize: 11, maxWidth: 200 },
-  tickerDays: { color: '#888', fontSize: 10 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#e8d5a3' },
+  tickerText: { color: C.text, fontSize: 11, maxWidth: 200 },
+  tickerDays: { color: C.textMuted, fontSize: F.size.xs },
+  title: { fontSize: F.size.title, fontWeight: 'bold', color: C.text },
   body: { flex: 1, flexDirection: 'row' },
 
   leftCol: { width: '36%', borderRightWidth: 1, borderRightColor: '#222' },
-  cropRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
+  cropRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 9, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: C.divider },
   cropRowSelected: { backgroundColor: '#0f3460' },
-  tierDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6, flexShrink: 0 },
+  tierDot: { width: 8, height: 8, borderRadius: R.xs, marginRight: 6, flexShrink: 0 },
   cropRowInfo: { flex: 1 },
-  cropRowName: { color: '#aaa', fontSize: 12 },
-  cropRowNameSelected: { color: '#e8d5a3', fontWeight: 'bold' },
-  cropRowPct: { fontSize: 10 },
+  cropRowName: { color: '#aaa', fontSize: F.size.sm },
+  cropRowNameSelected: { color: C.text, fontWeight: 'bold' },
+  cropRowPct: { fontSize: F.size.xs },
 
   rightPanel: { flex: 1, padding: 10 },
   chartMeta: { marginBottom: 6 },
-  chartCropName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 15 },
+  chartCropName: { color: C.text, fontWeight: 'bold', fontSize: 15 },
   chartPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  chartCurrentPrice: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
-  chartUnit: { color: '#666', fontSize: 12, marginRight: 4 },
-  chartPct: { fontSize: 13, fontWeight: 'bold' },
-  chartPlaceholder: { height: CHART_H, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a1628', borderRadius: 4 },
-  chartEmpty: { color: '#555', fontSize: 12 },
+  chartCurrentPrice: { color: C.white, fontSize: F.size.title, fontWeight: 'bold' },
+  chartUnit: { color: C.textFaint, fontSize: F.size.sm, marginRight: S.xs },
+  chartPct: { fontSize: F.size.md, fontWeight: 'bold' },
+  chartPlaceholder: { height: CHART_H, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a1628', borderRadius: R.xs },
+  chartEmpty: { color: '#555', fontSize: F.size.sm },
 
   up: { color: '#81c784' },
   down: { color: '#ef9a9a' },
 
-  statsBar: { flexDirection: 'row', backgroundColor: '#16213e', borderRadius: 8, marginTop: 6, padding: 10 },
+  statsBar: { flexDirection: 'row', backgroundColor: C.bgCard, borderRadius: R.md, marginTop: 6, padding: 10 },
   statItem: { flex: 1, alignItems: 'center' },
   statLabel: { color: '#555', fontSize: 9, fontWeight: 'bold', marginBottom: 2 },
-  statValue: { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' },
-  statDivider: { width: 1, backgroundColor: '#2a2a4a', marginHorizontal: 4 },
+  statValue: { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+  statDivider: { width: 1, backgroundColor: '#2a2a4a', marginHorizontal: S.xs },
 
-  signalPanel: { marginTop: 8, backgroundColor: '#16213e', borderRadius: 8, padding: 10, borderLeftWidth: 3 },
-  signalLabel: { fontWeight: 'bold', fontSize: 12, marginBottom: 2 },
-  signalAdvice: { color: '#888', fontSize: 11 },
-  sellPanel: { marginTop: 8, backgroundColor: '#16213e', borderRadius: 10, padding: 10 },
-  sellStock: { color: '#888', fontSize: 12, marginBottom: 6 },
-  sellStockNum: { color: '#e8d5a3', fontWeight: 'bold' },
-  sellBtn: { backgroundColor: '#2e7d32', borderRadius: 8, padding: 9, alignItems: 'center' },
+  signalPanel: { marginTop: S.sm, backgroundColor: C.bgCard, borderRadius: R.md, padding: 10, borderLeftWidth: 3 },
+  signalLabel: { fontWeight: 'bold', fontSize: F.size.sm, marginBottom: 2 },
+  signalAdvice: { color: C.textMuted, fontSize: 11 },
+  sellPanel: { marginTop: S.sm, backgroundColor: C.bgCard, borderRadius: 10, padding: 10 },
+  sellStock: { color: C.textMuted, fontSize: F.size.sm, marginBottom: 6 },
+  sellStockNum: { color: C.text, fontWeight: 'bold' },
+  sellBtn: { backgroundColor: '#2e7d32', borderRadius: R.md, padding: 9, alignItems: 'center' },
   sellBtnDisabled: { backgroundColor: '#333' },
-  sellBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  sellBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
 
-  section: { backgroundColor: '#16213e', borderRadius: 10, marginTop: 8, padding: 12 },
-  sectionTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13, marginBottom: 2 },
-  sectionSub: { color: '#555', fontSize: 10, marginBottom: 8 },
-  emptyText: { color: '#555', fontSize: 12 },
+  section: { backgroundColor: C.bgCard, borderRadius: 10, marginTop: S.sm, padding: S.md },
+  sectionTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: 2 },
+  sectionSub: { color: '#555', fontSize: F.size.xs, marginBottom: S.sm },
+  emptyText: { color: '#555', fontSize: F.size.sm },
 
-  roiRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
-  roiRank: { color: '#555', fontSize: 12, width: 22 },
-  roiName: { flex: 1, color: '#ccc', fontSize: 12 },
+  roiRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: C.divider },
+  roiRank: { color: '#555', fontSize: F.size.sm, width: 22 },
+  roiName: { flex: 1, color: '#ccc', fontSize: F.size.sm },
   roiRight: { alignItems: 'flex-end' },
-  roiValue: { color: '#81c784', fontSize: 12, fontWeight: 'bold' },
-  roiPrice: { color: '#666', fontSize: 10 },
+  roiValue: { color: '#81c784', fontSize: F.size.sm, fontWeight: 'bold' },
+  roiPrice: { color: C.textFaint, fontSize: F.size.xs },
 
-  invRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
-  invRowWarn: { backgroundColor: '#2a1a0a', borderRadius: 6 },
-  invName: { flex: 1, color: '#ccc', fontSize: 12 },
-  invQty: { color: '#888', fontSize: 11, marginRight: 8 },
-  invSellBtn: { backgroundColor: '#1b5e20', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
+  invRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: C.divider },
+  invRowWarn: { backgroundColor: '#2a1a0a', borderRadius: R.sm },
+  invName: { flex: 1, color: '#ccc', fontSize: F.size.sm },
+  invQty: { color: C.textMuted, fontSize: 11, marginRight: S.sm },
+  invSellBtn: { backgroundColor: '#1b5e20', borderRadius: R.sm, paddingHorizontal: S.sm, paddingVertical: S.xs },
   invSellText: { color: '#81c784', fontSize: 11, fontWeight: 'bold' },
-  spoilageWarn: { backgroundColor: '#2a1400', borderRadius: 6, padding: 8, marginBottom: 6, borderLeftWidth: 3, borderLeftColor: '#ff7043' },
+  spoilageWarn: { backgroundColor: '#2a1400', borderRadius: R.sm, padding: S.sm, marginBottom: 6, borderLeftWidth: 3, borderLeftColor: '#ff7043' },
   spoilageWarnText: { color: '#ff8a65', fontSize: 11 },
 
   // Tab bar
-  tabBar: { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 6, gap: 6 },
-  tabBtn: { flex: 1, backgroundColor: '#16213e', borderRadius: 8, padding: 8, alignItems: 'center' },
-  tabBtnActive: { backgroundColor: '#0f3460' },
-  tabBtnText: { color: '#888', fontSize: 11, fontWeight: 'bold' },
-  tabBtnTextActive: { color: '#e8d5a3' },
 
   // Auto-sell
-  autoSellScroll: { flex: 1, paddingHorizontal: 12 },
-  autoSellDesc: { color: '#888', fontSize: 12, marginBottom: 12, marginTop: 4 },
-  autoSellRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#16213e', borderRadius: 10, padding: 10, marginBottom: 6 },
+  autoSellScroll: { flex: 1, paddingHorizontal: S.md },
+  autoSellDesc: { color: C.textMuted, fontSize: F.size.sm, marginBottom: S.md, marginTop: S.xs },
+  autoSellRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.bgCard, borderRadius: 10, padding: 10, marginBottom: 6 },
   autoSellLeft: { flex: 1 },
-  autoSellName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
-  autoSellPrice: { color: '#888', fontSize: 11, marginTop: 1 },
-  autoSellInput: { backgroundColor: '#0a1628', color: '#fff', fontSize: 12, borderRadius: 6, padding: 6, width: 72, marginHorizontal: 8, textAlign: 'center' },
-  autoSellToggle: { backgroundColor: '#333', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  autoSellName: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  autoSellPrice: { color: C.textMuted, fontSize: 11, marginTop: 1 },
+  autoSellInput: { backgroundColor: '#0a1628', color: C.white, fontSize: F.size.sm, borderRadius: R.sm, padding: 6, width: 72, marginHorizontal: S.sm, textAlign: 'center' },
+  autoSellToggle: { backgroundColor: '#333', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: 6 },
   autoSellToggleOn: { backgroundColor: '#1b5e20' },
-  autoSellToggleText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  autoSellToggleText: { color: C.white, fontWeight: 'bold', fontSize: F.size.sm },
 
   // Stats
-  statsScroll: { flex: 1, paddingHorizontal: 12 },
-  statsCard: { backgroundColor: '#16213e', borderRadius: 10, padding: 12, marginBottom: 8 },
-  statsCardTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13, marginBottom: 8 },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
-  statsLabel: { color: '#888', fontSize: 12 },
-  statsValue: { color: '#ccc', fontSize: 12, fontWeight: 'bold' },
-  catRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  catLabel: { color: '#888', fontSize: 12, width: 90 },
-  catBarWrap: { flex: 1, height: 8, backgroundColor: '#0a1628', borderRadius: 4, marginHorizontal: 8, overflow: 'hidden' },
-  catBar: { height: 8, borderRadius: 4 },
-  catValue: { fontSize: 12, fontWeight: 'bold', width: 80, textAlign: 'right' },
-  prestigeCard: { backgroundColor: '#1a1050', borderRadius: 10, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#7c4dff', alignItems: 'center' },
+  statsScroll: { flex: 1, paddingHorizontal: S.md },
+  statsCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginBottom: S.sm },
+  statsCardTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: S.sm },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: C.divider },
+  statsLabel: { color: C.textMuted, fontSize: F.size.sm },
+  statsValue: { color: '#ccc', fontSize: F.size.sm, fontWeight: 'bold' },
+  catRow: { flexDirection: 'row', alignItems: 'center', marginBottom: S.sm },
+  catLabel: { color: C.textMuted, fontSize: F.size.sm, width: 90 },
+  catBarWrap: { flex: 1, height: 8, backgroundColor: '#0a1628', borderRadius: R.xs, marginHorizontal: S.sm, overflow: 'hidden' },
+  catBar: { height: 8, borderRadius: R.xs },
+  catValue: { fontSize: F.size.sm, fontWeight: 'bold', width: 80, textAlign: 'right' },
+  prestigeCard: { backgroundColor: '#1a1050', borderRadius: 10, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: '#7c4dff', alignItems: 'center' },
   prestigeTitle: { color: '#b39ddb', fontWeight: 'bold', fontSize: 15 },
-  prestigeSub: { color: '#7c4dff', fontSize: 12, marginTop: 2 },
+  prestigeSub: { color: '#7c4dff', fontSize: F.size.sm, marginTop: 2 },
   prestigeHint: { color: '#7c7c9a', fontSize: 11, marginTop: 6, textAlign: 'center' },
   sellPressureWarn: { color: '#ffb74d', fontSize: 11, marginBottom: 6, textAlign: 'center' },
   sellPressureActive: { color: '#ef9a9a', fontSize: 11, marginBottom: 6, textAlign: 'center' },
-  futuresScroll: { flex: 1, paddingHorizontal: 12 },
+  futuresScroll: { flex: 1, paddingHorizontal: S.md },
 
   // Futures tab
-  futuresSectionLabel: { color: '#888', fontSize: 12, fontWeight: 'bold', marginTop: 16, marginBottom: 6 },
-  futuresCropScroll:   { marginBottom: 4 },
-  futuresCropChip:     { backgroundColor: '#16213e', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, marginRight: 6 },
+  futuresSectionLabel: { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'bold', marginTop: S.lg, marginBottom: 6 },
+  futuresCropScroll:   { marginBottom: S.xs },
+  futuresCropChip:     { backgroundColor: C.bgCard, borderRadius: R.xl, paddingHorizontal: S.md, paddingVertical: 6, marginRight: 6 },
   futuresCropChipActive: { backgroundColor: '#0f3460', borderWidth: 1, borderColor: '#4fc3f7' },
-  futuresCropChipText: { color: '#888', fontSize: 11 },
-  futuresCropChipTextActive: { color: '#e8d5a3', fontWeight: 'bold' },
-  futuresCropMeta:     { color: '#888', fontSize: 11, marginBottom: 10 },
+  futuresCropChipText: { color: C.textMuted, fontSize: 11 },
+  futuresCropChipTextActive: { color: C.text, fontWeight: 'bold' },
+  futuresCropMeta:     { color: C.textMuted, fontSize: 11, marginBottom: 10 },
 
-  futuresForm:         { backgroundColor: '#16213e', borderRadius: 12, padding: 12, marginBottom: 4 },
+  futuresForm:         { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.xs },
   futuresFormRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  futuresFormLabel:    { color: '#888', fontSize: 12, marginBottom: 6 },
-  futuresQtyInput:     { backgroundColor: '#0a1628', color: '#fff', fontSize: 13, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, width: 100, textAlign: 'right' },
+  futuresFormLabel:    { color: C.textMuted, fontSize: F.size.sm, marginBottom: 6 },
+  futuresQtyInput:     { backgroundColor: '#0a1628', color: C.white, fontSize: F.size.md, borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6, width: 100, textAlign: 'right' },
   futuresTermRow:      { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  futuresTermBtn:      { flex: 1, backgroundColor: '#0a1628', borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
+  futuresTermBtn:      { flex: 1, backgroundColor: '#0a1628', borderRadius: R.md, paddingVertical: S.sm, alignItems: 'center' },
   futuresTermBtnActive: { backgroundColor: '#1565c0' },
-  futuresTermBtnText:  { color: '#666', fontWeight: 'bold', fontSize: 13 },
-  futuresTermBtnTextActive: { color: '#fff' },
-  futuresPreview:      { backgroundColor: '#0a1628', borderRadius: 8, padding: 8, marginBottom: 10 },
+  futuresTermBtnText:  { color: C.textFaint, fontWeight: 'bold', fontSize: F.size.md },
+  futuresTermBtnTextActive: { color: C.white },
+  futuresPreview:      { backgroundColor: '#0a1628', borderRadius: R.md, padding: S.sm, marginBottom: 10 },
   futuresPreviewText:  { color: '#81c784', fontSize: 11 },
-  futuresOpenBtn:      { backgroundColor: '#1b5e20', borderRadius: 8, padding: 10, alignItems: 'center' },
+  futuresOpenBtn:      { backgroundColor: '#1b5e20', borderRadius: R.md, padding: 10, alignItems: 'center' },
   futuresOpenBtnDisabled: { backgroundColor: '#333' },
-  futuresOpenBtnText:  { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  futuresFlash:        { color: '#81c784', fontSize: 12, textAlign: 'center', marginTop: 8 },
+  futuresOpenBtnText:  { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
+  futuresFlash:        { color: '#81c784', fontSize: F.size.sm, textAlign: 'center', marginTop: S.sm },
 
-  futuresCard:         { backgroundColor: '#16213e', borderRadius: 12, padding: 12, marginBottom: 4 },
-  futuresCardLast:    { backgroundColor: '#16213e', borderRadius: 12, padding: 12, marginBottom: 32 },
-  futuresEmpty:        { color: '#555', fontSize: 12 },
-  futuresPosRow:       { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
+  futuresCard:         { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.xs },
+  futuresCardLast:    { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.xxl },
+  futuresEmpty:        { color: '#555', fontSize: F.size.sm },
+  futuresPosRow:       { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider },
   futuresPosLeft:      { flex: 1 },
   futuresPosRight:     { alignItems: 'flex-end', justifyContent: 'center' },
-  futuresPosName:      { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
-  futuresPosDetail:    { color: '#888', fontSize: 11, marginTop: 2 },
+  futuresPosName:      { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  futuresPosDetail:    { color: C.textMuted, fontSize: 11, marginTop: 2 },
   futuresPosStock:     { fontSize: 11, marginTop: 3 },
   futuresPosStockOk:   { color: '#66bb6a' },
   futuresPosStockShort:{ color: '#ffa726' },
-  futuresPosDelivery:  { color: '#aaa', fontSize: 12, fontWeight: 'bold' },
-  futuresPosDay:       { color: '#555', fontSize: 10, marginTop: 2 },
-  futuresSettledBadge: { color: '#66bb6a', fontSize: 12, fontWeight: 'bold' },
-  alertPanel:           { backgroundColor: '#16213e', borderRadius: 10, padding: 10, marginTop: 8, gap: 6 },
-  alertPanelTitle:      { color: '#e8d5a3', fontSize: 11, fontWeight: 'bold', marginBottom: 2 },
+  futuresPosDelivery:  { color: '#aaa', fontSize: F.size.sm, fontWeight: 'bold' },
+  futuresPosDay:       { color: '#555', fontSize: F.size.xs, marginTop: 2 },
+  futuresSettledBadge: { color: '#66bb6a', fontSize: F.size.sm, fontWeight: 'bold' },
+  alertPanel:           { backgroundColor: C.bgCard, borderRadius: 10, padding: 10, marginTop: S.sm, gap: 6 },
+  alertPanelTitle:      { color: C.text, fontSize: 11, fontWeight: 'bold', marginBottom: 2 },
   alertActiveRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  alertActiveText:      { color: '#66bb6a', fontSize: 12 },
-  alertRemoveBtn:       { color: '#ef5350', fontSize: 12, paddingHorizontal: 6 },
+  alertActiveText:      { color: '#66bb6a', fontSize: F.size.sm },
+  alertRemoveBtn:       { color: '#ef5350', fontSize: F.size.sm, paddingHorizontal: 6 },
   alertDirectionRow:    { flexDirection: 'row', gap: 6 },
-  alertDirBtn:          { flex: 1, backgroundColor: '#0d1117', borderRadius: 6, paddingVertical: 5, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
-  alertDirBtnActive:    { backgroundColor: '#0f3460', borderColor: '#e8d5a3' },
-  alertDirBtnText:      { color: '#666', fontSize: 11, fontWeight: 'bold' },
-  alertDirBtnTextActive:{ color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' },
+  alertDirBtn:          { flex: 1, backgroundColor: '#0d1117', borderRadius: R.sm, paddingVertical: 5, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
+  alertDirBtnActive:    { backgroundColor: '#0f3460', borderColor: C.text },
+  alertDirBtnText:      { color: C.textFaint, fontSize: 11, fontWeight: 'bold' },
+  alertDirBtnTextActive:{ color: C.text, fontSize: 11, fontWeight: 'bold' },
   alertInputRow:        { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  alertInput:           { flex: 1, backgroundColor: '#0d1117', borderRadius: 6, borderWidth: 1, borderColor: '#333', color: '#e8d5a3', fontSize: 12, paddingHorizontal: 8, paddingVertical: 5 },
-  alertSetBtn:          { backgroundColor: '#0f3460', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
-  alertSetBtnText:      { color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' },
-  alertSummaryBar:          { backgroundColor: '#16213e', paddingHorizontal: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
-  alertSummaryTitle:        { color: '#e8d5a3', fontSize: 10, fontWeight: 'bold', marginBottom: 4 },
-  alertSummaryChip:         { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f3460', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, gap: 4 },
-  alertSummaryChipName:     { color: '#e8d5a3', fontSize: 10, fontWeight: 'bold' },
-  alertSummaryChipPrice:    { color: '#66bb6a', fontSize: 10 },
+  alertInput:           { flex: 1, backgroundColor: '#0d1117', borderRadius: R.sm, borderWidth: 1, borderColor: '#333', color: C.text, fontSize: F.size.sm, paddingHorizontal: S.sm, paddingVertical: 5 },
+  alertSetBtn:          { backgroundColor: '#0f3460', borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6 },
+  alertSetBtnText:      { color: C.text, fontSize: 11, fontWeight: 'bold' },
+  alertSummaryBar:          { backgroundColor: C.bgCard, paddingHorizontal: S.sm, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: C.divider },
+  alertSummaryTitle:        { color: C.text, fontSize: F.size.xs, fontWeight: 'bold', marginBottom: S.xs },
+  alertSummaryChip:         { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f3460', borderRadius: R.lg, paddingHorizontal: S.sm, paddingVertical: S.xs, gap: 4 },
+  alertSummaryChipName:     { color: C.text, fontSize: F.size.xs, fontWeight: 'bold' },
+  alertSummaryChipPrice:    { color: '#66bb6a', fontSize: F.size.xs },
   alertSummaryChipRemove:   { color: '#ef5350', fontSize: 11, paddingLeft: 2 },
 
   // Orders tab
-  ordersSection:            { margin: 12, backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
-  ordersSubtitle:           { color: '#666', fontSize: 11, marginBottom: 10, marginTop: -6 },
+  ordersSection:            { margin: S.md, backgroundColor: C.bgCard, borderRadius: R.lg, padding: 14 },
+  ordersSubtitle:           { color: C.textFaint, fontSize: 11, marginBottom: 10, marginTop: -6 },
   orderCropScroll:          { marginBottom: 10 },
-  orderCropChip:            { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, marginRight: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  orderCropChip:            { backgroundColor: '#0d1b2e', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 5, marginRight: 6, borderWidth: 1, borderColor: '#1e2a3a' },
   orderCropChipActive:      { backgroundColor: '#1565c0', borderColor: '#42a5f5' },
-  orderCropChipText:        { color: '#888', fontSize: 12 },
-  orderCropChipTextActive:  { color: '#fff', fontWeight: 'bold' },
+  orderCropChipText:        { color: C.textMuted, fontSize: F.size.sm },
+  orderCropChipTextActive:  { color: C.white, fontWeight: 'bold' },
   ordersFormRow:            { flexDirection: 'row', gap: 10, marginBottom: 10 },
   ordersFormHalf:           { flex: 1 },
-  ordersFormLabel:          { color: '#888', fontSize: 10, marginBottom: 4 },
-  ordersInput:              { backgroundColor: '#0d1b2e', borderRadius: 8, color: '#e8d5a3', paddingHorizontal: 10, paddingVertical: 7, fontSize: 13, borderWidth: 1, borderColor: '#1e2a3a' },
-  ordersTermRow:            { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  ordersTermBtn:            { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  ordersFormLabel:          { color: C.textMuted, fontSize: F.size.xs, marginBottom: S.xs },
+  ordersInput:              { backgroundColor: '#0d1b2e', borderRadius: R.md, color: C.text, paddingHorizontal: 10, paddingVertical: 7, fontSize: F.size.md, borderWidth: 1, borderColor: '#1e2a3a' },
+  ordersTermRow:            { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: S.md },
+  ordersTermBtn:            { backgroundColor: '#0d1b2e', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: 6, borderWidth: 1, borderColor: '#1e2a3a' },
   ordersTermBtnActive:      { backgroundColor: '#1565c0', borderColor: '#42a5f5' },
-  ordersTermText:           { color: '#888', fontSize: 12, fontWeight: 'bold' },
-  ordersTermTextActive:     { color: '#fff' },
+  ordersTermText:           { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'bold' },
+  ordersTermTextActive:     { color: C.white },
   ordersTermHint:           { color: '#555', fontSize: 11, flex: 1, textAlign: 'right' },
   ordersPlaceBtn:           { backgroundColor: '#1565c0', borderRadius: 10, paddingVertical: 11, alignItems: 'center' },
   ordersPlaceBtnDisabled:   { backgroundColor: '#333' },
-  ordersPlaceBtnText:       { color: '#fff', fontWeight: 'bold', fontSize: 12 },
-  ordersCard:               { marginHorizontal: 12, backgroundColor: '#16213e', borderRadius: 12, padding: 12, marginBottom: 8 },
-  ordersRow:                { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1e2a3a' },
-  ordersRowName:            { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
-  ordersRowDetail:          { color: '#888', fontSize: 11, marginTop: 1 },
-  ordersRowExpiry:          { color: '#ffa726', fontSize: 10, marginTop: 2 },
-  ordersCancelBtn:          { backgroundColor: '#b71c1c', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  ordersCancelText:         { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  ordersPlaceBtnText:       { color: C.white, fontWeight: 'bold', fontSize: F.size.sm },
+  ordersCard:               { marginHorizontal: S.md, backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.sm },
+  ordersRow:                { flexDirection: 'row', alignItems: 'center', paddingVertical: S.sm, borderBottomWidth: 1, borderBottomColor: '#1e2a3a' },
+  ordersRowName:            { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  ordersRowDetail:          { color: C.textMuted, fontSize: 11, marginTop: 1 },
+  ordersRowExpiry:          { color: '#ffa726', fontSize: F.size.xs, marginTop: 2 },
+  ordersCancelBtn:          { backgroundColor: '#b71c1c', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6 },
+  ordersCancelText:         { color: C.white, fontSize: 11, fontWeight: 'bold' },
   ordersBadgeGood:          { color: '#66bb6a', fontSize: 11, fontWeight: 'bold' },
   ordersBadgeWarn:          { color: '#ffa726', fontSize: 11 },
   ordersBadgeGray:          { color: '#555', fontSize: 11 },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
+  // Supply tab styles
+  tabScroll:          { flex: 1 },
+  sectionHeader:      { color: C.text, fontSize: F.size.lg, fontWeight: F.weight.bold, marginBottom: S.xs },
+  sectionSubtitle:    { color: C.textMuted, fontSize: F.size.sm },
+  card:               { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.sm },
+  cardTitle:          { color: C.text, fontWeight: F.weight.bold, fontSize: F.size.md },
+  rowInline:          { flexDirection: 'row', alignItems: 'center' },
+  rowBetween:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: S.xs },
+  buyerEmoji:         { fontSize: 22, marginRight: S.xs },
+  buyerCropLabel:     { fontSize: F.size.xs, color: C.textFaint, marginTop: 2 },
+  buyerStat:          { fontSize: F.size.xs, color: C.textMuted },
+  streakPip:          { width: 8, height: 8, borderRadius: 4, backgroundColor: C.green },
+  tierBadge:          { paddingHorizontal: S.sm, paddingVertical: 2, borderRadius: R.sm },
+  tierBadgeText:      { fontSize: F.size.xs, color: C.white, fontWeight: '700' },
+  lockedReason:       { fontSize: F.size.xs, color: C.textFaint, marginTop: S.xs, fontStyle: 'italic' },
+  activeContractChip: { backgroundColor: C.bg, borderRadius: R.sm, padding: S.sm, marginTop: S.sm },
+  activeContractText: { fontSize: F.size.xs, color: C.textMuted },
+  actionBtn:          { flex: 1, borderRadius: R.md, paddingVertical: S.sm, alignItems: 'center' },
+  actionBtnText:      { color: C.white, fontWeight: '700', fontSize: F.size.sm },
+  // Supply modal styles
+  supplyChip:         { paddingHorizontal: S.sm, paddingVertical: S.xs, borderRadius: R.pill,
+                        backgroundColor: C.bgCard, marginRight: S.xs, alignItems: 'center' },
+  supplyChipActive:   { backgroundColor: C.green },
+  supplyChipText:     { fontSize: F.size.sm, color: C.textMuted },
+  modalOverlay:       { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalSheet:         { backgroundColor: C.bg, borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl,
+                        padding: S.lg, paddingBottom: 36 },
+  modalTitle:         { color: C.text, fontSize: F.size.lg, fontWeight: F.weight.bold, marginBottom: S.xs },
+  modalSub:           { color: C.textMuted, fontSize: F.size.sm, marginBottom: S.xs },
+  formLabel:          { color: C.textMuted, fontSize: F.size.xs, fontWeight: '600',
+                        marginTop: S.sm, marginBottom: 4 },
+  formInput:          { backgroundColor: C.bgCard, borderRadius: R.md, color: C.text,
+                        fontSize: F.size.md, paddingHorizontal: S.md, paddingVertical: S.sm,
+                        marginBottom: S.sm },
 });
 
 const regionStyles = StyleSheet.create({
   row:             { flexDirection: 'row', gap: 6, marginBottom: 10, flexWrap: 'wrap' },
-  chip:            { flex: 1, minWidth: 90, borderWidth: 1, borderColor: '#2a3a2a', backgroundColor: '#0f1e0f', borderRadius: 8, padding: 8, alignItems: 'center' },
+  chip:            { flex: 1, minWidth: 90, borderWidth: 1, borderColor: '#2a3a2a', backgroundColor: '#0f1e0f', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
   chipActive:      { borderColor: '#4caf50', backgroundColor: '#0f2a0f' },
   chipLocked:      { opacity: 0.4 },
-  chipIcon:        { fontSize: 18, marginBottom: 2 },
-  chipName:        { color: '#888', fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
-  chipNameActive:  { color: '#e8d5a3' },
+  chipIcon:        { fontSize: F.size.xxl, marginBottom: 2 },
+  chipName:        { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', textAlign: 'center' },
+  chipNameActive:  { color: C.text },
   chipNameLocked:  { color: '#555' },
-  chipMult:        { color: '#888', fontSize: 10, textAlign: 'center', marginTop: 1 },
+  chipMult:        { color: C.textMuted, fontSize: F.size.xs, textAlign: 'center', marginTop: 1 },
   chipLockLabel:   { color: '#555', fontSize: 9, textAlign: 'center', marginTop: 1 },
-  transportNote:   { color: '#ef9a9a', fontSize: 10, marginBottom: 4 },
+  transportNote:   { color: '#ef9a9a', fontSize: F.size.xs, marginBottom: S.xs },
 });

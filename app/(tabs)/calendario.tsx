@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { getSeason } from '../../engine/climate';
 
@@ -11,7 +11,7 @@ type CalendarEntry = {
   title: string;
   detail: string;
   daysLeft: number;
-  category: 'contract' | 'loan' | 'futures' | 'season' | 'deposit';
+  category: 'contract' | 'loan' | 'futures' | 'season' | 'deposit' | 'recurring';
   urgent: boolean;
 };
 
@@ -28,7 +28,7 @@ function nextSeasonChange(day: number): { season: string; daysLeft: number } {
 }
 
 export default function CalendarioScreen() {
-  const { day, contracts, loans, futures, timeDeposits } = useGameStore();
+  const { day, contracts, loans, futures, timeDeposits, recurringContracts, buyers } = useGameStore();
 
   const entries: CalendarEntry[] = [];
 
@@ -93,6 +93,26 @@ export default function CalendarioScreen() {
     });
   }
 
+  // Recurring contract delivery windows
+  for (const c of (recurringContracts ?? [])) {
+    if (!c.active) continue;
+    if (c.nextDeliveryDay < day) continue;
+    const buyer = (buyers ?? []).find((b) => b.id === c.buyerId);
+    const daysLeft = c.nextDeliveryDay - day;
+    const windowCloseDay = c.nextDeliveryDay + c.deliveryWindowDays;
+    const daysToClose = windowCloseDay - day;
+    const urgent = daysToClose <= 3;
+    entries.push({
+      id: `rc_${c.id}`,
+      icon: urgent ? '⚠️' : '📋',
+      title: `${buyer?.emoji ?? '🏭'} ${buyer?.name ?? c.buyerId} delivery`,
+      detail: `${c.cropId} · ${c.amountPerDelivery} kg · window closes day ${windowCloseDay}`,
+      daysLeft,
+      category: 'recurring',
+      urgent,
+    });
+  }
+
   // Next season change
   const { season: nextSeason, daysLeft: seasonDays } = nextSeasonChange(day);
   entries.push({
@@ -112,11 +132,12 @@ export default function CalendarioScreen() {
   const upcoming = entries.filter(e => e.daysLeft >= 0);
 
   const CATEGORY_COLORS: Record<string, string> = {
-    contract: '#1565c0',
-    loan:     '#b71c1c',
-    futures:  '#4a148c',
-    deposit:  '#1b5e20',
-    season:   '#e65100',
+    contract:  '#1565c0',
+    loan:      '#b71c1c',
+    futures:   '#4a148c',
+    deposit:   '#1b5e20',
+    season:    '#e65100',
+    recurring: '#2e7d32',
   };
 
   function EntryCard({ entry }: { entry: CalendarEntry }) {
@@ -141,7 +162,7 @@ export default function CalendarioScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Calendar" />
+      <Text style={styles.screenTitle}>Calendar</Text>
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.dayLabel}>Day {day} — {getSeason(day).charAt(0).toUpperCase() + getSeason(day).slice(1)}</Text>
 
@@ -168,28 +189,36 @@ export default function CalendarioScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
-  scroll: { flex: 1, paddingHorizontal: 12 },
-  dayLabel: { color: '#888', fontSize: 12, marginTop: 8, marginBottom: 4 },
-  sectionLabel: { color: '#555', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginTop: 12, marginBottom: 6 },
+  container: { flex: 1, backgroundColor: C.bg },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
+  scroll: { flex: 1, paddingHorizontal: S.md },
+  dayLabel: { color: C.textMuted, fontSize: F.size.sm, marginTop: S.sm, marginBottom: S.xs },
+  sectionLabel: { color: '#555', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginTop: S.md, marginBottom: 6 },
   empty: { color: '#555', padding: 20, textAlign: 'center' },
 
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#16213e',
+    backgroundColor: C.bgCard,
     borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
+    padding: S.md,
+    marginBottom: S.sm,
     borderLeftWidth: 3,
   },
   cardUrgent: { backgroundColor: '#1a1010' },
   cardLeft: { marginRight: 10 },
   cardIcon: { fontSize: 20 },
   cardBody: { flex: 1 },
-  cardTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
+  cardTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
   cardTitleUrgent: { color: '#ef9a9a' },
-  cardDetail: { color: '#888', fontSize: 11, marginTop: 2 },
-  badge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginLeft: 8, alignItems: 'center', minWidth: 56 },
-  badgeDays: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  cardDetail: { color: C.textMuted, fontSize: 11, marginTop: 2 },
+  badge: { borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: S.xs, marginLeft: S.sm, alignItems: 'center', minWidth: 56 },
+  badgeDays: { color: C.white, fontSize: 11, fontWeight: 'bold' },
 });

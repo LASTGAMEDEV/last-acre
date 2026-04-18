@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import { useGameStore, AuctionListing, AuctionCategory } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F, R } from '../../constants/theme';
 import HintCard from '../../components/HintCard';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { geneScore } from '../../engine/animals';
 import { OwnedAnimal } from '../../engine/animals';
+import { BREED_TYPES, BreedRarity } from '../../data/breedTypes';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { OwnedMachine } from '../../store/useGameStore';
@@ -31,7 +32,7 @@ export default function SubastaScreen() {
   if (view === 'hub') {
     return (
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="Auction House" />
+        <Text style={styles.screenTitle}>Auction House</Text>
         <HintCard
           id="hint_auction"
           title="Buy and sell at auction"
@@ -86,7 +87,9 @@ export default function SubastaScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title={view === 'land' ? '🏡 Land Auction' : view === 'animal' ? '🐄 Animals' : view === 'crop' ? '🌾 Crops' : '⚙️ Machinery'} />
+      <Text style={styles.screenTitle}>
+        {view === 'land' ? '🏡 Land Auction' : view === 'animal' ? '🐄 Animals' : view === 'crop' ? '🌾 Crops' : '⚙️ Machinery'}
+      </Text>
       <TouchableOpacity style={styles.backBtn} onPress={() => setView('hub')}>
         <Text style={styles.backBtnText}>← Back to Auction House</Text>
       </TouchableOpacity>
@@ -115,7 +118,7 @@ function LandView({ listings, day, money, placeBid, bidInputs, setBidInputs }: {
     const minBid = Math.ceil(lot.currentBid * 1.05);
     const canBid = bidAmount >= minBid && money >= bidAmount && isActive && daysLeft > 0;
     const playerIsLeading = lot.playerBid !== null && lot.playerBid >= lot.currentBid;
-    const urgentColor = daysLeft <= 2 ? '#f44336' : daysLeft <= 5 ? '#ff9800' : '#888';
+    const urgentColor = daysLeft <= 2 ? '#f44336' : daysLeft <= 5 ? '#ff9800' : C.textMuted;
     return (
       <View key={lot.id} style={[styles.card, lot.playerWon === true && styles.cardWon, lot.playerWon === false && styles.cardLost]}>
         <View style={styles.cardHeader}>
@@ -175,13 +178,36 @@ function LandView({ listings, day, money, placeBid, bidInputs, setBidInputs }: {
   );
 }
 
+const RARITY_COLORS: Record<BreedRarity, string> = {
+  common: '#607d8b',
+  uncommon: '#7b5ea7',
+  rare: '#c9962a',
+};
+
+function BreedBadge({ breedId }: { breedId?: string }) {
+  if (!breedId) return <Text style={{ color: '#607d8b', fontSize: 11 }}>Mixed</Text>;
+  const breed = BREED_TYPES.find(b => b.id === breedId);
+  if (!breed) return <Text style={{ color: '#607d8b', fontSize: 11 }}>Mixed</Text>;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+      <View style={{ backgroundColor: RARITY_COLORS[breed.rarity], borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
+        <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>
+          {breed.rarity.toUpperCase()}
+        </Text>
+      </View>
+      <Text style={{ color: '#e0e0e0', fontSize: 12, fontWeight: '600' }}>{breed.name}</Text>
+      <Text style={{ color: '#9e9e9e', fontSize: 11 }}>· {breed.purposeLabel}</Text>
+    </View>
+  );
+}
+
 // Placeholder components — will be replaced in Tasks 5, 6, 7
 function geneLabel(score: number): { grade: string; color: string } {
   if (score >= 1.3) return { grade: 'S', color: '#7eb8f7' };
   if (score >= 1.15) return { grade: 'A', color: '#66bb6a' };
   if (score >= 1.0)  return { grade: 'B', color: '#ffa726' };
   if (score >= 0.85) return { grade: 'C', color: '#ef5350' };
-  return { grade: 'D', color: '#888' };
+  return { grade: 'D', color: C.textMuted };
 }
 
 function AnimalView({ listings, day, money, placeBid, listItem, withdrawListing,
@@ -222,6 +248,15 @@ function AnimalView({ listings, day, money, placeBid, listItem, withdrawListing,
         <View style={anStyles.cardHeader}>
           <View style={{ flex: 1 }}>
             <Text style={anStyles.cardTitle}>{animalTypeDef?.name ?? listing.animalTypeId}</Text>
+            <BreedBadge breedId={listing.animalBreedId} />
+            {listing.animalBreedId && (() => {
+              const breed = BREED_TYPES.find(b => b.id === listing.animalBreedId);
+              return breed ? (
+                <Text style={{ color: '#9e9e9e', fontSize: 11, marginTop: 2 }}>
+                  🌍 {breed.originCountry} · {breed.description}
+                </Text>
+              ) : null;
+            })()}
             <View style={{ flexDirection: 'row', gap: 6, marginTop: 3, alignItems: 'center' }}>
               <View style={[anStyles.gradeBadge, { backgroundColor: color + '33', borderColor: color }]}>
                 <Text style={[anStyles.gradeText, { color }]}>Grade {grade}</Text>
@@ -268,7 +303,7 @@ function AnimalView({ listings, day, money, placeBid, listItem, withdrawListing,
         )}
 
         {listing.resolved && (
-          <Text style={[anStyles.resolvedTag, listing.playerWon ? { color: '#66bb6a' } : { color: '#666' }]}>
+          <Text style={[anStyles.resolvedTag, listing.playerWon ? { color: '#66bb6a' } : { color: C.textFaint }]}>
             {listing.playerWon ? '🏆 Won' : listing.sellerId === 'player' ? '💰 Sold' : '❌ Lost'}
           </Text>
         )}
@@ -368,44 +403,44 @@ function AnimalView({ listings, day, money, placeBid, listItem, withdrawListing,
 }
 
 const anStyles = StyleSheet.create({
-  card:              { backgroundColor: '#16213e', borderRadius: 12, marginHorizontal: 12, marginVertical: 5, padding: 12, borderWidth: 1, borderColor: '#1e2a3a' },
+  card:              { backgroundColor: C.bgCard, borderRadius: R.lg, marginHorizontal: S.md, marginVertical: 5, padding: S.md, borderWidth: 1, borderColor: '#1e2a3a' },
   cardWon:           { borderColor: '#4caf50' },
-  cardHeader:        { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
-  cardTitle:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14 },
-  gradeBadge:        { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1 },
+  cardHeader:        { flexDirection: 'row', alignItems: 'flex-start', marginBottom: S.sm },
+  cardTitle:         { color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
+  gradeBadge:        { borderRadius: R.sm, paddingHorizontal: S.sm, paddingVertical: 2, borderWidth: 1 },
   gradeText:         { fontSize: 11, fontWeight: 'bold' },
-  yourTag:           { color: '#888', fontSize: 10, fontStyle: 'italic' },
-  currentBid:        { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  yourTag:           { color: C.textMuted, fontSize: F.size.xs, fontStyle: 'italic' },
+  currentBid:        { color: C.white, fontWeight: 'bold', fontSize: 15 },
   bidSub:            { color: '#555', fontSize: 9 },
-  bidRow:            { flexDirection: 'row', gap: 8, marginTop: 4 },
-  bidInput:          { flex: 1, backgroundColor: '#0d1117', borderRadius: 8, borderWidth: 1, borderColor: '#2a2a4a', color: '#e8d5a3', padding: 10, fontSize: 13 },
-  bidBtn:            { backgroundColor: '#c8860a', borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center' },
+  bidRow:            { flexDirection: 'row', gap: 8, marginTop: S.xs },
+  bidInput:          { flex: 1, backgroundColor: '#0d1117', borderRadius: R.md, borderWidth: 1, borderColor: '#2a2a4a', color: C.text, padding: 10, fontSize: F.size.md },
+  bidBtn:            { backgroundColor: '#c8860a', borderRadius: R.md, paddingHorizontal: S.lg, justifyContent: 'center' },
   bidBtnDisabled:    { backgroundColor: '#333' },
-  bidBtnText:        { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  withdrawBtn:       { marginTop: 6, backgroundColor: '#b71c1c', borderRadius: 8, paddingVertical: 7, alignItems: 'center' },
+  bidBtnText:        { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
+  withdrawBtn:       { marginTop: 6, backgroundColor: '#b71c1c', borderRadius: R.md, paddingVertical: 7, alignItems: 'center' },
   withdrawBtnDisabled:{ backgroundColor: '#2a2a2a' },
-  withdrawBtnText:   { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  resolvedTag:       { marginTop: 6, fontSize: 13, fontWeight: 'bold' },
-  eventBanner:       { margin: 12, backgroundColor: '#1a2744', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#ffd700', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  eventTitle:        { color: '#ffd700', fontWeight: 'bold', fontSize: 13 },
-  eventSub:          { color: '#888', fontSize: 10, marginTop: 2 },
-  eventDays:         { color: '#ffd700', fontSize: 22, fontWeight: 'bold' },
-  eventDaysSub:      { color: '#888', fontSize: 9 },
-  listBtn:           { margin: 12, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#4caf50', borderStyle: 'dashed', alignItems: 'center' },
-  listBtnText:       { color: '#4caf50', fontWeight: 'bold', fontSize: 13 },
-  listForm:          { margin: 12, backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
-  formTitle:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 10 },
-  formLabel:         { color: '#888', fontSize: 10, marginBottom: 4 },
-  formInput:         { backgroundColor: '#0d1b2e', borderRadius: 8, color: '#e8d5a3', padding: 10, fontSize: 13, borderWidth: 1, borderColor: '#1e2a3a' },
-  animalChip:        { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginRight: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  withdrawBtnText:   { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
+  resolvedTag:       { marginTop: 6, fontSize: F.size.md, fontWeight: 'bold' },
+  eventBanner:       { margin: S.md, backgroundColor: '#1a2744', borderRadius: 10, padding: S.md, borderWidth: 1, borderColor: '#ffd700', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  eventTitle:        { color: '#ffd700', fontWeight: 'bold', fontSize: F.size.md },
+  eventSub:          { color: C.textMuted, fontSize: F.size.xs, marginTop: 2 },
+  eventDays:         { color: '#ffd700', fontSize: F.size.title, fontWeight: 'bold' },
+  eventDaysSub:      { color: C.textMuted, fontSize: 9 },
+  listBtn:           { margin: S.md, borderRadius: 10, padding: S.md, borderWidth: 1, borderColor: '#4caf50', borderStyle: 'dashed', alignItems: 'center' },
+  listBtnText:       { color: '#4caf50', fontWeight: 'bold', fontSize: F.size.md },
+  listForm:          { margin: S.md, backgroundColor: C.bgCard, borderRadius: R.lg, padding: 14 },
+  formTitle:         { color: C.text, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: 10 },
+  formLabel:         { color: C.textMuted, fontSize: F.size.xs, marginBottom: S.xs },
+  formInput:         { backgroundColor: '#0d1b2e', borderRadius: R.md, color: C.text, padding: 10, fontSize: F.size.md, borderWidth: 1, borderColor: '#1e2a3a' },
+  animalChip:        { backgroundColor: '#0d1b2e', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: S.sm, marginRight: 6, borderWidth: 1, borderColor: '#1e2a3a' },
   animalChipActive:  { borderColor: '#4caf50', backgroundColor: '#0f2a0f' },
-  animalChipName:    { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' },
-  animalChipGrade:   { fontSize: 10, marginTop: 2 },
-  confirmBtn:        { flex: 1, backgroundColor: '#1565c0', borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
+  animalChipName:    { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+  animalChipGrade:   { fontSize: F.size.xs, marginTop: 2 },
+  confirmBtn:        { flex: 1, backgroundColor: '#1565c0', borderRadius: R.md, paddingVertical: 10, alignItems: 'center' },
   confirmBtnDisabled:{ backgroundColor: '#333' },
-  confirmBtnText:    { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  cancelBtn:         { backgroundColor: '#2a2a2a', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center' },
-  cancelBtnText:     { color: '#888', fontSize: 13 },
+  confirmBtnText:    { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
+  cancelBtn:         { backgroundColor: '#2a2a2a', borderRadius: R.md, paddingHorizontal: S.lg, paddingVertical: 10, alignItems: 'center' },
+  cancelBtnText:     { color: C.textMuted, fontSize: F.size.md },
 });
 
 function CropView({ listings, day, money, placeBid, listItem, withdrawListing,
@@ -470,7 +505,7 @@ function CropView({ listings, day, money, placeBid, listItem, withdrawListing,
           </TouchableOpacity>
         )}
         {listing.resolved && (
-          <Text style={{ color: listing.playerWon ? '#66bb6a' : '#666', fontSize: 12, marginTop: 4 }}>
+          <Text style={{ color: listing.playerWon ? '#66bb6a' : C.textFaint, fontSize: 12, marginTop: 4 }}>
             {listing.playerWon ? '🏆 Won' : listing.sellerId === 'player' ? (listing.currentBid > listing.startingBid ? '💰 Sold' : '📋 Reserve not met') : '❌ Lost'}
           </Text>
         )}
@@ -488,7 +523,7 @@ function CropView({ listings, day, money, placeBid, listItem, withdrawListing,
             ? <Text style={{ color: '#555', fontSize: 12 }}>No crops in inventory</Text>
             : stockedCrops.map(c => (
               <TouchableOpacity key={c.id} style={[cropStyles.cropChip, cropId === c.id && cropStyles.cropChipActive]} onPress={() => setCropId(c.id)}>
-                <Text style={[cropStyles.cropChipText, cropId === c.id && { color: '#fff' }]}>{c.name}</Text>
+                <Text style={[cropStyles.cropChipText, cropId === c.id && { color: C.white }]}>{c.name}</Text>
                 <Text style={cropStyles.cropChipStock}>{Math.round(inventory[c.id] ?? 0)} {c.unit}</Text>
               </TouchableOpacity>
             ))}
@@ -501,7 +536,7 @@ function CropView({ listings, day, money, placeBid, listItem, withdrawListing,
         <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>
           {([3, 7, 14] as const).map(t => (
             <TouchableOpacity key={t} style={[cropStyles.termBtn, termDays === t && cropStyles.termBtnActive]} onPress={() => setTermDays(t)}>
-              <Text style={[cropStyles.termText, termDays === t && { color: '#fff' }]}>{t}d</Text>
+              <Text style={[cropStyles.termText, termDays === t && { color: C.white }]}>{t}d</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -527,33 +562,33 @@ function CropView({ listings, day, money, placeBid, listItem, withdrawListing,
 }
 
 const cropStyles = StyleSheet.create({
-  form:              { margin: 12, backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
-  formTitle:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 10 },
-  label:             { color: '#888', fontSize: 10, marginBottom: 4 },
-  input:             { backgroundColor: '#0d1b2e', borderRadius: 8, color: '#e8d5a3', padding: 8, fontSize: 12, borderWidth: 1, borderColor: '#1e2a3a' },
-  cropChip:          { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginRight: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  form:              { margin: S.md, backgroundColor: C.bgCard, borderRadius: R.lg, padding: 14 },
+  formTitle:         { color: C.text, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: 10 },
+  label:             { color: C.textMuted, fontSize: F.size.xs, marginBottom: S.xs },
+  input:             { backgroundColor: '#0d1b2e', borderRadius: R.md, color: C.text, padding: S.sm, fontSize: F.size.sm, borderWidth: 1, borderColor: '#1e2a3a' },
+  cropChip:          { backgroundColor: '#0d1b2e', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6, marginRight: 6, borderWidth: 1, borderColor: '#1e2a3a' },
   cropChipActive:    { borderColor: '#4caf50', backgroundColor: '#0f2a0f' },
-  cropChipText:      { color: '#888', fontSize: 12, fontWeight: 'bold' },
+  cropChipText:      { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'bold' },
   cropChipStock:     { color: '#555', fontSize: 9 },
-  termBtn:           { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  termBtn:           { backgroundColor: '#0d1b2e', borderRadius: R.md, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: '#1e2a3a' },
   termBtnActive:     { backgroundColor: '#1565c0', borderColor: '#42a5f5' },
-  termText:          { color: '#888', fontSize: 12, fontWeight: 'bold' },
+  termText:          { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'bold' },
   listBtn:           { backgroundColor: '#1565c0', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   listBtnDisabled:   { backgroundColor: '#333' },
-  listBtnText:       { color: '#fff', fontWeight: 'bold', fontSize: 12 },
-  card:              { backgroundColor: '#16213e', borderRadius: 10, marginHorizontal: 12, marginVertical: 4, padding: 12, borderWidth: 1, borderColor: '#1e2a3a' },
+  listBtnText:       { color: C.white, fontWeight: 'bold', fontSize: F.size.sm },
+  card:              { backgroundColor: C.bgCard, borderRadius: 10, marginHorizontal: S.md, marginVertical: S.xs, padding: S.md, borderWidth: 1, borderColor: '#1e2a3a' },
   cardWon:           { borderColor: '#4caf50' },
-  cardTitle:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
-  cardSub:           { color: '#888', fontSize: 11, marginTop: 1 },
-  currentBid:        { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  daysLeft:          { color: '#888', fontSize: 10, marginTop: 1 },
-  bidInput:          { backgroundColor: '#0d1117', borderRadius: 8, borderWidth: 1, borderColor: '#2a2a4a', color: '#e8d5a3', padding: 8, fontSize: 13 },
-  bidBtn:            { backgroundColor: '#c8860a', borderRadius: 8, paddingHorizontal: 14, justifyContent: 'center' },
+  cardTitle:         { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  cardSub:           { color: C.textMuted, fontSize: 11, marginTop: 1 },
+  currentBid:        { color: C.white, fontWeight: 'bold', fontSize: F.size.lg },
+  daysLeft:          { color: C.textMuted, fontSize: F.size.xs, marginTop: 1 },
+  bidInput:          { backgroundColor: '#0d1117', borderRadius: R.md, borderWidth: 1, borderColor: '#2a2a4a', color: C.text, padding: S.sm, fontSize: F.size.md },
+  bidBtn:            { backgroundColor: '#c8860a', borderRadius: R.md, paddingHorizontal: 14, justifyContent: 'center' },
   bidBtnDisabled:    { backgroundColor: '#333' },
-  bidBtnText:        { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  withdrawBtn:       { marginTop: 6, backgroundColor: '#b71c1c', borderRadius: 8, paddingVertical: 6, alignItems: 'center' },
+  bidBtnText:        { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
+  withdrawBtn:       { marginTop: 6, backgroundColor: '#b71c1c', borderRadius: R.md, paddingVertical: 6, alignItems: 'center' },
   withdrawBtnDisabled:{ backgroundColor: '#2a2a2a' },
-  withdrawBtnText:   { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  withdrawBtnText:   { color: C.white, fontSize: 11, fontWeight: 'bold' },
 });
 
 function computeConditionScore(machine: OwnedMachine, day: number, machineRepairs: any[]): number {
@@ -650,7 +685,7 @@ function MachineryView({ listings, day, money, placeBid, listItem, withdrawListi
           </TouchableOpacity>
         )}
         {listing.resolved && (
-          <Text style={{ color: listing.playerWon ? '#66bb6a' : '#666', fontSize: 12, marginTop: 4 }}>
+          <Text style={{ color: listing.playerWon ? '#66bb6a' : C.textFaint, fontSize: 12, marginTop: 4 }}>
             {listing.playerWon ? '🏆 Won' : listing.sellerId === 'player' ? (listing.currentBid > listing.startingBid ? '💰 Sold' : '📋 Reserve not met') : '❌ Lost'}
           </Text>
         )}
@@ -704,7 +739,7 @@ function MachineryView({ listings, day, money, placeBid, listItem, withdrawListi
         <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>
           {([3, 7, 14] as const).map(t => (
             <TouchableOpacity key={t} style={[mStyles.termBtn, termDays === t && mStyles.termBtnActive]} onPress={() => setTermDays(t)}>
-              <Text style={[mStyles.termText, termDays === t && { color: '#fff' }]}>{t}d</Text>
+              <Text style={[mStyles.termText, termDays === t && { color: C.white }]}>{t}d</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -731,99 +766,107 @@ function MachineryView({ listings, day, money, placeBid, listItem, withdrawListi
 }
 
 const mStyles = StyleSheet.create({
-  form:              { margin: 12, backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
-  formTitle:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 10 },
-  label:             { color: '#888', fontSize: 10, marginBottom: 4 },
-  input:             { backgroundColor: '#0d1b2e', borderRadius: 8, color: '#e8d5a3', padding: 8, fontSize: 12, borderWidth: 1, borderColor: '#1e2a3a' },
-  machineChip:       { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginRight: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  form:              { margin: S.md, backgroundColor: C.bgCard, borderRadius: R.lg, padding: 14 },
+  formTitle:         { color: C.text, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: 10 },
+  label:             { color: C.textMuted, fontSize: F.size.xs, marginBottom: S.xs },
+  input:             { backgroundColor: '#0d1b2e', borderRadius: R.md, color: C.text, padding: S.sm, fontSize: F.size.sm, borderWidth: 1, borderColor: '#1e2a3a' },
+  machineChip:       { backgroundColor: '#0d1b2e', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: S.sm, marginRight: 6, borderWidth: 1, borderColor: '#1e2a3a' },
   machineChipActive: { borderColor: '#1565c0', backgroundColor: '#0d1b3e' },
-  machineChipName:   { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' },
-  machineChipCond:   { fontSize: 10, marginTop: 2 },
-  condBar:           { backgroundColor: '#0d1b2e', borderRadius: 8, padding: 10, marginBottom: 10 },
-  condBarLabel:      { color: '#888', fontSize: 10 },
+  machineChipName:   { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+  machineChipCond:   { fontSize: F.size.xs, marginTop: 2 },
+  condBar:           { backgroundColor: '#0d1b2e', borderRadius: R.md, padding: 10, marginBottom: 10 },
+  condBarLabel:      { color: C.textMuted, fontSize: F.size.xs },
   condBarScore:      { fontSize: 11, fontWeight: 'bold' },
-  condBarTrack:      { backgroundColor: '#1e2a3a', borderRadius: 4, height: 6, marginBottom: 4 },
-  condBarFill:       { height: 6, borderRadius: 4 },
-  condBarHint:       { color: '#555', fontSize: 10 },
-  termBtn:           { backgroundColor: '#0d1b2e', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: '#1e2a3a' },
+  condBarTrack:      { backgroundColor: '#1e2a3a', borderRadius: R.xs, height: 6, marginBottom: S.xs },
+  condBarFill:       { height: 6, borderRadius: R.xs },
+  condBarHint:       { color: '#555', fontSize: F.size.xs },
+  termBtn:           { backgroundColor: '#0d1b2e', borderRadius: R.md, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: '#1e2a3a' },
   termBtnActive:     { backgroundColor: '#1565c0', borderColor: '#42a5f5' },
-  termText:          { color: '#888', fontSize: 12, fontWeight: 'bold' },
+  termText:          { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'bold' },
   listBtn:           { backgroundColor: '#1565c0', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   listBtnDisabled:   { backgroundColor: '#333' },
-  listBtnText:       { color: '#fff', fontWeight: 'bold', fontSize: 12 },
-  card:              { backgroundColor: '#16213e', borderRadius: 10, marginHorizontal: 12, marginVertical: 4, padding: 12, borderWidth: 1, borderColor: '#1e2a3a' },
+  listBtnText:       { color: C.white, fontWeight: 'bold', fontSize: F.size.sm },
+  card:              { backgroundColor: C.bgCard, borderRadius: 10, marginHorizontal: S.md, marginVertical: S.xs, padding: S.md, borderWidth: 1, borderColor: '#1e2a3a' },
   cardWon:           { borderColor: '#4caf50' },
-  cardTitle:         { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
-  condBadge:         { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
-  condText:          { fontSize: 10, fontWeight: 'bold' },
-  daysLeft:          { color: '#888', fontSize: 10 },
-  currentBid:        { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+  cardTitle:         { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  condBadge:         { borderRadius: R.sm, paddingHorizontal: S.sm, paddingVertical: 2 },
+  condText:          { fontSize: F.size.xs, fontWeight: 'bold' },
+  daysLeft:          { color: C.textMuted, fontSize: F.size.xs },
+  currentBid:        { color: C.white, fontWeight: 'bold', fontSize: F.size.lg },
   sellerName:        { color: '#555', fontSize: 9 },
-  bidInput:          { backgroundColor: '#0d1117', borderRadius: 8, borderWidth: 1, borderColor: '#2a2a4a', color: '#e8d5a3', padding: 8, fontSize: 13 },
-  bidBtn:            { backgroundColor: '#c8860a', borderRadius: 8, paddingHorizontal: 14, justifyContent: 'center' },
+  bidInput:          { backgroundColor: '#0d1117', borderRadius: R.md, borderWidth: 1, borderColor: '#2a2a4a', color: C.text, padding: S.sm, fontSize: F.size.md },
+  bidBtn:            { backgroundColor: '#c8860a', borderRadius: R.md, paddingHorizontal: 14, justifyContent: 'center' },
   bidBtnDisabled:    { backgroundColor: '#333' },
-  bidBtnText:        { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  withdrawBtn:       { marginTop: 6, backgroundColor: '#b71c1c', borderRadius: 8, paddingVertical: 6, alignItems: 'center' },
+  bidBtnText:        { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
+  withdrawBtn:       { marginTop: 6, backgroundColor: '#b71c1c', borderRadius: R.md, paddingVertical: 6, alignItems: 'center' },
   withdrawBtnDisabled:{ backgroundColor: '#2a2a2a' },
-  withdrawBtnText:   { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  withdrawBtnText:   { color: C.white, fontSize: 11, fontWeight: 'bold' },
 });
 
 const styles = StyleSheet.create({
-  container:       { flex: 1, backgroundColor: '#1a1a2e' },
-  backBtn:         { paddingHorizontal: 16, paddingVertical: 8 },
-  backBtnText:     { color: '#7eb8f7', fontSize: 13 },
-  sectionLabel:    { color: '#888', fontSize: 13, paddingHorizontal: 16, marginTop: 10, marginBottom: 6 },
-  emptyHint:       { color: '#444', fontSize: 12, paddingHorizontal: 16 },
+  container:       { flex: 1, backgroundColor: C.bg },
+  backBtn:         { paddingHorizontal: S.lg, paddingVertical: S.sm },
+  backBtnText:     { color: '#7eb8f7', fontSize: F.size.md },
+  sectionLabel:    { color: C.textMuted, fontSize: F.size.md, paddingHorizontal: S.lg, marginTop: 10, marginBottom: 6 },
+  emptyHint:       { color: '#444', fontSize: F.size.sm, paddingHorizontal: S.lg },
 
   // Hub grid
-  grid:            { flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 10 },
-  tile:            { width: '47%', backgroundColor: '#16213e', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#1e2a3a' },
+  grid:            { flexDirection: 'row', flexWrap: 'wrap', padding: S.md, gap: 10 },
+  tile:            { width: '47%', backgroundColor: C.bgCard, borderRadius: R.lg, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#1e2a3a' },
   tileAnimal:      { borderColor: '#ffd700', backgroundColor: '#1a2744' },
-  tileIcon:        { fontSize: 28, marginBottom: 4 },
-  tileLabel:       { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
+  tileIcon:        { fontSize: 28, marginBottom: S.xs },
+  tileLabel:       { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
   tileLabelAnimal: { color: '#ffd700' },
-  tileSub:         { color: '#666', fontSize: 11, marginTop: 2 },
+  tileSub:         { color: C.textFaint, fontSize: 11, marginTop: 2 },
   tileSubAnimal:   { color: '#ffd700' },
 
   // Active bids strip
-  bidsStrip:       { margin: 12, backgroundColor: '#16213e', borderRadius: 12, padding: 12 },
-  bidStripTitle:   { color: '#555', fontSize: 9, letterSpacing: 1, marginBottom: 8 },
+  bidsStrip:       { margin: S.md, backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md },
+  bidStripTitle:   { color: '#555', fontSize: 9, letterSpacing: 1, marginBottom: S.sm },
   bidStripRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 5 },
-  bidStripLabel:   { color: '#e8d5a3', fontSize: 12 },
-  bidStripStatus:  { fontSize: 12, fontWeight: 'bold' },
+  bidStripLabel:   { color: C.text, fontSize: F.size.sm },
+  bidStripStatus:  { fontSize: F.size.sm, fontWeight: 'bold' },
 
   // Shared land card styles
-  card:            { backgroundColor: '#16213e', borderRadius: 12, margin: 10, marginVertical: 6, padding: 14, borderWidth: 1, borderColor: '#1e1e3a' },
+  card:            { backgroundColor: C.bgCard, borderRadius: R.lg, margin: 10, marginVertical: 6, padding: 14, borderWidth: 1, borderColor: C.divider },
   cardWon:         { borderColor: '#4caf50' },
   cardLost:        { borderColor: '#333', opacity: 0.7 },
   cardHeader:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  parcelTitle:     { color: '#e8d5a3', fontWeight: 'bold', fontSize: 15, flex: 1 },
-  daysLeft:        { fontSize: 12, fontWeight: 'bold' },
-  resolved:        { fontSize: 13, fontWeight: 'bold' },
+  parcelTitle:     { color: C.text, fontWeight: 'bold', fontSize: 15, flex: 1 },
+  daysLeft:        { fontSize: F.size.sm, fontWeight: 'bold' },
+  resolved:        { fontSize: F.size.md, fontWeight: 'bold' },
   wonText:         { color: '#4caf50' },
-  lostText:        { color: '#666' },
+  lostText:        { color: C.textFaint },
   infoRow:         { flexDirection: 'row', marginBottom: 10, gap: 8 },
-  infoItem:        { flex: 1, backgroundColor: '#0f3460', borderRadius: 8, padding: 8, alignItems: 'center' },
-  infoLabel:       { color: '#666', fontSize: 9, marginBottom: 2 },
-  infoValue:       { color: '#e8d5a3', fontWeight: 'bold', fontSize: 12 },
-  bidInfo:         { backgroundColor: '#0a1628', borderRadius: 8, padding: 10, marginBottom: 10 },
-  bidRow:          { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  bidLabel:        { color: '#666', fontSize: 12 },
-  currentBid:      { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  startingBid:     { color: '#888', fontSize: 12 },
-  playerBid:       { fontSize: 12, fontWeight: 'bold' },
+  infoItem:        { flex: 1, backgroundColor: '#0f3460', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
+  infoLabel:       { color: C.textFaint, fontSize: 9, marginBottom: 2 },
+  infoValue:       { color: C.text, fontWeight: 'bold', fontSize: F.size.sm },
+  bidInfo:         { backgroundColor: '#0a1628', borderRadius: R.md, padding: 10, marginBottom: 10 },
+  bidRow:          { flexDirection: 'row', justifyContent: 'space-between', marginBottom: S.xs },
+  bidLabel:        { color: C.textFaint, fontSize: F.size.sm },
+  currentBid:      { color: C.white, fontWeight: 'bold', fontSize: F.size.xl },
+  startingBid:     { color: C.textMuted, fontSize: F.size.sm },
+  playerBid:       { fontSize: F.size.sm, fontWeight: 'bold' },
   leading:         { color: '#4caf50' },
   outbid:          { color: '#ff9800' },
-  historyBox:      { backgroundColor: '#0d1117', borderRadius: 8, padding: 8, marginBottom: 10 },
-  historyTitle:    { color: '#555', fontSize: 10, marginBottom: 4 },
-  historyItem:     { color: '#888', fontSize: 11, paddingVertical: 2 },
+  historyBox:      { backgroundColor: '#0d1117', borderRadius: R.md, padding: S.sm, marginBottom: 10 },
+  historyTitle:    { color: '#555', fontSize: F.size.xs, marginBottom: S.xs },
+  historyItem:     { color: C.textMuted, fontSize: 11, paddingVertical: 2 },
   historyItemPlayer:{ color: '#64b5f6' },
   bidInputRow:     { flexDirection: 'row', gap: 8 },
-  bidInput:        { flex: 1, backgroundColor: '#0d1117', borderRadius: 8, borderWidth: 1, borderColor: '#2a2a4a', color: '#e8d5a3', padding: 10, fontSize: 14 },
-  bidBtn:          { backgroundColor: '#c8860a', borderRadius: 8, paddingHorizontal: 20, justifyContent: 'center' },
+  bidInput:        { flex: 1, backgroundColor: '#0d1117', borderRadius: R.md, borderWidth: 1, borderColor: '#2a2a4a', color: C.text, padding: 10, fontSize: F.size.lg },
+  bidBtn:          { backgroundColor: '#c8860a', borderRadius: R.md, paddingHorizontal: 20, justifyContent: 'center' },
   bidBtnDisabled:  { backgroundColor: '#333' },
-  bidBtnText:      { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  bidWarn:         { color: '#ff9800', fontSize: 11, marginTop: 4 },
+  bidBtnText:      { color: C.white, fontWeight: 'bold', fontSize: F.size.lg },
+  bidWarn:         { color: '#ff9800', fontSize: 11, marginTop: S.xs },
   emptyBox:        { alignItems: 'center', padding: 40 },
-  emptyText:       { color: '#555', fontSize: 15, marginBottom: 8 },
+  emptyText:       { color: '#555', fontSize: 15, marginBottom: S.sm },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
 });

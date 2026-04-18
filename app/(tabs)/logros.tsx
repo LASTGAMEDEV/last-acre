@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F, R } from '../../constants/theme';
 import { MILESTONES } from '../../data/milestones';
 import { CROP_TYPES } from '../../data/cropTypes';
 
@@ -120,7 +120,7 @@ export default function LogrosScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Achievements" />
+      <Text style={styles.screenTitle}>Achievements</Text>
 
       {/* Overall progress */}
       <View style={styles.overallCard}>
@@ -191,55 +191,63 @@ export default function LogrosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: '#1a1a2e' },
+  container:     { flex: 1, backgroundColor: C.bg },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
   scroll:        { flex: 1 },
 
   overallCard: {
-    margin: 12,
-    backgroundColor: '#16213e',
+    margin: S.md,
+    backgroundColor: C.bgCard,
     borderRadius: 14,
-    padding: 16,
+    padding: S.lg,
     borderWidth: 1,
     borderColor: '#c8860a44',
   },
   overallRow:    { flexDirection: 'row', alignItems: 'baseline', marginBottom: 10 },
   overallCount:  { color: '#c8860a', fontSize: 36, fontWeight: 'bold', marginRight: 10 },
-  overallTotal:  { color: '#888', fontSize: 20 },
-  overallLabel:  { color: '#e8d5a3', fontSize: 14, fontWeight: 'bold' },
-  overallBarBg:  { height: 8, backgroundColor: '#0a1628', borderRadius: 4, overflow: 'hidden', marginBottom: 6 },
-  overallBar:    { height: 8, backgroundColor: '#c8860a', borderRadius: 4 },
-  overallPct:    { color: '#888', fontSize: 11, textAlign: 'right' },
+  overallTotal:  { color: C.textMuted, fontSize: 20 },
+  overallLabel:  { color: C.text, fontSize: F.size.lg, fontWeight: 'bold' },
+  overallBarBg:  { height: 8, backgroundColor: '#0a1628', borderRadius: R.xs, overflow: 'hidden', marginBottom: 6 },
+  overallBar:    { height: 8, backgroundColor: '#c8860a', borderRadius: R.xs },
+  overallPct:    { color: C.textMuted, fontSize: 11, textAlign: 'right' },
 
-  categoryBlock:  { paddingHorizontal: 12, marginBottom: 12 },
-  categoryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  categoryIcon:   { fontSize: 16, marginRight: 6 },
-  categoryLabel:  { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13, flex: 1 },
-  categoryCount:  { color: '#666', fontSize: 12 },
+  categoryBlock:  { paddingHorizontal: S.md, marginBottom: S.md },
+  categoryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: S.sm },
+  categoryIcon:   { fontSize: F.size.xl, marginRight: 6 },
+  categoryLabel:  { color: C.text, fontWeight: 'bold', fontSize: F.size.md, flex: 1 },
+  categoryCount:  { color: C.textFaint, fontSize: F.size.sm },
 
   milestoneCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#16213e',
+    backgroundColor: C.bgCard,
     borderRadius: 10,
-    padding: 12,
+    padding: S.md,
     marginBottom: 6,
     opacity: 0.55,
   },
   milestoneCardDone: { opacity: 1, borderWidth: 1, borderColor: '#c8860a33' },
 
-  iconBox:     { width: 40, height: 40, borderRadius: 8, backgroundColor: '#0a1628', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  iconBox:     { width: 40, height: 40, borderRadius: R.md, backgroundColor: '#0a1628', alignItems: 'center', justifyContent: 'center', marginRight: S.md },
   iconBoxDone: { backgroundColor: '#3a2a00' },
   milestoneIcon: { fontSize: 20 },
 
   milestoneInfo:     { flex: 1 },
-  milestoneName:     { color: '#888', fontSize: 13, fontWeight: 'bold', marginBottom: 2 },
-  milestoneNameDone: { color: '#e8d5a3' },
+  milestoneName:     { color: C.textMuted, fontSize: F.size.md, fontWeight: 'bold', marginBottom: 2 },
+  milestoneNameDone: { color: C.text },
   milestoneDesc:     { color: '#555', fontSize: 11 },
 
   progressWrap:    { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 6 },
   progressBarBg:   { flex: 1, height: 4, backgroundColor: '#0a1628', borderRadius: 2, overflow: 'hidden' },
   progressBar:     { height: 4, backgroundColor: '#c8860a', borderRadius: 2 },
-  progressLabel:   { color: '#666', fontSize: 10, minWidth: 50, textAlign: 'right' },
+  progressLabel:   { color: C.textFaint, fontSize: F.size.xs, minWidth: 50, textAlign: 'right' },
 
-  checkmark: { color: '#c8860a', fontWeight: 'bold', fontSize: 18, marginLeft: 4 },
+  checkmark: { color: '#c8860a', fontWeight: 'bold', fontSize: F.size.xxl, marginLeft: S.xs },
 });

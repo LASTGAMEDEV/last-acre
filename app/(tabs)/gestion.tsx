@@ -9,7 +9,8 @@ import CalendarioScreen from './calendario';
 import Encyclopedia from '../../components/Encyclopedia';
 import { useGameStore, HenilBatch, ProductionBuildingState, OwnedAttachment, IncubationBatch } from '../../store/useGameStore';
 import { getSeason } from '../../engine/climate';
-import { SEASON_THEME, C } from '../../constants/theme';
+import { SEASON_THEME, C, S, F, R } from '../../constants/theme';
+import SubTabBar from '../../components/SubTabBar';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { BUILDING_TYPES, PRODUCTION_EQUIPMENT } from '../../data/buildingTypes';
@@ -115,7 +116,7 @@ function DashboardSection() {
               <View key={goal.id} style={{ marginTop: 6 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={{ color: '#ccc', fontSize: 11 }}>{goal.icon} {goal.label}</Text>
-                  <Text style={{ color: '#e8d5a3', fontSize: 11 }}>{Math.round(progress * 100)}%</Text>
+                  <Text style={{ color: C.text, fontSize: 11 }}>{Math.round(progress * 100)}%</Text>
                 </View>
                 <View style={{ height: 4, backgroundColor: '#0d1117', borderRadius: 2, marginTop: 3 }}>
                   <View style={{ height: 4, width: `${Math.round(progress * 100)}%` as any, backgroundColor: progress >= 1 ? '#4caf50' : theme.accent, borderRadius: 2 }} />
@@ -130,7 +131,7 @@ function DashboardSection() {
       {topRival && (
         <View style={dash.rivalCard}>
           <Text style={{ color: '#ef9a9a', fontSize: 12, fontWeight: 'bold' }}>🏭 Top Rival: {topRival.name}</Text>
-          <Text style={{ color: '#888', fontSize: 11 }}>Wealth: ${Math.round(topRival.wealth).toLocaleString()} · sells in {Math.max(0, topRival.nextSellDay - day)}d</Text>
+          <Text style={{ color: C.textMuted, fontSize: 11 }}>Wealth: ${Math.round(topRival.wealth).toLocaleString()} · sells in {Math.max(0, topRival.nextSellDay - day)}d</Text>
         </View>
       )}
 
@@ -139,16 +140,16 @@ function DashboardSection() {
         <Text style={dash.goalsTitle}>📊 Personal Bests</Text>
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 6 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#888', fontSize: 10 }}>Peak Cash</Text>
-            <Text style={{ color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' }}>${Math.round(personalRecords?.peakMoney ?? 0).toLocaleString()}</Text>
+            <Text style={{ color: C.textMuted, fontSize: 10 }}>Peak Cash</Text>
+            <Text style={{ color: C.text, fontSize: 12, fontWeight: 'bold' }}>${Math.round(personalRecords?.peakMoney ?? 0).toLocaleString()}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#888', fontSize: 10 }}>Total Harvests</Text>
-            <Text style={{ color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' }}>{personalRecords?.totalHarvests ?? 0}</Text>
+            <Text style={{ color: C.textMuted, fontSize: 10 }}>Total Harvests</Text>
+            <Text style={{ color: C.text, fontSize: 12, fontWeight: 'bold' }}>{personalRecords?.totalHarvests ?? 0}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#888', fontSize: 10 }}>Days Survived</Text>
-            <Text style={{ color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' }}>{personalRecords?.longestDay ?? day}</Text>
+            <Text style={{ color: C.textMuted, fontSize: 10 }}>Days Survived</Text>
+            <Text style={{ color: C.text, fontSize: 12, fontWeight: 'bold' }}>{personalRecords?.longestDay ?? day}</Text>
           </View>
         </View>
       </View>
@@ -158,21 +159,21 @@ function DashboardSection() {
 
 const dash = StyleSheet.create({
   row:       { flexDirection: 'row', gap: 8 },
-  card:      { flex: 1, backgroundColor: '#16213e', borderRadius: 10, padding: 12 },
-  cardLabel: { color: '#888', fontSize: 9, fontWeight: 'bold', letterSpacing: 0.5, marginBottom: 4 },
-  cardValue: { color: '#e8d5a3', fontSize: 18, fontWeight: 'bold' },
-  cardSub:   { color: '#555', fontSize: 10, marginTop: 2 },
-  netWorthCard:      { backgroundColor: '#16213e', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#c8860a33' },
-  netWorthLabel:     { color: '#888', fontSize: 9, fontWeight: 'bold', letterSpacing: 0.5, marginBottom: 2 },
+  card:      { flex: 1, backgroundColor: C.bgCard, borderRadius: 10, padding: S.md },
+  cardLabel: { color: C.textMuted, fontSize: 9, fontWeight: 'bold', letterSpacing: 0.5, marginBottom: S.xs },
+  cardValue: { color: C.text, fontSize: F.size.xxl, fontWeight: 'bold' },
+  cardSub:   { color: '#555', fontSize: F.size.xs, marginTop: 2 },
+  netWorthCard:      { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, borderWidth: 1, borderColor: '#c8860a33' },
+  netWorthLabel:     { color: C.textMuted, fontSize: 9, fontWeight: 'bold', letterSpacing: 0.5, marginBottom: 2 },
   netWorthValue:     { color: '#c8860a', fontSize: 24, fontWeight: 'bold' },
-  netWorthBreakdown: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4, alignItems: 'center' },
-  netWorthSub:       { color: '#555', fontSize: 10 },
-  netWorthDot:       { color: '#333', fontSize: 10 },
-  warnBanner:{ backgroundColor: '#3a1a00', borderRadius: 8, padding: 10, gap: 4 },
+  netWorthBreakdown: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: S.xs, alignItems: 'center' },
+  netWorthSub:       { color: '#555', fontSize: F.size.xs },
+  netWorthDot:       { color: '#333', fontSize: F.size.xs },
+  warnBanner:{ backgroundColor: '#3a1a00', borderRadius: R.md, padding: 10, gap: 4 },
   warnText:  { color: '#ffb74d', fontSize: 11, fontWeight: 'bold' },
-  goalsCard: { backgroundColor: '#16213e', borderRadius: 10, padding: 12 },
-  goalsTitle:{ color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' },
-  rivalCard: { backgroundColor: '#1a1030', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#ef9a9a33' },
+  goalsCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md },
+  goalsTitle:{ color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+  rivalCard: { backgroundColor: '#1a1030', borderRadius: 10, padding: S.md, borderWidth: 1, borderColor: '#ef9a9a33' },
 });
 
 // ── Settings ──────────────────────────────────────────────────────────────────
@@ -320,7 +321,7 @@ function SettingsSection() {
                 style={[set.cropChip, alertCropId === c.id && set.cropChipActive]}
                 onPress={() => setAlertCropId(c.id)}
               >
-                <Text style={[set.cropChipText, alertCropId === c.id && { color: '#fff' }]}>{c.name}</Text>
+                <Text style={[set.cropChipText, alertCropId === c.id && { color: C.white }]}>{c.name}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -373,7 +374,7 @@ function SettingsSection() {
             value={soundEnabled}
             onValueChange={setSoundEnabled}
             trackColor={{ false: '#333', true: '#4caf50' }}
-            thumbColor="#fff"
+            thumbColor={C.white}
           />
         </View>
         <View style={[set.row, { marginTop: 8 }]}>
@@ -385,7 +386,7 @@ function SettingsSection() {
             value={hapticEnabled}
             onValueChange={setHapticEnabled}
             trackColor={{ false: '#333', true: '#4caf50' }}
-            thumbColor="#fff"
+            thumbColor={C.white}
           />
         </View>
         <View style={[set.row, { marginTop: 8 }]}>
@@ -397,7 +398,7 @@ function SettingsSection() {
             value={musicEnabled}
             onValueChange={setMusicEnabled}
             trackColor={{ false: '#333', true: '#4caf50' }}
-            thumbColor="#fff"
+            thumbColor={C.white}
           />
         </View>
       </View>
@@ -425,7 +426,7 @@ function SettingsSection() {
         {prestige > 0 && (
           <View style={{ backgroundColor: '#1a1a00', borderRadius: 8, padding: 10, marginBottom: 10 }}>
             <Text style={{ color: '#c8860a', fontSize: 13, fontWeight: 'bold' }}>Level {prestige} — +{prestige * 5}% all sell revenue</Text>
-            <Text style={{ color: '#666', fontSize: 11, marginTop: 2 }}>Applies to crops, animals, and processed goods</Text>
+            <Text style={{ color: C.textFaint, fontSize: 11, marginTop: 2 }}>Applies to crops, animals, and processed goods</Text>
           </View>
         )}
         {day < 1080 ? (
@@ -436,7 +437,7 @@ function SettingsSection() {
               On prestige: keep your records, gain a permanent revenue bonus, and start fresh with ${((prestige + 1) * 2000 + 3500).toLocaleString()} seed money.
             </Text>
             <View style={{ backgroundColor: '#0d1117', borderRadius: 8, padding: 8, marginTop: 8 }}>
-              <Text style={{ color: '#888', fontSize: 11 }}>Next prestige reward: +5% sell revenue · +${((prestige + 1) * 2000).toLocaleString()} starting cash</Text>
+              <Text style={{ color: C.textMuted, fontSize: 11 }}>Next prestige reward: +5% sell revenue · +${((prestige + 1) * 2000).toLocaleString()} starting cash</Text>
             </View>
           </View>
         ) : (
@@ -456,7 +457,7 @@ function SettingsSection() {
                 ]
               )}
             >
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>⭐ Prestige to Level {prestige + 1}</Text>
+              <Text style={{ color: C.white, fontWeight: 'bold', fontSize: 14 }}>⭐ Prestige to Level {prestige + 1}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -465,7 +466,7 @@ function SettingsSection() {
       {/* About */}
       <View style={set.section}>
         <Text style={set.sectionTitle}>ℹ️ About</Text>
-        <Text style={{ color: '#888', fontSize: 12, lineHeight: 18 }}>
+        <Text style={{ color: C.textMuted, fontSize: 12, lineHeight: 18 }}>
           Last Acre v1.0{'\n'}
           A farming tycoon game built with passion.{'\n'}
           Day {day} · Total revenue: ${Math.round(totalRevenue ?? 0).toLocaleString()}
@@ -484,27 +485,27 @@ function SettingsSection() {
 }
 
 const set = StyleSheet.create({
-  section:       { backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
-  sectionTitle:  { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold', marginBottom: 10 },
+  section:       { backgroundColor: C.bgCard, borderRadius: R.lg, padding: 14 },
+  sectionTitle:  { color: C.text, fontSize: F.size.md, fontWeight: 'bold', marginBottom: 10 },
   row:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   rowInfo:       { flex: 1 },
-  rowLabel:      { color: '#ccc', fontSize: 13 },
+  rowLabel:      { color: '#ccc', fontSize: F.size.md },
   rowSub:        { color: '#555', fontSize: 11, marginTop: 1 },
-  recordRow:     { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
-  recordLabel:   { color: '#888', fontSize: 12 },
-  recordValue:   { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' },
-  resetBtn:      { backgroundColor: '#3a0a0a', borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginTop: 4 },
-  resetBtnText:  { color: '#ef5350', fontWeight: 'bold', fontSize: 14 },
-  nameInput:     { flex: 1, backgroundColor: '#0d1a2e', color: '#e8d5a3', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, borderWidth: 1, borderColor: '#2a3a5e' },
-  nameBtn:       { backgroundColor: '#0f3460', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 9 },
-  nameBtnText:   { color: '#64b5f6', fontWeight: 'bold', fontSize: 12 },
-  alertRow:      { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1e2a3a' },
-  priceInput:    { flex: 1, backgroundColor: '#0d1a2e', color: '#e8d5a3', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, borderWidth: 1, borderColor: '#2a3a5e' },
-  cropChip:      { backgroundColor: '#0d1a2e', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, marginRight: 5, borderWidth: 1, borderColor: '#2a3a5e' },
+  recordRow:     { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: C.divider },
+  recordLabel:   { color: C.textMuted, fontSize: F.size.sm },
+  recordValue:   { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+  resetBtn:      { backgroundColor: '#3a0a0a', borderRadius: R.md, paddingVertical: S.md, alignItems: 'center', marginTop: S.xs },
+  resetBtnText:  { color: '#ef5350', fontWeight: 'bold', fontSize: F.size.lg },
+  nameInput:     { flex: 1, backgroundColor: '#0d1a2e', color: C.text, borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: S.sm, fontSize: F.size.md, borderWidth: 1, borderColor: '#2a3a5e' },
+  nameBtn:       { backgroundColor: '#0f3460', borderRadius: R.md, paddingHorizontal: 14, paddingVertical: 9 },
+  nameBtnText:   { color: '#64b5f6', fontWeight: 'bold', fontSize: F.size.sm },
+  alertRow:      { flexDirection: 'row', alignItems: 'center', paddingVertical: S.sm, borderBottomWidth: 1, borderBottomColor: '#1e2a3a' },
+  priceInput:    { flex: 1, backgroundColor: '#0d1a2e', color: C.text, borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: S.sm, fontSize: F.size.md, borderWidth: 1, borderColor: '#2a3a5e' },
+  cropChip:      { backgroundColor: '#0d1a2e', borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 5, marginRight: 5, borderWidth: 1, borderColor: '#2a3a5e' },
   cropChipActive:{ backgroundColor: '#0f3460', borderColor: '#64b5f6' },
-  cropChipText:  { color: '#888', fontSize: 11 },
-  saveDataBtn:     { backgroundColor: '#0f3460', borderRadius: 8, paddingVertical: 10, alignItems: 'center', marginTop: 4 },
-  saveDataBtnText: { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' },
+  cropChipText:  { color: C.textMuted, fontSize: 11 },
+  saveDataBtn:     { backgroundColor: '#0f3460', borderRadius: R.md, paddingVertical: 10, alignItems: 'center', marginTop: S.xs },
+  saveDataBtnText: { color: C.text, fontSize: F.size.md, fontWeight: 'bold' },
 });
 
 // ── Seed Market ───────────────────────────────────────────────────────────────
@@ -568,22 +569,22 @@ function SeedMarketSection() {
 }
 
 const smk = StyleSheet.create({
-  section:       { backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
-  title:         { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold', marginBottom: 6 },
-  sub:           { color: '#555', fontSize: 11, marginBottom: 8 },
-  empty:         { color: '#444', fontSize: 12, textAlign: 'center', paddingVertical: 8 },
-  shopRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
-  shopCrop:      { color: '#ccc', fontSize: 12 },
-  buyBtn:        { backgroundColor: '#0f3460', borderRadius: 7, paddingHorizontal: 12, paddingVertical: 6 },
-  buyBtnDisabled:{ backgroundColor: '#1a1a2e', opacity: 0.5 },
+  section:       { backgroundColor: C.bgCard, borderRadius: R.lg, padding: 14 },
+  title:         { color: C.text, fontSize: F.size.md, fontWeight: 'bold', marginBottom: 6 },
+  sub:           { color: '#555', fontSize: 11, marginBottom: S.sm },
+  empty:         { color: '#444', fontSize: F.size.sm, textAlign: 'center', paddingVertical: S.sm },
+  shopRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: C.divider },
+  shopCrop:      { color: '#ccc', fontSize: F.size.sm },
+  buyBtn:        { backgroundColor: '#0f3460', borderRadius: 7, paddingHorizontal: S.md, paddingVertical: 6 },
+  buyBtnDisabled:{ backgroundColor: C.bg, opacity: 0.5 },
   buyBtnText:    { color: '#64b5f6', fontSize: 11, fontWeight: 'bold' },
-  vaultRow:      { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1e1e3a', gap: 8 },
-  vaultName:     { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold' },
-  vaultGenes:    { color: '#888', fontSize: 10, marginTop: 1 },
-  vaultQty:      { color: '#555', fontSize: 10, marginTop: 1 },
-  sellBtn:       { backgroundColor: '#1a3a1a', borderRadius: 7, paddingHorizontal: 10, paddingVertical: 8, alignItems: 'center' },
+  vaultRow:      { flexDirection: 'row', alignItems: 'center', paddingVertical: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider, gap: 8 },
+  vaultName:     { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+  vaultGenes:    { color: C.textMuted, fontSize: F.size.xs, marginTop: 1 },
+  vaultQty:      { color: '#555', fontSize: F.size.xs, marginTop: 1 },
+  sellBtn:       { backgroundColor: '#1a3a1a', borderRadius: 7, paddingHorizontal: 10, paddingVertical: S.sm, alignItems: 'center' },
   sellBtnText:   { color: '#66bb6a', fontSize: 11, fontWeight: 'bold' },
-  sellBtnSub:    { color: '#4caf50', fontSize: 10 },
+  sellBtnSub:    { color: '#4caf50', fontSize: F.size.xs },
 });
 
 // ── Henil ─────────────────────────────────────────────────────────────────────
@@ -614,7 +615,7 @@ function HenilAndBuildingsSection() {
               </Text>
 
               {activeBatches.length === 0 && (
-                <Text style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>No active batches.</Text>
+                <Text style={{ color: C.textFaint, fontSize: 12, marginBottom: 8 }}>No active batches.</Text>
               )}
               {activeBatches.map((batch: HenilBatch) => {
                 const daysLeft = batch.readyDay - day;
@@ -627,7 +628,7 @@ function HenilAndBuildingsSection() {
                     <Text style={{ color: '#66bb6a', fontSize: 12 }}>
                       → {hayYield.toLocaleString()} kg hay
                     </Text>
-                    <Text style={{ color: daysLeft <= 1 ? '#66bb6a' : '#888', fontSize: 12 }}>
+                    <Text style={{ color: daysLeft <= 1 ? '#66bb6a' : C.textMuted, fontSize: 12 }}>
                       {daysLeft === 0 ? 'Ready!' : `${daysLeft}d left`}
                     </Text>
                   </View>
@@ -637,14 +638,14 @@ function HenilAndBuildingsSection() {
               <TouchableOpacity
                 style={{
                   marginTop: 10,
-                  backgroundColor: canStartBatch ? '#1b5e20' : '#1a1a2e',
+                  backgroundColor: canStartBatch ? '#1b5e20' : C.bg,
                   borderRadius: 6, padding: 10, alignItems: 'center',
                   opacity: canStartBatch ? 1 : 0.5,
                 }}
                 onPress={canStartBatch ? addToHenil : undefined}
                 disabled={!canStartBatch}
               >
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+                <Text style={{ color: C.white, fontWeight: 'bold' }}>
                   {activeBatches.length >= 2 ? 'Queue Full (2/2)' : grassInStock <= 0 ? 'No Grass in Stock' : `Start Batch (${Math.min(Math.floor(grassInStock), 700)} kg grass)`}
                 </Text>
               </TouchableOpacity>
@@ -653,7 +654,7 @@ function HenilAndBuildingsSection() {
           {!hasHenil && (
             <View style={[styles.sectionCard, { opacity: 0.6 }]}>
               <Text style={styles.sectionTitle}>🌿 Henil</Text>
-              <Text style={{ color: '#666', fontSize: 12 }}>Build a Henil to convert grass into hay for your animals.</Text>
+              <Text style={{ color: C.textFaint, fontSize: 12 }}>Build a Henil to convert grass into hay for your animals.</Text>
             </View>
           )}
           <AnimalQualitySection
@@ -726,7 +727,7 @@ function AnimalQualitySection({
 
   return (
     <View style={{ backgroundColor: '#1c1c1c', borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
-      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>📊 Animal Quality</Text>
+      <Text style={{ color: C.white, fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>📊 Animal Quality</Text>
 
       {/* Milk grades */}
       {dairyEntries.length > 0 && (
@@ -744,7 +745,7 @@ function AnimalQualitySection({
                     {DAIRY_LABELS[typeId] ?? typeId}
                   </Text>
                   <View style={{ backgroundColor: badgeColor, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>Grade {grade}</Text>
+                    <Text style={{ color: C.white, fontSize: 11, fontWeight: 'bold' }}>Grade {grade}</Text>
                   </View>
                 </View>
               );
@@ -804,8 +805,8 @@ function IncubationSection({
   const barColor = fillPct >= 0.9 ? '#e65100' : fillPct >= 0.5 ? '#f57c00' : '#ffa726';
 
   return (
-    <View style={{ backgroundColor: '#1a1a2e', borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
-      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>🥚 Hatchery</Text>
+    <View style={{ backgroundColor: C.bg, borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
+      <Text style={{ color: C.white, fontWeight: 'bold', fontSize: 13 }}>🥚 Hatchery</Text>
 
       {/* Capacity bar */}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, marginBottom: 8 }}>
@@ -823,13 +824,13 @@ function IncubationSection({
         const toAdd = Math.min(eggsInStock, space);
         return (
           <View key={typeId} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <Text style={{ color: '#ddd', fontSize: 12 }}>{icon} {label} <Text style={{ color: '#888' }}>({days}d)</Text></Text>
+            <Text style={{ color: '#ddd', fontSize: 12 }}>{icon} {label} <Text style={{ color: C.textMuted }}>({days}d)</Text></Text>
             {canAdd ? (
               <TouchableOpacity
                 style={{ backgroundColor: '#37474f', borderRadius: 5, paddingHorizontal: 10, paddingVertical: 5 }}
                 onPress={() => queueEggsForIncubation(typeId, toAdd)}
               >
-                <Text style={{ color: '#fff', fontSize: 11 }}>+ {toAdd} eggs</Text>
+                <Text style={{ color: C.white, fontSize: 11 }}>+ {toAdd} eggs</Text>
               </TouchableOpacity>
             ) : (
               <Text style={{ color: '#555', fontSize: 11 }}>
@@ -878,7 +879,7 @@ function SilageSection({
   const canFill = grassInStock > 0 && space > 0;
   return (
     <View style={{ backgroundColor: '#1a2e1a', borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
-      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>🌿 Silage Pit</Text>
+      <Text style={{ color: C.white, fontWeight: 'bold', fontSize: 13 }}>🌿 Silage Pit</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
         <View style={{ flex: 1, backgroundColor: '#333', borderRadius: 4, height: 8, marginRight: 8 }}>
           <View style={{ width: `${Math.round(fillPct * 100)}%`, backgroundColor: barColor, borderRadius: 4, height: 8 }} />
@@ -892,13 +893,13 @@ function SilageSection({
           style={{ backgroundColor: '#388e3c', borderRadius: 6, padding: 8, marginTop: 8, alignItems: 'center' }}
           onPress={() => fillSilagePit(Math.floor(Math.min(grassInStock, space)))}
         >
-          <Text style={{ color: '#fff', fontSize: 12 }}>
+          <Text style={{ color: C.white, fontSize: 12 }}>
             Fill with Grass ({Math.floor(Math.min(grassInStock, space))} kg available)
           </Text>
         </TouchableOpacity>
       )}
       {!canFill && space > 0 && (
-        <Text style={{ color: '#888', fontSize: 11, marginTop: 6 }}>No grass in stock to fill pit</Text>
+        <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 6 }}>No grass in stock to fill pit</Text>
       )}
       {space <= 0 && (
         <Text style={{ color: '#4caf50', fontSize: 11, marginTop: 6 }}>Pit full — spread or wait for winter feed draw</Text>
@@ -916,9 +917,9 @@ function BiogasToggle({
   setBiogasMode: (mode: 'income' | 'fuel') => void;
 }) {
   return (
-    <View style={{ backgroundColor: '#1a1a2e', borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+    <View style={{ backgroundColor: C.bg, borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
       <View>
-        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>⚡ Biogas Upgrader</Text>
+        <Text style={{ color: C.white, fontWeight: 'bold', fontSize: 13 }}>⚡ Biogas Upgrader</Text>
         <Text style={{ color: '#aaa', fontSize: 11, marginTop: 2 }}>
           {biogasMode === 'income' ? 'Selling to grid · $0.80/animal/day' : 'On-farm fuel · 0.3 L/animal/day'}
         </Text>
@@ -927,7 +928,7 @@ function BiogasToggle({
         style={{ backgroundColor: biogasMode === 'income' ? '#1565c0' : '#2e7d32', borderRadius: 6, padding: 8, minWidth: 70, alignItems: 'center' }}
         onPress={() => setBiogasMode(biogasMode === 'income' ? 'fuel' : 'income')}
       >
-        <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
+        <Text style={{ color: C.white, fontSize: 11, fontWeight: 'bold' }}>
           {biogasMode === 'income' ? '💰 Income' : '⛽ Fuel'}
         </Text>
       </TouchableOpacity>
@@ -951,8 +952,8 @@ function SlurrySection({
   const fillPct = Math.min(1, slurryLevel / slurryCapacity);
   const barColor = fillPct >= 0.9 ? '#f44336' : fillPct >= 0.7 ? '#ff9800' : '#4caf50';
   return (
-    <View style={{ backgroundColor: '#1a1a2e', borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
-      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>Slurry Tank</Text>
+    <View style={{ backgroundColor: C.bg, borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
+      <Text style={{ color: C.white, fontWeight: 'bold', fontSize: 13 }}>Slurry Tank</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
         <View style={{ flex: 1, backgroundColor: '#333', borderRadius: 4, height: 8, marginRight: 8 }}>
           <View style={{ width: `${Math.round(fillPct * 100)}%`, backgroundColor: barColor, borderRadius: 4, height: 8 }} />
@@ -966,7 +967,7 @@ function SlurrySection({
           style={{ backgroundColor: '#2e7d32', borderRadius: 6, padding: 8, marginTop: 8, alignItems: 'center' }}
           onPress={spreadSlurry}
         >
-          <Text style={{ color: '#fff', fontSize: 12 }}>Spread on Fields (+1 fertility all owned parcels)</Text>
+          <Text style={{ color: C.white, fontSize: 12 }}>Spread on Fields (+1 fertility all owned parcels)</Text>
         </TouchableOpacity>
       )}
       {!hasSlurryTanker && slurryLevel > 0 && (
@@ -996,8 +997,8 @@ function ProductionBuildingsSection() {
 
   if (!productionBuildings || productionBuildings.length === 0) {
     return (
-      <View style={{ backgroundColor: '#16213e', borderRadius: 10, margin: 8, padding: 14 }}>
-        <Text style={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 6 }}>Production Buildings</Text>
+      <View style={{ backgroundColor: C.bgCard, borderRadius: 10, margin: 8, padding: 14 }}>
+        <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 14, marginBottom: 6 }}>Production Buildings</Text>
         <Text style={{ color: '#aaa', fontSize: 12 }}>
           No production buildings built yet. Buy them in the Shop to stop paying contractor fees.
         </Text>
@@ -1007,8 +1008,8 @@ function ProductionBuildingsSection() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 8 }} showsVerticalScrollIndicator={false}>
-      <View style={{ backgroundColor: '#16213e', borderRadius: 10, margin: 0, padding: 14 }}>
-        <Text style={{ color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 10 }}>Production Buildings</Text>
+      <View style={{ backgroundColor: C.bgCard, borderRadius: 10, margin: 0, padding: 14 }}>
+        <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 14, marginBottom: 10 }}>Production Buildings</Text>
         {productionBuildings.map((pb: ProductionBuildingState) => {
           const bt = BUILDING_TYPES.find(b => b.id === pb.buildingTypeId);
           if (!bt) return null;
@@ -1025,7 +1026,7 @@ function ProductionBuildingsSection() {
             <View key={pb.id} style={{ borderTopWidth: 1, borderTopColor: '#333', paddingTop: 10, marginTop: 10 }}>
               {/* Header */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ color: '#e8d5a3', fontWeight: 'bold' }}>{bt.name}</Text>
+                <Text style={{ color: C.text, fontWeight: 'bold' }}>{bt.name}</Text>
                 <Text style={{ color: certColor, fontSize: 12 }}>{certLabel}</Text>
               </View>
 
@@ -1132,19 +1133,7 @@ export default function GestionScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabBar}>
-        {TABS.map(t => (
-          <TouchableOpacity
-            key={t.id}
-            style={[styles.tabBtn, tab === t.id && styles.tabBtnActive]}
-            onPress={() => setTab(t.id)}
-          >
-            <Text style={[styles.tabBtnText, tab === t.id && styles.tabBtnTextActive]}>
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as OfficeTab)} />
 
       {tab === 'dashboard' && <DashboardSection />}
       {tab === 'office'    && <OficinaScreen />}
@@ -1158,12 +1147,7 @@ export default function GestionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: '#0a1628' },
-  tabBar:           { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 6, gap: 6, backgroundColor: '#0a1628' },
-  tabBtn:           { flex: 1, backgroundColor: '#16213e', borderRadius: 8, paddingVertical: 7, alignItems: 'center' },
-  tabBtnActive:     { backgroundColor: '#0f3460' },
-  tabBtnText:       { color: '#888', fontSize: 10, fontWeight: 'bold' },
-  tabBtnTextActive: { color: '#e8d5a3' },
-  sectionCard:      { backgroundColor: '#16213e', borderRadius: 12, padding: 14 },
-  sectionTitle:     { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold', marginBottom: 8 },
+  container:    { flex: 1, backgroundColor: C.bg },
+  sectionCard:  { backgroundColor: C.bgCard, borderRadius: R.lg, padding: 14 },
+  sectionTitle: { color: C.text, fontSize: F.size.md, fontWeight: 'bold', marginBottom: S.sm },
 });

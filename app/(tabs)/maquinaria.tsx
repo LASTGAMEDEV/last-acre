@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { useGameStore, OwnedMachine, OwnedAttachment, OwnedTrailer, TractorJob, HarvestJob, DeliveryJob } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F, R } from '../../constants/theme';
+import SubTabBar from '../../components/SubTabBar';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { ATTACHMENT_TYPES } from '../../data/attachmentTypes';
 
@@ -302,12 +303,12 @@ function DeliveriesTab() {
         const daysLeft = Math.max(0, job.returnDay - day);
         const cargoSummary = job.cargo.map((c: { quantity: number; itemId: string }) => `${c.quantity.toLocaleString()} ${c.itemId}`).join(', ');
         return (
-          <View key={job.id} style={{ backgroundColor: '#16213e', borderRadius: 10, padding: 12 }}>
+          <View key={job.id} style={{ backgroundColor: C.bgCard, borderRadius: 10, padding: 12 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-              <Text style={{ color: '#e8d5a3', fontWeight: 'bold' }}>
+              <Text style={{ color: C.text, fontWeight: 'bold' }}>
                 {truckType?.name ?? 'Truck'} → {job.marketId}
               </Text>
-              <Text style={{ color: daysLeft === 0 ? '#66bb6a' : '#888', fontSize: 12 }}>
+              <Text style={{ color: daysLeft === 0 ? '#66bb6a' : C.textMuted, fontSize: 12 }}>
                 {daysLeft === 0 ? 'Arriving today' : `${daysLeft}d left`}
               </Text>
             </View>
@@ -340,20 +341,12 @@ export default function MaquinariaScreen() {
 
   return (
     <View style={s.container}>
-      <ScreenHeader title="Machinery" />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabBar} contentContainerStyle={{ flexDirection: 'row' }}>
-        {MACHINERY_TABS.map(t => (
-          <TouchableOpacity
-            key={t.id}
-            style={[s.tabBtn, tab === t.id && s.tabBtnActive]}
-            onPress={() => setTab(t.id)}
-          >
-            <Text style={[s.tabText, tab === t.id && s.tabTextActive]}>
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <Text style={s.screenTitle}>Machinery</Text>
+      <SubTabBar
+        tabs={MACHINERY_TABS}
+        active={tab}
+        onSelect={id => setTab(id as MachineryTab)}
+      />
       <View style={{ flex: 1 }}>
         {tab === 'fleet'       && <FleetTab />}
         {tab === 'attachments' && <AttachmentsTab />}
@@ -365,39 +358,42 @@ export default function MaquinariaScreen() {
 }
 
 const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#0a0a1a' },
-  tabBar:       { borderBottomWidth: 1, borderBottomColor: '#333' },
-  tabBtn:       { flex: 1, padding: 12, alignItems: 'center' },
-  tabBtnActive: { borderBottomWidth: 2, borderBottomColor: '#81c784' },
-  tabText:      { color: '#aaa', fontSize: 13 },
-  tabTextActive:{ color: '#81c784', fontWeight: 'bold' },
-  sectionHeader:{ color: '#e8d5a3', fontSize: 13, fontWeight: 'bold', paddingHorizontal: 12, paddingTop: 16, paddingBottom: 6 },
-  machineCard:  { backgroundColor: '#16213e', borderRadius: 10, margin: 8, padding: 12 },
-  machineName:  { color: '#fff', fontWeight: 'bold', fontSize: 14, marginBottom: 4 },
-  machineDetail:{ color: '#aaa', fontSize: 12, marginBottom: 2 },
-  repairBadge:  { color: '#ef5350', fontSize: 12, marginBottom: 2 },
-  jobBadge:     { color: '#ffb74d', fontSize: 12 },
-  idleBadge:    { color: '#81c784', fontSize: 12 },
-  empty:        { color: '#555', fontSize: 13, textAlign: 'center', marginTop: 40, paddingHorizontal: 20 },
-  hitchRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
-  smallBtn:     { backgroundColor: '#0f3460', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
-  smallBtnText: { color: '#64b5f6', fontSize: 12 },
-  jobCard:      { backgroundColor: '#16213e', borderRadius: 10, margin: 8, padding: 12 },
-  jobTitle:     { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, marginBottom: 4 },
-  progressBar:  { height: 6, backgroundColor: '#1a1a2e', borderRadius: 3, marginTop: 8, overflow: 'hidden' },
+  container:    { flex: 1, backgroundColor: C.bg },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
+  sectionHeader:{ color: C.text, fontSize: F.size.md, fontWeight: 'bold', paddingHorizontal: S.md, paddingTop: S.lg, paddingBottom: 6 },
+  machineCard:  { backgroundColor: C.bgCard, borderRadius: 10, margin: S.sm, padding: S.md },
+  machineName:  { color: C.white, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: S.xs },
+  machineDetail:{ color: '#aaa', fontSize: F.size.sm, marginBottom: 2 },
+  repairBadge:  { color: '#ef5350', fontSize: F.size.sm, marginBottom: 2 },
+  jobBadge:     { color: '#ffb74d', fontSize: F.size.sm },
+  idleBadge:    { color: '#81c784', fontSize: F.size.sm },
+  empty:        { color: '#555', fontSize: F.size.md, textAlign: 'center', marginTop: 40, paddingHorizontal: 20 },
+  hitchRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: S.sm },
+  smallBtn:     { backgroundColor: '#0f3460', borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6 },
+  smallBtnText: { color: '#64b5f6', fontSize: F.size.sm },
+  jobCard:      { backgroundColor: C.bgCard, borderRadius: 10, margin: S.sm, padding: S.md },
+  jobTitle:     { color: C.text, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: S.xs },
+  progressBar:  { height: 6, backgroundColor: C.bg, borderRadius: 3, marginTop: S.sm, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: '#81c784', borderRadius: 3 },
-  fuelCard:           { backgroundColor: '#16213e', borderRadius: 10, padding: 12, margin: 8, gap: 8 },
+  fuelCard:           { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, margin: S.sm, gap: 8 },
   fuelHeader:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  fuelTitle:          { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' },
-  fuelAmount:         { color: '#888', fontSize: 11 },
-  fuelGaugeBg:        { height: 8, backgroundColor: '#0d1117', borderRadius: 4, overflow: 'hidden' },
-  fuelGaugeFill:      { height: 8, borderRadius: 4 },
+  fuelTitle:          { color: C.text, fontSize: F.size.md, fontWeight: 'bold' },
+  fuelAmount:         { color: C.textMuted, fontSize: 11 },
+  fuelGaugeBg:        { height: 8, backgroundColor: '#0d1117', borderRadius: R.xs, overflow: 'hidden' },
+  fuelGaugeFill:      { height: 8, borderRadius: R.xs },
   fuelBuyRow:         { flexDirection: 'row', gap: 6 },
-  fuelBuyBtn:         { flex: 1, backgroundColor: '#0f3460', borderRadius: 8, paddingVertical: 7, alignItems: 'center' },
-  fuelBuyBtnDisabled: { backgroundColor: '#1a1a2e', opacity: 0.5 },
+  fuelBuyBtn:         { flex: 1, backgroundColor: '#0f3460', borderRadius: R.md, paddingVertical: 7, alignItems: 'center' },
+  fuelBuyBtnDisabled: { backgroundColor: C.bg, opacity: 0.5 },
   fuelFillBtn:        { backgroundColor: '#1a3a20' },
-  fuelBuyBtnTop:      { color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' },
-  fuelBuyBtnSub:      { color: '#66bb6a', fontSize: 10 },
-  escrowBadge: { backgroundColor: '#2a2a2a', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start', marginTop: 6 },
-  escrowText:  { color: '#666', fontSize: 11, fontStyle: 'italic' },
+  fuelBuyBtnTop:      { color: C.text, fontSize: 11, fontWeight: 'bold' },
+  fuelBuyBtnSub:      { color: '#66bb6a', fontSize: F.size.xs },
+  escrowBadge: { backgroundColor: '#2a2a2a', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: 6, alignSelf: 'flex-start', marginTop: 6 },
+  escrowText:  { color: C.textFaint, fontSize: 11, fontStyle: 'italic' },
 });

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ScrollView, TouchableOpacity } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F, R } from '../../constants/theme';
 import { getSeason, WeatherEvent, Season } from '../../engine/climate';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { CROP_CALENDAR, STATUS_COLORS, STATUS_ICONS, STATUS_LABELS, SeasonStatus } from '../../data/cropCalendar';
@@ -61,7 +61,7 @@ export default function ClimaScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <ScreenHeader title="Weather" />
+      <Text style={styles.screenTitle}>Weather</Text>
 
       {/* Today */}
       <View style={styles.todayCard}>
@@ -72,6 +72,7 @@ export default function ClimaScreen() {
             <Text style={styles.todayEvent}>{todayWeather.event.replace('_', ' ')}</Text>
             <Text style={styles.todayMod}>
               Crop modifier: {(todayWeather.climateModifier * 100).toFixed(0)}%
+              {'  '}🌡️ {todayWeather.minTemp?.toFixed(0) ?? '?'}–{todayWeather.maxTemp?.toFixed(0) ?? '?'}°C
             </Text>
           </>
         ) : (
@@ -87,13 +88,33 @@ export default function ClimaScreen() {
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.forecastList}
-        renderItem={({ item, index }) => (
-          <View style={styles.forecastCard}>
-            <Text style={styles.forecastDay}>Day {day + index + 1}</Text>
-            <Text style={styles.forecastIcon}>{WEATHER_ICONS[item.event]}</Text>
-            <Text style={styles.forecastMod}>{(item.climateModifier * 100).toFixed(0)}%</Text>
-          </View>
-        )}
+        renderItem={({ item, index }) => {
+          const isFrost = item.event === 'frost';
+          const isLowConfidence = item.probability <= 0.55;
+          const streakLabel = item.streakDay != null
+            ? `day ${item.streakDay}` : null;
+          return (
+            <View style={[
+              styles.forecastCard,
+              isFrost && styles.forecastCardFrost,
+              isLowConfidence && styles.forecastCardDim,
+            ]}>
+              <Text style={styles.forecastDay}>+{index + 1}d</Text>
+              <Text style={styles.forecastIcon}>{WEATHER_ICONS[item.event]}</Text>
+              {item.probability < 1.0 && (
+                <Text style={styles.forecastProb}>
+                  {Math.round(item.probability * 100)}%
+                </Text>
+              )}
+              <Text style={styles.forecastTemp}>
+                {item.minTemp?.toFixed(0) ?? '?'}–{item.maxTemp?.toFixed(0) ?? '?'}°C
+              </Text>
+              {streakLabel && (
+                <Text style={styles.forecastStreak}>{streakLabel}</Text>
+              )}
+            </View>
+          );
+        }}
       />
 
       {/* ── CALENDAR ── */}
@@ -189,62 +210,93 @@ export default function ClimaScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 4 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#e8d5a3' },
-  season: { fontSize: 14, color: '#81c784' },
-  dayLabel: { color: '#888', fontSize: 13, paddingHorizontal: 16, marginBottom: 10 },
-  sectionLabel: { color: '#888', fontSize: 13, paddingHorizontal: 16, marginBottom: 6, marginTop: 10 },
+  container: { flex: 1, backgroundColor: C.bg },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: S.lg, marginBottom: S.xs },
+  title: { fontSize: F.size.title, fontWeight: 'bold', color: C.text },
+  season: { fontSize: F.size.lg, color: '#81c784' },
+  dayLabel: { color: C.textMuted, fontSize: F.size.md, paddingHorizontal: S.lg, marginBottom: 10 },
+  sectionLabel: { color: C.textMuted, fontSize: F.size.md, paddingHorizontal: S.lg, marginBottom: 6, marginTop: 10 },
 
   // Today
-  todayCard: { backgroundColor: '#16213e', borderRadius: 12, marginHorizontal: 12, padding: 16, alignItems: 'center' },
-  todayLabel: { color: '#888', fontSize: 12, marginBottom: 4 },
+  todayCard: { backgroundColor: C.bgCard, borderRadius: R.lg, marginHorizontal: S.md, padding: S.lg, alignItems: 'center' },
+  todayLabel: { color: C.textMuted, fontSize: F.size.sm, marginBottom: S.xs },
   todayIcon: { fontSize: 48 },
-  todayEvent: { color: '#e8d5a3', fontSize: 16, fontWeight: 'bold', textTransform: 'capitalize', marginTop: 6 },
-  todayMod: { color: '#aaa', fontSize: 13, marginTop: 2 },
-  noWeather: { color: '#555', fontSize: 13 },
+  todayEvent: { color: C.text, fontSize: F.size.xl, fontWeight: 'bold', textTransform: 'capitalize', marginTop: 6 },
+  todayMod: { color: '#aaa', fontSize: F.size.md, marginTop: 2 },
+  noWeather: { color: '#555', fontSize: F.size.md },
 
   // Forecast
-  forecastList: { paddingHorizontal: 8 },
-  forecastCard: { backgroundColor: '#16213e', borderRadius: 10, padding: 10, marginRight: 8, alignItems: 'center', width: 78 },
-  forecastDay: { color: '#888', fontSize: 10, marginBottom: 4 },
+  forecastList: { paddingHorizontal: S.sm },
+  forecastCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: 10, marginRight: S.sm, alignItems: 'center', width: 78 },
+  forecastDay: { color: C.textMuted, fontSize: F.size.xs, marginBottom: S.xs },
   forecastIcon: { fontSize: 26 },
-  forecastMod: { color: '#aaa', fontSize: 10, marginTop: 4 },
+  forecastMod: { color: '#aaa', fontSize: F.size.xs, marginTop: S.xs },
+  forecastCardFrost: {
+    borderColor: C.red,
+    borderWidth: 1.5,
+  },
+  forecastCardDim: {
+    opacity: 0.65,
+  },
+  forecastProb: {
+    fontSize: F.size.xs,
+    color: C.amber,
+    fontWeight: F.weight.bold,
+  },
+  forecastTemp: {
+    fontSize: F.size.xs,
+    color: C.textMuted,
+    marginTop: 2,
+  },
+  forecastStreak: {
+    fontSize: F.size.xs,
+    color: C.red,
+    fontWeight: F.weight.bold,
+    marginTop: 1,
+  },
 
   // Filter tabs
-  filterRow: { marginBottom: 8 },
-  filterTab: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#16213e', borderWidth: 1, borderColor: '#333' },
-  filterTabActive: { backgroundColor: '#0f3460', borderColor: '#e8d5a3' },
+  filterRow: { marginBottom: S.sm },
+  filterTab: { borderRadius: 20, paddingHorizontal: S.md, paddingVertical: 6, backgroundColor: C.bgCard, borderWidth: 1, borderColor: '#333' },
+  filterTabActive: { backgroundColor: '#0f3460', borderColor: C.text },
   filterTabCurrent: { borderColor: '#81c784' },
-  filterTabText: { color: '#666', fontSize: 12 },
-  filterTabTextActive: { color: '#e8d5a3', fontWeight: 'bold' },
+  filterTabText: { color: C.textFaint, fontSize: F.size.sm },
+  filterTabTextActive: { color: C.text, fontWeight: 'bold' },
 
   // Legend
-  legend: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, marginBottom: 8, gap: 8 },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: S.md, marginBottom: S.sm, gap: 8 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendDot: { width: 10, height: 10, borderRadius: 2 },
-  legendText: { color: '#666', fontSize: 10 },
+  legendText: { color: C.textFaint, fontSize: F.size.xs },
 
   // Calendar grid
   calendarWrap: { marginHorizontal: 10, backgroundColor: '#0d1117', borderRadius: 10, overflow: 'hidden' },
-  calendarRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
-  calendarCropCol: { width: 110, paddingVertical: 8, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  tierDot: { width: 7, height: 7, borderRadius: 4, flexShrink: 0 },
+  calendarRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: C.divider },
+  calendarCropCol: { width: 110, paddingVertical: S.sm, paddingHorizontal: S.sm, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tierDot: { width: 7, height: 7, borderRadius: R.xs, flexShrink: 0 },
   calendarCropName: { color: '#aaa', fontSize: 11, flex: 1 },
-  calendarSeasonHeader: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, backgroundColor: '#111827' },
+  calendarSeasonHeader: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: S.sm, backgroundColor: '#111827' },
   calendarSeasonHeaderCurrent: { backgroundColor: '#0f3460' },
-  calendarSeasonText: { color: '#555', fontSize: 10, fontWeight: 'bold' },
-  calendarSeasonTextCurrent: { color: '#e8d5a3' },
+  calendarSeasonText: { color: '#555', fontSize: F.size.xs, fontWeight: 'bold' },
+  calendarSeasonTextCurrent: { color: C.text },
   calendarCellWrap: { flex: 1, padding: 3 },
-  cell: { borderRadius: 4, alignItems: 'center', justifyContent: 'center', paddingVertical: 5 },
-  cellCurrent: { borderWidth: 1, borderColor: '#e8d5a350' },
-  cellIcon: { fontSize: 13 },
-  noCalendar: { color: '#555', padding: 16, textAlign: 'center' },
+  cell: { borderRadius: R.xs, alignItems: 'center', justifyContent: 'center', paddingVertical: 5 },
+  cellCurrent: { borderWidth: 1, borderColor: C.text + '50' },
+  cellIcon: { fontSize: F.size.md },
+  noCalendar: { color: '#555', padding: S.lg, textAlign: 'center' },
 
   // Notes
-  notesCard: { backgroundColor: '#16213e', borderRadius: 12, margin: 12, padding: 14 },
-  notesTitle: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13, marginBottom: 10 },
+  notesCard: { backgroundColor: C.bgCard, borderRadius: R.lg, margin: S.md, padding: 14 },
+  notesTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: 10 },
   noteRow: { flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'flex-start' },
-  noteCropName: { color: '#ccc', fontWeight: 'bold', fontSize: 12 },
-  noteText: { color: '#666', fontSize: 11, marginTop: 1 },
+  noteCropName: { color: '#ccc', fontWeight: 'bold', fontSize: F.size.sm },
+  noteText: { color: C.textFaint, fontSize: 11, marginTop: 1 },
 });

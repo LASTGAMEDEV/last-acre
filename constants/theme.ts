@@ -1,5 +1,47 @@
 import { Platform } from 'react-native';
 
+// ── Spacing scale ─────────────────────────────────────────────────────────────
+export const S = {
+  xs:  4,
+  sm:  8,
+  md:  12,
+  lg:  16,
+  xl:  24,
+  xxl: 32,
+} as const;
+
+// ── Font scale ────────────────────────────────────────────────────────────────
+export const F = {
+  size: {
+    xs:    10,
+    sm:    12,
+    md:    13,
+    lg:    14,
+    xl:    16,
+    xxl:   18,
+    title: 22,
+  },
+  weight: {
+    normal: '400' as const,
+    medium: '500' as const,
+    bold:   '600' as const,
+    heavy:  'bold' as const,
+  },
+} as const;
+
+// ── Border radii ──────────────────────────────────────────────────────────────
+export const R = {
+  xs:   4,
+  sm:   6,
+  md:   8,
+  lg:   12,
+  xl:   16,
+  pill: 999,
+} as const;
+
+// ── Touch target minimum (mobile) ─────────────────────────────────────────────
+export const MIN_TOUCH = 44;
+
 // ── Season theming ───────────────────────────────────────────────────────────
 
 export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
@@ -50,18 +92,24 @@ export const SEASON_THEME: Record<Season, {
 
 export const C = {
   // Backgrounds
-  bg:        '#1a1a2e',
-  bgCard:    '#16213e',
-  bgDeep:    '#0f1f3d',
-  bgInput:   '#0d1117',
+  bg:        '#0d1a0d',
+  bgCard:    '#142014',
+  bgDeep:    '#0a1a0a',
+  bgInput:   '#0a1a0a',
 
   // Text
-  gold:      '#e8d5a3',
-  goldDim:   '#c8a96a',
+  text:      '#c8e6c9',
+  textDim:   '#81c784',
+  textMuted: '#6a9a6a',
+  textFaint: '#4a6e4a',
+
+  // Legacy aliases (backwards compat — migrate to text/textDim/textMuted/textFaint)
+  gold:      '#c8e6c9',   // → C.text
+  goldDim:   '#81c784',   // → C.textDim
   white:     '#ffffff',
-  muted:     '#888888',
-  faint:     '#555555',
-  dim:       '#aaaaaa',
+  muted:     '#6a9a6a',   // → C.textMuted
+  faint:     '#4a6e4a',   // → C.textFaint
+  dim:       '#81c784',   // → C.textDim
 
   // Semantic
   green:     '#4caf50',
@@ -76,8 +124,8 @@ export const C = {
   gray:      '#9e9e9e',
 
   // Dividers
-  divider:   '#1e1e3a',
-  border:    '#222222',
+  divider:   '#1b3a1b',
+  border:    '#1b3a1b',
 };
 
 // ── Tier colors ──────────────────────────────────────────────────────────────

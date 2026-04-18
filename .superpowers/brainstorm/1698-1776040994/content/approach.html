@@ -1,0 +1,29 @@
+<h2>UI Improvement: Which approach?</h2>
+<p class="subtitle">You asked to fix the overlap issue and optimize for mobile. How deep should we go?</p>
+
+<div class="options">
+  <div class="option" data-choice="targeted" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Targeted Fixes</h3>
+      <p><strong>Fix the real problems:</strong> reposition the Next Day button so it doesn't overlap, increase touch targets to ≥44pt everywhere, unify card background colors across new sections (Plans 3–8 added inconsistent colors). Stop there.</p>
+      <p style="margin-top:8px;font-size:12px;color:#aaa">Scope: ~3 files, minimal risk, ship fast</p>
+    </div>
+  </div>
+  <div class="option" data-choice="polish" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Mobile Polish Pass</h3>
+      <p><strong>Targeted fixes +</strong> bottom safe-area padding, sticky Next Day button in a floating action bar, consistent spacing/typography across all tabs, theme colors used everywhere (no more hardcoded hex).</p>
+      <p style="margin-top:8px;font-size:12px;color:#aaa">Scope: all tab files, medium effort, noticeable improvement</p>
+    </div>
+  </div>
+  <div class="option" data-choice="design-system" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Design System Refresh</h3>
+      <p><strong>Polish pass +</strong> extract shared Card, Button, StatRow, SectionHeader components. Every screen uses them. One file to update = all screens update.</p>
+      <p style="margin-top:8px;font-size:12px;color:#aaa">Scope: new components folder + all screens, larger effort, solid foundation</p>
+    </div>
+  </div>
+</div>

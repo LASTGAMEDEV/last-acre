@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
-import ScreenHeader from '../../components/ScreenHeader';
+import { C, S, F, R } from '../../constants/theme';
 import HintCard from '../../components/HintCard';
 import { PROCESSING_RECIPES, PROCESSED_PRODUCTS, ProcessingRecipe } from '../../data/processingTypes';
 import { CROP_TYPES } from '../../data/cropTypes';
@@ -62,7 +62,8 @@ export default function ProcesadoScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <ScreenHeader title="Processing" subtitle="Transform raw materials into higher-value products" />
+      <Text style={styles.screenTitle}>Processing</Text>
+      <Text style={styles.screenSubtitle}>Convert raw crops into products</Text>
       {Object.values(inventory).some(v => v > 0) && !Object.values(processedInventory).some(v => v > 0) && (
         <HintCard id="hint_processing" title="Process crops for higher margins" body="Raw crops sell at base price, but processed goods (flour, oil, juice) sell for 2–4× more. Select a recipe and tap Process to start a batch." />
       )}
@@ -218,67 +219,81 @@ export default function ProcesadoScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
+  container: { flex: 1, backgroundColor: C.bg },
   content: { paddingBottom: 100 },
-  subtitle: { color: '#888', fontSize: 12, marginTop: 2 },
+  subtitle: { color: C.textMuted, fontSize: F.size.sm, marginTop: 2 },
 
-  section: { marginTop: 12, paddingHorizontal: 12 },
-  sectionLabel: { color: '#888', fontSize: 13, marginBottom: 8 },
+  section: { marginTop: S.md, paddingHorizontal: S.md },
+  sectionLabel: { color: C.textMuted, fontSize: F.size.md, marginBottom: S.sm },
 
   inventoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   inventoryCard: { backgroundColor: '#0f3460', borderRadius: 10, padding: 10, minWidth: 130, flex: 1 },
-  inventoryName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13, marginBottom: 2 },
-  inventoryQty: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-  inventoryPrice: { color: '#888', fontSize: 11, marginTop: 2, marginBottom: 6 },
-  sellBtn: { backgroundColor: '#2e7d32', borderRadius: 6, padding: 6, alignItems: 'center' },
-  sellBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  inventoryName: { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: 2 },
+  inventoryQty: { color: C.white, fontSize: 15, fontWeight: 'bold' },
+  inventoryPrice: { color: C.textMuted, fontSize: 11, marginTop: 2, marginBottom: 6 },
+  sellBtn: { backgroundColor: '#2e7d32', borderRadius: R.sm, padding: 6, alignItems: 'center' },
+  sellBtnText: { color: C.white, fontSize: 11, fontWeight: 'bold' },
 
-  buildingHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 10 },
+  buildingHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: S.sm, gap: 10 },
   buildingIcon: { fontSize: 24 },
   buildingInfo: { flex: 1 },
-  buildingName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 15 },
-  buildingLocked: { color: '#888', fontSize: 11, marginTop: 2 },
-  buildingBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  buildingName: { color: C.text, fontWeight: 'bold', fontSize: 15 },
+  buildingLocked: { color: C.textMuted, fontSize: 11, marginTop: 2 },
+  buildingBadge: { borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: 3 },
   badgeOwned: { backgroundColor: '#1b3a1b' },
   badgeLocked: { backgroundColor: '#2a2a2a' },
   badgeText: { fontSize: 11, fontWeight: 'bold', color: '#aaa' },
 
   recipeCard: {
-    backgroundColor: '#16213e',
+    backgroundColor: C.bgCard,
     borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
+    padding: S.md,
+    marginBottom: S.sm,
     borderWidth: 1,
-    borderColor: '#1e1e3a',
+    borderColor: C.divider,
   },
   recipeCardLocked: { opacity: 0.5 },
   recipeHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   recipeIcon: { fontSize: 20 },
-  recipeName: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14 },
+  recipeName: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
 
   recipeFlow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#0f1f3d',
-    borderRadius: 8,
+    backgroundColor: C.bgDeep,
+    borderRadius: R.md,
     padding: 10,
     marginBottom: 10,
   },
   flowItem: { flex: 1 },
-  flowLabel: { color: '#555', fontSize: 10, marginBottom: 3 },
-  flowValue: { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' },
-  flowStock: { color: '#888', fontSize: 11, marginTop: 2 },
-  flowArrow: { color: '#c8860a', fontSize: 20, fontWeight: 'bold', paddingHorizontal: 8 },
+  flowLabel: { color: '#555', fontSize: F.size.xs, marginBottom: 3 },
+  flowValue: { color: C.text, fontSize: F.size.md, fontWeight: 'bold' },
+  flowStock: { color: C.textMuted, fontSize: 11, marginTop: 2 },
+  flowArrow: { color: '#c8860a', fontSize: 20, fontWeight: 'bold', paddingHorizontal: S.sm },
 
   batchRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  batchBtn: { backgroundColor: '#1e1e3a', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 },
+  batchBtn: { backgroundColor: C.divider, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6 },
   maxBtn: { backgroundColor: '#2a2a4a' },
-  batchBtnText: { color: '#e8d5a3', fontWeight: 'bold', fontSize: 13 },
-  batchCount: { color: '#e8d5a3', fontSize: 13, minWidth: 60, textAlign: 'center' },
-  processBtn: { flex: 1, backgroundColor: '#c8860a', borderRadius: 8, padding: 8, alignItems: 'center' },
+  batchBtnText: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  batchCount: { color: C.text, fontSize: F.size.md, minWidth: 60, textAlign: 'center' },
+  processBtn: { flex: 1, backgroundColor: '#c8860a', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
   processBtnDisabled: { backgroundColor: '#333' },
-  processBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  processBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
 
   maxInfo: { color: '#555', fontSize: 11, marginTop: 6 },
+  screenTitle: {
+    color: C.text,
+    fontSize: F.size.xl,
+    fontWeight: F.weight.bold,
+    paddingHorizontal: S.md,
+    paddingTop: S.sm,
+    paddingBottom: S.xs,
+  },
+  screenSubtitle: {
+    color: C.textMuted,
+    fontSize: F.size.xs,
+    paddingHorizontal: S.md,
+    paddingBottom: S.xs,
+  },
 });

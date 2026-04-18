@@ -38,13 +38,13 @@ export interface LoanRecord {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-export const SAVINGS_APR = 0.10; // S&P 500 historical average annual return
+export const SAVINGS_APR = 0.045; // S&P 500 historical average annual return
 
 export const LOAN_TIERS: { name: string; maxAmount: number; baseRate: number; minMonthlyIncome: number }[] = [
-  { name: 'Micro',   maxAmount: 5000,   baseRate: 0.10, minMonthlyIncome: 0     },
-  { name: 'Small',   maxAmount: 25000,  baseRate: 0.08, minMonthlyIncome: 1000  },
-  { name: 'Medium',  maxAmount: 100000, baseRate: 0.07, minMonthlyIncome: 5000  },
-  { name: 'Large',   maxAmount: 400000, baseRate: 0.06, minMonthlyIncome: 20000 },
+  { name: 'Micro',   maxAmount: 5000,   baseRate: 0.18,  minMonthlyIncome: 0     },
+  { name: 'Small',   maxAmount: 25000,  baseRate: 0.14,  minMonthlyIncome: 1000  },
+  { name: 'Medium',  maxAmount: 100000, baseRate: 0.10,  minMonthlyIncome: 5000  },
+  { name: 'Large',   maxAmount: 400000, baseRate: 0.055, minMonthlyIncome: 20000 },
 ];
 
 // ── Credit Score ─────────────────────────────────────────────────────────────

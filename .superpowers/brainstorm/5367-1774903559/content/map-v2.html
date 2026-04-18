@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>World Map v2</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #060810; font-family: system-ui, -apple-system, sans-serif; }
+
+#wrap {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12px;
+}
+
+#map {
+  width: min(100%, 460px);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 4px 24px rgba(0,0,0,0.8));
+}
+
+.field { cursor: pointer; }
+.field:hover { filter: brightness(1.3); }
+.field.lit { filter: brightness(1.5) drop-shadow(0 0 8px rgba(255,255,120,0.3)); }
+
+/* Detail panel */
+#panel {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(6,8,18,0.97);
+  border: 1px solid #2a4870;
+  border-radius: 10px;
+  padding: 14px 16px;
+  width: min(320px, calc(100vw - 24px));
+  font-size: 13px;
+  z-index: 100;
+  display: none;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.9);
+}
+#panel.show { display: block; }
+#panel-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+#panel-name { font-size: 15px; font-weight: 700; color: #fff; }
+#panel-close { cursor: pointer; color: #555; font-size: 18px; line-height: 1; padding: 0 0 0 12px; }
+.prow { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.prow .lbl { color: #666; }
+.prow .val { color: #ccc; text-align: right; }
+.prow .val.good { color: #81c784; }
+.prow .val.warn { color: #ffd54f; }
+.prow .val.rival { color: #ef9a9a; }
+.pdiv { border-top: 1px solid #1a2a3a; margin: 8px 0; }
+.pact {
+  margin-top: 10px; width: 100%; padding: 9px; border: none; border-radius: 6px;
+  font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 0.3px;
+}
+.pact.buy  { background: #1b3a20; color: #81c784; border: 1px solid #43a047; }
+.pact.manage { background: #1a2a44; color: #90caf9; border: 1px solid #2a4a7a; }
+.pact.harvest { background: #3a3000; color: #ffd54f; border: 1px solid #c8a000; }
+.pact.scout { background: #2a1a3a; color: #ce93d8; border: 1px solid #6a2a8a; }
+</style>
+</head>
+<body>
+<div id="wrap">
+<svg id="map" viewBox="0 0 420 580" xmlns="http://www.w3.org/2000/svg">
+<defs>
+
+  <!-- Base soil texture -->
+  <pattern id="soil" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+    <rect width="60" height="60" fill="#110e08"/>
+    <rect x="0" y="0" width="30" height="30" fill="#131008" opacity="0.4"/>
+    <rect x="30" y="30" width="30" height="30" fill="#0f0d07" opacity="0.3"/>
+  </pattern>
+
+  <!-- Crop row patterns - subtle horizontal tillage lines -->
+  <pattern id="crop-corn" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+    <rect width="6" height="6" fill="#14280f"/>
+    <line x1="0" y1="3" x2="6" y2="3" stroke="#1c3816" stroke-width="1.4"/>
+  </pattern>
+  <pattern id="crop-wheat" x="0" y="0" width="5" height="5" patternUnits="userSpaceOnUse">
+    <rect width="5" height="5" fill="#1e2c0a"/>
+    <line x1="0" y1="2.5" x2="5" y2="2.5" stroke="#2a3e10" stroke-width="1"/>
+  </pattern>
+  <pattern id="crop-ready" x="0" y="0" width="5" height="5" patternUnits="userSpaceOnUse">
+    <rect width="5" height="5" fill="#303608"/>
+    <line x1="0" y1="2.5" x2="5" y2="2.5" stroke="#4a5210" stroke-width="1"/>
+  </pattern>
+  <pattern id="crop-sun" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+    <rect width="6" height="6" fill="#1e2210"/>
+    <line x1="0" y1="3" x2="6" y2="3" stroke="#2c3218" stroke-width="1.2"/>
+  </pattern>
+  <pattern id="crop-rival" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+    <rect width="6" height="6" fill="#200808"/>
+    <line x1="0" y1="3" x2="6" y2="3" stroke="#2e1010" stroke-width="1.2"/>
+  </pattern>
+  <pattern id="crop-rival2" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+    <rect width="6" height="6" fill="#0a0820"/>
+    <line x1="0" y1="3" x2="6" y2="3" stroke="#14103a" stroke-width="1.2"/>
+  </pattern>
+  <pattern id="crop-empty" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+    <rect width="8" height="8" fill="#0e1a0a"/>
+  </pattern>
+  <pattern id="crop-sale" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+    <rect width="8" height="8" fill="#1a1500"/>
+  </pattern>
+
+</defs>
+
+<!-- ===== GROUND BASE ===== -->
+<rect width="420" height="580" fill="url(#soil)"/>
+
+<!-- ===== FIELDS ===== -->
+<!--
+  Layout:
+  - Vertical road (x≈88) divides left strip from main area
+  - Horizontal road (y≈380) separates upper fields from town zone
+  - River flows top-right to bottom-center, cuts through the map
+  - Town occupies lower-right corner (below road, right of river)
+
+  River centerline approx points:
+    (298,0) → (278,100) → (258,200) → (244,290) → (238,380) → (234,460) → (232,580)
+
+  Fields are drawn with slightly irregular edges (not perfect rectangles)
+  to simulate real property/terrain boundaries.
+-->
+
+<!-- === LEFT STRIP (x: 0–88, y: 0–580) === -->
+
+<!-- F1 · Player · Corn — top-left -->
+<g class="field" id="f1" onclick="sel('f1')">
+  <path d="M 1,1 L 88,1 L 90,92 Q 89,135 87,178 L 1,177 Z"
+    fill="url(#crop-corn)" stroke="#3a8c30" stroke-width="1.5"/>
+  <text x="44" y="82" font-size="22" text-anchor="middle" dominant-baseline="middle">🌽</text>
+  <text x="44" y="105" fill="#4caf50" font-size="8.5" text-anchor="middle" font-weight="600">F1 · 42 ha</text>
+  <text x="44" y="116" fill="#388e3c" font-size="7" text-anchor="middle">Growing · 4d</text>
+</g>
+
+<!-- F2 · Player · Wheat — mid-left -->
+<g class="field" id="f2" onclick="sel('f2')">
+  <path d="M 1,177 L 87,178 L 88,268 Q 88,320 87,380 L 1,380 Z"
+    fill="url(#crop-wheat)" stroke="#558b2f" stroke-width="1.5"/>
+  <text x="44" y="270" font-size="20" text-anchor="middle" dominant-baseline="middle">🌾</text>
+  <text x="44" y="292" fill="#8bc34a" font-size="8.5" text-anchor="middle" font-weight="600">F2 · 56 ha</text>
+  <text x="44" y="303" fill="#558b2f" font-size="7" text-anchor="middle">Growing · 8d</text>
+</g>
+
+<!-- F3 · Player · Unplanted — bottom-left (below road) -->
+<g class="field" id="f3" onclick="sel('f3')">
+  <path d="M 1,380 L 87,380 L 88,460 Q 88,515 87,579 L 1,579 Z"
+    fill="url(#crop-empty)" stroke="#2e5c22" stroke-width="1.5" stroke-dasharray="4 2"/>
+  <text x="44" y="468" fill="#3a7028" font-size="9" text-anchor="middle">F3 · 36 ha</text>
+  <text x="44" y="481" fill="#2a5020" font-size="8" text-anchor="middle">Unplanted</text>
+</g>
+
+<!-- === UPPER CENTER (x: 88–river, y: 0–380) === -->
+
+<!-- F4 · Hacienda Rivera (Rival A) · Corn — top-center large -->
+<g class="field" id="f4" onclick="sel('f4')">
+  <path d="M 88,1 L 255,1 Q 270,10 278,30 Q 286,55 282,95
+           Q 278,130 272,155 Q 264,175 255,185
+           L 240,190 Q 215,185 192,180 Q 162,172 138,162
+           Q 112,150 94,138 Q 89,118 88,90 L 88,1 Z"
+    fill="url(#crop-rival)" stroke="#8b2020" stroke-width="1.5"/>
+  <text x="182" y="88" font-size="20" text-anchor="middle" dominant-baseline="middle">🌽</text>
+  <text x="182" y="112" fill="#ef5350" font-size="8.5" text-anchor="middle" font-weight="600">F4 · 95 ha · Hacienda Rivera</text>
+  <text x="182" y="123" fill="#8b2020" font-size="7" text-anchor="middle">Competitor · crop unknown</text>
+</g>
+
+<!-- F5 · Player · Sunflower — center -->
+<g class="field" id="f5" onclick="sel('f5')">
+  <path d="M 88,90 Q 89,118 94,138 Q 112,150 138,162
+           Q 162,172 192,180 Q 215,185 240,190
+           Q 245,205 244,228 Q 242,258 237,278
+           Q 230,298 220,308 Q 205,316 188,316
+           Q 168,315 148,305 Q 128,293 112,278
+           Q 97,262 90,242 Q 87,220 88,195 L 88,90 Z"
+    fill="url(#crop-sun)" stroke="#43a047" stroke-width="1.5"/>
+  <text x="165" y="238" font-size="20" text-anchor="middle" dominant-baseline="middle">🌻</text>
+  <text x="165" y="260" fill="#66bb6a" font-size="8.5" text-anchor="middle" font-weight="600">F5 · 72 ha</text>
+  <text x="165" y="271" fill="#388e3c" font-size="7" text-anchor="middle">Growing · 11d</text>
+</g>
+
+<!-- F6 · Player · Wheat READY — center-low -->
+<g class="field" id="f6" onclick="sel('f6')">
+  <path d="M 88,195 Q 87,220 90,242 Q 97,262 112,278
+           Q 128,293 148,305 Q 168,315 188,316
+           Q 205,316 220,308 Q 225,318 228,338
+           Q 230,358 228,380 L 88,380 Z"
+    fill="url(#crop-ready)" stroke="#aed136" stroke-width="1.8"/>
+  <!-- Ready glow -->
+  <path d="M 88,195 Q 87,220 90,242 Q 97,262 112,278
+           Q 128,293 148,305 Q 168,315 188,316
+           Q 205,316 220,308 Q 225,318 228,338
+           Q 230,358 228,380 L 88,380 Z"
+    fill="none" stroke="#cddc39" stroke-width="0.6" opacity="0.5"/>
+  <text x="155" y="340" font-size="20" text-anchor="middle" dominant-baseline="middle">🌾</text>
+  <text x="155" y="362" fill="#cddc39" font-size="8.5" text-anchor="middle" font-weight="700">F6 · 64 ha · READY ⚡</text>
+</g>
+
+<!-- === RIGHT OF RIVER (x: river–420, y: 0–380) === -->
+
+<!-- F7 · For Sale — top-right (above road, right of river) -->
+<g class="field" id="f7" onclick="sel('f7')">
+  <path d="M 298,1 L 419,1 L 419,190 Q 390,192 365,188
+           Q 340,183 320,174 Q 305,166 296,154
+           Q 288,140 285,120 Q 280,90 282,60
+           Q 283,30 288,10 Q 292,4 298,1 Z"
+    fill="url(#crop-sale)" stroke="#c8860b" stroke-width="1.5"/>
+  <text x="355" y="88" font-size="18" text-anchor="middle" dominant-baseline="middle">💰</text>
+  <text x="355" y="110" fill="#c8860b" font-size="8.5" text-anchor="middle" font-weight="600">F7 · 78 ha</text>
+  <text x="355" y="121" fill="#a07008" font-size="7.5" text-anchor="middle">FOR SALE · $24,000</text>
+</g>
+
+<!-- F8 · Granja del Norte (Rival B) · Carrots — mid-right -->
+<g class="field" id="f8" onclick="sel('f8')">
+  <path d="M 296,154 Q 305,166 320,174 Q 340,183 365,188
+           Q 390,192 419,190 L 419,380 Q 395,380 370,376
+           Q 348,372 330,362 Q 312,350 302,334
+           Q 292,318 290,298 Q 287,275 290,252
+           Q 293,228 295,205 Q 296,178 296,154 Z"
+    fill="url(#crop-rival2)" stroke="#4a2a9a" stroke-width="1.5"/>
+  <text x="360" y="278" font-size="20" text-anchor="middle" dominant-baseline="middle">🥕</text>
+  <text x="360" y="300" fill="#9575cd" font-size="8.5" text-anchor="middle" font-weight="600">F8 · 82 ha · Granja del Norte</text>
+  <text x="360" y="311" fill="#4a2a8a" font-size="7" text-anchor="middle">Competitor · crop unknown</text>
+</g>
+
+<!-- ===== RIVER ===== -->
+<!-- The river flows from top (x≈298) diagonally down through center to bottom -->
+<!-- Drawn OVER fields so it acts as a natural cut-off line -->
+
+<!-- River shadow/bank -->
+<path d="M 298,0 C 282,70 264,148 250,220 C 240,272 238,318 236,380 C 234,430 233,500 232,580"
+  fill="none" stroke="#061828" stroke-width="22" stroke-linecap="round"/>
+
+<!-- River body -->
+<path d="M 298,0 C 282,70 264,148 250,220 C 240,272 238,318 236,380 C 234,430 233,500 232,580"
+  fill="none" stroke="#0a3a60" stroke-width="14" stroke-linecap="round"/>
+
+<!-- River mid channel -->
+<path d="M 298,0 C 282,70 264,148 250,220 C 240,272 238,318 236,380 C 234,430 233,500 232,580"
+  fill="none" stroke="#0d4f82" stroke-width="8" stroke-linecap="round"/>
+
+<!-- River highlight/shimmer -->
+<path d="M 296,0 C 280,70 262,148 248,220 C 238,272 236,318 234,380 C 232,430 231,500 230,580"
+  fill="none" stroke="#1565c0" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+<path d="M 294,0 C 278,70 260,148 246,220 C 236,272 234,318 232,380 C 230,430 229,500 228,580"
+  fill="none" stroke="#1e88e5" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+
+<!-- River label -->
+<g transform="translate(270, 180) rotate(-72)">
+  <text fill="#1565c0" font-size="8.5" text-anchor="middle" opacity="0.85" font-style="italic" letter-spacing="1">Río Grande</text>
+</g>
+
+<!-- Bridge at road crossing -->
+<g transform="translate(237, 380)">
+  <rect x="-12" y="-4" width="24" height="8" rx="1" fill="#252d38" stroke="#3a4858" stroke-width="1"/>
+  <line x1="-10" y1="0" x2="10" y2="0" stroke="#2a3548" stroke-width="1"/>
+  <line x1="-6" y1="-4" x2="-6" y2="4" stroke="#3a4858" stroke-width="0.8"/>
+  <line x1="6" y1="-4" x2="6" y2="4" stroke="#3a4858" stroke-width="0.8"/>
+</g>
+
+<!-- ===== ROADS ===== -->
+
+<!-- Vertical road (x≈88) -->
+<rect x="85" y="0" width="6" height="380" fill="#181e28"/>
+<rect x="86" y="0" width="1" height="380" fill="#22283a" opacity="0.5"/>
+<rect x="90" y="0" width="1" height="380" fill="#22283a" opacity="0.5"/>
+
+<!-- Horizontal main road (y≈380) -->
+<rect x="0" y="377" width="420" height="7" fill="#181e28"/>
+<rect x="0" y="378" width="420" height="1" fill="#22283a" opacity="0.5"/>
+<rect x="0" y="383" width="420" height="1" fill="#22283a" opacity="0.5"/>
+
+<!-- Road label -->
+<text x="44" y="376" fill="#2a3248" font-size="6.5" text-anchor="middle">Route 3</text>
+<text x="190" y="375" fill="#2a3248" font-size="6.5" text-anchor="middle">— Route 1 —</text>
+
+<!-- ===== BOTTOM-CENTER (unplanted strip between river and town) ===== -->
+<!-- Small unplanted field between left road and river, below main road -->
+<g class="field" id="f9" onclick="sel('f9')">
+  <path d="M 88,380 L 228,380 Q 224,440 220,500 Q 218,540 218,579 L 88,579 Z"
+    fill="url(#crop-empty)" stroke="#2e5c22" stroke-width="1.5" stroke-dasharray="4 2"/>
+  <text x="152" y="470" fill="#3a7028" font-size="9" text-anchor="middle">F9 · 48 ha</text>
+  <text x="152" y="483" fill="#2a5020" font-size="8" text-anchor="middle">Unplanted</text>
+</g>
+
+<!-- ===== TOWN AREA ===== -->
+<!-- Bottom-right quadrant: x≈240–420, y≈380–580 -->
+<!-- The town fills this area — all buildings clustered here -->
+
+<!-- Town ground -->
+<rect x="240" y="384" width="180" height="196" fill="#0c1018" rx="0"/>
+
+<!-- Town road grid -->
+<!-- N-S main street -->
+<rect x="290" y="384" width="7" height="196" fill="#15181e"/>
+<rect x="355" y="384" width="6" height="196" fill="#15181e"/>
+<!-- E-W streets -->
+<rect x="240" y="436" width="180" height="6" fill="#15181e"/>
+<rect x="240" y="490" width="180" height="6" fill="#15181e"/>
+<rect x="240" y="540" width="180" height="6" fill="#15181e"/>
+
+<!-- Road junction markings -->
+<rect x="288" y="436" width="11" height="6" fill="#1e2530"/>
+<rect x="288" y="490" width="11" height="6" fill="#1e2530"/>
+<rect x="353" y="436" width="10" height="6" fill="#1e2530"/>
+<rect x="353" y="490" width="10" height="6" fill="#1e2530"/>
+
+<!-- === TOWN BLOCK A (top-left of town, between left edge and first N-S road, above first E-W) === -->
+<rect x="244" y="388" width="42" height="44" rx="3" fill="#101820"/>
+<text x="265" y="406" font-size="16" text-anchor="middle" dominant-baseline="middle">🏪</text>
+<text x="265" y="424" fill="#4fc3f7" font-size="7" text-anchor="middle" font-weight="600">Market</text>
+
+<!-- === TOWN BLOCK B (between N-S roads, above first E-W) === -->
+<rect x="301" y="388" width="50" height="44" rx="3" fill="#0e1c10"/>
+<text x="326" y="406" font-size="16" text-anchor="middle" dominant-baseline="middle">🏗️</text>
+<text x="326" y="424" fill="#81c784" font-size="7" text-anchor="middle" font-weight="600">Grain Elevator</text>
+
+<!-- === TOWN BLOCK C (right of second N-S road, above first E-W) === -->
+<rect x="365" y="388" width="48" height="44" rx="3" fill="#18101a"/>
+<text x="389" y="406" font-size="16" text-anchor="middle" dominant-baseline="middle">🏦</text>
+<text x="389" y="424" fill="#ce93d8" font-size="7" text-anchor="middle" font-weight="600">Bank</text>
+
+<!-- === TOWN BLOCK D (between E-W roads, left) === -->
+<rect x="244" y="446" width="42" height="40" rx="3" fill="#181422"/>
+<text x="265" y="462" font-size="14" text-anchor="middle" dominant-baseline="middle">🔧</text>
+<text x="265" y="478" fill="#90a4ae" font-size="6.5" text-anchor="middle">Repair Shop</text>
+
+<!-- === TOWN BLOCK E (between E-W roads, center) === -->
+<rect x="301" y="446" width="50" height="40" rx="3" fill="#201410"/>
+<text x="326" y="462" font-size="14" text-anchor="middle" dominant-baseline="middle">🚜</text>
+<text x="326" y="478" fill="#ffcc80" font-size="6.5" text-anchor="middle">Machinery Dealer</text>
+
+<!-- === TOWN BLOCK F (between E-W roads, right) === -->
+<rect x="365" y="446" width="48" height="40" rx="3" fill="#101820"/>
+<text x="389" y="462" font-size="14" text-anchor="middle" dominant-baseline="middle">🌿</text>
+<text x="389" y="478" fill="#a5d6a7" font-size="6.5" text-anchor="middle">Agro Supply</text>
+
+<!-- === TOWN BLOCK G (second row, left) === -->
+<rect x="244" y="500" width="42" height="36" rx="3" fill="#141414"/>
+<text x="265" y="515" font-size="13" text-anchor="middle" dominant-baseline="middle">🏠</text>
+<text x="265" y="529" fill="#b0bec5" font-size="6" text-anchor="middle">Homes</text>
+
+<!-- === TOWN BLOCK H (second row, center) === -->
+<rect x="301" y="500" width="50" height="36" rx="3" fill="#14100c"/>
+<text x="326" y="515" font-size="13" text-anchor="middle" dominant-baseline="middle">⛪</text>
+<text x="326" y="529" fill="#d4b896" font-size="6" text-anchor="middle">Town Hall</text>
+
+<!-- === TOWN BLOCK I (second row, right) === -->
+<rect x="365" y="500" width="48" height="36" rx="3" fill="#0c140a"/>
+<text x="389" y="515" font-size="13" text-anchor="middle" dominant-baseline="middle">🌳</text>
+<text x="389" y="529" fill="#66bb6a" font-size="6" text-anchor="middle">Town Park</text>
+
+<!-- === TOWN BLOCK J (bottom row) === -->
+<rect x="244" y="549" width="165" height="26" rx="3" fill="#101018"/>
+<text x="327" y="560" font-size="11" text-anchor="middle" dominant-baseline="middle">🏘️🏘️🏘️🏘️🏘️</text>
+<text x="327" y="572" fill="#78909c" font-size="6" text-anchor="middle">Residential</text>
+
+<!-- Town border/name -->
+<rect x="240" y="384" width="180" height="196" fill="none" stroke="#1e2838" stroke-width="1.5" rx="0"/>
+<text x="330" y="375" fill="#2a4060" font-size="8" text-anchor="middle" font-weight="600" letter-spacing="2">MARKET TOWN</text>
+
+<!-- Town entry road from Route 1 -->
+<rect x="290" y="371" width="7" height="10" fill="#181e28"/>
+
+<!-- ===== LEGEND ===== -->
+<rect x="2" y="397" width="82" height="90" rx="5" fill="rgba(0,0,0,0.75)"/>
+<text x="43" y="409" fill="#445" font-size="7" text-anchor="middle" letter-spacing="1">LEGEND</text>
+
+<rect x="8" y="415" width="9" height="7" rx="1" fill="#14280f" stroke="#3a8c30" stroke-width="1"/>
+<text x="20" y="421" fill="#888" font-size="7">Your fields</text>
+
+<rect x="8" y="427" width="9" height="7" rx="1" fill="#2a3608" stroke="#aed136" stroke-width="1"/>
+<text x="20" y="433" fill="#888" font-size="7">Ready to harvest</text>
+
+<rect x="8" y="439" width="9" height="7" rx="1" fill="#200808" stroke="#8b2020" stroke-width="1"/>
+<text x="20" y="445" fill="#888" font-size="7">Rival: Rivera</text>
+
+<rect x="8" y="451" width="9" height="7" rx="1" fill="#0a0820" stroke="#4a2a9a" stroke-width="1"/>
+<text x="20" y="457" fill="#888" font-size="7">Rival: Norte</text>
+
+<rect x="8" y="463" width="9" height="7" rx="1" fill="#1a1500" stroke="#c8860b" stroke-width="1"/>
+<text x="20" y="469" fill="#888" font-size="7">For sale</text>
+
+<rect x="8" y="475" width="9" height="4" rx="0" fill="#0d4f82"/>
+<text x="20" y="480" fill="#888" font-size="7">Río Grande</text>
+
+<!-- ===== COMPASS ===== -->
+<text x="408" y="16" fill="#2a3248" font-size="8" text-anchor="middle" font-weight="600">N</text>
+<line x1="408" y1="18" x2="408" y2="26" stroke="#2a3248" stroke-width="1.5"/>
+
+<!-- ===== MAP TITLE ===== -->
+<text x="44" y="15" fill="#1a2830" font-size="9" font-weight="600" letter-spacing="1.5">GRANJA TYCOON</text>
+
+</svg>
+</div>
+
+<!-- ===== DETAIL PANEL ===== -->
+<div id="panel">
+  <div id="panel-header">
+    <div id="panel-name">Field</div>
+    <span id="panel-close" onclick="closePanel()">✕</span>
+  </div>
+  <div class="prow"><span class="lbl">Owner</span><span class="val" id="pd-owner">—</span></div>
+  <div class="prow"><span class="lbl">Size</span><span class="val" id="pd-size">—</span></div>
+  <div class="prow"><span class="lbl">Crop</span><span class="val" id="pd-crop">—</span></div>
+  <div class="prow"><span class="lbl">Status</span><span class="val" id="pd-status">—</span></div>
+  <div class="prow" id="pr-fertility"><span class="lbl">Fertility</span><span class="val" id="pd-fertility">—</span></div>
+  <div class="prow" id="pr-price" style="display:none"><span class="lbl">Price</span><span class="val warn" id="pd-price">—</span></div>
+  <button class="pact" id="panel-btn" onclick="closePanel()">—</button>
+</div>
+
+<script>
+const DATA = {
+  f1: { name:"Field F1", owner:"You", size:"42 ha", crop:"Corn 🌽", status:"Growing · 4 days left", statusCls:"good", fertility:"78%", action:"manage", btn:"Manage Field →" },
+  f2: { name:"Field F2", owner:"You", size:"56 ha", crop:"Wheat 🌾", status:"Growing · 8 days left", statusCls:"good", fertility:"65%", action:"manage", btn:"Manage Field →" },
+  f3: { name:"Field F3", owner:"You", size:"36 ha", crop:"None", status:"Unplanted", statusCls:"", fertility:"82%", action:"manage", btn:"Plant a Crop →" },
+  f4: { name:"Field F4", owner:"Hacienda Rivera", size:"95 ha", crop:"Unknown", status:"Competitor field", statusCls:"rival", fertility:"?", action:"scout", btn:"Buy Scout Report ($500)" },
+  f5: { name:"Field F5", owner:"You", size:"72 ha", crop:"Sunflower 🌻", status:"Growing · 11 days left", statusCls:"good", fertility:"70%", action:"manage", btn:"Manage Field →" },
+  f6: { name:"Field F6", owner:"You", size:"64 ha", crop:"Wheat 🌾", status:"⚡ Ready to Harvest!", statusCls:"warn", fertility:"60%", action:"harvest", btn:"⚡ Harvest Now →" },
+  f7: { name:"Field F7", owner:"For Sale", size:"78 ha", crop:"—", status:"Available now", statusCls:"warn", fertility:"74%", price:"$24,000", action:"buy", btn:"Buy Field ($24,000)" },
+  f8: { name:"Field F8", owner:"Granja del Norte", size:"82 ha", crop:"Unknown", status:"Competitor field", statusCls:"rival", fertility:"?", action:"scout", btn:"Buy Scout Report ($500)" },
+  f9: { name:"Field F9", owner:"You", size:"48 ha", crop:"None", status:"Unplanted", statusCls:"", fertility:"88%", action:"manage", btn:"Plant a Crop →" },
+};
+
+let active = null;
+
+function sel(id) {
+  if (active) active.classList.remove('lit');
+  active = document.getElementById(id);
+  if (active) active.classList.add('lit');
+
+  const d = DATA[id];
+  if (!d) return;
+  document.getElementById('panel-name').textContent = d.name;
+  document.getElementById('pd-owner').textContent = d.owner;
+  document.getElementById('pd-size').textContent = d.size;
+  document.getElementById('pd-crop').textContent = d.crop;
+
+  const st = document.getElementById('pd-status');
+  st.textContent = d.status;
+  st.className = 'val ' + (d.statusCls || '');
+
+  document.getElementById('pd-fertility').textContent = d.fertility;
+
+  const pr = document.getElementById('pr-price');
+  if (d.price) {
+    pr.style.display = 'flex';
+    document.getElementById('pd-price').textContent = d.price;
+  } else {
+    pr.style.display = 'none';
+  }
+
+  const btn = document.getElementById('panel-btn');
+  btn.textContent = d.btn;
+  btn.className = 'pact ' + d.action;
+
+  document.getElementById('panel').classList.add('show');
+}
+
+function closePanel() {
+  document.getElementById('panel').classList.remove('show');
+  if (active) { active.classList.remove('lit'); active = null; }
+}
+
+document.getElementById('wrap').addEventListener('click', function(e) {
+  if (!e.target.closest('.field') && !e.target.closest('#panel')) closePanel();
+});
+</script>
+</body>
+</html>
