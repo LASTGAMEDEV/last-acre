@@ -117,6 +117,20 @@ export default function TrabajadoresScreen() {
         </View>
       )}
 
+      {/* Water department */}
+      {(() => {
+        const hydroType = WORKER_TYPES.find(t => t.id === 'hydrogeologist');
+        if (!hydroType) return null;
+        return (
+          <View style={styles.deptSection}>
+            <Text style={styles.deptLabel}>💧 Water</Text>
+            <View style={styles.cardRow}>
+              {renderCard(hydroType)}
+            </View>
+          </View>
+        );
+      })()}
+
       {/* Active staff */}
       <Text style={styles.sectionLabel}>Active Staff ({activeWorkers.length})</Text>
       {activeWorkers.length === 0 ? (

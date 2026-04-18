@@ -1,4 +1,4 @@
-import type { Season } from '../engine/climate';
+import type { PlantingSeason } from './cropTypes';
 
 export interface VolatilityProfile {
   dailyVolatility: number;    // % std dev per day (e.g. 0.008 = 0.8%)
@@ -71,7 +71,7 @@ export const SEASONAL_AMPLITUDES: Record<string, number> = {
 };
 
 // Season when market prices are LOWEST (harvest glut) — mirrors cropTypes.ts peakSeason
-export const SEASONAL_PEAK_SEASONS: Record<string, Season> = {
+export const SEASONAL_PEAK_SEASONS: Record<string, PlantingSeason> = {
   wheat: 'summer',
   corn: 'autumn',
   strawberries: 'spring',
