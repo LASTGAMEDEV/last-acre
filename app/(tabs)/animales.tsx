@@ -10,7 +10,8 @@ import SubTabBar from '../../components/SubTabBar';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
-import { sellValue, isMature, canBreed, TRAIT_ICONS, TRAIT_DESC, AnimalGenes, OwnedAnimal, getLactationState, lactationDaysRemaining, dryDaysRemaining, LACTATION_PARAMS, getSeasonMultiplier, GRAIN_CROP_IDS } from '../../engine/animals';
+import { sellValue, isMature, canBreed, TRAIT_ICONS, TRAIT_DESC, AnimalGenes, OwnedAnimal, getLactationState, lactationDaysRemaining, dryDaysRemaining, LACTATION_PARAMS, getSeasonMultiplier, GRAIN_CROP_IDS, getBreedDisplayName } from '../../engine/animals';
+import { BREED_TYPES } from '../../data/breedTypes';
 import { ENCLOSURE_BUILDINGS } from '../../constants/enclosures';
 import HelpSheet from '../../components/HelpSheet';
 import { DAIRY_SPECIES } from '../../engine/productionBuildings';
@@ -157,7 +158,7 @@ function getEnclosureCapacity(buildings: string[], enclosureType: string): numbe
 export default function AnimalesScreen() {
   const {
     money, animals, animalInventory, day, buildings, activeFair,
-    buyAnimal, sellAnimal, collectAnimalProduction, sellAnimalProduct, breedAnimal,
+    cullAnimal, sellAnimal, collectAnimalProduction, sellAnimalProduct, breedAnimal,
     treatAnimal, collectAllProduction,
     breedingPairs, setBreedingPair, clearBreedingPair,
     animalPrices, upgradeAnimalGene,
@@ -370,6 +371,9 @@ export default function AnimalesScreen() {
                 <Text style={styles.animalName}>{type.name}</Text>
                 <Text style={[styles.sexBadge, { color: sexColor }]}>{sexIcon}</Text>
               </View>
+              <Text style={{ color: '#8bc34a', fontSize: 11, marginBottom: 2 }}>
+                {getBreedDisplayName(item, BREED_TYPES)}
+              </Text>
               <Text style={styles.detail}>
                 Age: {age}d {mature ? (isOld ? '👴 Old' : '✅') : '🌱'}
               </Text>
@@ -636,6 +640,12 @@ export default function AnimalesScreen() {
                   <Text style={styles.btnText}>🐄 Sell Live</Text>
                 </TouchableOpacity>
               )}
+              <TouchableOpacity
+                style={{ backgroundColor: '#8b1a1a', padding: 6, borderRadius: 6, marginTop: 4 }}
+                onPress={() => cullAnimal(item.id)}
+              >
+                <Text style={{ color: '#fff', fontSize: 11, textAlign: 'center' }}>🔪 Cull for Meat</Text>
+              </TouchableOpacity>
               {item.sex === 'male' && (buildings ?? []).includes('bld_sire_pen') && (() => {
                 const isSire = (sirePenAnimalIds ?? []).includes(item.id);
                 return (
@@ -659,82 +669,17 @@ export default function AnimalesScreen() {
         ListEmptyComponent={<Text style={styles.empty}>You have no animals yet.</Text>}
       />
 
-      {/* Buy animals */}
-      <Text style={styles.sectionLabel}>Buy animals</Text>
-      <FlatList
-        data={ANIMAL_TYPES}
-        keyExtractor={t => t.id}
-        numColumns={2}
-        style={styles.list}
-        renderItem={({ item }) => {
-          const capacity = getEnclosureCapacity(buildings, item.enclosureType);
-          // Species isolation: find what species currently occupies this enclosure type
-          const enclosureOccupant = animals.find(a => {
-            const at = ANIMAL_TYPES.find(t => t.id === a.typeId);
-            return at?.enclosureType === item.enclosureType;
-          });
-          const occupantType = enclosureOccupant
-            ? ANIMAL_TYPES.find(t => t.id === enclosureOccupant.typeId)
-            : null;
-          const blockedBySpecies = !!occupantType && occupantType.id !== item.id;
-          const occupied = animals.filter(a => a.typeId === item.id).length;
-          const noRoom = capacity === 0 || occupied >= capacity || blockedBySpecies;
-          const femaleCost = Math.round(item.buyCost * fairMult);
-          const maleCost = Math.round(item.buyCost * fairMult * 0.7);
-          // Bees are always female (hive)
-          const isBee = item.id === 'abeja';
-          return (
-            <View style={[styles.buyCard, activeFair ? styles.buyCardFair : null]}>
-              <Text style={styles.animalName}>{item.name}</Text>
-              {item.productionType && <Text style={styles.detail}>📦 {item.productionType}</Text>}
-              <Text style={[styles.capacityText, noRoom && styles.capacityFull]}>
-                {capacity === 0
-                  ? '🏗️ No enclosure'
-                  : blockedBySpecies
-                    ? `🚫 ${occupantType!.name}s here`
-                    : `${occupied}/${capacity} housed`}
-              </Text>
-              <WelfareBadge score={animalWelfareScores?.[item.id]} />
-              <BuildingStatusLine animalTypeId={item.id} productionBuildings={productionBuildings ?? []} />
-              <MilkGradeBadge animalTypeId={item.id} milkGrades={milkGrades ?? {}} />
-              <View style={styles.sexBtnRow}>
-                {!isBee && (
-                  <TouchableOpacity
-                    style={[styles.sexBtnM, (noRoom || money < maleCost) && styles.buyCardDisabled]}
-                    onPress={() => buyAnimal(item.id, 'male')}
-                    disabled={noRoom || money < maleCost}
-                  >
-                    <Text style={styles.sexBtnLabel}>♂</Text>
-                    {activeFair ? (
-                      <View style={styles.priceRow}>
-                        <Text style={styles.priceOriginal}>${Math.round(item.buyCost * 0.7).toLocaleString()}</Text>
-                        <Text style={styles.priceFairSm}>${maleCost.toLocaleString()}</Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.sexBtnPrice}>${maleCost.toLocaleString()}</Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={[styles.sexBtnF, (noRoom || money < femaleCost) && styles.buyCardDisabled, isBee && { flex: 1 }]}
-                  onPress={() => buyAnimal(item.id, 'female')}
-                  disabled={noRoom || money < femaleCost}
-                >
-                  <Text style={styles.sexBtnLabel}>{isBee ? '🐝' : '♀'}</Text>
-                  {activeFair ? (
-                    <View style={styles.priceRow}>
-                      <Text style={styles.priceOriginal}>${item.buyCost.toLocaleString()}</Text>
-                      <Text style={styles.priceFairSm}>${femaleCost.toLocaleString()}</Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.sexBtnPrice}>${femaleCost.toLocaleString()}</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        }}
-      />
+      {/* Buy animals — auction only */}
+      <View style={{ margin: 12, padding: 14, backgroundColor: '#1a2a1a', borderRadius: 10, borderWidth: 1, borderColor: '#2d4a2d' }}>
+        <Text style={{ color: '#8bc34a', fontSize: 14, fontWeight: '600', marginBottom: 6 }}>
+          🏷️ Buy Animals at Auction
+        </Text>
+        <Text style={{ color: '#aaa', fontSize: 12, lineHeight: 18 }}>
+          Animals can only be purchased at auction. Go to the{' '}
+          <Text style={{ color: '#8bc34a', fontWeight: '600' }}>Subasta</Text>
+          {' '}tab to bid on livestock — new lots appear every 7 days with real breed information.
+        </Text>
+      </View>
       </>}
 
       {animalTab === 'results' && (
