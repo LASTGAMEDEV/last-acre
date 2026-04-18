@@ -56,6 +56,10 @@ import { MapField, MapOwner } from '../types/worldMap';
 import { INITIAL_MAP_FIELDS } from '../data/mapFields';
 import { MarketId, MARKET_REGIONS } from '../data/marketRegions';
 import { NPC_FARM_GROUP } from '../data/npcFarmGroups';
+import { Well, DrillSpot, advanceAquifer, generateSurveySpots, wellFlowRate, pipeCost } from '../engine/water';
+import type { CoopId, CoopMembership, CoopState } from '../engine/cooperativeTypes';
+import { makeInitialCoopState } from '../engine/cooperativeData';
+export type { Well, DrillSpot };
 
 // ── Machine / building helpers ───────────────────────────────────────────────
 function getDailyMaintenance(machines: OwnedMachine[], buildings: string[]): number {
@@ -535,6 +539,12 @@ export interface GameState {
   activeFair: FairEvent | null;
   futures: FuturesPosition[];
   cooperative: { member: boolean; joinDay: number } | null;
+  coopMemberships: Partial<Record<CoopId, CoopMembership>>;
+  coopStates: Record<CoopId, CoopState>;
+  aquiferLevel: number;        // 0–100 (% of total capacity)
+  wells: Well[];
+  gridWaterActive: boolean;
+  gridWaterDailyRate: number;  // $ per irrigated hectare per day
   reputation: number;
   autoSell: Record<string, { enabled: boolean; minPrice: number }>;
   prestige: number;
@@ -659,6 +669,12 @@ export interface GameState {
   withdrawAnimalShow: (animalId: string) => void;
   advanceDay: () => void;
   advanceDays: (n: number) => void;
+  assignHydrogeologist: (parcelId: string) => void;
+  startDrilling: (wellId: string, spotId: string, targetFlowRate: number) => void;
+  installPump: (wellId: string, pumpTier: 1 | 2 | 3) => void;
+  connectParcel: (wellId: string, parcelId: string) => void;
+  disconnectParcel: (wellId: string, parcelId: string) => void;
+  setGridWater: (active: boolean) => void;
   buyParcel: (parcelId: string) => void;
   plantCrop: (parcelId: string, cropId: string, hectares: number, fertilized: boolean) => void;
   harvestCrop: (parcelId: string) => void;
@@ -954,6 +970,16 @@ function makeInitialState() {
     activeFair: null as FairEvent | null,
     futures: [] as FuturesPosition[],
     cooperative: null as { member: boolean; joinDay: number } | null,
+    coopMemberships: {} as Partial<Record<CoopId, CoopMembership>>,
+    coopStates: {
+      grain: makeInitialCoopState('grain'),
+      horticulture: makeInitialCoopState('horticulture'),
+      livestock: makeInitialCoopState('livestock'),
+    } as Record<CoopId, CoopState>,
+    aquiferLevel: 75,
+    wells: [] as Well[],
+    gridWaterActive: false,
+    gridWaterDailyRate: 12,
     reputation: 50,
     autoSell: {} as Record<string, { enabled: boolean; minPrice: number }>,
     prestige: 0,
@@ -3689,13 +3715,106 @@ export const useGameStore = create<GameState>()(
           }
         }
 
+        // ── Water system tick ──────────────────────────────────────────────────────
+
+        // 1. Advance survey / drilling timers
+        let updatedWells = (state.wells ?? []).map(well => {
+          if (well.status === 'surveying' && newDay >= (well.surveyCompletesDay ?? Infinity)) {
+            const spots = generateSurveySpots(well.parcelId, newDay);
+            summary.push({
+              id: `survey_${well.id}`,
+              icon: '🔍',
+              title: 'Hydrogeologist survey complete',
+              detail: `${spots.length} drilling spots found. Check the Water tab.`,
+              severity: 'info' as const,
+            });
+            return { ...well, status: 'survey_ready' as const, surveySpots: spots };
+          }
+          if (well.status === 'drilling' && newDay >= (well.drillingCompletesDay ?? Infinity)) {
+            const spot = well.surveySpots?.find(s => s.id === well.chosenSpotId);
+            if (!spot) return well;
+            const success = Math.random() < spot.successProbability;
+            if (success) {
+              const depth = spot.approxDepthMin + Math.floor(Math.random() * (spot.approxDepthMax - spot.approxDepthMin + 1));
+              const costPerMetre = 180 + Math.floor(Math.random() * 121);
+              const actualCost = depth * costPerMetre;
+              summary.push({
+                id: `drill_ok_${well.id}`,
+                icon: '💧',
+                title: 'Well drilled successfully',
+                detail: `${depth}m deep. Final cost: $${actualCost.toLocaleString()}. Install a pump to activate.`,
+                severity: 'good' as const,
+              });
+              return { ...well, status: 'active' as const, actualDepth: depth, actualCost };
+            } else {
+              summary.push({
+                id: `drill_fail_${well.id}`,
+                icon: '🪨',
+                title: 'Drilling failed — dry rock',
+                detail: 'The team hit dry rock. Try a different spot or commission a new survey.',
+                severity: 'warning' as const,
+              });
+              return { ...well, status: 'failed' as const };
+            }
+          }
+          return well;
+        });
+
+        // Deduct any just-completed drilling costs
+        let moneyAfterDrilling = state.money;
+        updatedWells = updatedWells.map(well => {
+          if (well.status === 'active' && well.actualCost !== undefined && !well.pumpTier) {
+            // Only deduct once (if no pumpTier yet, the well just finished drilling this tick)
+            const prevWell = (state.wells ?? []).find(w => w.id === well.id);
+            if (prevWell?.status === 'drilling') {
+              moneyAfterDrilling -= well.actualCost;
+            }
+          }
+          return well;
+        });
+
+        // 2. Calculate farm pump demand and NPC draw
+        const activePumpDemand = updatedWells
+          .filter(w => w.status === 'active' && w.pumpTier)
+          .reduce((sum, w) => sum + wellFlowRate(w, state.aquiferLevel), 0);
+
+        const npcDailyDraw = 5 + Math.random() * 15;
+
+        // 3. Advance aquifer
+        const newAquifer = advanceAquifer(state.aquiferLevel ?? 75, {
+          totalFarmDemandLhr: (state.gridWaterActive ?? false) ? 0 : activePumpDemand,
+          npcDailyDraw,
+          weatherEvent: todayWeather?.event ?? 'sunny',
+          season,
+        });
+
+        // 4. Warn when aquifer drops below 20%
+        if (newAquifer < 20 && (state.aquiferLevel ?? 75) >= 20) {
+          summary.push({
+            id: `aquifer_low_${newDay}`,
+            icon: '⚠️',
+            title: 'Aquifer critically low',
+            detail: 'Underground water reserves are running low. Enable grid water in the Water tab.',
+            severity: 'warning' as const,
+          });
+        }
+
+        // 5. Grid water cost
+        const irrigatedHa = (state.parcels ?? [])
+          .filter(p => p.owned && p.irrigated)
+          .reduce((sum, p) => sum + p.hectares, 0);
+        const gridWaterCost = (state.gridWaterActive ?? false) ? irrigatedHa * (state.gridWaterDailyRate ?? 12) : 0;
+        if (gridWaterCost > 0) moneyAfterDrilling -= gridWaterCost;
+
         const autoSellSalesEntries = autoSellLog.map(s => ({ day: newDay, amount: Math.round(s.revenue), category: 'crops' as const }));
         const deliverySalesEntries = deliveryRevenue > 0
           ? [{ day: newDay, amount: deliveryRevenue, category: 'crops' as const }]
           : [];
         set({
           day: newDay,
-          money: finalMoney + showPrizeMoney + deliveryRevenue - deliveryRepairCost - productionBuildingContractorFees - slurryFine - disposalFee + biogasIncome,
+          money: finalMoney + showPrizeMoney + deliveryRevenue - deliveryRepairCost - productionBuildingContractorFees - slurryFine - disposalFee + biogasIncome + (moneyAfterDrilling - state.money),
+          wells: updatedWells,
+          aquiferLevel: newAquifer,
           showWindowOpen,
           showEntries: season !== prevSeason
             ? (state.showEntries ?? []).filter(e => {
@@ -6037,6 +6156,97 @@ export const useGameStore = create<GameState>()(
           ),
         });
       },
+
+      // ── Water system actions (Task 4) ────────────────────────────────────
+      assignHydrogeologist: (parcelId) => {
+        const state = get();
+        // Require hired hydrogeologist
+        const hasHydro = (state.workers ?? []).some(w => w.typeId === 'hydrogeologist');
+        if (!hasHydro) return;
+        // Only one active survey at a time
+        const busySurvey = (state.wells ?? []).some(w => w.status === 'surveying');
+        if (busySurvey) return;
+        const surveyDays = 5 + Math.floor(Math.random() * 6); // 5–10 days
+        const newWell: Well = {
+          id: `well_${Date.now()}`,
+          parcelId,
+          status: 'surveying',
+          surveyCompletesDay: state.day + surveyDays,
+          flowRateTarget: 0,
+          connectedParcelIds: [],
+        };
+        set({ wells: [...(state.wells ?? []), newWell] });
+      },
+      startDrilling: (wellId, spotId, targetFlowRate) => {
+        const state = get();
+        const well = (state.wells ?? []).find(w => w.id === wellId);
+        if (!well || well.status !== 'survey_ready') return;
+        const spot = well.surveySpots?.find(s => s.id === spotId);
+        if (!spot) return;
+        // Estimate cost to verify budget (use midpoint estimate)
+        const estCost = (spot.estimatedCostMin + spot.estimatedCostMax) / 2;
+        if (state.money < estCost) return;
+        const drillingDays = 5 + Math.floor(Math.random() * 3); // 5–7 days
+        set({
+          wells: (state.wells ?? []).map(w =>
+            w.id === wellId
+              ? { ...w, status: 'drilling', chosenSpotId: spotId, flowRateTarget: targetFlowRate, drillingCompletesDay: state.day + drillingDays }
+              : w
+          ),
+        });
+      },
+      installPump: (wellId, pumpTier) => {
+        const state = get();
+        const well = (state.wells ?? []).find(w => w.id === wellId);
+        if (!well || well.status !== 'active') return;
+        if (well.pumpTier) return; // already installed
+        const { PUMP_SPECS } = require('../engine/water');
+        const pumpCost = PUMP_SPECS[pumpTier].cost;
+        if (state.money < pumpCost) return;
+        set({
+          money: state.money - pumpCost,
+          wells: (state.wells ?? []).map(w =>
+            w.id === wellId ? { ...w, pumpTier } : w
+          ),
+        });
+      },
+      connectParcel: (wellId, parcelId) => {
+        const state = get();
+        const well = (state.wells ?? []).find(w => w.id === wellId);
+        if (!well || well.status !== 'active' || !well.pumpTier) return;
+        if (well.connectedParcelIds.includes(parcelId)) return;
+        const wellParcelIdx = (state.parcels ?? []).findIndex(p => p.id === well.parcelId);
+        const targetIdx     = (state.parcels ?? []).findIndex(p => p.id === parcelId);
+        const cost = pipeCost(wellParcelIdx, targetIdx);
+        if (state.money < cost) return;
+        set({
+          money: state.money - cost,
+          wells: (state.wells ?? []).map(w =>
+            w.id === wellId
+              ? { ...w, connectedParcelIds: [...w.connectedParcelIds, parcelId] }
+              : w
+          ),
+          parcels: (state.parcels ?? []).map(p =>
+            p.id === parcelId ? { ...p, irrigated: true } : p
+          ),
+        });
+      },
+      disconnectParcel: (wellId, parcelId) => {
+        const state = get();
+        set({
+          wells: (state.wells ?? []).map(w =>
+            w.id === wellId
+              ? { ...w, connectedParcelIds: w.connectedParcelIds.filter(id => id !== parcelId) }
+              : w
+          ),
+          parcels: (state.parcels ?? []).map(p =>
+            p.id === parcelId ? { ...p, irrigated: false } : p
+          ),
+        });
+      },
+      setGridWater: (active) => {
+        set({ gridWaterActive: active });
+      },
     }),
     {
       name: 'granja-tycoon-save-v5',
@@ -6060,6 +6270,7 @@ export const useGameStore = create<GameState>()(
           processProduct, sellProcessed,
           openTimeDeposit, closeTimeDeposit, resetGame, markTutorialSeen, markYearEndShown,
           installGreenhouse, removeGreenhouse, openFuture, joinCooperative, leaveCooperative,
+          joinCoop, leaveCoop, deliverToCoop, voteAGM, submitCounterProposal, bookCoopEquipment,
           harvestAllReady, collectAllProduction, setAutoSell, startNewSeason,
           hireWorker, fireWorker, installIrrigation,
           renegotiateLoan, takeBankruptcyLoan, clearBankruptcy,
@@ -6073,6 +6284,7 @@ export const useGameStore = create<GameState>()(
           selectMapField, buyMapField, scoutMapField, savePanZoom,
           designateAsSire, removeFromSirePen, spreadSlurry, fillSilagePit, setBiogasMode, queueEggsForIncubation,
           applySoilAmendment, plantCoverCrop,
+          assignHydrogeologist, startDrilling, installPump, connectParcel, disconnectParcel, setGridWater,
           ...dataState
         } = state;
         return dataState;
