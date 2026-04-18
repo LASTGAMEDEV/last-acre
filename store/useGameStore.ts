@@ -58,7 +58,13 @@ import { MarketId, MARKET_REGIONS } from '../data/marketRegions';
 import { NPC_FARM_GROUP } from '../data/npcFarmGroups';
 import { Well, DrillSpot, advanceAquifer, generateSurveySpots, wellFlowRate, pipeCost } from '../engine/water';
 import type { CoopId, CoopMembership, CoopState } from '../engine/cooperativeTypes';
-import { makeInitialCoopState } from '../engine/cooperativeData';
+import { makeInitialCoopState, getCoopForCrop, getCoopForAnimal, COOP_NAMES, INITIAL_SHARE_PRICES } from '../engine/cooperativeData';
+import {
+  calculateRedemptionMultiplier, getSeason, getYear,
+  isMemberSuspended, isCoopActive, isSlotBooked, nextAvailableDay,
+  generateAGMProposal, resolveAGMVote, COOP_DEPOT_FUEL_COST,
+  getSeedDiscount,
+} from '../engine/cooperatives';
 export type { Well, DrillSpot };
 
 // ── Machine / building helpers ───────────────────────────────────────────────
@@ -741,6 +747,12 @@ export interface GameState {
   openFuture: (cropId: string, quantity: number, termDays: number) => void;
   joinCooperative: () => void;
   leaveCooperative: () => void;
+  joinCoop: (coopId: CoopId, sharesToBuy: number) => void;
+  leaveCoop: (coopId: CoopId) => void;
+  deliverToCoop: (coopId: CoopId, itemId: string, volume: number) => void;
+  voteAGM: (coopId: CoopId, vote: 'yes' | 'no') => void;
+  submitCounterProposal: (coopId: CoopId, changes: Partial<import('../engine/cooperativeTypes').CoopTerms>) => void;
+  bookCoopEquipment: (coopId: CoopId, equipmentId: string, day: number) => void;
   harvestAllReady: () => void;
   collectAllProduction: () => void;
   setAutoSell: (cropId: string, settings: { enabled: boolean; minPrice: number } | null) => void;
@@ -5938,6 +5950,151 @@ export const useGameStore = create<GameState>()(
       leaveCooperative: () => {
         set({ cooperative: null });
       },
+
+      joinCoop: (coopId: CoopId, sharesToBuy: number) =>
+        set((state) => {
+          const coopState = state.coopStates[coopId];
+          if (!isCoopActive(coopState, getYear(state.day))) return state;
+          if (state.coopMemberships[coopId]) return state;
+          const sharePrice = INITIAL_SHARE_PRICES[coopId] * (0.5 + (coopState.health / 100) * 0.5 + 0.5);
+          const cost = sharesToBuy * sharePrice;
+          if (state.money < cost) return state;
+          if (sharesToBuy < 10) return state;
+          const membership: CoopMembership = {
+            shares: sharesToBuy,
+            sharePrice,
+            joinDay: state.day,
+            pendingRedemption: null,
+            offenceHistory: [],
+            seasonDelivered: 0,
+            seasonObligation: 0,
+            suspendedUntilSeason: null,
+          };
+          return {
+            money: state.money - cost,
+            coopMemberships: { ...state.coopMemberships, [coopId]: membership },
+            coopStates: {
+              ...state.coopStates,
+              [coopId]: { ...coopState, memberCount: coopState.memberCount + 1 },
+            },
+          };
+        }),
+
+      leaveCoop: (coopId: CoopId) =>
+        set((state) => {
+          const membership = state.coopMemberships[coopId];
+          if (!membership) return state;
+          if (membership.pendingRedemption) return state;
+          return {
+            coopMemberships: {
+              ...state.coopMemberships,
+              [coopId]: { ...membership, pendingRedemption: { requestedDay: state.day } },
+            },
+          };
+        }),
+
+      deliverToCoop: (coopId: CoopId, itemId: string, volume: number) =>
+        set((state) => {
+          const membership = state.coopMemberships[coopId];
+          if (!membership) return state;
+          const coopState = state.coopStates[coopId];
+          const currentSeason = getSeason(state.day);
+          if (isMemberSuspended(membership, currentSeason)) return state;
+          const availableInv =
+            (state.inventory[itemId] ?? 0) +
+            (state.animalInventory[itemId] ?? 0) +
+            (state.processedInventory[itemId] ?? 0);
+          if (availableInv < volume) return state;
+          const poolPrice = coopState.poolPrices[itemId] ?? 0;
+          const fuelCost = COOP_DEPOT_FUEL_COST[coopId];
+          const revenue = volume * poolPrice - fuelCost;
+          let remaining = volume;
+          const newInventory = { ...state.inventory };
+          const newAnimalInventory = { ...state.animalInventory };
+          const deduct = (inv: Record<string, number>) => {
+            const avail = inv[itemId] ?? 0;
+            const take = Math.min(avail, remaining);
+            inv[itemId] = avail - take;
+            remaining -= take;
+          };
+          deduct(newInventory);
+          if (remaining > 0) deduct(newAnimalInventory);
+          return {
+            money: state.money + revenue,
+            inventory: newInventory,
+            animalInventory: newAnimalInventory,
+            coopMemberships: {
+              ...state.coopMemberships,
+              [coopId]: {
+                ...membership,
+                seasonDelivered: membership.seasonDelivered + volume,
+              },
+            },
+          };
+        }),
+
+      voteAGM: (coopId: CoopId, vote: 'yes' | 'no') =>
+        set((state) => {
+          const coopState = state.coopStates[coopId];
+          if (!coopState.pendingAGM || coopState.pendingAGM.resolved) return state;
+          const updatedProposal = { ...coopState.pendingAGM, playerVote: vote };
+          const passes = resolveAGMVote(updatedProposal, coopState.memberCount);
+          const newTerms = passes
+            ? { ...coopState.terms, ...updatedProposal.changes }
+            : coopState.terms;
+          return {
+            coopStates: {
+              ...state.coopStates,
+              [coopId]: {
+                ...coopState,
+                terms: newTerms,
+                pendingAGM: { ...updatedProposal, resolved: true },
+              },
+            },
+          };
+        }),
+
+      submitCounterProposal: (coopId: CoopId, changes: Partial<import('../engine/cooperativeTypes').CoopTerms>) =>
+        set((state) => {
+          const coopState = state.coopStates[coopId];
+          if (!coopState.pendingAGM || !coopState.pendingAGM.resolved) return state;
+          const currentSeason = getSeason(state.day);
+          const counterProposal = generateAGMProposal(coopId, currentSeason, coopState.health, coopState.terms);
+          const overridden = { ...counterProposal, changes, playerVote: null as null };
+          return {
+            coopStates: {
+              ...state.coopStates,
+              [coopId]: { ...coopState, pendingAGM: overridden },
+            },
+          };
+        }),
+
+      bookCoopEquipment: (coopId: CoopId, equipmentId: string, day: number) =>
+        set((state) => {
+          const membership = state.coopMemberships[coopId];
+          if (!membership) return state;
+          const coopState = state.coopStates[coopId];
+          const currentSeason = getSeason(state.day);
+          if (isMemberSuspended(membership, currentSeason)) return state;
+          const equipIdx = coopState.equipment.findIndex(e => e.id === equipmentId);
+          if (equipIdx === -1) return state;
+          const item = coopState.equipment[equipIdx];
+          if (item.unlocksAtHealth > coopState.health) return state;
+          if (isSlotBooked(item, day)) return state;
+          if (state.money < item.usageFeePerDay) return state;
+          const newEquipment = coopState.equipment.map((e, i) =>
+            i === equipIdx
+              ? { ...e, bookings: [...e.bookings, { memberId: 'player', day }] }
+              : e
+          );
+          return {
+            money: state.money - item.usageFeePerDay,
+            coopStates: {
+              ...state.coopStates,
+              [coopId]: { ...coopState, equipment: newEquipment },
+            },
+          };
+        }),
 
       harvestAllReady: () => {
         const state = get();
