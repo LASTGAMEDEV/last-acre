@@ -129,7 +129,7 @@ function applyCorrelations(
     const adj = adjustments[p.cropId];
     if (!adj) return p;
     // Apply correlation as a gentle nudge (capped at ±10% to avoid runaway feedback)
-    const cappedAdj = Math.max(-0.10, Math.min(0.10, adj));
+    const cappedAdj = Math.max(-0.10, Math.min(0.10, adj * 0.10));
     return { ...p, price: Math.max(p.basePrice * 0.2, p.price * (1 + cappedAdj)) };
   });
 }
