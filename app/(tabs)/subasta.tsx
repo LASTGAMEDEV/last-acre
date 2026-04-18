@@ -6,6 +6,7 @@ import HintCard from '../../components/HintCard';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { geneScore } from '../../engine/animals';
 import { OwnedAnimal } from '../../engine/animals';
+import { BREED_TYPES, BreedRarity } from '../../data/breedTypes';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { OwnedMachine } from '../../store/useGameStore';
@@ -177,6 +178,29 @@ function LandView({ listings, day, money, placeBid, bidInputs, setBidInputs }: {
   );
 }
 
+const RARITY_COLORS: Record<BreedRarity, string> = {
+  common: '#607d8b',
+  uncommon: '#7b5ea7',
+  rare: '#c9962a',
+};
+
+function BreedBadge({ breedId }: { breedId?: string }) {
+  if (!breedId) return <Text style={{ color: '#607d8b', fontSize: 11 }}>Mixed</Text>;
+  const breed = BREED_TYPES.find(b => b.id === breedId);
+  if (!breed) return <Text style={{ color: '#607d8b', fontSize: 11 }}>Mixed</Text>;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+      <View style={{ backgroundColor: RARITY_COLORS[breed.rarity], borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
+        <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>
+          {breed.rarity.toUpperCase()}
+        </Text>
+      </View>
+      <Text style={{ color: '#e0e0e0', fontSize: 12, fontWeight: '600' }}>{breed.name}</Text>
+      <Text style={{ color: '#9e9e9e', fontSize: 11 }}>· {breed.purposeLabel}</Text>
+    </View>
+  );
+}
+
 // Placeholder components — will be replaced in Tasks 5, 6, 7
 function geneLabel(score: number): { grade: string; color: string } {
   if (score >= 1.3) return { grade: 'S', color: '#7eb8f7' };
@@ -224,6 +248,15 @@ function AnimalView({ listings, day, money, placeBid, listItem, withdrawListing,
         <View style={anStyles.cardHeader}>
           <View style={{ flex: 1 }}>
             <Text style={anStyles.cardTitle}>{animalTypeDef?.name ?? listing.animalTypeId}</Text>
+            <BreedBadge breedId={listing.animalBreedId} />
+            {listing.animalBreedId && (() => {
+              const breed = BREED_TYPES.find(b => b.id === listing.animalBreedId);
+              return breed ? (
+                <Text style={{ color: '#9e9e9e', fontSize: 11, marginTop: 2 }}>
+                  🌍 {breed.originCountry} · {breed.description}
+                </Text>
+              ) : null;
+            })()}
             <View style={{ flexDirection: 'row', gap: 6, marginTop: 3, alignItems: 'center' }}>
               <View style={[anStyles.gradeBadge, { backgroundColor: color + '33', borderColor: color }]}>
                 <Text style={[anStyles.gradeText, { color }]}>Grade {grade}</Text>
