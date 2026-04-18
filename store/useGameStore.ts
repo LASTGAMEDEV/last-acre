@@ -6011,6 +6011,7 @@ export const useGameStore = create<GameState>()(
           let remaining = volume;
           const newInventory = { ...state.inventory };
           const newAnimalInventory = { ...state.animalInventory };
+          const newProcessedInventory = { ...state.processedInventory };
           const deduct = (inv: Record<string, number>) => {
             const avail = inv[itemId] ?? 0;
             const take = Math.min(avail, remaining);
@@ -6019,10 +6020,12 @@ export const useGameStore = create<GameState>()(
           };
           deduct(newInventory);
           if (remaining > 0) deduct(newAnimalInventory);
+          if (remaining > 0) deduct(newProcessedInventory);
           return {
             money: state.money + revenue,
             inventory: newInventory,
             animalInventory: newAnimalInventory,
+            processedInventory: newProcessedInventory,
             coopMemberships: {
               ...state.coopMemberships,
               [coopId]: {
