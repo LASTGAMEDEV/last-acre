@@ -4,7 +4,7 @@ import {
   PlantedCrop, SoilType, getSoilModifier, harvestAmount,
   SoilStats, SOIL_DEFAULTS, advanceSoilStats, SoilTickParams,
 } from '../engine/crops';
-import { OwnedAnimal, AnimalGenes, inheritTrait, randomGenes, breedGenes, isAtOptimalWeight } from '../engine/animals';
+import { OwnedAnimal, AnimalGenes, inheritTrait, randomGenes, isAtOptimalWeight } from '../engine/animals';
 import { MarketPrice, NewsEvent } from '../engine/market';
 import { WeatherDay } from '../engine/climate';
 import { Loan, SavingsAccount, TimeDeposit, SaleRecord, LoanRecord,
@@ -60,7 +60,7 @@ import { Well, DrillSpot, advanceAquifer, generateSurveySpots, wellFlowRate, pip
 import type { CoopId, CoopMembership, CoopState } from '../engine/cooperativeTypes';
 import { makeInitialCoopState, getCoopForCrop, getCoopForAnimal, COOP_NAMES, INITIAL_SHARE_PRICES, COOP_CROPS, COOP_ANIMALS } from '../engine/cooperativeData';
 import {
-  calculateRedemptionMultiplier, getSeason, getYear,
+  calculateRedemptionMultiplier, getSeason as getCoopSeason, getYear,
   isMemberSuspended, isCoopActive, isSlotBooked, nextAvailableDay,
   generateAGMProposal, resolveAGMVote, COOP_DEPOT_FUEL_COST,
   getSeedDiscount, calculateHealthDelta, calculateDividend,
@@ -3829,7 +3829,7 @@ export const useGameStore = create<GameState>()(
         // ── Co-op season-end delivery assessment ─────────────────────────────
         if (newDay % 90 === 0) {
           const coopIds: CoopId[] = ['grain', 'horticulture', 'livestock'];
-          const currentSeasonNum = getSeason(newDay);
+          const currentSeasonNum = getCoopSeason(newDay);
 
           coopIds.forEach((coopId) => {
             const membership = updatedCoopMemberships[coopId];
@@ -3988,7 +3988,7 @@ export const useGameStore = create<GameState>()(
 
             // Process pending redemption if 1 full season has passed
             if (membership.pendingRedemption) {
-              const seasonsElapsed = getSeason(newDay) - getSeason(membership.pendingRedemption.requestedDay);
+              const seasonsElapsed = getCoopSeason(newDay) - getCoopSeason(membership.pendingRedemption.requestedDay);
               if (seasonsElapsed >= 1) {
                 const mult = calculateRedemptionMultiplier(coopSt.health);
                 const redemptionAmt = membership.shares * membership.sharePrice * mult;
@@ -4017,7 +4017,7 @@ export const useGameStore = create<GameState>()(
             if (!updatedCoopMemberships[coopId]) return;
             const coopSt = updatedCoopStates[coopId];
             if (coopSt.pendingAGM && !coopSt.pendingAGM.resolved) return;
-            const proposal = generateAGMProposal(coopId, getSeason(newDay), coopSt.health, coopSt.terms);
+            const proposal = generateAGMProposal(coopId, getCoopSeason(newDay), coopSt.health, coopSt.terms);
             updatedCoopStates[coopId] = { ...updatedCoopStates[coopId], pendingAGM: proposal };
             summary.push({
               id: `coop_agm_${coopId}_${newDay}`,
@@ -4181,7 +4181,7 @@ export const useGameStore = create<GameState>()(
           const coopId = getCoopForCrop(cropId);
           if (!coopId) return 1.0;
           const m = state.coopMemberships[coopId];
-          if (!m || isMemberSuspended(m, getSeason(state.day))) return 1.0;
+          if (!m || isMemberSuspended(m, getCoopSeason(state.day))) return 1.0;
           return 1.0 - getSeedDiscount(coopId);
         })();
         const seedCost = cropType.seedCost * hectares * fertCostMult * coopSeedDiscount;
@@ -4278,7 +4278,7 @@ export const useGameStore = create<GameState>()(
         const harvestCoopId = getCoopForCrop(crop.cropId);
         if (harvestCoopId) {
           const coopMembership = state.coopMemberships[harvestCoopId];
-          if (coopMembership && !isMemberSuspended(coopMembership, getSeason(state.day))) {
+          if (coopMembership && !isMemberSuspended(coopMembership, getCoopSeason(state.day))) {
             const coopStateForHarvest = state.coopStates[harvestCoopId];
             const obligation = Math.round(units * (coopStateForHarvest.terms.deliveryPct / 100));
             newCoopMemberships = {
@@ -4434,7 +4434,8 @@ export const useGameStore = create<GameState>()(
         if (!animal) return;
         const { ANIMAL_TYPES } = require('../data/animalTypes');
         const animalType = ANIMAL_TYPES.find((a: any) => a.id === animal.typeId);
-        const { sellValue } = require('../engine/animals');
+        const { sellValue, getBreedPurebredMultiplier } = require('../engine/animals');
+        const { BREED_TYPES } = require('../data/breedTypes');
         const coopBonus = 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
         const baseValue = sellValue(animal, animalType, state.day) * coopBonus * prestigeBonus;
@@ -4445,7 +4446,8 @@ export const useGameStore = create<GameState>()(
           bid === 'bld_finishing_unit_s' || bid === 'bld_finishing_unit_m' || bid === 'bld_finishing_unit_l'
         );
         const finishingBonus = hasFinishingUnit && animal.typeId === 'cerdo' ? 1.10 : 1.0;
-        const value = Math.round(baseValue * optimalBonus * finishingBonus);
+        const breedMult = getBreedPurebredMultiplier(animal, BREED_TYPES);
+        const value = Math.round(baseValue * optimalBonus * finishingBonus * breedMult);
         const nextPairs = { ...state.breedingPairs };
         delete nextPairs[animalId]; // in case she was a female with a preferred pair
         for (const [femId, maleId] of Object.entries(nextPairs)) {
@@ -4467,7 +4469,8 @@ export const useGameStore = create<GameState>()(
         const { ANIMAL_TYPES } = require('../data/animalTypes');
         const animalType = ANIMAL_TYPES.find((a: any) => a.id === animal.typeId);
         if (!animalType) return;
-        const { canBreed, isMature, inheritTrait } = require('../engine/animals');
+        const { canBreed, isMature, inheritTrait, breedAnimalGenes } = require('../engine/animals');
+        const { BREED_TYPES } = require('../data/breedTypes');
         if (!canBreed(animal, animalType, state.day)) return;
 
         const matureMales = state.animals.filter(
@@ -4513,9 +4516,24 @@ export const useGameStore = create<GameState>()(
             return (state.day - a.bornDay) >= matureDays;
           }
         );
-        const fatherGenes = hasSirePen && sirePenMale
-          ? sirePenMale.genes
-          : father?.genes;
+        const actualFather: OwnedAnimal | undefined = hasSirePen && sirePenMale ? sirePenMale : father;
+
+        const motherBreedId = animal.breedId;
+        const fatherBreedId = actualFather?.breedId;
+        let offspringBreedId: string | undefined;
+        let offspringCrossbreedParents: [string, string] | undefined;
+
+        if (motherBreedId && fatherBreedId) {
+          if (motherBreedId === fatherBreedId) {
+            offspringBreedId = motherBreedId;
+          } else {
+            offspringCrossbreedParents = [motherBreedId, fatherBreedId];
+          }
+        } else if (motherBreedId && actualFather?.crossbreedParents) {
+          offspringCrossbreedParents = [motherBreedId, actualFather.crossbreedParents[0]];
+        } else if (fatherBreedId && animal.crossbreedParents) {
+          offspringCrossbreedParents = [animal.crossbreedParents[0], fatherBreedId];
+        }
 
         const offspring: OwnedAnimal = {
           id: `animal_${Date.now()}`,
@@ -4526,9 +4544,11 @@ export const useGameStore = create<GameState>()(
           lastBreedDay: state.day,
           sick: false,
           traits: offspringTraits.length > 0 ? offspringTraits : undefined,
-          genes: breedGenes(animal.genes, fatherGenes),
+          genes: breedAnimalGenes(animal, actualFather, BREED_TYPES),
           parentIds: [animalId, father.id],
           grandparentIds,
+          breedId: offspringBreedId,
+          crossbreedParents: offspringCrossbreedParents,
         };
 
         // Calving pen mortality reduction
@@ -4901,7 +4921,7 @@ export const useGameStore = create<GameState>()(
             const coopId = getCoopForCrop(cropId);
             if (!coopId) return 1.0;
             const m = state.coopMemberships[coopId];
-            if (!m || isMemberSuspended(m, getSeason(state.day))) return 1.0;
+            if (!m || isMemberSuspended(m, getCoopSeason(state.day))) return 1.0;
             return 1.0 - getSeedDiscount(coopId);
           })();
           const seedCost = cropType.seedCost * totalHa * coopSeedDiscount;
@@ -6243,7 +6263,7 @@ export const useGameStore = create<GameState>()(
           const membership = state.coopMemberships[coopId];
           if (!membership) return state;
           const coopState = state.coopStates[coopId];
-          const currentSeason = getSeason(state.day);
+          const currentSeason = getCoopSeason(state.day);
           if (isMemberSuspended(membership, currentSeason)) return state;
           const availableInv =
             (state.inventory[itemId] ?? 0) +
@@ -6306,7 +6326,7 @@ export const useGameStore = create<GameState>()(
         set((state) => {
           const coopState = state.coopStates[coopId];
           if (!coopState.pendingAGM || !coopState.pendingAGM.resolved) return state;
-          const currentSeason = getSeason(state.day);
+          const currentSeason = getCoopSeason(state.day);
           const counterProposal = generateAGMProposal(coopId, currentSeason, coopState.health, coopState.terms);
           const overridden = { ...counterProposal, changes, playerVote: null as null };
           return {
@@ -6322,7 +6342,7 @@ export const useGameStore = create<GameState>()(
           const membership = state.coopMemberships[coopId];
           if (!membership) return state;
           const coopState = state.coopStates[coopId];
-          const currentSeason = getSeason(state.day);
+          const currentSeason = getCoopSeason(state.day);
           if (isMemberSuspended(membership, currentSeason)) return state;
           const equipIdx = coopState.equipment.findIndex(e => e.id === equipmentId);
           if (equipIdx === -1) return state;
