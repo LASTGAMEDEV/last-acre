@@ -1495,21 +1495,18 @@ export const useGameStore = create<GameState>()(
           const plan = INSURANCE_PLANS.find(pl => pl.type === p.type);
           return s + (plan?.premiumPerDay ?? 0);
         }, 0);
-        // Cooperative dues: $400 every 30 days
-        const cooperativeDues = (state.cooperative?.member && newDay % 30 === 0) ? 400 : 0;
         // Worker wages
         const { WORKER_TYPES } = require('../data/workerTypes');
         const workerWages = (state.workers ?? []).reduce((s: number, w: OwnedWorker) => {
           const wt = WORKER_TYPES.find((t: any) => t.id === w.typeId);
           return s + (wt?.dailyWage ?? 0);
         }, 0);
-        const totalFixed = maintenanceCost + insurancePremium + cooperativeDues + workerWages;
+        const totalFixed = maintenanceCost + insurancePremium + workerWages;
         const moneyAfterMaintenance = state.money - totalFixed;
-        if (maintenanceCost > 0 || insurancePremium > 0 || cooperativeDues > 0 || workerWages > 0) {
+        if (maintenanceCost > 0 || insurancePremium > 0 || workerWages > 0) {
           const detail = [
             maintenanceCost > 0 && `${state.machines.length} machine${state.machines.length !== 1 ? 's' : ''} · ${state.buildings.length} building${state.buildings.length !== 1 ? 's' : ''}`,
             insurancePremium > 0 && `${activePolicies.length} active policy${activePolicies.length !== 1 ? 'ies' : ''} (-$${insurancePremium}/day)`,
-            cooperativeDues > 0 && `Cooperative monthly dues -$${cooperativeDues}`,
             workerWages > 0 && `${(state.workers ?? []).length} worker${(state.workers ?? []).length !== 1 ? 's' : ''} -$${workerWages}/day`,
           ].filter(Boolean).join(' · ');
           summary.push({
@@ -2653,7 +2650,7 @@ export const useGameStore = create<GameState>()(
           const currentPrice = prices.find(p => p.cropId === o.cropId)?.price ?? 0;
           if (currentPrice >= o.targetPrice) {
             const secaderoBonus = hasSecadero(state.buildings) ? 1.05 : 1.0;
-            const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
+            const coopBonus = 1.0;
             const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
             const revenue = Math.round(sellRevenue(o.quantity, currentPrice) * secaderoBonus * coopBonus * prestigeBonus);
             marketOrderIncome += revenue;
@@ -2724,7 +2721,7 @@ export const useGameStore = create<GameState>()(
           const inStock = Math.max(0, (orderAdjustedInventory[cropId] ?? 0) + (autoSellInventoryDelta[cropId] ?? 0));
           if (inStock <= 0) continue;
           const secaderoBonus = hasSecadero(state.buildings) ? 1.05 : 1.0;
-          const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
+          const coopBonus = 1.0;
           const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
           const rev = sellRevenue(inStock, currentPrice) * secaderoBonus * coopBonus * prestigeBonus;
           autoSellIncome += rev;
@@ -3967,8 +3964,14 @@ export const useGameStore = create<GameState>()(
         if (!cropType.seasons.includes(currentSeason) && !parcel.greenhouse) return;
         // Biodigestor: free fertilizer (no cost premium)
         const fertCostMult = fertilized && !hasBiodigestor(state.buildings) ? 1.3 : 1.0;
-        // Cooperative: -10% seed cost discount
-        const coopSeedDiscount = state.cooperative?.member ? 0.90 : 1.0;
+        // Cooperative: per-co-op seed cost discount
+        const coopSeedDiscount = (() => {
+          const coopId = getCoopForCrop(cropId);
+          if (!coopId) return 1.0;
+          const m = state.coopMemberships[coopId];
+          if (!m || isMemberSuspended(m, getSeason(state.day))) return 1.0;
+          return 1.0 - getSeedDiscount(coopId);
+        })();
         const seedCost = cropType.seedCost * hectares * fertCostMult * coopSeedDiscount;
         if (state.money < seedCost) return;
         const plantedCrop: PlantedCrop = { cropId, parcelId, plantedDay: state.day, hectares, fertilized };
@@ -4058,6 +4061,23 @@ export const useGameStore = create<GameState>()(
           ? state.harvestedCropIds
           : [...state.harvestedCropIds, crop.cropId];
         const newFertility = Math.max(1, parcel.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonusesManual.fertilityDrainMult));
+        // co-op delivery obligation
+        let newCoopMemberships = state.coopMemberships;
+        const harvestCoopId = getCoopForCrop(crop.cropId);
+        if (harvestCoopId) {
+          const coopMembership = state.coopMemberships[harvestCoopId];
+          if (coopMembership && !isMemberSuspended(coopMembership, getSeason(state.day))) {
+            const coopStateForHarvest = state.coopStates[harvestCoopId];
+            const obligation = Math.round(units * (coopStateForHarvest.terms.deliveryPct / 100));
+            newCoopMemberships = {
+              ...state.coopMemberships,
+              [harvestCoopId]: {
+                ...coopMembership,
+                seasonObligation: coopMembership.seasonObligation + obligation,
+              },
+            };
+          }
+        }
         set({
           parcels: state.parcels.map(p => p.id === parcelId
             ? { ...p, plantedCrop: null, lastCropId: crop.cropId, fertility: newFertility, seedEntryId: undefined, diseased: false, diseasedDay: undefined, cropHistory: [...(parcel.cropHistory ?? []).slice(-3), crop.cropId] }
@@ -4067,6 +4087,7 @@ export const useGameStore = create<GameState>()(
           harvestedCropIds,
           cropQualityMap: nextCropQualityMap,
           seedVault: nextSeedVaultAfterHarvest,
+          coopMemberships: newCoopMemberships,
           firstMissionStep: state.firstMissionStep === 1 ? 2 : state.firstMissionStep,
           seasonHarvestCount: (state.seasonHarvestCount ?? 0) + 1,
           personalRecords: {
@@ -4093,7 +4114,7 @@ export const useGameStore = create<GameState>()(
         const transportCost  = Math.round(toSell * region.transportCostPerUnit);
 
         const secaderoBonus  = hasSecadero(state.buildings) ? 1.05 : 1.0;
-        const coopBonus      = state.cooperative?.member ? 1.12 : 1.0;
+        const coopBonus      = 1.0;
         const prestigeBonus  = 1 + 0.05 * (state.prestige ?? 0);
         const grossRevenue   = sellRevenue(toSell, effectivePrice) * secaderoBonus * coopBonus * prestigeBonus;
         const revenue        = Math.max(0, Math.round(grossRevenue - transportCost));
@@ -4202,7 +4223,7 @@ export const useGameStore = create<GameState>()(
         const { ANIMAL_TYPES } = require('../data/animalTypes');
         const animalType = ANIMAL_TYPES.find((a: any) => a.id === animal.typeId);
         const { sellValue } = require('../engine/animals');
-        const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
+        const coopBonus = 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
         const baseValue = sellValue(animal, animalType, state.day) * coopBonus * prestigeBonus;
         const weighCrateFunctional = (state.buildings ?? []).includes('bld_weigh_crate') &&
@@ -4530,7 +4551,7 @@ export const useGameStore = create<GameState>()(
         const inStock = state.animalInventory[productType] ?? 0;
         const toSell = Math.min(units, inStock);
         if (toSell <= 0) return;
-        const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
+        const coopBonus = 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
         const livePrice = (state.animalPrices ?? {})[productType] ?? product.basePrice;
         const hasWoolScouring = productType === 'wool' && (state.buildings ?? []).some((bid: string) =>
@@ -4664,7 +4685,13 @@ export const useGameStore = create<GameState>()(
           const { CROP_TYPES: CT } = require('../data/cropTypes');
           const cropType = CT.find((c: { id: string }) => c.id === cropId);
           if (!cropType) return;
-          const coopSeedDiscount = state.cooperative?.member ? 0.90 : 1.0;
+          const coopSeedDiscount = (() => {
+            const coopId = getCoopForCrop(cropId);
+            if (!coopId) return 1.0;
+            const m = state.coopMemberships[coopId];
+            if (!m || isMemberSuspended(m, getSeason(state.day))) return 1.0;
+            return 1.0 - getSeedDiscount(coopId);
+          })();
           const seedCost = cropType.seedCost * totalHa * coopSeedDiscount;
           if (state.money < seedCost) return;
           const { getSeason } = require('../engine/climate');
@@ -4747,7 +4774,13 @@ export const useGameStore = create<GameState>()(
           );
           if (validParcels.length === 0) return;
           const totalHa = validParcels.reduce((s: number, p: LandParcel) => s + p.hectares, 0);
-          const coopSeedDiscount = state.cooperative?.member ? 0.90 : 1.0;
+          const coopSeedDiscount = (() => {
+            const coopId = getCoopForCrop(cropId);
+            if (!coopId) return 1.0;
+            const m = state.coopMemberships[coopId];
+            if (!m || isMemberSuspended(m, getSeason(state.day))) return 1.0;
+            return 1.0 - getSeedDiscount(coopId);
+          })();
           const seedCost = cropType.seedCost * totalHa * coopSeedDiscount;
           const contractorFee = getContractorCost('plant', totalHa);
           cost = seedCost + contractorFee;
@@ -4832,7 +4865,7 @@ export const useGameStore = create<GameState>()(
         // Lock in expected revenue — matches sellCrop formula exactly
         const secaderoBonus = hasSecadero(state.buildings) ? 1.05 : 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
-        const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
+        const coopBonus = 1.0;
         let expectedRevenue = 0;
         for (const c of cargo) {
           const basePrice =
@@ -5260,7 +5293,7 @@ export const useGameStore = create<GameState>()(
         if (toDeliver <= 0) return;
         // Administrative Office building: +5% contract delivery revenue
         const contractBonus = hasOficinaBuilding(state.buildings) ? 1.05 : 1.0;
-        const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
+        const coopBonus = 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
         const revenue = toDeliver * contract.pricePerUnit * contractBonus * coopBonus * prestigeBonus;
         const newDelivered = contract.delivered + toDeliver;
@@ -5630,7 +5663,7 @@ export const useGameStore = create<GameState>()(
         if (toSell <= 0) return;
         const product = PROCESSED_PRODUCTS.find(p => p.id === productId);
         if (!product) return;
-        const coopBonus = state.cooperative?.member ? 1.12 : 1.0;
+        const coopBonus = 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
         const revenue = Math.round(toSell * product.basePrice * coopBonus * prestigeBonus);
         set({
