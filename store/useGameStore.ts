@@ -4555,11 +4555,8 @@ export const useGameStore = create<GameState>()(
           } else {
             offspringCrossbreedParents = [motherBreedId, fatherBreedId];
           }
-        } else if (motherBreedId && actualFather?.crossbreedParents) {
-          offspringCrossbreedParents = [motherBreedId, actualFather.crossbreedParents[0]];
-        } else if (fatherBreedId && animal.crossbreedParents) {
-          offspringCrossbreedParents = [animal.crossbreedParents[0], fatherBreedId];
         }
+        // Otherwise offspring is Mixed (no breedId, no crossbreedParents)
 
         const offspring: OwnedAnimal = {
           id: `animal_${Date.now()}`,
@@ -4639,7 +4636,7 @@ export const useGameStore = create<GameState>()(
               ? Math.min(1, (state.day - animal.bornDay) / animalType.maxPriceAge)
               : 0.4;
             const meatKg = spec.weightKg * spec.dressPercent * ageFraction * (animal.genes?.value ?? 1.0);
-            const meatPrice = (state.prices ?? []).find((p: any) => p.id === 'meat')?.price ?? 4.50;
+            const meatPrice = (state.prices ?? []).find((p: any) => p.cropId === 'meat')?.price ?? 4.50;
             moneyGain = Math.round(meatKg * meatPrice * 0.85);
           }
         }
@@ -5821,6 +5818,7 @@ export const useGameStore = create<GameState>()(
           if (!animal) return;
           listing.animalId = animalId;
           listing.animalGenes = animal.genes;
+          listing.animalBreedId = animal.breedId;
           listing.animalTypeId = animal.typeId;
           listing.animalSex = animal.sex;
           listing.animalBornDay = animal.bornDay;
@@ -5877,6 +5875,7 @@ export const useGameStore = create<GameState>()(
             sex: listing.animalSex ?? 'female',
             bornDay: listing.animalBornDay ?? state.day,
             genes: listing.animalGenes,
+            breedId: listing.animalBreedId,
             sick: false,
             lastProductionDay: state.day,
             lastBreedDay: state.day,

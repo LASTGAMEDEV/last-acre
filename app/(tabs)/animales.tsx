@@ -642,7 +642,16 @@ export default function AnimalesScreen() {
               )}
               <TouchableOpacity
                 style={{ backgroundColor: '#8b1a1a', padding: 6, borderRadius: 6, marginTop: 4 }}
-                onPress={() => cullAnimal(item.id)}
+                onPress={() => {
+                  Alert.alert(
+                    'Cull Animal?',
+                    `Send ${type.name} to processing? This cannot be undone.`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Cull', style: 'destructive', onPress: () => cullAnimal(item.id) },
+                    ]
+                  );
+                }}
               >
                 <Text style={{ color: '#fff', fontSize: 11, textAlign: 'center' }}>🔪 Cull for Meat</Text>
               </TouchableOpacity>
