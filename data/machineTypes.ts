@@ -14,21 +14,21 @@ export interface MachineType {
 
 export const MACHINE_TYPES: MachineType[] = [
   // ── Tractors ─────────────────────────────────────────────────────────────
-  { id: 'tractor-small',  name: 'Small Tractor',  cost: 18000,  size: 'small',  category: 'tractor',    maintenancePerDay: 4,  fuelPerDay: 8 },
-  { id: 'tractor-medium', name: 'Medium Tractor', cost: 48000,  size: 'medium', category: 'tractor',    maintenancePerDay: 9,  fuelPerDay: 18 },
-  { id: 'tractor-large',  name: 'Large Tractor',  cost: 120000, size: 'large',  category: 'tractor',    maintenancePerDay: 20, fuelPerDay: 40 },
+  { id: 'tractor-small',  name: 'Small Tractor',  cost: 45000,  size: 'small',  category: 'tractor',    maintenancePerDay: 12, fuelPerDay: 8 },
+  { id: 'tractor-medium', name: 'Medium Tractor', cost: 120000, size: 'medium', category: 'tractor',    maintenancePerDay: 28, fuelPerDay: 18 },
+  { id: 'tractor-large',  name: 'Large Tractor',  cost: 280000, size: 'large',  category: 'tractor',    maintenancePerDay: 55, fuelPerDay: 40 },
   // ── Combine Harvesters ───────────────────────────────────────────────────
-  { id: 'combine-small',  name: 'Small Combine',  cost: 85000,  size: 'small',  category: 'harvester',  maintenancePerDay: 15, fuelPerDay: 15, haPerDay: 4 },
-  { id: 'combine-medium', name: 'Medium Combine', cost: 175000, size: 'medium', category: 'harvester',  maintenancePerDay: 28, fuelPerDay: 30, haPerDay: 10 },
-  { id: 'combine-large',  name: 'Large Combine',  cost: 340000, size: 'large',  category: 'harvester',  maintenancePerDay: 50, fuelPerDay: 60, haPerDay: 22 },
+  { id: 'combine-small',  name: 'Small Combine',  cost: 250000, size: 'small',  category: 'harvester',  maintenancePerDay: 45, fuelPerDay: 15, haPerDay: 4 },
+  { id: 'combine-medium', name: 'Medium Combine', cost: 420000, size: 'medium', category: 'harvester',  maintenancePerDay: 75, fuelPerDay: 30, haPerDay: 10 },
+  { id: 'combine-large',  name: 'Large Combine',  cost: 750000, size: 'large',  category: 'harvester',  maintenancePerDay: 130, fuelPerDay: 60, haPerDay: 22 },
   // ── Irrigation Systems ───────────────────────────────────────────────────
-  { id: 'irrigation-drip',      name: 'Drip System',      cost: 8500,  size: 'small',  category: 'irrigation', maintenancePerDay: 2,  haPerDay: 1 },
-  { id: 'irrigation-sprinkler', name: 'Sprinkler Array',  cost: 28000, size: 'medium', category: 'irrigation', maintenancePerDay: 5,  haPerDay: 3 },
-  { id: 'irrigation-pivot',     name: 'Center Pivot',     cost: 95000, size: 'large',  category: 'irrigation', maintenancePerDay: 12, haPerDay: 8 },
+  { id: 'irrigation-drip',      name: 'Drip System',      cost: 8000,  size: 'small',  category: 'irrigation', maintenancePerDay: 2,  haPerDay: 1 },
+  { id: 'irrigation-sprinkler', name: 'Sprinkler Array',  cost: 30000, size: 'medium', category: 'irrigation', maintenancePerDay: 6,  haPerDay: 3 },
+  { id: 'irrigation-pivot',     name: 'Center Pivot',     cost: 180000, size: 'large',  category: 'irrigation', maintenancePerDay: 25, haPerDay: 8 },
   // ── Trucks ───────────────────────────────────────────────────────────────
-  { id: 'truck-pickup', name: 'Pickup',     cost: 28000, size: 'small',  category: 'truck', maintenancePerDay: 5,  capacityKg: 0,      compatibleTrailerSizes: ['small', 'medium'] },
-  { id: 'truck-dump',   name: 'Dump Truck', cost: 43000, size: 'medium', category: 'truck', maintenancePerDay: 10, capacityKg: 10000 },
-  { id: 'truck-semi',   name: 'Semi Truck', cost: 72000, size: 'large',  category: 'truck', maintenancePerDay: 18, capacityKg: 0,      compatibleTrailerSizes: ['medium', 'large'] },
+  { id: 'truck-pickup', name: 'Pickup',     cost: 42000, size: 'small',  category: 'truck', maintenancePerDay: 12, capacityKg: 0,      compatibleTrailerSizes: ['small', 'medium'] },
+  { id: 'truck-dump',   name: 'Dump Truck', cost: 85000, size: 'medium', category: 'truck', maintenancePerDay: 22, capacityKg: 10000 },
+  { id: 'truck-semi',   name: 'Semi Truck', cost: 150000, size: 'large',  category: 'truck', maintenancePerDay: 35, capacityKg: 0,      compatibleTrailerSizes: ['medium', 'large'] },
   // ── Trailers (catalog entry — owned via OwnedTrailer[] not machines[]) ──
   { id: 'trailer-small',    name: 'Small Trailer',    cost: 10000, size: 'small',  category: 'trailer', maintenancePerDay: 1, capacityKg: 2000,  compatibleTruckTypeIds: ['truck-pickup'] },
   { id: 'trailer-standard', name: 'Standard Trailer', cost: 22000, size: 'medium', category: 'trailer', maintenancePerDay: 2, capacityKg: 6000,  compatibleTruckTypeIds: ['truck-pickup', 'truck-semi'] },
