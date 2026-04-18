@@ -120,7 +120,7 @@ export const RANDOM_EVENT_TEMPLATES: GameEventTemplate[] = [
     priceShock: { commodityId: null, magnitude: 0.30, durationDays: 60, decayRate: 0.017 },
   },
   {
-    id: 'e_bs05', type: 'equipment_failure', icon: '🏗️',
+    id: 'e_bs05', type: 'market_surge', icon: '🏗️',
     title: 'Infrastructure Collapse',
     description: 'Critical transport infrastructure fails, tripling logistics costs.',
     durationDays: 45, weight: 1, modifier: 0.85,
