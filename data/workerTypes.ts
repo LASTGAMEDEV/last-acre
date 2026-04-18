@@ -12,7 +12,8 @@ export type WorkerRole =
   | 'processor'
   | 'supervisor'
   | 'vet'
-  | 'truck_driver';
+  | 'truck_driver'
+  | 'hydrogeologist';
 
 export interface WorkerType {
   id: WorkerRole;
@@ -152,5 +153,17 @@ export const WORKER_TYPES: WorkerType[] = [
     department: 'transport',
     tier: 'basic',
     description: 'Handles deliveries to local, city, and export markets. Required to self-dispatch — without one, deliveries go through a contractor at 12% fee.',
+  },
+
+  // ── Water ────────────────────────────────────────────────────────────────────
+  {
+    id: 'hydrogeologist',
+    name: 'Hydrogeologist',
+    icon: '🔍',
+    dailyWage: 280,
+    maxCount: 1,
+    department: null,
+    tier: 'standalone',
+    description: 'Surveys parcels for well placement. Assign to a parcel to begin survey (5–10 days). One parcel at a time.',
   },
 ];

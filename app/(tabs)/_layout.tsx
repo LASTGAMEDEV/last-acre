@@ -81,6 +81,7 @@ export default function TabLayout() {
         <Tabs.Screen name="oficina"      options={{ href: null }} />
         <Tabs.Screen name="calendario"   options={{ href: null }} />
         <Tabs.Screen name="logros"       options={{ href: null }} />
+        <Tabs.Screen name="agua"         options={{ href: null }} />
       </Tabs>
 
       <DaySummaryModal />

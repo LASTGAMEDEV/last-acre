@@ -11,6 +11,7 @@ import { MACHINE_TYPES } from '../../data/machineTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { getSeason } from '../../engine/climate';
 import { getSoilModifier, SoilStats, SOIL_DEFAULTS, computeSoilYieldModifier } from '../../engine/crops';
+import { wellFlowRate, PUMP_SPECS, pipeCost } from '../../engine/water';
 import { PRODUCT_TYPES } from '../../data/productTypes';
 import ContractorModal from '../../components/ContractorModal';
 import { getContractorCost, ContractorOperation } from '../../engine/machinery';
@@ -48,7 +49,7 @@ const SOIL_BAR_COLORS = {
 function soilStatColor(value: number, low: number, high: number, invert = false): string {
   const pct = (value - low) / (high - low);
   const good = invert ? pct < 0.3 : pct > 0.6;
-  const bad  = invert ? pct > 0.7 : pct < 0.3;
+  const bad  = invert ? pct > 0.5 : pct < 0.3;
   return good ? SOIL_BAR_COLORS.good : bad ? SOIL_BAR_COLORS.bad : SOIL_BAR_COLORS.warn;
 }
 
@@ -141,6 +142,86 @@ function SoilTab({ parcel, onAmendment, onCoverCrop }: {
   );
 }
 
+function WaterParcelSection({ parcel }: { parcel: LandParcel }) {
+  const { wells, aquiferLevel, assignHydrogeologist, connectParcel, disconnectParcel, workers } = useGameStore();
+
+  const connectedWell = (wells ?? []).find(w => w.connectedParcelIds.includes(parcel.id) || w.parcelId === parcel.id);
+  const hasHydro = (workers ?? []).some(w => w.typeId === 'hydrogeologist');
+  const busySurvey = (wells ?? []).some(w => w.status === 'surveying');
+
+  const cardStyle = { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.sm };
+  const btnStyle = { backgroundColor: C.green, borderRadius: R.md, padding: S.sm, alignItems: 'center' as const };
+  const btnTextStyle = { color: C.text, fontWeight: 'bold' as const, fontSize: F.size.md };
+
+  return (
+    <View style={{ gap: 8 }}>
+      {/* Current water source */}
+      <View style={cardStyle}>
+        <Text style={{ color: C.text, fontWeight: 'bold', marginBottom: 4 }}>Water Source</Text>
+        {connectedWell ? (
+          <Text style={{ color: C.faint, fontSize: F.size.md }}>
+            Well — {connectedWell.status === 'active' && connectedWell.pumpTier
+              ? `Active (${wellFlowRate(connectedWell, aquiferLevel ?? 75).toFixed(0)} L/hr effective)`
+              : connectedWell.status}
+          </Text>
+        ) : parcel.irrigated ? (
+          <Text style={{ color: '#4caf50', fontSize: F.size.md }}>Grid water (enabled farm-wide)</Text>
+        ) : (
+          <Text style={{ color: C.faint, fontSize: F.size.md }}>No water source connected</Text>
+        )}
+      </View>
+
+      {/* Survey / connect actions */}
+      {!connectedWell && (
+        <View style={cardStyle}>
+          {hasHydro && !busySurvey ? (
+            <TouchableOpacity
+              style={btnStyle}
+              onPress={() => assignHydrogeologist(parcel.id)}
+            >
+              <Text style={btnTextStyle}>🔍 Start Hydrogeologist Survey</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={{ color: C.faint, fontSize: F.size.sm }}>
+              {!hasHydro
+                ? 'Hire a Hydrogeologist (Workers tab) to survey this parcel for well spots.'
+                : 'Hydrogeologist is currently busy with another survey.'}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* Connect to existing well */}
+      {!connectedWell && (wells ?? []).filter(w => w.status === 'active' && w.pumpTier).length > 0 && (
+        <View style={cardStyle}>
+          <Text style={{ color: C.text, fontWeight: 'bold', marginBottom: 6 }}>Connect to Existing Well</Text>
+          {(wells ?? []).filter(w => w.status === 'active' && w.pumpTier).map(w => {
+            const allParcels = useGameStore.getState().parcels;
+            const wellIdx = allParcels.findIndex(p => p.id === w.parcelId);
+            const targetIdx = allParcels.findIndex(p => p.id === parcel.id);
+            const cost = pipeCost(wellIdx, targetIdx);
+            return (
+              <TouchableOpacity key={w.id} style={[btnStyle, { marginBottom: 4 }]} onPress={() => connectParcel(w.id, parcel.id)}>
+                <Text style={btnTextStyle}>Connect via pipe — ${cost.toLocaleString()}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Disconnect */}
+      {connectedWell && connectedWell.parcelId !== parcel.id && (
+        <TouchableOpacity
+          style={[btnStyle, { backgroundColor: C.gray }]}
+          onPress={() => disconnectParcel(connectedWell.id, parcel.id)}
+        >
+          <Text style={btnTextStyle}>Disconnect from well</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
 export default function TierrasScreen() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
@@ -177,7 +258,7 @@ export default function TierrasScreen() {
   const currentSeason: PlantingSeason = getSeason(day);
   const [mapView, setMapView] = useState(false);
   const [mapSelected, setMapSelected] = useState<LandParcel | null>(null);
-  const [activeParcelTab, setActiveParcelTab] = useState<'info' | 'soil'>('info');
+  const [activeParcelTab, setActiveParcelTab] = useState<'info' | 'soil' | 'water'>('info');
   type FieldFilter = 'all' | 'empty' | 'growing' | 'ready' | 'events';
   const [fieldFilter, setFieldFilter] = useState<FieldFilter>('all');
 
@@ -1078,6 +1159,7 @@ export default function TierrasScreen() {
                     {([
                       { id: 'info' as const, label: '📋 Info' },
                       { id: 'soil' as const, label: '🌱 Soil' },
+                      { id: 'water' as const, label: '💧 Water' },
                     ]).map(tab => (
                       <TouchableOpacity
                         key={tab.id}
@@ -1181,6 +1263,11 @@ export default function TierrasScreen() {
                       plantCoverCrop(mapSelected.id, cropId);
                     }}
                   />
+                )}
+
+                {/* Water tab content */}
+                {activeParcelTab === 'water' && mapSelected.owned && (
+                  <WaterParcelSection parcel={mapSelected} />
                 )}
               </>
             )}

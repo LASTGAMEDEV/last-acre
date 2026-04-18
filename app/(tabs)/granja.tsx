@@ -4,13 +4,14 @@ import TierrasScreen from './tierras';
 import AnimalesScreen from './animales';
 import MaquinariaScreen from './maquinaria';
 import TrabajadoresScreen from './trabajadores';
+import AguaScreen from './agua';
 import { useGameStore, SeedEntry, SeedGenes, HybridJob } from '../../store/useGameStore';
 import { CROP_TYPES } from '../../data/cropTypes';
 import HelpSheet from '../../components/HelpSheet';
 import SubTabBar from '../../components/SubTabBar';
 import { C, S, F, R } from '../../constants/theme';
 
-type FarmTab = 'fields' | 'animals' | 'machinery' | 'workers' | 'seedlab';
+type FarmTab = 'fields' | 'animals' | 'machinery' | 'workers' | 'seedlab' | 'water';
 
 const TABS: { id: FarmTab; label: string }[] = [
   { id: 'fields',    label: '🌾 Fields' },
@@ -18,6 +19,7 @@ const TABS: { id: FarmTab; label: string }[] = [
   { id: 'machinery', label: '🚜 Machinery' },
   { id: 'workers',   label: '👨‍🌾 Workers' },
   { id: 'seedlab',   label: '🌱 Seed Lab' },
+  { id: 'water',     label: '💧 Water' },
 ];
 
 function geneGrade(v: number): string {
@@ -289,6 +291,7 @@ export default function GranjaScreen() {
       {tab === 'machinery' && <MaquinariaScreen />}
       {tab === 'workers'   && <TrabajadoresScreen />}
       {tab === 'seedlab'   && <SeedLabScreen />}
+      {tab === 'water'     && <AguaScreen />}
     </View>
   );
 }
