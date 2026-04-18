@@ -4545,7 +4545,7 @@ export const useGameStore = create<GameState>()(
           sick: false,
           traits: offspringTraits.length > 0 ? offspringTraits : undefined,
           genes: breedAnimalGenes(animal, actualFather, BREED_TYPES),
-          parentIds: [animalId, father.id],
+          parentIds: [animalId, actualFather!.id],
           grandparentIds,
           breedId: offspringBreedId,
           crossbreedParents: offspringCrossbreedParents,
