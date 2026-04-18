@@ -43,7 +43,7 @@ import {
 import { INSURANCE_PLANS, InsuranceType } from '../data/insuranceTypes';
 import { PROCESSING_RECIPES, PROCESSED_PRODUCTS } from '../data/processingTypes';
 import { MILESTONES, checkNewMilestones, MILESTONE_REWARDS } from '../data/milestones';
-import { applyDailyFluctuation, sellRevenue, SellPressure, computeSellPressureModifier, sellPressureDuration } from '../engine/market';
+import { sellRevenue, SellPressure, computeSellPressureModifier, sellPressureDuration } from '../engine/market';
 import { getSeason, generateForecast, applyDailyWeather } from '../engine/climate';
 import { ENCLOSURE_BUILDINGS } from '../constants/enclosures';
 import { WorkerRole, WorkerType as WorkerTypeDef } from '../data/workerTypes';
@@ -2325,6 +2325,13 @@ export const useGameStore = create<GameState>()(
               modifier: newEventTemplate.modifier,
             };
             activeEvents = [...activeEvents, newEvent];
+
+            if (newEventTemplate?.priceShock) {
+              activeShocks = [...activeShocks, {
+                ...newEventTemplate.priceShock,
+                remainingDays: newEventTemplate.priceShock.durationDays,
+              }];
+            }
 
             if (newEventTemplate.type !== 'windfall_subsidy') {
               summary.push({
