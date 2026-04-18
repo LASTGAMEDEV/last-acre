@@ -50,6 +50,7 @@ import { WorkerRole, WorkerType as WorkerTypeDef } from '../data/workerTypes';
 import { GameEventType } from '../data/randomEvents';
 import { rollEvent, calcRepairCost, calcRepairDays, getHarvestModifier } from '../engine/events';
 import { NPCFarmRuntime, initNpcFarms, npcSellVolume, npcAuctionBid } from '../engine/competitors';
+import { tickAllPrices, updateNpcProductionMultipliers, ActiveShock } from '../engine/priceEngine';
 import { ATTACHMENT_TYPES, AttachmentType } from '../data/attachmentTypes';
 import { ContractorOperation, calcJobDays, canAssignJob, getTransportCapacityKg } from '../engine/machinery';
 import { MapField, MapOwner } from '../types/worldMap';
@@ -505,6 +506,12 @@ export interface GameState {
   machines: OwnedMachine[];
 
   prices: MarketPrice[];
+  activeShocks: ActiveShock[];
+  priceMomentum: Record<string, number>;
+  priceHistory15d: Record<string, number[]>;
+  npcProductionMultipliers: Record<string, number>;
+  npcPriceSignalDays: Record<string, number>;
+  fertilizerPrice: number;
   newsEvents: NewsEvent[];
 
   loans: Loan[];
@@ -914,13 +921,31 @@ function generateParcelsFromMap(): LandParcel[] {
 }
 
 function generateInitialPrices(): MarketPrice[] {
-  return CROP_TYPES.map(c => ({ cropId: c.id, price: c.basePrice, basePrice: c.basePrice }));
+  const { COMMODITY_BASELINES } = require('../data/prices');
+  const { ANIMAL_PRODUCTS } = require('../data/animalProducts');
+  const { PROCESSED_PRODUCTS } = require('../data/processingTypes');
+  const bases = COMMODITY_BASELINES as Record<string, number>;
+  const result: MarketPrice[] = [];
+  for (const c of CROP_TYPES) {
+    if ((c as any).coverCrop) continue;
+    const base = bases[c.id] ?? c.basePrice;
+    result.push({ cropId: c.id, price: base, basePrice: base });
+  }
+  for (const ap of ANIMAL_PRODUCTS as { productType: string; basePrice: number }[]) {
+    const base = bases[ap.productType] ?? ap.basePrice;
+    result.push({ cropId: ap.productType, price: base, basePrice: base });
+  }
+  for (const pp of PROCESSED_PRODUCTS as { id: string; basePrice: number }[]) {
+    const base = bases[pp.id] ?? pp.basePrice;
+    result.push({ cropId: pp.id, price: base, basePrice: base });
+  }
+  return result;
 }
 
 function generateInitialListings(): AuctionListing[] {
   const premiumParcels: LandParcel[] = [
-    { id: 'auction_p0', name: 'Gold Acre',   fertility: 22, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 5,  pricePerHa: 55000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
-    { id: 'auction_p1', name: 'Prime Ridge', fertility: 25, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 2,  pricePerHa: 60000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
+    { id: 'auction_p0', name: 'Gold Acre',   fertility: 22, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 5,  pricePerHa: 550000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
+    { id: 'auction_p1', name: 'Prime Ridge', fertility: 25, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 2,  pricePerHa: 600000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
   ];
   return premiumParcels.map((parcel, i) => ({
     id: `lot_init_${i}`,
@@ -964,7 +989,7 @@ function makeInitialState() {
     forecast: generateForecast('spring'),
     todayWeather: null as WeatherDay | null,
     inventory: {} as Record<string, number>,
-    priceHistory: Object.fromEntries(CROP_TYPES.map(c => [c.id, [c.basePrice]])) as Record<string, number[]>,
+    priceHistory: Object.fromEntries(generateInitialPrices().map(p => [p.cropId, [p.price]])) as Record<string, number[]>,
     productInventory: {} as Record<string, number>,
     buildings: [] as string[],
     declinedTemplates: [] as string[],
@@ -995,7 +1020,7 @@ function makeInitialState() {
     aquiferLevel: 75,
     wells: [] as Well[],
     gridWaterActive: false,
-    gridWaterDailyRate: 12,
+    gridWaterDailyRate: 1.20,
     reputation: 50,
     autoSell: {} as Record<string, { enabled: boolean; minPrice: number }>,
     prestige: 0,
@@ -1027,12 +1052,18 @@ function makeInitialState() {
     soundEnabled: true,
     hapticEnabled: true,
     musicEnabled: true,
-    animalPrices: { eggs: 3.50, milk: 0.90, honey: 25.0, wool: 42.0, meat: 14.0 },
+    animalPrices: { eggs: 0.18, milk: 0.45, honey: 8.50, wool: 3.20, meat: 4.50, cream: 2.80 },
     personalRecords: { peakMoney: 1_000_000, totalHarvests: 0, bestSeasonRevenue: 0, longestDay: 1 },
     seasonalEvent: null as { type: 'heat_wave' | 'flood' | 'frost'; startDay: number; endsDay: number; severity: number } | null,
     farmName: 'My Farm',
     fuel: 200,
     fuelPrice: 1.20,
+    fertilizerPrice: 0.35,
+    priceMomentum: {} as Record<string, number>,
+    priceHistory15d: {} as Record<string, number[]>,
+    activeShocks: [] as ActiveShock[],
+    npcProductionMultipliers: {} as Record<string, number>,
+    npcPriceSignalDays: {} as Record<string, number>,
     deliveryJobs: [],
     productionBuildings: [],
     animalWelfareScores: {},
@@ -1161,17 +1192,20 @@ export const useGameStore = create<GameState>()(
           summary.push({ id: 'weather', icon: w.icon, title: w.name, severity: w.severity });
         }
 
-        // Prices + daily fluctuation + seasonal nudge
-        let prices = state.prices.map(p => {
-          const fluctuated = applyDailyFluctuation(p.price);
-          const crop = CROP_TYPES.find(c => c.id === p.cropId);
-          if (!crop) return { ...p, price: fluctuated };
-          // Nudge toward seasonal target: peak = 80% of base (harvest glut), off-peak = 120%
-          const isPeak = season === crop.peakSeason;
-          const target = isPeak ? p.basePrice * 0.80 : p.basePrice * 1.20;
-          const nudged = fluctuated + (target - fluctuated) * 0.05;
-          return { ...p, price: Math.max(1, nudged) };
+        // ── Price engine tick (all commodities) ────────────────────────────
+        const priceTickResult = tickAllPrices({
+          prices: state.prices,
+          momentum: state.priceMomentum ?? {},
+          priceHistory15d: state.priceHistory15d ?? {},
+          activeShocks: state.activeShocks ?? [],
+          day: newDay,
+          forecast: state.forecast,
+          npcProductionMultipliers: state.npcProductionMultipliers ?? {},
         });
+        let prices = priceTickResult.prices;
+        const newPriceMomentum = priceTickResult.momentum;
+        const newPriceHistory15d = priceTickResult.priceHistory15d;
+        let activeShocks: ActiveShock[] = priceTickResult.activeShocks;
 
         // Fallow recovery: owned empty parcels regain +1 fertility (Botanist speeds this up)
         const fallowInterval = workerBonuses.fallowRestoreInterval;
@@ -1211,6 +1245,12 @@ export const useGameStore = create<GameState>()(
               }
               return p;
             });
+            if (template.priceShock) {
+              activeShocks = [...activeShocks, {
+                ...template.priceShock,
+                remainingDays: template.priceShock.durationDays,
+              }];
+            }
           }
         }
         if (newNewsEvent) {
@@ -1366,20 +1406,13 @@ export const useGameStore = create<GameState>()(
         });
         const sellPressures = [...activePressures];
 
-        // ── Animal product price fluctuation ────────────────────────────────
-        const { ANIMAL_PRODUCTS: AP_DATA } = require('../data/animalProducts');
-        const ANIMAL_PEAK_SEASON: Record<string, string> = {
-          eggs: 'spring', milk: 'summer', honey: 'summer', wool: 'winter', meat: 'autumn',
-        };
-        let animalPrices = { ...(state.animalPrices ?? { eggs: 3.50, milk: 0.90, honey: 25.0, wool: 42.0, meat: 14.0 }) };
-        for (const product of AP_DATA) {
-          const base = product.basePrice as number;
-          const current = animalPrices[product.productType] ?? base;
-          const peakBonus = ANIMAL_PEAK_SEASON[product.productType] === season ? 0.12 : -0.04;
-          const randomDelta = (Math.random() - 0.5) * 0.08;
-          const meanRevert = (base - current) / base * 0.05;
-          const newPrice = Math.max(base * 0.4, Math.min(base * 2.5, current * (1 + peakBonus / 90 + randomDelta * 0.1 + meanRevert)));
-          animalPrices[product.productType] = Math.round(newPrice * 100) / 100;
+        // Derive animalPrices from unified prices array (now managed by priceEngine)
+        const animalPrices: Record<string, number> = { ...(state.animalPrices ?? {}) };
+        const ANIMAL_PRODUCT_IDS = ['eggs', 'milk', 'honey', 'wool', 'meat', 'cream'];
+        for (const p of prices) {
+          if (ANIMAL_PRODUCT_IDS.includes(p.cropId)) {
+            animalPrices[p.cropId] = p.price;
+          }
         }
 
         // ── NPC competitor sells ─────────────────────────────────────────────
@@ -1445,7 +1478,7 @@ export const useGameStore = create<GameState>()(
             const ownedFields = mapFields.filter(f => f.owner === mapOwner);
             if (ownedFields.length > 0) {
               const lost = ownedFields[Math.floor(Math.random() * ownedFields.length)];
-              mapFields = mapFields.map(f => f.id === lost.id ? { ...f, owner: 'forsale', askingPrice: Math.round(lost.approximateHa * 1400) } : f);
+              mapFields = mapFields.map(f => f.id === lost.id ? { ...f, owner: 'forsale', askingPrice: Math.round(lost.approximateHa * 6500) } : f);
               // Add a discounted foreclosure parcel to the player's buy list (if not already there)
               const foreId = `foreclosure_${farm.id}`;
               if (!state.parcels.some(p => p.id === foreId)) {
@@ -1456,7 +1489,7 @@ export const useGameStore = create<GameState>()(
                   soil: { ...SOIL_DEFAULTS },
                   cropHistory: [],
                   hectares: farm.tier * 2,
-                  pricePerHa: 1200 + (farm.tier * 300), // ~40% below market
+                  pricePerHa: 6500 + (farm.tier * 300), // ~40% below market
                   owned: false,
                   hasWeeds: true,
                   plantedCrop: null,
@@ -1484,6 +1517,14 @@ export const useGameStore = create<GameState>()(
           };
         });
 
+        // NPC supply response to sustained price signals
+        const { multipliers: newNpcProductionMultipliers, signalDays: newNpcPriceSignalDays } =
+          updateNpcProductionMultipliers(
+            state.npcProductionMultipliers ?? {},
+            state.npcPriceSignalDays ?? {},
+            prices,
+          );
+
         // Price history
         const priceHistory: Record<string, number[]> = {};
         for (const p of prices) {
@@ -1495,9 +1536,14 @@ export const useGameStore = create<GameState>()(
         const maintenanceCost = Math.round(getDailyMaintenance(state.machines, state.buildings) * workerBonuses.maintenanceMult);
         // Insurance premiums
         const activePolicies = state.insurances.filter(p => p.active);
-        const insurancePremium = activePolicies.reduce((s, p) => {
-          const plan = INSURANCE_PLANS.find(pl => pl.type === p.type);
-          return s + (plan?.premiumPerDay ?? 0);
+        const ownedHa = state.parcels.filter(p => p.owned).reduce((s, p) => s + ((p as any).hectares ?? 1), 0);
+        const insurancePremium = activePolicies.reduce((s, pol) => {
+          const plan = INSURANCE_PLANS.find(pl => pl.type === pol.type);
+          if (!plan) return s;
+          if (plan.perHa && plan.ratePerHaPerDay != null) {
+            return s + plan.ratePerHaPerDay * ownedHa;
+          }
+          return s + plan.premiumPerDay;
         }, 0);
         // Worker wages
         const { WORKER_TYPES } = require('../data/workerTypes');
@@ -4133,6 +4179,11 @@ export const useGameStore = create<GameState>()(
           rivalNews: [...rivalNewsItems, ...(state.rivalNews ?? [])].slice(0, 30),
           seasonalEvent,
           animalPrices,
+          priceMomentum: newPriceMomentum,
+          priceHistory15d: newPriceHistory15d,
+          activeShocks,
+          npcProductionMultipliers: newNpcProductionMultipliers,
+          npcPriceSignalDays: newNpcPriceSignalDays,
           tractorJobs: remainingTractorJobs,
           harvestJobs: updatedHarvestJobs,
           deliveryJobs: updatedDeliveryJobs,
