@@ -509,7 +509,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     name: 'Oil Press',
     category: 'industrial',
     cost: 28000,
-    maintenancePerDay: 7,
+    maintenancePerDay: 28,
     effectLabel: 'Extracts sunflower, rapeseed, canola and soy oil',
   },
   {
@@ -517,7 +517,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     name: 'Dairy Plant',
     category: 'industrial',
     cost: 32000,
-    maintenancePerDay: 8,
+    maintenancePerDay: 32,
     effectLabel: 'Produces cheese, butter and egg pasta',
   },
   {
@@ -525,7 +525,7 @@ export const BUILDING_TYPES: BuildingType[] = [
     name: 'Agricultural Processor',
     category: 'industrial',
     cost: 22000,
-    maintenancePerDay: 6,
+    maintenancePerDay: 22,
     effectLabel: 'Processes sugar, ethanol, cotton fiber, fabric and cold cuts',
   },
 
