@@ -9,7 +9,8 @@ export interface ActiveEvent {
 }
 
 export interface RepairWorker {
-  typeId: string;
+  typeId?: string;
+  role?: string;
 }
 
 export interface RepairableMachine {
@@ -96,7 +97,7 @@ export function calcRepairCost(machine: RepairableMachine): number {
  * engineer → 2 days · mechanic → 3 days · no mechanic → 5 days
  */
 export function calcRepairDays(workers: RepairWorker[]): number {
-  if (workers.some(w => w.typeId === 'engineer')) return 2;
-  if (workers.some(w => w.typeId === 'mechanic')) return 3;
+  if (workers.some(w => w.role === 'farm_mechanic' || w.typeId === 'engineer')) return 2;
+  if (workers.some(w => w.role === 'farm_mechanic' || w.typeId === 'mechanic')) return 3;
   return 5;
 }
