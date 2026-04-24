@@ -57,10 +57,10 @@ export default function DispatchModal({ visible, cargo, marketId, onClose, onCon
     return !busyTrailerIds.has(tr.id);
   });
 
-  // All truck_driver workers sorted by hire day — used to derive a stable "Driver #N" label
+  // All transport_driver workers sorted by hire day — used to derive a stable "Driver #N" label
   const allDrivers = (workers ?? [])
-    .filter(w => w.typeId === 'truck_driver')
-    .sort((a, b) => a.hiredDay - b.hiredDay);
+    .filter(w => w.role === 'transport_driver')
+    .sort((a, b) => a.hireDay - b.hireDay);
 
   const availableDrivers = allDrivers.filter(w => !busyDriverIds.has(w.id));
 
@@ -165,7 +165,7 @@ export default function DispatchModal({ visible, cargo, marketId, onClose, onCon
                   style={[s.optionRow, selectedDriverId === w.id && s.optionSelected]}
                   onPress={() => setSelectedDriverId(w.id)}
                 >
-                  <Text style={s.optionText}>🚛 Driver #{driverNum} (hired day {w.hiredDay})</Text>
+                  <Text style={s.optionText}>🚛 Driver #{driverNum} (hired day {w.hireDay})</Text>
                 </TouchableOpacity>
               );
             })}
