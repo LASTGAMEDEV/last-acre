@@ -55,7 +55,7 @@ import {
   calcWeeklyPayroll, rollInjury, rollPoaching, generateApplicants,
   createWorkerFromApplicant, applyPayRiseApproved, applyPayRiseDenied,
   applyTimeOffApproved, applyExamFeeApproved, applicantCountForSeason,
-  WorkerBonuses,
+  calcUnlockedNodes, WorkerBonuses,
 } from '../engine/workers';
 import { GameEventType } from '../data/randomEvents';
 import { rollEvent, calcRepairCost, calcRepairDays, getHarvestModifier } from '../engine/events';
@@ -3088,7 +3088,12 @@ export const useGameStore = create<GameState>()(
           }
 
           // Processing min-worker headcount check
-          const activeProcessingBuildings = state.buildings.filter(b => b.startsWith('bld_')).length;
+          const PROCESSING_BUILDING_IDS = new Set([
+            'bld_molino', 'bld_prensa', 'bld_lacteo', 'bld_procesadora', 'bld_bodega',
+          ]);
+          const activeProcessingBuildings = state.buildings.filter(
+            b => PROCESSING_BUILDING_IDS.has(b)
+          ).length;
           const hasAnyWorkers = (state.workers ?? []).length > 0;
           let processingEfficiency = 1.0;
           if (activeProcessingBuildings > 0 && hasAnyWorkers) {
@@ -3099,7 +3104,7 @@ export const useGameStore = create<GameState>()(
               ? 0
               : Math.min(1, processingStaff / Math.max(1, activeProcessingBuildings));
           }
-          const processingUnderManned = processingEfficiency === 0 && activeProcessingBuildings > 0 && hasAnyWorkers;
+          const processingUnderManned = hasAnyWorkers && activeProcessingBuildings > 0 && processingEfficiency < 1;
 
           // Supervisor auto-process: 1 batch of highest-stock recipe per day
           if (workerBonuses.autoProcessEnabled && !processingUnderManned) {
@@ -3128,7 +3133,7 @@ export const useGameStore = create<GameState>()(
                 return curStock > prevStock ? cur : prev;
               });
 
-              const outputAmount = Math.round(best.outputAmount * workerBonuses.processingOutputMult * processingEfficiency);
+              const outputAmount = Math.round(best.outputAmount * workerBonuses.processingOutputMult);
 
               if (best.input.source === 'crop') {
                 (autoSellFinalInventory as any).__workerInventory = {
@@ -6795,7 +6800,6 @@ export const useGameStore = create<GameState>()(
 
       postVacancy: (role, contractType, offeredWage) => {
         const state = get();
-        const { getSeason } = require('../engine/climate');
         const season = getSeason(state.day);
         const count = applicantCountForSeason(season);
         const applicants = count > 0 ? generateApplicants(role, season, count) : [];
@@ -6881,7 +6885,6 @@ export const useGameStore = create<GameState>()(
         const state = get();
         const worker = (state.workers ?? []).find(w => w.id === workerId);
         if (!worker || worker.tier < 3) return;
-        const { calcUnlockedNodes } = require('../engine/workers');
         const newNodes = calcUnlockedNodes(worker.role, worker.experienceYears, branchId);
         set({
           workers: (state.workers ?? []).map(w =>
