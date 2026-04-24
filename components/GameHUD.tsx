@@ -5,7 +5,6 @@ import { useGameStore } from '../store/useGameStore';
 import { getSeason, WeatherEvent } from '../engine/climate';
 import { SEASON_THEME, C, S, F, R, MIN_TOUCH } from '../constants/theme';
 import { playSound } from '../engine/sounds';
-import { WORKER_ROLE_CONFIG } from '../data/workerTypes';
 import { MACHINE_TYPES } from '../data/machineTypes';
 import { BUILDING_TYPES } from '../data/buildingTypes';
 import type { CoopId } from '../engine/cooperativeTypes';
