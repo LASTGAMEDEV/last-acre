@@ -1530,6 +1530,176 @@ export const useGameStore = create<GameState>()(
           priceHistory[p.cropId] = [...prev, p.price].slice(-90);
         }
 
+        // ── Workers daily tick ──────────────────────────────────────────────
+        const tickedWorkers = (state.workers ?? []).map(w => tickWorker(w, newDay));
+
+        // Weekly satisfaction pressure
+        const weeklyPayrollDue = newDay % 7 === 0;
+        const weeklyTickedWorkers = weeklyPayrollDue
+          ? tickedWorkers.map(w => {
+              let sat = w.satisfaction;
+              const hist = [...w.satisfactionHistory];
+              if (w.nightShift) {
+                const seniorWage = WORKER_ROLE_CONFIG[w.role]?.wageRangeSenior[0] ?? 100;
+                if (w.wagePerDay < Math.round(seniorWage * 1.25)) {
+                  sat -= 5;
+                  hist.push({ day: newDay, delta: -5, reason: 'Night shift without premium' });
+                }
+              }
+              if (!w.pinnedAssetId && (w.role === 'tractor_operator' || w.role === 'combine_operator')) {
+                sat -= 2;
+                hist.push({ day: newDay, delta: -2, reason: 'Underutilized' });
+              }
+              sat = Math.max(0, Math.min(100, sat));
+              return { ...w, satisfaction: sat, satisfactionHistory: hist.slice(-30) };
+            })
+          : tickedWorkers;
+
+        // Injury rolls
+        const injuredWorkers = weeklyTickedWorkers.map(w => {
+          if (w.isInjured || w.isOnLeave) return w;
+          const hasMechanic = weeklyTickedWorkers.some(x => x.role === 'farm_mechanic' && !x.isInjured);
+          if (rollInjury(w, hasMechanic)) {
+            const recoveryDays = Math.floor(Math.random() * 18) + 3;
+            return { ...w, isInjured: true, injuryRecoveryDay: newDay + recoveryDays, satisfaction: Math.max(0, w.satisfaction - 15) };
+          }
+          return w;
+        });
+
+        // Poaching rolls
+        const poachingRequests: WorkerRequest[] = [];
+        const employerRep = state.employerReputation ?? 50;
+        const afterPoachingWorkers = injuredWorkers.map(w => {
+          const { poached, offerWage } = rollPoaching(w, employerRep);
+          if (poached) {
+            poachingRequests.push({
+              id: `req_poach_${w.id}_${newDay}`,
+              workerId: w.id,
+              workerName: w.name,
+              workerIcon: WORKER_ROLE_CONFIG[w.role]?.icon ?? '👷',
+              type: 'poaching_alert',
+              message: `${w.name} has been approached by a competitor farm offering $${offerWage}/day.`,
+              cost: offerWage - w.wagePerDay,
+              consequence: `${w.name} may leave if you don't match the offer.`,
+              urgency: 'urgent',
+              postedDay: newDay,
+              timeoutDay: newDay + 3,
+              resolved: false,
+            });
+          }
+          return w;
+        });
+
+        // Weekly payroll
+        let workerPayrollDeducted = 0;
+        let finalWorkers = afterPoachingWorkers;
+        if (weeklyPayrollDue) {
+          workerPayrollDeducted = calcWeeklyPayroll(afterPoachingWorkers, state.consultant ?? null);
+          finalWorkers = afterPoachingWorkers.map(w => ({
+            ...w,
+            satisfaction: Math.min(100, w.satisfaction + 1),
+          }));
+        }
+
+        // Performance review reminders (every 180 days per worker)
+        const reviewRequests: WorkerRequest[] = finalWorkers
+          .filter(w => {
+            const lastReview = w.lastPerformanceReviewDay ?? w.hireDay;
+            return newDay - lastReview >= 180;
+          })
+          .filter(w => !(state.pendingRequests ?? []).some(r => r.workerId === w.id && r.type === 'performance_review'))
+          .map(w => ({
+            id: `req_review_${w.id}_${newDay}`,
+            workerId: w.id,
+            workerName: w.name,
+            workerIcon: WORKER_ROLE_CONFIG[w.role]?.icon ?? '👷',
+            type: 'performance_review' as const,
+            message: `${w.name} is due for a performance review.`,
+            urgency: 'routine' as const,
+            postedDay: newDay,
+            resolved: false,
+          }));
+
+        // Personal requests (throttled: 1 per worker at a time)
+        const personalRequests: WorkerRequest[] = [];
+        const busyWorkerIds = new Set([
+          ...(state.pendingRequests ?? []).map(r => r.workerId),
+          ...poachingRequests.map(r => r.workerId),
+          ...reviewRequests.map(r => r.workerId),
+        ]);
+        for (const w of finalWorkers) {
+          if (busyWorkerIds.has(w.id)) continue;
+          const icon = WORKER_ROLE_CONFIG[w.role]?.icon ?? '👷';
+          if (w.satisfaction < 60 && Math.random() < 0.01) {
+            personalRequests.push({
+              id: `req_payrise_${w.id}_${newDay}`,
+              workerId: w.id, workerName: w.name, workerIcon: icon,
+              type: 'pay_rise',
+              message: `${w.name} is asking for a pay rise from $${w.wagePerDay}/day.`,
+              cost: Math.round(w.wagePerDay * 0.15),
+              consequence: 'Satisfaction will drop if denied.',
+              urgency: 'routine',
+              postedDay: newDay,
+              resolved: false,
+            });
+            busyWorkerIds.add(w.id);
+          } else if (Math.random() < 0.003) {
+            personalRequests.push({
+              id: `req_timeoff_${w.id}_${newDay}`,
+              workerId: w.id, workerName: w.name, workerIcon: icon,
+              type: 'time_off',
+              message: `${w.name} is asking for 3 days off.`,
+              consequence: 'Tasks will be unmanned for 3 days.',
+              urgency: 'routine',
+              postedDay: newDay,
+              resolved: false,
+            });
+            busyWorkerIds.add(w.id);
+          } else if (w.isStudying && w.studyingCertId) {
+            const cert = w.certifications.find(c => c.id === w.studyingCertId);
+            if (cert && !cert.examFeePaid && Math.random() < 0.01) {
+              personalRequests.push({
+                id: `req_examfee_${w.id}_${newDay}`,
+                workerId: w.id, workerName: w.name, workerIcon: icon,
+                type: 'exam_fee',
+                message: `${w.name} is asking you to cover the exam fee for ${cert.name}.`,
+                cost: 400,
+                consequence: 'Certification will stall without the exam fee.',
+                urgency: 'routine',
+                postedDay: newDay,
+                resolved: false,
+              });
+              busyWorkerIds.add(w.id);
+            }
+          }
+        }
+
+        // Strike check
+        const avgSatisfaction = finalWorkers.length > 0
+          ? finalWorkers.reduce((s, w) => s + w.satisfaction, 0) / finalWorkers.length
+          : 100;
+        if (avgSatisfaction < 25 && finalWorkers.length >= 3) {
+          const strikeAlreadyPending = (state.pendingRequests ?? []).some(r => r.type === 'disagreement' && r.workerId === 'all');
+          if (!strikeAlreadyPending) {
+            personalRequests.push({
+              id: `req_strike_${newDay}`,
+              workerId: 'all',
+              workerName: 'All Staff',
+              workerIcon: '⚠️',
+              type: 'disagreement',
+              message: `Charlie: "The whole team is at breaking point — average satisfaction is ${Math.round(avgSatisfaction)}%. You need to act now."`,
+              consequence: 'All workers may strike. Farm operations will halt.',
+              urgency: 'urgent',
+              postedDay: newDay,
+              timeoutDay: newDay + 3,
+              resolved: false,
+            });
+          }
+        }
+
+        const allNewRequests = [...poachingRequests, ...reviewRequests, ...personalRequests];
+        const newPendingRequests = [...(state.pendingRequests ?? []), ...allNewRequests];
+
         // Machine + building maintenance
         const maintenanceCost = Math.round(getDailyMaintenance(state.machines, state.buildings) * workerBonuses.maintenanceMult);
         // Insurance premiums
@@ -1544,16 +1714,14 @@ export const useGameStore = create<GameState>()(
           return s + plan.premiumPerDay;
         }, 0);
         // Worker wages
-        const workerWages = (state.workers ?? []).reduce((s: number, w: Worker) => {
-          return s + (w.wagePerDay ?? 0);
-        }, 0);
+        const workerWages = weeklyPayrollDue ? workerPayrollDeducted : 0;
         const totalFixed = maintenanceCost + insurancePremium + workerWages;
         const moneyAfterMaintenance = state.money - totalFixed;
         if (maintenanceCost > 0 || insurancePremium > 0 || workerWages > 0) {
           const detail = [
             maintenanceCost > 0 && `${state.machines.length} machine${state.machines.length !== 1 ? 's' : ''} · ${state.buildings.length} building${state.buildings.length !== 1 ? 's' : ''}`,
             insurancePremium > 0 && `${activePolicies.length} active policy${activePolicies.length !== 1 ? 'ies' : ''} (-$${insurancePremium}/day)`,
-            workerWages > 0 && `${(state.workers ?? []).length} worker${(state.workers ?? []).length !== 1 ? 's' : ''} -$${workerWages}/day`,
+            workerWages > 0 && `${finalWorkers.length} worker${finalWorkers.length !== 1 ? 's' : ''} -$${workerWages}/week`,
           ].filter(Boolean).join(' · ');
           summary.push({
             id: 'maintenance',
@@ -2824,7 +2992,7 @@ export const useGameStore = create<GameState>()(
 
         // Worker auto-actions
         let vetTreatmentCost = 0;
-        const activeWorkers = state.workers ?? [];
+        const activeWorkers = finalWorkers;
         if (activeWorkers.length > 0) {
           const hasVet = activeWorkers.some((w: Worker) => w.role === 'veterinarian');
           const hasAnimalKeeper = activeWorkers.some((w: Worker) => w.role === 'livestock_hand');
@@ -4210,6 +4378,8 @@ export const useGameStore = create<GameState>()(
           } : {}),
           coopMemberships: updatedCoopMemberships,
           coopStates: updatedCoopStates,
+          workers: finalWorkers,
+          pendingRequests: newPendingRequests,
         });
       },
 
