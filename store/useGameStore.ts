@@ -3087,8 +3087,22 @@ export const useGameStore = create<GameState>()(
             (autoSellFinalInventory as any).__harvestedIds = newHarvestedIds;
           }
 
+          // Processing min-worker headcount check
+          const activeProcessingBuildings = state.buildings.filter(b => b.startsWith('bld_')).length;
+          const hasAnyWorkers = (state.workers ?? []).length > 0;
+          let processingEfficiency = 1.0;
+          if (activeProcessingBuildings > 0 && hasAnyWorkers) {
+            const processingStaff = finalWorkers.filter(
+              (w: Worker) => (w.role === 'processing_tech' || w.role === 'quality_controller') && !w.isInjured && !w.isOnLeave
+            ).length;
+            processingEfficiency = processingStaff === 0
+              ? 0
+              : Math.min(1, processingStaff / Math.max(1, activeProcessingBuildings));
+          }
+          const processingUnderManned = processingEfficiency === 0 && activeProcessingBuildings > 0 && hasAnyWorkers;
+
           // Supervisor auto-process: 1 batch of highest-stock recipe per day
-          if (workerBonuses.autoProcessEnabled) {
+          if (workerBonuses.autoProcessEnabled && !processingUnderManned) {
             const { PROCESSING_RECIPES: AUTO_RECIPES } = require('../data/processingTypes');
             const currentInventory = (autoSellFinalInventory as any).__workerInventory ?? autoSellFinalInventory;
             const currentAnimalInv = (animals as any).__newAnimalInventory ?? state.animalInventory;
@@ -3114,7 +3128,7 @@ export const useGameStore = create<GameState>()(
                 return curStock > prevStock ? cur : prev;
               });
 
-              const outputAmount = Math.round(best.outputAmount * workerBonuses.processingOutputMult);
+              const outputAmount = Math.round(best.outputAmount * workerBonuses.processingOutputMult * processingEfficiency);
 
               if (best.input.source === 'crop') {
                 (autoSellFinalInventory as any).__workerInventory = {
