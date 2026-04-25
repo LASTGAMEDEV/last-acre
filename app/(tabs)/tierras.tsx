@@ -146,7 +146,7 @@ function WaterParcelSection({ parcel }: { parcel: LandParcel }) {
   const { wells, aquiferLevel, assignHydrogeologist, connectParcel, disconnectParcel, workers } = useGameStore();
 
   const connectedWell = (wells ?? []).find(w => w.connectedParcelIds.includes(parcel.id) || w.parcelId === parcel.id);
-  const hasHydro = (workers ?? []).some(w => w.typeId === 'hydrogeologist');
+  const hasHydro = (workers ?? []).some(w => w.role === 'hydrogeologist');
   const busySurvey = (wells ?? []).some(w => w.status === 'surveying');
 
   const cardStyle = { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.sm };

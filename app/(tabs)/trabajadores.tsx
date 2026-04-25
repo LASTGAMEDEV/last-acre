@@ -1,208 +1,393 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { useGameStore, OwnedWorker } from '../../store/useGameStore';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'react-native';
+import { useGameStore } from '../../store/useGameStore';
+import type { Worker, WorkerRole, ContractType } from '../../data/workerTypes';
+import { WORKER_ROLE_CONFIG } from '../../data/workerTypes';
 import { C, S, F, R } from '../../constants/theme';
-import HintCard from '../../components/HintCard';
-import { WORKER_TYPES, WorkerType, WorkerRole } from '../../data/workerTypes';
+import SubTabBar from '../../components/SubTabBar';
 
-const DEPARTMENTS: { id: string; label: string; icon: string; basicId: WorkerRole; specialistId: WorkerRole }[] = [
-  { id: 'fields',      label: 'Fields',      icon: '🌾', basicId: 'field_worker',  specialistId: 'agronomist'     },
-  { id: 'animals',     label: 'Animals',     icon: '🐄', basicId: 'animal_keeper', specialistId: 'zootechnician'  },
-  { id: 'machinery',   label: 'Machinery',   icon: '⚙️', basicId: 'mechanic',      specialistId: 'engineer'       },
-  { id: 'processing',  label: 'Processing',  icon: '🏭', basicId: 'processor',     specialistId: 'supervisor'     },
-];
+type Tab = 'staff' | 'requests' | 'hire';
 
-const DEPT_ICONS: Record<string, string> = Object.fromEntries(DEPARTMENTS.map(d => [d.id, d.icon]));
+function satColor(sat: number) {
+  if (sat >= 70) return '#66bb6a';
+  if (sat >= 40) return '#ffa726';
+  return '#ef5350';
+}
 
-export default function TrabajadoresScreen() {
-  const { money, workers, day, hireWorker, fireWorker } = useGameStore();
-  const activeWorkers: OwnedWorker[] = workers ?? [];
+function tierLabel(tier: number) {
+  return ['', 'Junior', 'Mid', 'Senior', 'Expert'][tier] ?? '';
+}
 
-  const totalDailyWage = activeWorkers.reduce((s, w) => {
-    const wt = WORKER_TYPES.find(t => t.id === w.typeId);
-    return s + (wt?.dailyWage ?? 0);
-  }, 0);
+function SatBar({ value }: { value: number }) {
+  return (
+    <View style={sb.track}>
+      <View style={[sb.fill, { width: `${Math.round(value)}%` as any, backgroundColor: satColor(value) }]} />
+      <Text style={sb.label}>{Math.round(value)}%</Text>
+    </View>
+  );
+}
+const sb = StyleSheet.create({
+  track: { height: 8, backgroundColor: '#222', borderRadius: 4, overflow: 'hidden', flex: 1, marginRight: 6 },
+  fill: { height: '100%', borderRadius: 4 },
+  label: { color: '#888', fontSize: 10, minWidth: 28, textAlign: 'right' },
+});
 
-  function countOf(typeId: WorkerRole) {
-    return activeWorkers.filter(w => w.typeId === typeId).length;
-  }
+// ── Worker detail modal ───────────────────────────────────────────────────────
 
-  function isSpecialistLocked(wt: WorkerType): boolean {
-    if (!wt.requiresBasicId) return false;
-    return countOf(wt.requiresBasicId) === 0;
-  }
-
-  function renderCard(wt: WorkerType) {
-    const count = countOf(wt.id);
-    const atMax = count >= wt.maxCount;
-    const canAfford = money >= wt.dailyWage;
-    const locked = wt.tier === 'specialist' && isSpecialistLocked(wt);
-    const isSpecialist = wt.tier === 'specialist';
-
-    return (
-      <View key={wt.id} style={[styles.card, isSpecialist && styles.cardSpecialist, locked && styles.cardLocked]}>
-        <Text style={styles.cardIcon}>{wt.icon}</Text>
-        <Text style={[styles.cardName, isSpecialist && styles.cardNameSpecialist]}>{wt.name}</Text>
-        <Text style={styles.cardDesc}>{wt.description}</Text>
-        <Text style={styles.cardWage}>${wt.dailyWage}/day</Text>
-        {locked && (
-          <Text style={styles.lockNote}>
-            Requires 1 {WORKER_TYPES.find(t => t.id === wt.requiresBasicId)?.name}
-          </Text>
-        )}
-        <View style={styles.cardBottom}>
-          <Text style={styles.cardCount}>{count}/{wt.maxCount}</Text>
-          <TouchableOpacity
-            style={[styles.hireBtn, (atMax || !canAfford || locked) && styles.hireBtnDisabled]}
-            onPress={() => hireWorker(wt.id)}
-            disabled={atMax || !canAfford || locked}
-          >
-            <Text style={styles.hireBtnText}>
-              {atMax ? 'Max' : locked ? 'Locked' : !canAfford ? 'No funds' : '+ Hire'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  const vetType = WORKER_TYPES.find(t => t.id === 'vet')!;
-  const truckDriverType = WORKER_TYPES.find(t => t.id === 'truck_driver')!;
+function WorkerDetail({ worker, onClose }: { worker: Worker; onClose: () => void }) {
+  const { fireWorker, chooseBranch, startCertStudy } = useGameStore();
+  const cfg = WORKER_ROLE_CONFIG[worker.role];
+  const passedCertIds = worker.certifications.filter(c => c.passed).map(c => c.id);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.screenTitle}>Staff</Text>
-      {activeWorkers.length === 0 && (
-        <HintCard id="hint_workers" title="Hire workers to automate tasks" body="Field Workers harvest automatically, Animal Keepers collect daily production, and Agronomists boost crop yield. Each worker costs a daily wage deducted at midnight." />
-      )}
-
-      {totalDailyWage > 0 && (
-        <View style={styles.wageBanner}>
-          <Text style={styles.wageText}>
-            💼 {activeWorkers.length} staff · ${totalDailyWage}/day total wages
-          </Text>
+    <Modal visible animationType="slide" onRequestClose={onClose}>
+      <ScrollView style={wd.container}>
+        <View style={wd.header}>
+          <Text style={wd.title}>{cfg?.icon} {worker.name}</Text>
+          <TouchableOpacity onPress={onClose}><Text style={wd.close}>✕</Text></TouchableOpacity>
         </View>
-      )}
 
-      {/* Department sections */}
-      {DEPARTMENTS.map(dept => {
-        const basicType = WORKER_TYPES.find(t => t.id === dept.basicId)!;
-        const specialistType = WORKER_TYPES.find(t => t.id === dept.specialistId)!;
-        return (
-          <View key={dept.id} style={styles.deptSection}>
-            <Text style={styles.deptLabel}>{dept.icon} {dept.label}</Text>
-            <View style={styles.cardRow}>
-              {renderCard(basicType)}
-              {renderCard(specialistType)}
+        <Text style={st.sectionLabel}>Profile</Text>
+        <Text style={wd.row}>{cfg?.name} · {tierLabel(worker.tier)} · {worker.experienceYears.toFixed(1)} yrs exp</Text>
+        <Text style={wd.row}>{worker.nationality} · Age {worker.age} · {worker.contractType} · ${worker.wagePerDay}/day</Text>
+        {worker.personalityRevealed && (
+          <Text style={wd.row}>Ethics {worker.workEthic}% · Team {worker.teamPlayer}% · Stress thr. {worker.stressThreshold}%</Text>
+        )}
+        {worker.isInjured && <Text style={wd.warn}>🤕 Injured — recovering until day {worker.injuryRecoveryDay}</Text>}
+        {worker.isOnLeave && <Text style={wd.warn}>🏖️ On leave until day {worker.leaveReturnDay}</Text>}
+
+        <Text style={st.sectionLabel}>Satisfaction</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, marginBottom: 4 }}>
+          <SatBar value={worker.satisfaction} />
+        </View>
+        {worker.satisfaction < 30 && <Text style={wd.warn}>⚠️ Low satisfaction — quit risk</Text>}
+
+        <Text style={st.sectionLabel}>Skill Tree</Text>
+        {cfg?.skillTree.map(node => {
+          const unlocked = worker.unlockedNodeIds.includes(node.id);
+          const hasCert = node.certId ? passedCertIds.includes(node.certId) : false;
+          const studying = worker.studyingCertId === node.certId;
+          const canChooseBranch = node.tier === 3 && node.branchId && !worker.selectedBranch && worker.tier >= 3;
+          const canStudy = node.isCert && unlocked && !hasCert && !studying && node.certId;
+          return (
+            <View key={node.id} style={[wd.node, !unlocked && wd.nodeLocked]}>
+              <Text style={wd.nodeText}>T{node.tier} · {node.name}{hasCert ? ' ✅' : studying ? ' 📖' : ''}</Text>
+              {canStudy && (
+                <TouchableOpacity style={wd.smallBtn} onPress={() => startCertStudy(worker.id, node.certId!)}>
+                  <Text style={wd.smallBtnText}>Start studying</Text>
+                </TouchableOpacity>
+              )}
+              {canChooseBranch && (
+                <TouchableOpacity style={wd.smallBtn} onPress={() => chooseBranch(worker.id, node.branchId!)}>
+                  <Text style={wd.smallBtnText}>Choose branch</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          </View>
-        );
-      })}
+          );
+        })}
 
-      {/* Standalone: Vet */}
-      <View style={styles.deptSection}>
-        <Text style={styles.deptLabel}>🏥 Veterinary</Text>
-        <View style={styles.cardRow}>
-          {renderCard(vetType)}
-        </View>
+        <TouchableOpacity style={wd.fireBtn} onPress={() => { fireWorker(worker.id); onClose(); }}>
+          <Text style={wd.fireBtnText}>🔴 Fire {worker.name}</Text>
+        </TouchableOpacity>
+        <View style={{ height: 48 }} />
+      </ScrollView>
+    </Modal>
+  );
+}
+const wd = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: S.md, paddingTop: 48 },
+  title: { color: C.text, fontWeight: 'bold', fontSize: F.size.xl },
+  close: { color: '#aaa', fontSize: 18 },
+  row: { color: C.text, fontSize: F.size.sm, paddingHorizontal: S.md, paddingBottom: 3 },
+  warn: { color: '#ff7043', fontSize: 12, paddingHorizontal: S.md, marginTop: 2 },
+  node: { backgroundColor: '#1a2744', borderRadius: 8, padding: 8, marginHorizontal: S.md, marginBottom: 4 },
+  nodeLocked: { opacity: 0.35 },
+  nodeText: { color: C.text, fontSize: 13 },
+  smallBtn: { marginTop: 4, backgroundColor: '#1565c0', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start' },
+  smallBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  fireBtn: { backgroundColor: '#b71c1c', borderRadius: R.lg, padding: S.md, margin: S.md, alignItems: 'center' },
+  fireBtnText: { color: '#fff', fontWeight: 'bold', fontSize: F.size.md },
+});
+
+// ── Staff tab ─────────────────────────────────────────────────────────────────
+
+function StaffTab() {
+  const { workers, consultant, employerReputation } = useGameStore();
+  const [detail, setDetail] = useState<Worker | null>(null);
+  const list = workers ?? [];
+  const totalDaily = list.reduce((s, w) => s + w.wagePerDay, 0) + (consultant?.isHired ? (consultant.hireCostPerDay ?? 0) : 0);
+
+  return (
+    <ScrollView showsVerticalScrollIndicator={false}>
+      <View style={st.section}>
+        <Text style={st.stat}>👥 {list.length} staff · ${totalDaily}/day total</Text>
+        <Text style={st.stat}>⭐ Employer reputation: {employerReputation ?? 50}/100</Text>
       </View>
 
-      {/* Transport department */}
-      {truckDriverType && (
-        <View style={styles.deptSection}>
-          <Text style={styles.deptLabel}>🚛 Transport</Text>
-          <View style={styles.cardRow}>
-            {renderCard(truckDriverType)}
+      {consultant?.isHired && (
+        <View style={st.section}>
+          <Text style={st.sectionLabel}>🎩 Consultant</Text>
+          <View style={st.card}>
+            <Text style={st.cardName}>🤵 {consultant.name}</Text>
+            <Text style={st.cardSub}>Farm Consultant · ${consultant.hireCostPerDay}/day</Text>
+            <Text style={st.cardSub}>Relationship {consultant.relationshipScore}/100 · Autonomy {consultant.autonomyLevel}/100</Text>
           </View>
         </View>
       )}
 
-      {/* Water department */}
-      {(() => {
-        const hydroType = WORKER_TYPES.find(t => t.id === 'hydrogeologist');
-        if (!hydroType) return null;
-        return (
-          <View style={styles.deptSection}>
-            <Text style={styles.deptLabel}>💧 Water</Text>
-            <View style={styles.cardRow}>
-              {renderCard(hydroType)}
-            </View>
-          </View>
-        );
-      })()}
-
-      {/* Active staff */}
-      <Text style={styles.sectionLabel}>Active Staff ({activeWorkers.length})</Text>
-      {activeWorkers.length === 0 ? (
-        <Text style={styles.empty}>No staff hired yet.</Text>
-      ) : (
-        <View style={styles.staffList}>
-          {activeWorkers.map((worker: OwnedWorker) => {
-            const wt = WORKER_TYPES.find(t => t.id === worker.typeId);
-            if (!wt) return null;
-            const daysEmployed = day - worker.hiredDay;
-            const deptIcon = wt.department ? DEPT_ICONS[wt.department] : '🏥';
+      <Text style={st.sectionLabel}>Active Staff ({list.length})</Text>
+      {list.length === 0
+        ? <Text style={st.empty}>No staff hired. Use the Hire tab to post vacancies.</Text>
+        : list.map(w => {
+            const cfg = WORKER_ROLE_CONFIG[w.role];
             return (
-              <View key={worker.id} style={styles.staffCard}>
-                <Text style={styles.staffIcon}>{wt.icon}</Text>
-                <View style={styles.staffInfo}>
-                  <Text style={styles.staffName}>{deptIcon} {wt.name}</Text>
-                  <Text style={styles.staffDays}>Hired {daysEmployed}d ago · ${wt.dailyWage}/day</Text>
+              <TouchableOpacity key={w.id} style={st.card} onPress={() => setDetail(w)}>
+                <View style={st.cardRow}>
+                  <Text style={st.cardIcon}>{cfg?.icon ?? '👷'}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={st.cardName}>
+                      {w.name}{w.isInjured ? ' 🤕' : ''}{w.isOnLeave ? ' 🏖️' : ''}{w.isStudying ? ' 📖' : ''}
+                    </Text>
+                    <Text style={st.cardSub}>{cfg?.name} · {tierLabel(w.tier)} · ${w.wagePerDay}/day · {w.contractType}</Text>
+                  </View>
                 </View>
-                <TouchableOpacity style={styles.fireBtn} onPress={() => fireWorker(worker.id)}>
-                  <Text style={styles.fireBtnText}>Fire</Text>
-                </TouchableOpacity>
-              </View>
+                <View style={[st.cardRow, { marginTop: 6 }]}>
+                  <SatBar value={w.satisfaction} />
+                </View>
+              </TouchableOpacity>
             );
-          })}
-        </View>
-      )}
+          })
+      }
+      {detail && <WorkerDetail worker={detail} onClose={() => setDetail(null)} />}
       <View style={{ height: 32 }} />
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container:         { flex: 1, backgroundColor: C.bg },
-  screenTitle: {
-    color: C.text,
-    fontSize: F.size.xl,
-    fontWeight: F.weight.bold,
-    paddingHorizontal: S.md,
-    paddingTop: S.sm,
-    paddingBottom: S.xs,
-  },
-  sectionLabel:      { color: C.textMuted, fontSize: F.size.md, paddingHorizontal: S.lg, marginTop: S.lg, marginBottom: 6 },
-  empty:             { color: '#555', padding: S.lg },
+// ── Requests tab ──────────────────────────────────────────────────────────────
 
-  wageBanner:        { backgroundColor: '#1e2a3a', marginHorizontal: S.md, marginTop: S.sm, borderRadius: 10, padding: 10 },
-  wageText:          { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+function RequestsTab() {
+  const { pendingRequests, requestLog, approveRequest, denyRequest } = useGameStore();
+  const pending = pendingRequests ?? [];
+  const log = requestLog ?? [];
+  const [showLog, setShowLog] = useState(false);
 
-  deptSection:       { marginTop: S.lg, paddingHorizontal: S.sm },
-  deptLabel:         { color: '#aaa', fontSize: F.size.md, fontWeight: 'bold', marginBottom: S.sm, paddingHorizontal: S.xs },
+  if (pending.length === 0 && log.length === 0) {
+    return <View style={st.section}><Text style={st.empty}>No pending requests. Charlie is handling things.</Text></View>;
+  }
 
-  cardRow:           { flexDirection: 'row', gap: 8 },
-  card:              { flex: 1, backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md },
-  cardSpecialist:    { backgroundColor: '#1a2744', borderWidth: 1, borderColor: '#2d4a8a' },
-  cardLocked:        { opacity: 0.55 },
-  cardIcon:          { fontSize: 26, marginBottom: S.xs },
-  cardName:          { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: 2 },
-  cardNameSpecialist:{ color: '#7eb8f7' },
-  cardDesc:          { color: C.textMuted, fontSize: 11, marginBottom: S.xs, lineHeight: 15 },
-  cardWage:          { color: '#81c784', fontWeight: 'bold', fontSize: F.size.sm, marginBottom: S.xs },
-  lockNote:          { color: C.textFaint, fontSize: F.size.xs, fontStyle: 'italic', marginBottom: S.xs },
-  cardBottom:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: S.xs },
-  cardCount:         { color: C.textFaint, fontSize: 11 },
-  hireBtn:           { backgroundColor: '#1565c0', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 5 },
-  hireBtnDisabled:   { backgroundColor: '#333' },
-  hireBtnText:       { color: C.white, fontWeight: 'bold', fontSize: 11 },
+  return (
+    <ScrollView showsVerticalScrollIndicator={false}>
+      <Text style={st.sectionLabel}>Needs Your Decision ({pending.length})</Text>
+      {pending.map(req => (
+        <View key={req.id} style={rq.card}>
+          <View style={rq.row}>
+            <Text style={rq.icon}>{req.workerIcon}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={rq.name}>{req.workerName}</Text>
+              {req.urgency === 'urgent' && <Text style={rq.urgent}>⚡ URGENT</Text>}
+            </View>
+          </View>
+          <Text style={rq.msg}>{req.message}</Text>
+          {req.cost != null && <Text style={rq.cost}>Cost: ${req.cost}</Text>}
+          {req.consequence && <Text style={rq.consequence}>If denied: {req.consequence}</Text>}
+          <View style={rq.btns}>
+            <TouchableOpacity style={rq.approve} onPress={() => approveRequest(req.id)}>
+              <Text style={rq.btnText}>✓ Approve</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={rq.deny} onPress={() => denyRequest(req.id)}>
+              <Text style={rq.btnText}>✕ Deny</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+      <TouchableOpacity style={st.section} onPress={() => setShowLog(!showLog)}>
+        <Text style={st.sectionLabel}>Charlie Handled ({log.length}) {showLog ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+      {showLog && log.map(req => (
+        <View key={req.id} style={[rq.card, { opacity: 0.55 }]}>
+          <Text style={rq.msg}>{req.workerName}: {req.message}</Text>
+          <Text style={{ color: '#888', fontSize: 11 }}>→ {req.resolution}</Text>
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+const rq = StyleSheet.create({
+  card: { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.sm, marginHorizontal: S.md },
+  row: { flexDirection: 'row', alignItems: 'center', marginBottom: S.xs },
+  icon: { fontSize: 22, marginRight: S.sm },
+  name: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  urgent: { color: '#ff7043', fontWeight: 'bold', fontSize: 11 },
+  msg: { color: C.text, fontSize: F.size.sm, marginBottom: S.xs },
+  cost: { color: '#ef9a9a', fontSize: 12 },
+  consequence: { color: '#ffcc80', fontSize: 11, fontStyle: 'italic' },
+  btns: { flexDirection: 'row', gap: 8, marginTop: S.sm },
+  approve: { flex: 1, backgroundColor: '#2e7d32', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
+  deny: { flex: 1, backgroundColor: '#b71c1c', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
+  btnText: { color: '#fff', fontWeight: 'bold', fontSize: F.size.sm },
+});
 
-  staffList:         { paddingHorizontal: S.md },
-  staffCard:         { flexDirection: 'row', alignItems: 'center', backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginBottom: S.sm },
-  staffIcon:         { fontSize: F.size.title, marginRight: S.md },
-  staffInfo:         { flex: 1 },
-  staffName:         { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
-  staffDays:         { color: C.textMuted, fontSize: 11, marginTop: 2 },
-  fireBtn:           { backgroundColor: '#b71c1c', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6 },
-  fireBtnText:       { color: C.white, fontWeight: 'bold', fontSize: F.size.sm },
+// ── Hire tab ──────────────────────────────────────────────────────────────────
+
+function HireTab() {
+  const { jobPostings, postVacancy, closePosting, hireApplicant, day } = useGameStore();
+  const [selectedRole, setSelectedRole] = useState<WorkerRole | null>(null);
+  const [selectedContract, setSelectedContract] = useState<ContractType>('permanent');
+  const [offeredWage, setOfferedWage] = useState(100);
+  const openPostings = (jobPostings ?? []).filter(p => !p.closed);
+  const allRoles = Object.keys(WORKER_ROLE_CONFIG) as WorkerRole[];
+
+  return (
+    <ScrollView showsVerticalScrollIndicator={false}>
+      <Text style={st.sectionLabel}>Post a Vacancy</Text>
+      <View style={st.section}>
+        <Text style={st.label}>Role</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: S.sm }}>
+          {allRoles.map(role => {
+            const cfg = WORKER_ROLE_CONFIG[role];
+            return (
+              <TouchableOpacity
+                key={role}
+                style={[hr.chip, selectedRole === role && hr.chipSelected]}
+                onPress={() => {
+                  setSelectedRole(role);
+                  const [wMin, wMax] = cfg.wageRangeJunior;
+                  setOfferedWage(Math.round((wMin + wMax) / 2));
+                }}
+              >
+                <Text style={hr.chipText}>{cfg.icon} {cfg.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        <Text style={st.label}>Contract type</Text>
+        <View style={hr.contractRow}>
+          {(['permanent', 'seasonal', 'casual'] as ContractType[]).map(ct => (
+            <TouchableOpacity
+              key={ct}
+              style={[hr.contractChip, selectedContract === ct && hr.chipSelected]}
+              onPress={() => setSelectedContract(ct)}
+            >
+              <Text style={hr.chipText}>{ct}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={st.label}>Offered wage: ${offeredWage}/day</Text>
+        <View style={hr.wageRow}>
+          <TouchableOpacity style={hr.wageBtn} onPress={() => setOfferedWage(w => Math.max(20, w - 10))}>
+            <Text style={hr.wageBtnText}>−10</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={hr.wageBtn} onPress={() => setOfferedWage(w => w + 10)}>
+            <Text style={hr.wageBtnText}>+10</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={[hr.postBtn, !selectedRole && hr.postBtnDisabled]}
+          disabled={!selectedRole}
+          onPress={() => { if (selectedRole) { postVacancy(selectedRole, selectedContract, offeredWage); setSelectedRole(null); } }}
+        >
+          <Text style={hr.postBtnText}>Post Vacancy</Text>
+        </TouchableOpacity>
+      </View>
+
+      {openPostings.length > 0 && (
+        <>
+          <Text style={st.sectionLabel}>Open Postings</Text>
+          {openPostings.map(posting => {
+            const cfg = WORKER_ROLE_CONFIG[posting.role];
+            const ready = posting.applicants.length > 0 &&
+              (posting.applicantsGeneratedDay == null || day >= posting.applicantsGeneratedDay);
+            return (
+              <View key={posting.id} style={st.card}>
+                <Text style={st.cardName}>{cfg?.icon} {cfg?.name} — ${posting.offeredWagePerDay}/day · {posting.contractType}</Text>
+                <Text style={st.cardSub}>Posted day {posting.postedDay}</Text>
+                {!ready
+                  ? <Text style={st.cardSub}>⏳ Waiting for applicants…</Text>
+                  : posting.applicants.length === 0
+                  ? <Text style={st.cardSub}>No applicants this round.</Text>
+                  : posting.applicants.map(applicant => (
+                      <View key={applicant.id} style={hr.applicantRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={st.cardName}>{applicant.name}</Text>
+                          <Text style={st.cardSub}>{applicant.nationality} · {applicant.age}yr · {applicant.experienceYears}yr exp · ${applicant.askingWagePerDay}/day</Text>
+                          {applicant.certificationIds.length > 0 && <Text style={st.cardSub}>Certs: {applicant.certificationIds.join(', ')}</Text>}
+                          {applicant.personalityHints.map((h, i) => <Text key={i} style={st.cardSub}>💬 {h}</Text>)}
+                        </View>
+                        <TouchableOpacity style={hr.hireBtn} onPress={() => hireApplicant(posting.id, applicant.id)}>
+                          <Text style={hr.hireBtnText}>Hire</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))
+                }
+                <TouchableOpacity onPress={() => closePosting(posting.id)}>
+                  <Text style={[st.cardSub, { color: '#ef9a9a', marginTop: S.xs }]}>Cancel posting</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </>
+      )}
+      <View style={{ height: 32 }} />
+    </ScrollView>
+  );
+}
+const hr = StyleSheet.create({
+  chip: { backgroundColor: '#1e2a3a', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6, marginRight: 6 },
+  chipSelected: { backgroundColor: '#1565c0' },
+  chipText: { color: C.text, fontSize: 12 },
+  contractRow: { flexDirection: 'row', gap: 8, marginBottom: S.sm },
+  contractChip: { flex: 1, backgroundColor: '#1e2a3a', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
+  wageRow: { flexDirection: 'row', gap: 8, marginBottom: S.sm },
+  wageBtn: { backgroundColor: '#1e2a3a', borderRadius: R.md, paddingHorizontal: 16, paddingVertical: 8 },
+  wageBtnText: { color: C.text, fontWeight: 'bold' },
+  postBtn: { backgroundColor: '#1565c0', borderRadius: R.md, padding: S.sm, alignItems: 'center', marginTop: S.sm },
+  postBtnDisabled: { backgroundColor: '#333' },
+  postBtnText: { color: '#fff', fontWeight: 'bold' },
+  applicantRow: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#0d1a2a', borderRadius: 8, padding: S.sm, marginBottom: 4, marginTop: 4 },
+  hireBtn: { backgroundColor: '#1565c0', borderRadius: R.md, paddingHorizontal: 12, paddingVertical: 8, marginLeft: S.sm, alignSelf: 'flex-start' },
+  hireBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+});
+
+// ── Main screen ───────────────────────────────────────────────────────────────
+
+export default function TrabajadoresScreen() {
+  const [tab, setTab] = useState<Tab>('staff');
+  const { pendingRequests } = useGameStore();
+  const reqCount = (pendingRequests ?? []).length;
+
+  const tabs = [
+    { id: 'staff', label: 'Staff' },
+    { id: 'requests', label: reqCount > 0 ? `Requests (${reqCount})` : 'Requests' },
+    { id: 'hire', label: 'Hire' },
+  ];
+
+  return (
+    <View style={st.container}>
+      <SubTabBar tabs={tabs} active={tab} onSelect={(t: string) => setTab(t as Tab)} />
+      <View style={{ flex: 1 }}>
+        {tab === 'staff' && <StaffTab />}
+        {tab === 'requests' && <RequestsTab />}
+        {tab === 'hire' && <HireTab />}
+      </View>
+    </View>
+  );
+}
+
+const st = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
+  section: { paddingHorizontal: S.md, paddingTop: S.sm },
+  sectionLabel: { color: '#aaa', fontSize: F.size.md, fontWeight: 'bold', paddingHorizontal: S.md, paddingTop: S.lg, paddingBottom: 6 },
+  stat: { color: C.text, fontSize: F.size.sm, paddingBottom: 4 },
+  empty: { color: '#555', padding: S.lg },
+  label: { color: '#aaa', fontSize: 12, marginBottom: 4 },
+  card: { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.sm, marginHorizontal: S.md },
+  cardRow: { flexDirection: 'row', alignItems: 'center' },
+  cardIcon: { fontSize: 26, marginRight: S.md },
+  cardName: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  cardSub: { color: '#888', fontSize: 11, marginTop: 1 },
 });

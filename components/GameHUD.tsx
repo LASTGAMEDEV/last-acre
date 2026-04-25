@@ -5,7 +5,6 @@ import { useGameStore } from '../store/useGameStore';
 import { getSeason, WeatherEvent } from '../engine/climate';
 import { SEASON_THEME, C, S, F, R, MIN_TOUCH } from '../constants/theme';
 import { playSound } from '../engine/sounds';
-import { WORKER_TYPES } from '../data/workerTypes';
 import { MACHINE_TYPES } from '../data/machineTypes';
 import { BUILDING_TYPES } from '../data/buildingTypes';
 import type { CoopId } from '../engine/cooperativeTypes';
@@ -56,8 +55,7 @@ export default function GameHUD() {
     return s + (t?.maintenancePerDay ?? 0);
   }, 0);
   const dailyWages = (workers ?? []).reduce((sum, w) => {
-    const def = WORKER_TYPES.find(t => t.id === w.typeId);
-    return sum + (def?.dailyWage ?? 0);
+    return sum + (w.wagePerDay ?? 0);
   }, 0);
   const dailyBurn = Math.round(dailyWages + machineMaint + buildingMaint);
 

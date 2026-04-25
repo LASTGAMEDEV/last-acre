@@ -46,7 +46,17 @@ import { MILESTONES, checkNewMilestones, MILESTONE_REWARDS } from '../data/miles
 import { sellRevenue, SellPressure, computeSellPressureModifier, sellPressureDuration } from '../engine/market';
 import { getSeason, generateForecast, applyDailyWeather } from '../engine/climate';
 import { ENCLOSURE_BUILDINGS } from '../constants/enclosures';
-import { WorkerRole, WorkerType as WorkerTypeDef } from '../data/workerTypes';
+import {
+  Worker, WorkerRole, WorkerRequest, WorkerJobPosting, Consultant,
+  ContractType, WORKER_ROLE_CONFIG,
+} from '../data/workerTypes';
+import {
+  getWorkerBonuses, createDefaultConsultant, tickWorker,
+  calcWeeklyPayroll, rollInjury, rollPoaching, generateApplicants,
+  createWorkerFromApplicant, applyPayRiseApproved, applyPayRiseDenied,
+  applyTimeOffApproved, applyExamFeeApproved, applicantCountForSeason,
+  calcUnlockedNodes, WorkerBonuses,
+} from '../engine/workers';
 import { GameEventType } from '../data/randomEvents';
 import { rollEvent, calcRepairCost, calcRepairDays, getHarvestModifier } from '../engine/events';
 import { NPCFarmRuntime, initNpcFarms, npcSellVolume, npcAuctionBid } from '../engine/competitors';
@@ -176,11 +186,8 @@ export interface LandParcel {
   diseasedDay?: number; // day disease started; crop dies after 20 days untreated
 }
 
-export interface OwnedWorker {
-  id: string;
-  typeId: WorkerRole;
-  hiredDay: number;
-}
+export type OwnedWorker = Worker;
+export type { Worker };
 
 // ── Animal Shows ─────────────────────────────────────────────────────────────
 export interface ShowEntry {
@@ -564,7 +571,12 @@ export interface GameState {
   reputation: number;
   autoSell: Record<string, { enabled: boolean; minPrice: number }>;
   prestige: number;
-  workers: OwnedWorker[];
+  workers: Worker[];
+  consultant: Consultant | null;
+  pendingRequests: WorkerRequest[];
+  requestLog: WorkerRequest[];
+  jobPostings: WorkerJobPosting[];
+  employerReputation: number;
   bankrupt: boolean;
   sellPressures: { cropId: string; modifier: number; expiresDay: number }[];
   breedingPairs: Record<string, string>; // femaleId → preferred maleId
@@ -770,6 +782,15 @@ export interface GameState {
   startNewSeason: () => void;
   hireWorker: (typeId: WorkerRole) => void;
   fireWorker: (workerId: string) => void;
+  postVacancy: (role: WorkerRole, contractType: ContractType, offeredWage: number) => void;
+  closePosting: (postingId: string) => void;
+  hireApplicant: (postingId: string, applicantId: string) => void;
+  approveRequest: (requestId: string) => void;
+  denyRequest: (requestId: string) => void;
+  chooseBranch: (workerId: string, branchId: string) => void;
+  startCertStudy: (workerId: string, certId: string) => void;
+  setWorkerNightShift: (workerId: string, enabled: boolean) => void;
+  hireConsultant: () => void;
   installIrrigation: (parcelId: string) => void;
   renegotiateLoan: (loanId: string, extraDays: 30 | 60 | 90) => void;
   takeBankruptcyLoan: () => void;
@@ -1024,7 +1045,12 @@ function makeInitialState() {
     reputation: 50,
     autoSell: {} as Record<string, { enabled: boolean; minPrice: number }>,
     prestige: 0,
-    workers: [] as OwnedWorker[],
+    workers: [] as Worker[],
+    consultant: createDefaultConsultant(),
+    pendingRequests: [] as WorkerRequest[],
+    requestLog: [] as WorkerRequest[],
+    jobPostings: [] as WorkerJobPosting[],
+    employerReputation: 50,
     bankrupt: false,
     sellPressures: [] as { cropId: string; modifier: number; expiresDay: number }[],
     breedingPairs: {} as Record<string, string>,
@@ -1091,34 +1117,6 @@ function makeInitialState() {
   };
 }
 
-function getWorkerBonuses(workers: OwnedWorker[]) {
-  const fieldWorkerCount = workers.filter(w => w.typeId === 'field_worker').length;
-  const agronomistCount  = workers.filter(w => w.typeId === 'agronomist').length;
-  const botanistCount    = workers.filter(w => w.typeId === 'botanist').length;
-  const keeperCount      = workers.filter(w => w.typeId === 'animal_keeper').length;
-  const zootechCount     = workers.filter(w => w.typeId === 'zootechnician').length;
-  const mechanicCount    = workers.filter(w => w.typeId === 'mechanic').length;
-  const engineerCount    = workers.filter(w => w.typeId === 'engineer').length;
-  const processorCount   = workers.filter(w => w.typeId === 'processor').length;
-  const supervisorCount  = workers.filter(w => w.typeId === 'supervisor').length;
-
-  return {
-    // Fields
-    cropYieldMultiplier:    1 + (fieldWorkerCount * 0.05) + (agronomistCount * 0.15),
-    cropGrowthReduction:    agronomistCount > 0 ? 1 : 0,
-    fertilityDrainMult:     botanistCount > 0 ? 0.5 : 1.0,      // Botanist: −50% fertility drain
-    fallowRestoreInterval:  botanistCount > 0 ? 15 : 30,         // Botanist: fallow recovers 2× faster
-    // Animals
-    animalProductionMult:   1 + (keeperCount * 0.08) + (zootechCount * 0.25),
-    sicknessBonusReduction: zootechCount > 0 ? 0.3 : 0,
-    // Machinery
-    maintenanceMult:        engineerCount > 0 ? 0.6 : Math.max(0.6, 1 - mechanicCount * 0.2),
-    machineYieldBonus:      engineerCount > 0 ? 0.1 : 0,
-    // Processing
-    processingOutputMult:   1 + (processorCount * 0.10) + (supervisorCount * 0.25),
-    autoProcessEnabled:     supervisorCount > 0,
-  };
-}
 
 const COVER_CROP_BENEFITS: Record<string, {
   nitrogen?: number;
@@ -1532,6 +1530,176 @@ export const useGameStore = create<GameState>()(
           priceHistory[p.cropId] = [...prev, p.price].slice(-90);
         }
 
+        // ── Workers daily tick ──────────────────────────────────────────────
+        const tickedWorkers = (state.workers ?? []).map(w => tickWorker(w, newDay));
+
+        // Weekly satisfaction pressure
+        const weeklyPayrollDue = newDay % 7 === 0;
+        const weeklyTickedWorkers = weeklyPayrollDue
+          ? tickedWorkers.map(w => {
+              let sat = w.satisfaction;
+              const hist = [...w.satisfactionHistory];
+              if (w.nightShift) {
+                const seniorWage = WORKER_ROLE_CONFIG[w.role]?.wageRangeSenior[0] ?? 100;
+                if (w.wagePerDay < Math.round(seniorWage * 1.25)) {
+                  sat -= 5;
+                  hist.push({ day: newDay, delta: -5, reason: 'Night shift without premium' });
+                }
+              }
+              if (!w.pinnedAssetId && (w.role === 'tractor_operator' || w.role === 'combine_operator')) {
+                sat -= 2;
+                hist.push({ day: newDay, delta: -2, reason: 'Underutilized' });
+              }
+              sat = Math.max(0, Math.min(100, sat));
+              return { ...w, satisfaction: sat, satisfactionHistory: hist.slice(-30) };
+            })
+          : tickedWorkers;
+
+        // Injury rolls
+        const injuredWorkers = weeklyTickedWorkers.map(w => {
+          if (w.isInjured || w.isOnLeave) return w;
+          const hasMechanic = weeklyTickedWorkers.some(x => x.role === 'farm_mechanic' && !x.isInjured);
+          if (rollInjury(w, hasMechanic)) {
+            const recoveryDays = Math.floor(Math.random() * 18) + 3;
+            return { ...w, isInjured: true, injuryRecoveryDay: newDay + recoveryDays, satisfaction: Math.max(0, w.satisfaction - 15) };
+          }
+          return w;
+        });
+
+        // Poaching rolls
+        const poachingRequests: WorkerRequest[] = [];
+        const employerRep = state.employerReputation ?? 50;
+        const afterPoachingWorkers = injuredWorkers.map(w => {
+          const { poached, offerWage } = rollPoaching(w, employerRep);
+          if (poached) {
+            poachingRequests.push({
+              id: `req_poach_${w.id}_${newDay}`,
+              workerId: w.id,
+              workerName: w.name,
+              workerIcon: WORKER_ROLE_CONFIG[w.role]?.icon ?? '👷',
+              type: 'poaching_alert',
+              message: `${w.name} has been approached by a competitor farm offering $${offerWage}/day.`,
+              cost: offerWage - w.wagePerDay,
+              consequence: `${w.name} may leave if you don't match the offer.`,
+              urgency: 'urgent',
+              postedDay: newDay,
+              timeoutDay: newDay + 3,
+              resolved: false,
+            });
+          }
+          return w;
+        });
+
+        // Weekly payroll
+        let workerPayrollDeducted = 0;
+        let finalWorkers = afterPoachingWorkers;
+        if (weeklyPayrollDue) {
+          workerPayrollDeducted = calcWeeklyPayroll(afterPoachingWorkers, state.consultant ?? null);
+          finalWorkers = afterPoachingWorkers.map(w => ({
+            ...w,
+            satisfaction: Math.min(100, w.satisfaction + 1),
+          }));
+        }
+
+        // Performance review reminders (every 180 days per worker)
+        const reviewRequests: WorkerRequest[] = finalWorkers
+          .filter(w => {
+            const lastReview = w.lastPerformanceReviewDay ?? w.hireDay;
+            return newDay - lastReview >= 180;
+          })
+          .filter(w => !(state.pendingRequests ?? []).some(r => r.workerId === w.id && r.type === 'performance_review'))
+          .map(w => ({
+            id: `req_review_${w.id}_${newDay}`,
+            workerId: w.id,
+            workerName: w.name,
+            workerIcon: WORKER_ROLE_CONFIG[w.role]?.icon ?? '👷',
+            type: 'performance_review' as const,
+            message: `${w.name} is due for a performance review.`,
+            urgency: 'routine' as const,
+            postedDay: newDay,
+            resolved: false,
+          }));
+
+        // Personal requests (throttled: 1 per worker at a time)
+        const personalRequests: WorkerRequest[] = [];
+        const busyWorkerIds = new Set([
+          ...(state.pendingRequests ?? []).map(r => r.workerId),
+          ...poachingRequests.map(r => r.workerId),
+          ...reviewRequests.map(r => r.workerId),
+        ]);
+        for (const w of finalWorkers) {
+          if (busyWorkerIds.has(w.id)) continue;
+          const icon = WORKER_ROLE_CONFIG[w.role]?.icon ?? '👷';
+          if (w.satisfaction < 60 && Math.random() < 0.01) {
+            personalRequests.push({
+              id: `req_payrise_${w.id}_${newDay}`,
+              workerId: w.id, workerName: w.name, workerIcon: icon,
+              type: 'pay_rise',
+              message: `${w.name} is asking for a pay rise from $${w.wagePerDay}/day.`,
+              cost: Math.round(w.wagePerDay * 0.15),
+              consequence: 'Satisfaction will drop if denied.',
+              urgency: 'routine',
+              postedDay: newDay,
+              resolved: false,
+            });
+            busyWorkerIds.add(w.id);
+          } else if (Math.random() < 0.003) {
+            personalRequests.push({
+              id: `req_timeoff_${w.id}_${newDay}`,
+              workerId: w.id, workerName: w.name, workerIcon: icon,
+              type: 'time_off',
+              message: `${w.name} is asking for 3 days off.`,
+              consequence: 'Tasks will be unmanned for 3 days.',
+              urgency: 'routine',
+              postedDay: newDay,
+              resolved: false,
+            });
+            busyWorkerIds.add(w.id);
+          } else if (w.isStudying && w.studyingCertId) {
+            const cert = w.certifications.find(c => c.id === w.studyingCertId);
+            if (cert && !cert.examFeePaid && Math.random() < 0.01) {
+              personalRequests.push({
+                id: `req_examfee_${w.id}_${newDay}`,
+                workerId: w.id, workerName: w.name, workerIcon: icon,
+                type: 'exam_fee',
+                message: `${w.name} is asking you to cover the exam fee for ${cert.name}.`,
+                cost: 400,
+                consequence: 'Certification will stall without the exam fee.',
+                urgency: 'routine',
+                postedDay: newDay,
+                resolved: false,
+              });
+              busyWorkerIds.add(w.id);
+            }
+          }
+        }
+
+        // Strike check
+        const avgSatisfaction = finalWorkers.length > 0
+          ? finalWorkers.reduce((s, w) => s + w.satisfaction, 0) / finalWorkers.length
+          : 100;
+        if (avgSatisfaction < 25 && finalWorkers.length >= 3) {
+          const strikeAlreadyPending = (state.pendingRequests ?? []).some(r => r.type === 'disagreement' && r.workerId === 'all');
+          if (!strikeAlreadyPending) {
+            personalRequests.push({
+              id: `req_strike_${newDay}`,
+              workerId: 'all',
+              workerName: 'All Staff',
+              workerIcon: '⚠️',
+              type: 'disagreement',
+              message: `Charlie: "The whole team is at breaking point — average satisfaction is ${Math.round(avgSatisfaction)}%. You need to act now."`,
+              consequence: 'All workers may strike. Farm operations will halt.',
+              urgency: 'urgent',
+              postedDay: newDay,
+              timeoutDay: newDay + 3,
+              resolved: false,
+            });
+          }
+        }
+
+        const allNewRequests = [...poachingRequests, ...reviewRequests, ...personalRequests];
+        const newPendingRequests = [...(state.pendingRequests ?? []), ...allNewRequests];
+
         // Machine + building maintenance
         const maintenanceCost = Math.round(getDailyMaintenance(state.machines, state.buildings) * workerBonuses.maintenanceMult);
         // Insurance premiums
@@ -1546,18 +1714,14 @@ export const useGameStore = create<GameState>()(
           return s + plan.premiumPerDay;
         }, 0);
         // Worker wages
-        const { WORKER_TYPES } = require('../data/workerTypes');
-        const workerWages = (state.workers ?? []).reduce((s: number, w: OwnedWorker) => {
-          const wt = WORKER_TYPES.find((t: any) => t.id === w.typeId);
-          return s + (wt?.dailyWage ?? 0);
-        }, 0);
+        const workerWages = weeklyPayrollDue ? workerPayrollDeducted : 0;
         const totalFixed = maintenanceCost + insurancePremium + workerWages;
         const moneyAfterMaintenance = state.money - totalFixed;
         if (maintenanceCost > 0 || insurancePremium > 0 || workerWages > 0) {
           const detail = [
             maintenanceCost > 0 && `${state.machines.length} machine${state.machines.length !== 1 ? 's' : ''} · ${state.buildings.length} building${state.buildings.length !== 1 ? 's' : ''}`,
             insurancePremium > 0 && `${activePolicies.length} active policy${activePolicies.length !== 1 ? 'ies' : ''} (-$${insurancePremium}/day)`,
-            workerWages > 0 && `${(state.workers ?? []).length} worker${(state.workers ?? []).length !== 1 ? 's' : ''} -$${workerWages}/day`,
+            workerWages > 0 && `${finalWorkers.length} worker${finalWorkers.length !== 1 ? 's' : ''} -$${workerWages}/week`,
           ].filter(Boolean).join(' · ');
           summary.push({
             id: 'maintenance',
@@ -1953,7 +2117,7 @@ export const useGameStore = create<GameState>()(
         }
 
         // ── Sick bay auto-isolation ───────────────────────────────────────────
-        const hasVetWorker = (state.workers ?? []).some((w: OwnedWorker) => w.typeId === 'vet');
+        const hasVetWorker = (state.workers ?? []).some((w: Worker) => w.role === 'veterinarian');
         const sickBayCap = state.sickBayCapacity ?? 0;
 
         // Always clear isolation on healthy animals (handles case where sick bay is later removed)
@@ -2828,11 +2992,11 @@ export const useGameStore = create<GameState>()(
 
         // Worker auto-actions
         let vetTreatmentCost = 0;
-        const activeWorkers = state.workers ?? [];
+        const activeWorkers = finalWorkers;
         if (activeWorkers.length > 0) {
-          const hasVet = activeWorkers.some((w: OwnedWorker) => w.typeId === 'vet');
-          const hasAnimalKeeper = activeWorkers.some((w: OwnedWorker) => w.typeId === 'animal_keeper');
-          const hasFieldWorker = activeWorkers.some((w: OwnedWorker) => w.typeId === 'field_worker');
+          const hasVet = activeWorkers.some((w: Worker) => w.role === 'veterinarian');
+          const hasAnimalKeeper = activeWorkers.some((w: Worker) => w.role === 'livestock_hand');
+          const hasFieldWorker = activeWorkers.some((w: Worker) => w.role === 'field_hand');
 
           if (hasVet) {
             const { ANIMAL_TYPES: AT_VET } = require('../data/animalTypes');
@@ -2923,8 +3087,27 @@ export const useGameStore = create<GameState>()(
             (autoSellFinalInventory as any).__harvestedIds = newHarvestedIds;
           }
 
+          // Processing min-worker headcount check
+          const PROCESSING_BUILDING_IDS = new Set([
+            'bld_molino', 'bld_prensa', 'bld_lacteo', 'bld_procesadora', 'bld_bodega',
+          ]);
+          const activeProcessingBuildings = state.buildings.filter(
+            b => PROCESSING_BUILDING_IDS.has(b)
+          ).length;
+          const hasAnyWorkers = (state.workers ?? []).length > 0;
+          let processingEfficiency = 1.0;
+          if (activeProcessingBuildings > 0 && hasAnyWorkers) {
+            const processingStaff = finalWorkers.filter(
+              (w: Worker) => (w.role === 'processing_tech' || w.role === 'quality_controller') && !w.isInjured && !w.isOnLeave
+            ).length;
+            processingEfficiency = processingStaff === 0
+              ? 0
+              : Math.min(1, processingStaff / Math.max(1, activeProcessingBuildings));
+          }
+          const processingUnderManned = hasAnyWorkers && activeProcessingBuildings > 0 && processingEfficiency < 1;
+
           // Supervisor auto-process: 1 batch of highest-stock recipe per day
-          if (workerBonuses.autoProcessEnabled) {
+          if (workerBonuses.autoProcessEnabled && !processingUnderManned) {
             const { PROCESSING_RECIPES: AUTO_RECIPES } = require('../data/processingTypes');
             const currentInventory = (autoSellFinalInventory as any).__workerInventory ?? autoSellFinalInventory;
             const currentAnimalInv = (animals as any).__newAnimalInventory ?? state.animalInventory;
@@ -3141,7 +3324,7 @@ export const useGameStore = create<GameState>()(
 
         // ── Delivery job processing ───────────────────────────────────────────
         const hasMechanic = (state.workers ?? []).some(
-          (w: OwnedWorker) => w.typeId === 'mechanic' || w.typeId === 'engineer'
+          (w: Worker) => w.role === 'farm_mechanic'
         );
 
         let deliveryRevenue = 0;
@@ -3233,7 +3416,7 @@ export const useGameStore = create<GameState>()(
         // ── Crop disease spread ──────────────────────────────────────────────
         const hasShelter = state.buildings.includes('bld_shelter');
         const anyDisease = finalParcels.some(p => p.owned && p.diseased);
-        const fieldWorkerCount = (state.workers ?? []).filter(w => w.typeId === 'field_worker').length;
+        const fieldWorkerCount = (state.workers ?? []).filter(w => w.role === 'field_hand').length;
         let autoChemistryCures = fieldWorkerCount; // field workers cure 1 diseased parcel/day each
         finalParcels = finalParcels.map(p => {
           if (!p.owned) return p;
@@ -3354,7 +3537,7 @@ export const useGameStore = create<GameState>()(
           const { computeFeedNeeded, GRAIN_CROP_IDS: GRAIN_IDS } = require('../engine/animals');
           const { ANIMAL_TYPES: AT_FEED } = require('../data/animalTypes');
           const hasAnimalWorker = (state.workers ?? []).some(
-            (w: OwnedWorker) => w.typeId === 'animal_keeper' || w.typeId === 'zootechnician'
+            (w: Worker) => w.role === 'livestock_hand' || w.role === 'veterinarian'
           );
           const { grainKg: _rawGrainKg, hayKg, pigGrainKg: _rawPigGrainKg } = computeFeedNeeded(animals, AT_FEED, newDay);
           const hasFeedMill = (state.buildings ?? []).some(bid =>
@@ -3533,7 +3716,7 @@ export const useGameStore = create<GameState>()(
 
           // Hygiene decay
           const hasCleanerWorker = pb.assignedWorkerIds.some(wid =>
-            ((state.workers ?? []).find((w: OwnedWorker) => w.id === wid)?.typeId as string) === 'farmhand'
+            ((state.workers ?? []).find((w: Worker) => w.id === wid)?.role as string) === 'field_hand'
           );
           const hasUVSanitiser = pb.equipmentSlots.includes('eq_uv_sanitiser');
           const decay = hygieneDecay(pb.animalTypeId, herdSize, effCap, hasCleanerWorker, hasUVSanitiser);
@@ -4214,6 +4397,8 @@ export const useGameStore = create<GameState>()(
           } : {}),
           coopMemberships: updatedCoopMemberships,
           coopStates: updatedCoopStates,
+          workers: finalWorkers,
+          pendingRequests: newPendingRequests,
         });
       },
 
@@ -4506,7 +4691,7 @@ export const useGameStore = create<GameState>()(
         // Sets flag so advanceDay knows animals were fed today.
         const state = get();
         const hasAnimalWorker = (state.workers ?? []).some(
-          (w: OwnedWorker) => w.typeId === 'animal_keeper' || w.typeId === 'zootechnician'
+          (w: Worker) => w.role === 'livestock_hand' || w.role === 'veterinarian'
         );
         if (hasAnimalWorker) return; // worker handles it automatically
         set({ animalsManuallyFed: true });
@@ -6574,31 +6759,171 @@ export const useGameStore = create<GameState>()(
 
       hireWorker: (typeId) => {
         const state = get();
-        const { WORKER_TYPES: WT } = require('../data/workerTypes');
-        const workerType = WT.find((t: WorkerTypeDef) => t.id === typeId);
-        if (!workerType) return;
-
-        // Specialist unlock check
-        if (workerType.requiresBasicId) {
-          const hasBasic = (state.workers ?? []).some((w: OwnedWorker) => w.typeId === workerType.requiresBasicId);
-          if (!hasBasic) return;
-        }
-
-        const currentCount = (state.workers ?? []).filter((w: OwnedWorker) => w.typeId === typeId).length;
-        if (currentCount >= workerType.maxCount) return;
-        if (state.money < workerType.dailyWage) return;
-
-        const worker: OwnedWorker = { id: `worker_${Date.now()}`, typeId, hiredDay: state.day };
-        set({
-          money: state.money - workerType.dailyWage,
-          workers: [...(state.workers ?? []), worker],
-          firstMissionStep: state.firstMissionStep === 3 ? 4 : state.firstMissionStep,
-        });
+        const config = WORKER_ROLE_CONFIG[typeId];
+        if (!config) return;
+        const [wMin, wMax] = config.wageRangeJunior;
+        const worker: Worker = {
+          id: `worker_${Date.now()}`,
+          name: 'Unnamed Worker',
+          age: 25,
+          nationality: 'Irish',
+          role: typeId,
+          department: config.department,
+          experienceYears: 0,
+          tier: 1,
+          unlockedNodeIds: [],
+          certifications: [],
+          contractType: 'permanent',
+          wagePerDay: Math.round((wMin + wMax) / 2),
+          hireDay: state.day,
+          satisfaction: 70,
+          satisfactionHistory: [],
+          isInjured: false,
+          workEthic: 70,
+          teamPlayer: 70,
+          stressThreshold: 60,
+          personalityRevealed: false,
+          goodChemistryWith: [],
+          badChemistryWith: [],
+          chemistryCheckedWith: [],
+          isStudying: false,
+          isOnLeave: false,
+          nightShift: false,
+        };
+        set({ workers: [...(state.workers ?? []), worker] });
       },
 
       fireWorker: (workerId) => {
         const state = get();
-        set({ workers: (state.workers ?? []).filter((w: OwnedWorker) => w.id !== workerId) });
+        set({ workers: (state.workers ?? []).filter((w: Worker) => w.id !== workerId) });
+      },
+
+      postVacancy: (role, contractType, offeredWage) => {
+        const state = get();
+        const season = getSeason(state.day);
+        const count = applicantCountForSeason(season);
+        const applicants = count > 0 ? generateApplicants(role, season, count) : [];
+        const posting: WorkerJobPosting = {
+          id: `posting_${Date.now()}`,
+          role, contractType,
+          offeredWagePerDay: offeredWage,
+          postedDay: state.day,
+          applicants,
+          applicantsGeneratedDay: count > 0 ? state.day + Math.floor(Math.random() * 3) + 1 : undefined,
+          closed: false,
+        };
+        set({ jobPostings: [...(state.jobPostings ?? []), posting] });
+      },
+
+      closePosting: (postingId) => {
+        const state = get();
+        set({ jobPostings: (state.jobPostings ?? []).map(p => p.id === postingId ? { ...p, closed: true } : p) });
+      },
+
+      hireApplicant: (postingId, applicantId) => {
+        const state = get();
+        const posting = (state.jobPostings ?? []).find(p => p.id === postingId);
+        if (!posting) return;
+        const applicant = posting.applicants.find(a => a.id === applicantId);
+        if (!applicant) return;
+        const worker = createWorkerFromApplicant(applicant, posting.role, posting.contractType, state.day);
+        set({
+          workers: [...(state.workers ?? []), worker],
+          jobPostings: (state.jobPostings ?? []).map(p => p.id === postingId ? { ...p, closed: true } : p),
+          money: state.money - 200,
+        });
+      },
+
+      approveRequest: (requestId) => {
+        const state = get();
+        const req = (state.pendingRequests ?? []).find(r => r.id === requestId);
+        if (!req) return;
+        let workers = state.workers ?? [];
+        let money = state.money;
+        if (req.type === 'pay_rise') {
+          const worker = workers.find(w => w.id === req.workerId);
+          if (worker) {
+            const newWage = Math.round(worker.wagePerDay * 1.15);
+            workers = workers.map(w => w.id === req.workerId ? applyPayRiseApproved(w, newWage) : w);
+          }
+        } else if (req.type === 'time_off') {
+          workers = workers.map(w => w.id === req.workerId ? applyTimeOffApproved(w, state.day, 3) : w);
+        } else if (req.type === 'exam_fee') {
+          workers = workers.map(w => w.id === req.workerId ? applyExamFeeApproved(w) : w);
+          money -= req.cost ?? 400;
+        } else if (req.type === 'performance_review') {
+          workers = workers.map(w => w.id === req.workerId
+            ? { ...w, lastPerformanceReviewDay: state.day, satisfaction: Math.min(100, w.satisfaction + 8) }
+            : w);
+        }
+        const resolved: WorkerRequest = { ...req, resolved: true, resolution: 'approved' };
+        set({
+          workers,
+          money,
+          pendingRequests: (state.pendingRequests ?? []).filter(r => r.id !== requestId),
+          requestLog: [resolved, ...(state.requestLog ?? [])].slice(0, 50),
+        });
+      },
+
+      denyRequest: (requestId) => {
+        const state = get();
+        const req = (state.pendingRequests ?? []).find(r => r.id === requestId);
+        if (!req) return;
+        let workers = state.workers ?? [];
+        if (req.type === 'pay_rise') {
+          workers = workers.map(w => w.id === req.workerId ? applyPayRiseDenied(w) : w);
+        }
+        const resolved: WorkerRequest = { ...req, resolved: true, resolution: 'denied' };
+        set({
+          workers,
+          pendingRequests: (state.pendingRequests ?? []).filter(r => r.id !== requestId),
+          requestLog: [resolved, ...(state.requestLog ?? [])].slice(0, 50),
+        });
+      },
+
+      chooseBranch: (workerId, branchId) => {
+        const state = get();
+        const worker = (state.workers ?? []).find(w => w.id === workerId);
+        if (!worker || worker.tier < 3) return;
+        const newNodes = calcUnlockedNodes(worker.role, worker.experienceYears, branchId);
+        set({
+          workers: (state.workers ?? []).map(w =>
+            w.id === workerId ? { ...w, selectedBranch: branchId, unlockedNodeIds: newNodes } : w,
+          ),
+        });
+      },
+
+      startCertStudy: (workerId, certId) => {
+        const state = get();
+        const worker = (state.workers ?? []).find(w => w.id === workerId);
+        if (!worker) return;
+        const config = WORKER_ROLE_CONFIG[worker.role];
+        const node = config.skillTree.find(n => n.certId === certId);
+        if (!node) return;
+        const existing = worker.certifications.find(c => c.id === certId);
+        const cert = existing ?? {
+          id: certId,
+          name: node.name.replace('📜 ', ''),
+          studyProgressHours: 0,
+          totalHours: 60,
+          examFeePaid: false,
+          passed: false,
+        };
+        const updatedCerts = existing ? worker.certifications : [...worker.certifications, cert];
+        set({
+          workers: (state.workers ?? []).map(w =>
+            w.id === workerId ? { ...w, isStudying: true, studyingCertId: certId, studyStartDay: state.day, certifications: updatedCerts } : w,
+          ),
+        });
+      },
+
+      setWorkerNightShift: (workerId, enabled) => {
+        const state = get();
+        set({ workers: (state.workers ?? []).map(w => w.id === workerId ? { ...w, nightShift: enabled } : w) });
+      },
+
+      hireConsultant: () => {
+        set({ consultant: createDefaultConsultant() });
       },
 
       installIrrigation: (parcelId) => {
@@ -6709,7 +7034,7 @@ export const useGameStore = create<GameState>()(
       assignHydrogeologist: (parcelId) => {
         const state = get();
         // Require hired hydrogeologist
-        const hasHydro = (state.workers ?? []).some(w => w.typeId === 'hydrogeologist');
+        const hasHydro = (state.workers ?? []).some(w => w.role === 'hydrogeologist');
         if (!hasHydro) return;
         // Only one active survey at a time
         const busySurvey = (state.wells ?? []).some(w => w.status === 'surveying');
@@ -6797,10 +7122,10 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'granja-tycoon-save-v6',
-      version: 6,
+      name: 'granja-tycoon-save-v7',
+      version: 7,
       migrate: (persistedState: any, version: number) => {
-        if (version < 6) {
+        if (version < 7) {
           const old = persistedState as any;
           const oldCoop = old.cooperative ?? null;
           let coopMemberships: Partial<Record<CoopId, CoopMembership>> = {};
@@ -6864,9 +7189,18 @@ export const useGameStore = create<GameState>()(
           designateAsSire, removeFromSirePen, spreadSlurry, fillSilagePit, setBiogasMode, queueEggsForIncubation,
           applySoilAmendment, plantCoverCrop,
           assignHydrogeologist, startDrilling, installPump, connectParcel, disconnectParcel, setGridWater,
+          postVacancy, closePosting, hireApplicant, approveRequest, denyRequest,
+          chooseBranch, startCertStudy, setWorkerNightShift, hireConsultant,
           ...dataState
         } = state;
-        return dataState;
+        return {
+          ...dataState,
+          consultant: state.consultant,
+          pendingRequests: state.pendingRequests,
+          requestLog: state.requestLog,
+          jobPostings: state.jobPostings,
+          employerReputation: state.employerReputation,
+        };
       },
       onRehydrateStorage: () => (state) => {
         if (!state) return;

@@ -170,7 +170,7 @@ export default function AnimalesScreen() {
   } = useGameStore();
   const fairMult = activeFair ? (1 - activeFair.discount) : 1.0;
   const hasAnimalWorker = (workers ?? []).some(
-    (w: any) => w.typeId === 'animal_keeper' || w.typeId === 'zootechnician'
+    (w: any) => w.role === 'livestock_hand' || w.role === 'veterinarian'
   );
   const grainStock = GRAIN_CROP_IDS.reduce(
     (sum: number, id: string) => sum + (inventory[id] ?? 0), 0

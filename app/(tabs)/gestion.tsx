@@ -993,7 +993,7 @@ function ProductionBuildingsSection() {
     performDeepClean,
   } = useGameStore();
 
-  const farmhands = (workers ?? []).filter((w: any) => w.typeId === 'farmhand');
+  const farmhands = (workers ?? []).filter((w: any) => w.role === 'field_hand');
 
   if (!productionBuildings || productionBuildings.length === 0) {
     return (
