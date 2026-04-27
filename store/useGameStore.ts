@@ -81,7 +81,7 @@ import {
 export type { Well, DrillSpot };
 import type { GridTier, GeneratorModel, PendingGrant } from '../data/electricityTypes';
 import {
-  GRID_TIER_CONFIG, GRID_TIER_ORDER, GENERATOR_CONFIG,
+  GRID_TIER_CONFIG, GENERATOR_CONFIG,
   BATTERY_KWH_PER_BANK, BATTERY_COST_PER_BANK,
   SOLAR_COST_PER_PANEL, SOLAR_GRANT_PCT, SOLAR_SERVICE_COST,
   WIND_COST_PER_TURBINE, WIND_GRANT_PCT, WIND_SERVICE_COST,
@@ -7122,6 +7122,7 @@ export const useGameStore = create<GameState>()(
       buyGenerator: (model) => {
         const state = get();
         const el = state.electricity;
+        if (el.generatorModel) return;
         const cost = GENERATOR_CONFIG[model].purchaseCost;
         if (state.money < cost) return;
         set({ money: state.money - cost, electricity: { ...el, generatorModel: model } });
