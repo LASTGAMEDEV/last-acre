@@ -20,7 +20,7 @@ There is no test suite. There is no build step beyond Expo's bundler.
 
 ### State: `store/useGameStore.ts`
 
-Single Zustand store with `persist` middleware writing to `AsyncStorage` (key: `granja-tycoon-save-v7`). The store holds all game state and every action. `partialize` is used to exclude action functions from serialization — never remove it or rename the storage key without bumping the version, or hydration will silently overwrite functions with `{}`, breaking all buttons.
+Single Zustand store with `persist` middleware writing to `AsyncStorage` (key: `granja-tycoon-save-v8`). The store holds all game state and every action. `partialize` is used to exclude action functions from serialization — never remove it or rename the storage key without bumping the version, or hydration will silently overwrite functions with `{}`, breaking all buttons.
 
 Key state groups:
 - **Land:** `parcels[]` — 80 total, 2 initially owned. Each parcel has `fertility` (1–25), optional `plantedCrop`, `fieldEvent`, and `owned` flag.
@@ -70,7 +70,7 @@ These are active bugs/fixes that must be preserved:
 
 1. **`metro.config.js` must keep `unstable_enablePackageExports: false`** — Zustand v5 ships an ESM build (`esm/*.mjs`) using `import.meta`, which crashes Metro's web output as a classic script. Disabling package exports forces the CJS build. Removing this breaks all buttons on web.
 
-2. **`partialize` in persist config** — Must exclude all action functions from the Zustand store. If omitted, functions get serialized as `{}` in localStorage, hydration overwrites them, and all button presses silently fail. Storage key is `granja-tycoon-save-v7` — bump this if the state shape changes incompatibly.
+2. **`partialize` in persist config** — Must exclude all action functions from the Zustand store. If omitted, functions get serialized as `{}` in localStorage, hydration overwrites them, and all button presses silently fail. Storage key is `granja-tycoon-save-v8` — bump this if the state shape changes incompatibly.
 
 3. **`GestureHandlerRootView`** wraps the app in `app/_layout.tsx`. Required for `react-native-gesture-handler` on web.
 
@@ -82,6 +82,6 @@ Several string values are stored in game saves and must not be renamed:
 - Animal `enclosureType` values: `'gallinero'`, `'establo'`, `'caballeriza'`, `'pocilga'`, `'corral'`, `'colmena'`, `'conejera'`
 - `InsuranceType` values: `'sequia'`, `'helada'`, `'plaga'`, `'incendio'`
 - Building IDs: `bld_gallinero_s`, `bld_gallinero_l`, `bld_establo_s`, etc.
-- Storage key: `granja-tycoon-save-v7`
+- Storage key: `granja-tycoon-save-v8`
 
 Only `name`/`description`/`label` display fields should be changed for localization.
