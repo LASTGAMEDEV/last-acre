@@ -1,0 +1,151 @@
+<h2>Skill Tree Structure</h2>
+<p class="subtitle">Example: Agronomist — approve the structure, then we apply it to all 15 roles</p>
+
+<style>
+.tree-wrap { overflow-x: auto; padding-bottom: 12px; }
+.tree { display: flex; flex-direction: column; gap: 0; min-width: 600px; }
+.tier { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; position: relative; }
+.tier-label { width: 80px; flex-shrink: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #666; padding-top: 10px; text-align: right; }
+.tier-nodes { display: flex; gap: 10px; flex-wrap: wrap; }
+.node { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 14px; width: 160px; position: relative; cursor: default; }
+.node.unlocked { border-color: #7ec850; background: rgba(126,200,80,0.08); }
+.node.locked { opacity: 0.5; }
+.node.cert-node { border-color: #e0d050; background: rgba(224,208,80,0.08); }
+.node-icon { font-size: 18px; margin-bottom: 4px; }
+.node-name { font-size: 12px; font-weight: 700; color: #f0f0f0; margin-bottom: 3px; }
+.node-desc { font-size: 10px; color: #999; line-height: 1.4; }
+.node-req { font-size: 9px; color: #666; margin-top: 5px; }
+.node-bonus { font-size: 10px; color: #7ec850; margin-top: 4px; font-weight: 600; }
+.connector { width: 1px; background: rgba(255,255,255,0.15); margin: 0 auto; height: 20px; }
+.tier-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0; }
+
+.legend { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #aaa; }
+.legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+.legend-dot.base { background: rgba(126,200,80,0.3); border: 1px solid #7ec850; }
+.legend-dot.skill { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
+.legend-dot.cert { background: rgba(224,208,80,0.2); border: 1px solid #e0d050; }
+.legend-dot.locked { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); opacity:0.5; }
+
+.xp-bar-wrap { background: rgba(255,255,255,0.06); border-radius: 4px; height: 6px; margin-top: 5px; overflow: hidden; }
+.xp-bar { background: #7ec850; height: 100%; border-radius: 4px; }
+</style>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot base"></div> Base skill (unlocked by XP)</div>
+  <div class="legend-item"><div class="legend-dot cert"></div> Certification node (requires study + XP)</div>
+  <div class="legend-item"><div class="legend-dot locked"></div> Locked (requires previous tier)</div>
+</div>
+
+<div class="tree-wrap">
+<div class="tree">
+
+  <!-- Tier 1: Base -->
+  <div class="tier">
+    <div class="tier-label">Tier 1<br>0–1 yr</div>
+    <div class="tier-nodes">
+      <div class="node unlocked">
+        <div class="node-icon">🔍</div>
+        <div class="node-name">Field Scouting</div>
+        <div class="node-desc">Daily pest & disease detection. Spot problems earlier.</div>
+        <div class="node-bonus">+20% pest detection speed</div>
+        <div class="xp-bar-wrap"><div class="xp-bar" style="width:100%"></div></div>
+      </div>
+      <div class="node unlocked">
+        <div class="node-icon">🧪</div>
+        <div class="node-name">Soil Reading</div>
+        <div class="node-desc">Basic NPK interpretation. Recommends standard fertiliser programs.</div>
+        <div class="node-bonus">+10% fertiliser efficiency</div>
+        <div class="xp-bar-wrap"><div class="xp-bar" style="width:80%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"></div>
+
+  <!-- Tier 2 -->
+  <div class="tier">
+    <div class="tier-label">Tier 2<br>1–3 yrs</div>
+    <div class="tier-nodes">
+      <div class="node unlocked">
+        <div class="node-icon">🌿</div>
+        <div class="node-name">Crop Rotation</div>
+        <div class="node-desc">Plans multi-season rotations. Reduces soil depletion over time.</div>
+        <div class="node-bonus">−15% soil degradation/yr</div>
+        <div class="xp-bar-wrap"><div class="xp-bar" style="width:60%"></div></div>
+      </div>
+      <div class="node cert-node">
+        <div class="node-icon">📜</div>
+        <div class="node-name">Pesticide Applicator</div>
+        <div class="node-desc">Certification: can legally apply restricted pesticides. Requires 40hr study.</div>
+        <div class="node-req">⏱ 40hr study · $120 exam fee</div>
+        <div class="node-bonus">Unlocks chemical pest control</div>
+        <div class="xp-bar-wrap"><div class="xp-bar" style="width:40%"></div></div>
+      </div>
+      <div class="node locked">
+        <div class="node-icon">💧</div>
+        <div class="node-name">Irrigation Planning</div>
+        <div class="node-desc">Optimises water scheduling per crop type and soil moisture data.</div>
+        <div class="node-req">Requires: Soil Reading</div>
+        <div class="node-bonus">−20% water usage</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"></div>
+
+  <!-- Tier 3 — branching specialisation -->
+  <div class="tier">
+    <div class="tier-label">Tier 3<br>3–6 yrs<br><span style="color:#5ab0e0">Specialise</span></div>
+    <div class="tier-nodes">
+      <div class="node locked">
+        <div class="node-icon">🦠</div>
+        <div class="node-name">IPM Specialist</div>
+        <div class="node-desc">Integrated pest management. Biological controls, reduced chemical dependency.</div>
+        <div class="node-req">Branch: Pest Track</div>
+        <div class="node-bonus">−30% pesticide costs</div>
+      </div>
+      <div class="node cert-node locked">
+        <div class="node-icon">📜</div>
+        <div class="node-name">Certified Agronomist</div>
+        <div class="node-desc">Full professional certification. Unlocks government subsidy consulting and premium market advice.</div>
+        <div class="node-req">⏱ 120hr study · $800 exam · Branch: General</div>
+        <div class="node-bonus">Subsidy applications + 5% yield advice bonus</div>
+      </div>
+      <div class="node locked">
+        <div class="node-icon">🌱</div>
+        <div class="node-name">Precision Ag</div>
+        <div class="node-desc">Variable-rate seeding, GPS field mapping, data-driven input optimisation.</div>
+        <div class="node-req">Branch: Tech Track · Requires machinery GPS</div>
+        <div class="node-bonus">+15% yield, −10% seed waste</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"></div>
+
+  <!-- Tier 4 -->
+  <div class="tier">
+    <div class="tier-label">Tier 4<br>6+ yrs<br><span style="color:#e0d050">Expert</span></div>
+    <div class="tier-nodes">
+      <div class="node locked">
+        <div class="node-icon">🏆</div>
+        <div class="node-name">Master Agronomist</div>
+        <div class="node-desc">Can teach other field workers. Unlocks organic certification pathway. Autonomous — never needs approval for field decisions.</div>
+        <div class="node-req">Requires: Certified Agronomist + 6yrs XP</div>
+        <div class="node-bonus">Full autonomy · Mentors junior staff</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div class="section" style="margin-top:20px; padding: 12px 16px; background: rgba(255,255,255,0.05); border-radius: 8px; font-size:12px; color:#ccc;">
+  <strong style="color:#f0f0f0">Key rules:</strong><br>
+  • XP gained from daily work — no grinding, just time on the job<br>
+  • Certifications require <strong>study time</strong> (worker is less productive while studying) + an <strong>exam fee</strong><br>
+  • Branching at Tier 3 — each role has 2–3 specialisation paths, worker can only pick one<br>
+  • Pre-hired workers may arrive with Tier 1–2 nodes already unlocked depending on their years of experience<br>
+  • <strong>Master level = full autonomy</strong> — they never need your approval for their domain
+</div>

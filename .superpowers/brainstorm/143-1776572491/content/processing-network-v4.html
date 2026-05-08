@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #111; color: #e0e0e0; font-family: -apple-system, sans-serif; padding: 20px; }
+h2 { font-size: 18px; margin-bottom: 4px; color: #f0f0f0; }
+.sub { font-size: 12px; color: #888; margin-bottom: 16px; }
+
+.scroll-wrap { overflow-x: auto; padding-bottom: 16px; }
+.network { display: flex; gap: 0; min-width: 980px; }
+.col { display: flex; flex-direction: column; gap: 7px; min-width: 200px; padding: 0 8px; border-right: 1px solid rgba(255,255,255,0.06); }
+.col:last-child { border-right: none; }
+.col-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-bottom: 6px; text-align: center; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+
+.node { border-radius: 7px; padding: 8px 10px; font-size: 10px; line-height: 1.4; border: 1px solid transparent; }
+.node-name { font-weight: 700; font-size: 11px; margin-bottom: 3px; }
+.node-in { color: #555; font-size: 9px; margin-bottom: 2px; }
+.node-out { color: #999; font-size: 9px; }
+.node-shop { display:inline-block; background:#1a2a0a; color:#7ec850; font-size:8px; padding:1px 5px; border-radius:3px; margin-left:4px; vertical-align:middle; }
+
+.grain   { background: #141e0a; border-color: #2a4010; }
+.grain .node-name { color: #8ec860; }
+.dairy   { background: #10101e; border-color: #252550; }
+.dairy .node-name { color: #8898e8; }
+.meat    { background: #1e100a; border-color: #402510; }
+.meat .node-name { color: #e89858; }
+.bev     { background: #180a18; border-color: #401840; }
+.bev .node-name { color: #c878c8; }
+.produce { background: #0a1818; border-color: #183030; }
+.produce .node-name { color: #68c8c8; }
+.oils    { background: #181808; border-color: #303010; }
+.oils .node-name { color: #c8c848; }
+.craft   { background: #0a100a; border-color: #182018; }
+.craft .node-name { color: #88c878; }
+.raw     { background: #0c0c0c; border-color: #222; }
+.raw .node-name { color: #777; font-size: 10px; }
+
+.gap { height: 8px; }
+.section { height: 1px; background: rgba(255,255,255,0.04); margin: 6px 0; }
+
+.shop-banner { background: rgba(126,200,80,0.07); border: 1px solid rgba(126,200,80,0.2); border-radius: 8px; padding: 10px 14px; font-size: 11px; color: #7ec860; margin-bottom: 14px; line-height: 1.6; }
+.shop-banner strong { color: #a0e880; }
+</style>
+</head>
+<body>
+
+<h2>Farm Shop Processing Network</h2>
+
+<div class="shop-banner">
+  <strong>The rule:</strong> Every product must pass this test — "Could a farm make this with the right equipment and sell it at their own shop?" &nbsp;·&nbsp; Think Clarkson's Farm Shop, artisan dairy farms, small-batch breweries, lavender farms. <br>
+  <strong>Scale:</strong> Artisan / small-batch. Not industrial. Equipment you could fit in a barn or outbuilding.
+</div>
+
+<div class="scroll-wrap">
+<div class="network">
+
+<!-- RAW -->
+<div class="col">
+  <div class="col-label">Your Farm</div>
+  <div class="node raw"><div class="node-name">🌾 Cereals</div><div class="node-out">wheat, barley, oats, corn, rye</div></div>
+  <div class="node raw"><div class="node-name">🌱 Legumes & Fodder</div><div class="node-out">soy, alfalfa, grass</div></div>
+  <div class="node raw"><div class="node-name">🫒 Olives</div><div class="node-out">green & black</div></div>
+  <div class="node raw"><div class="node-name">🥜 Almonds</div><div class="node-out">raw almonds</div></div>
+  <div class="node raw"><div class="node-name">🍅 Tomatoes</div><div class="node-out">fresh tomatoes</div></div>
+  <div class="node raw"><div class="node-name">🍓 Fruit</div><div class="node-out">strawberries, grapes, apples</div></div>
+  <div class="node raw"><div class="node-name">🌿 Fibre Crops</div><div class="node-out">cotton, wool, flax</div></div>
+  <div class="node raw"><div class="node-name">🌸 Specialty Crops</div><div class="node-out">lavender, saffron, vanilla, ginseng</div></div>
+  <div class="node raw"><div class="node-name">🐄 Milk</div><div class="node-out">cow, goat, sheep, buffalo</div></div>
+  <div class="node raw"><div class="node-name">🥩 Livestock</div><div class="node-out">cattle, pigs, sheep, poultry, rabbits</div></div>
+  <div class="node raw"><div class="node-name">🥚 Eggs</div><div class="node-out">chicken, duck, quail</div></div>
+  <div class="node raw"><div class="node-name">🍯 Honey & Wax</div><div class="node-out">raw honey, beeswax</div></div>
+  <div class="node raw"><div class="node-name">🐖 Animal Byproducts</div><div class="node-out">hides, fat, bones</div></div>
+</div>
+
+<!-- STAGE 1: EQUIPMENT -->
+<div class="col">
+  <div class="col-label">Stage 1 — Basic Equipment</div>
+
+  <div class="node grain"><div class="node-name">🌡️ Grain Dryer & Store</div><div class="node-in">← cereals</div><div class="node-out">→ dried, stored grain (sell direct or mill)</div></div>
+  <div class="node grain"><div class="node-name">🌰 Malting Floor</div><div class="node-in">← barley, rye, wheat</div><div class="node-out">→ malted grain (for brewing/distilling)</div></div>
+  <div class="node grain"><div class="node-name">🌽 Feed Mixer</div><div class="node-in">← grain + soy + alfalfa</div><div class="node-out">→ compound animal feed (sell to other farms)</div></div>
+  <div class="section"></div>
+
+  <div class="node dairy"><div class="node-name">🥛 Milk Pasteuriser</div><div class="node-in">← raw milk</div><div class="node-out">→ pasteurised milk (sell bottled)</div></div>
+  <div class="section"></div>
+
+  <div class="node meat"><div class="node-name">🏭 Licensed Abattoir</div><div class="node-in">← livestock</div><div class="node-out">→ carcasses, hides, fat, bones</div></div>
+  <div class="node meat"><div class="node-name">🥚 Egg Washer & Grader</div><div class="node-in">← eggs</div><div class="node-out">→ graded, packed eggs <span class="node-shop">🏪 shop</span></div></div>
+  <div class="section"></div>
+
+  <div class="node produce"><div class="node-name">🌸 Drying Rack & Kiln</div><div class="node-in">← lavender, saffron, vanilla, ginseng, herbs, tomatoes, fruit</div><div class="node-out">→ dried herbs, dried saffron threads, cured vanilla, dried fruit <span class="node-shop">🏪 shop</span> (or → tinning room)</div></div>
+  <div class="section"></div>
+
+  <div class="node craft"><div class="node-name">🌿 Fibre Prep</div><div class="node-in">← raw cotton / raw wool</div><div class="node-out">→ cleaned lint / scoured wool (for textile work)</div></div>
+</div>
+
+<!-- STAGE 2: PROCESSING ROOMS -->
+<div class="col">
+  <div class="col-label">Stage 2 — Processing Rooms</div>
+
+  <div class="node grain"><div class="node-name">⚙️ Stone Flour Mill</div><div class="node-in">← dried wheat, oats, rye, barley</div><div class="node-out">→ stoneground flour <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node grain"><div class="node-name">🫒 Olive Press</div><div class="node-in">← olives</div><div class="node-out">→ extra virgin olive oil <span class="node-shop">🏪 shop</span>, pomace, brine</div></div>
+  <div class="node grain"><div class="node-name">🥜 Nut Roaster & Press</div><div class="node-in">← almonds</div><div class="node-out">→ roasted almonds, almond flour, almond butter <span class="node-shop">🏪 shop</span></div></div>
+  <div class="section"></div>
+
+  <div class="node dairy"><div class="node-name">🧈 Dairy Room</div><div class="node-in">← pasteurised milk</div><div class="node-out">→ butter, cream, yoghurt, sour cream, crème fraîche <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node dairy"><div class="node-name">🧀 Cheese Room</div><div class="node-in">← pasteurised milk</div><div class="node-out">→ fresh soft cheese, curds <span class="node-shop">🏪 shop</span></div></div>
+  <div class="section"></div>
+
+  <div class="node meat"><div class="node-name">🔪 Farm Butchery</div><div class="node-in">← carcasses</div><div class="node-out">→ retail cuts, mince, sausages <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node meat"><div class="node-name">🫙 Lard & Bone Meal Room</div><div class="node-in">← animal fat, bones</div><div class="node-out">→ cooking lard <span class="node-shop">🏪 shop</span>, bone meal fertiliser</div></div>
+  <div class="section"></div>
+
+  <div class="node bev"><div class="node-name">🍎 Fruit Press</div><div class="node-in">← apples, pears, grapes, strawberries</div><div class="node-out">→ fresh pressed juice <span class="node-shop">🏪 shop</span>, must (for wine/cider)</div></div>
+  <div class="section"></div>
+
+  <div class="node produce"><div class="node-name">🍅 Tomato Kitchen</div><div class="node-in">← tomatoes</div><div class="node-out">→ tomato paste, passata, sundried tomatoes <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node produce"><div class="node-name">🍓 Preserving Kitchen</div><div class="node-in">← strawberries, grapes, tomatoes, herbs</div><div class="node-out">→ jams, chutneys, pickles, sauces <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node produce"><div class="node-name">🥫 Tinning & Packaging Room</div><div class="node-in">← dried saffron, dried herbs, lavender, vanilla, ginseng</div><div class="node-out">→ saffron tins, dried herb tins, gift-boxed vanilla pods, branded spice sets <span class="node-shop">🏪 shop</span></div></div>
+  <div class="section"></div>
+
+  <div class="node craft"><div class="node-name">🌸 Small Still</div><div class="node-in">← lavender, herbs</div><div class="node-out">→ lavender oil, herbal waters <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node craft"><div class="node-name">🍯 Honey Room</div><div class="node-in">← raw honey, beeswax</div><div class="node-out">→ filtered honey, creamed honey, infused honey <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node craft"><div class="node-name">🕯️ Wax Workshop</div><div class="node-in">← beeswax, tallow</div><div class="node-out">→ candles, basic soap, beeswax wraps, wood polish <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node craft"><div class="node-name">🧵 Wool & Fibre Workshop</div><div class="node-in">← clean wool, cotton, flax</div><div class="node-out">→ yarn, undyed wool, linen thread <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node craft"><div class="node-name">👜 Small Leather Workshop</div><div class="node-in">← hides</div><div class="node-out">→ tanned leather, small leather goods <span class="node-shop">🏪 shop</span></div></div>
+</div>
+
+<!-- STAGE 3: CRAFT PRODUCTION -->
+<div class="col">
+  <div class="col-label">Stage 3 — Craft Production</div>
+
+  <div class="node grain"><div class="node-name">🍞 Farm Bakery</div><div class="node-in">← flour + eggs + butter</div><div class="node-out">→ bread, scones, pastries, shortbread <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node grain"><div class="node-name">🥢 Pasta Workshop</div><div class="node-in">← flour + eggs</div><div class="node-out">→ fresh pasta, dried pasta <span class="node-shop">🏪 shop</span></div></div>
+  <div class="section"></div>
+
+  <div class="node dairy"><div class="node-name">🍦 Ice Cream Churner</div><div class="node-in">← cream + milk + eggs + flavours</div><div class="node-out">→ artisan ice cream, gelato <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node dairy"><div class="node-name">🧀 Cheese Ageing Room</div><div class="node-in">← fresh curds</div><div class="node-out">→ hard cheese, aged cheese (months–years) <span class="node-shop">🏪 shop</span></div></div>
+  <div class="section"></div>
+
+  <div class="node meat"><div class="node-name">🥓 Curing & Smoking Room</div><div class="node-in">← cuts + salt + spices + wood chips</div><div class="node-out">→ smoked bacon, ham, sausages, salami <span class="node-shop">🏪 shop</span></div></div>
+  <div class="section"></div>
+
+  <div class="node bev"><div class="node-name">🍷 Farm Winery</div><div class="node-in">← grape must + yeast</div><div class="node-out">→ table wine, rosé, sparkling <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node bev"><div class="node-name">🍺 Micro-Brewery</div><div class="node-in">← malted grain + hops + water</div><div class="node-out">→ craft ales, stouts, lagers <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node bev"><div class="node-name">🍎 Cider House</div><div class="node-in">← pressed juice + yeast</div><div class="node-out">→ still/sparkling cider, fruit wine <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node bev"><div class="node-name">🥃 Small Batch Distillery</div><div class="node-in">← malted grain, molasses, fruit wine</div><div class="node-out">→ gin, vodka, new make spirit <span class="node-shop">🏪 shop</span></div></div>
+  <div class="section"></div>
+
+  <div class="node produce"><div class="node-name">🫒 Infused Oil Kitchen</div><div class="node-in">← olive oil + garlic/herbs/chilli</div><div class="node-out">→ infused olive oils, dressings <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node produce"><div class="node-name">🫙 Vinegar Barrel Room</div><div class="node-in">← wine, cider, malt</div><div class="node-out">→ wine vinegar, cider vinegar, aged balsamic <span class="node-shop">🏪 shop</span></div></div>
+  <div class="section"></div>
+
+  <div class="node craft"><div class="node-name">🌿 Infusion & Extract Kitchen</div><div class="node-in">← vanilla, saffron, ginseng</div><div class="node-out">→ vanilla extract, saffron water, ginseng tincture <span class="node-shop">🏪 shop</span></div></div>
+</div>
+
+<!-- STAGE 4: PREMIUM / AGED -->
+<div class="col">
+  <div class="col-label">Stage 4 — Premium & Aged</div>
+
+  <div class="node dairy"><div class="node-name">🧀 Cave-Aged Cheese</div><div class="node-in">← aged cheese room</div><div class="node-out">→ parmesan-style, cheddar, blue (12–36mo) <span class="node-shop">🏪 shop</span></div></div>
+  <div class="gap"></div>
+  <div class="node bev"><div class="node-name">🍷 Wine Cellar</div><div class="node-in">← farm winery</div><div class="node-out">→ barrel-aged wine, reserve bottles <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node bev"><div class="node-name">🥃 Spirit Maturation Casks</div><div class="node-in">← small batch distillery</div><div class="node-out">→ aged whisky, brandy, rum (3–12+ yrs) <span class="node-shop">🏪 shop</span></div></div>
+  <div class="node bev"><div class="node-name">🍺 Bottle-Conditioned Ales</div><div class="node-in">← micro-brewery</div><div class="node-out">→ bottle-conditioned, gift-boxed ales <span class="node-shop">🏪 shop</span></div></div>
+  <div class="gap"></div>
+  <div class="node meat"><div class="node-name">🥩 Long-Cured Meats</div><div class="node-in">← curing room + time</div><div class="node-out">→ aged prosciutto, dry-cured ham (6–18mo) <span class="node-shop">🏪 shop</span></div></div>
+  <div class="gap"></div>
+  <div class="node produce"><div class="node-name">🫙 Aged Balsamic</div><div class="node-in">← vinegar + oak barrels</div><div class="node-out">→ 5yr, 10yr aged balsamic vinegar <span class="node-shop">🏪 shop</span></div></div>
+</div>
+
+</div>
+</div>
+
+<div style="margin-top:14px; padding:12px 16px; background:rgba(255,255,255,0.03); border-radius:8px; font-size:10px; color:#666; line-height:1.8;">
+  <span style="color:#999"><strong>Everything sells in the farm shop</strong></span><br>
+  Bottled milk · Eggs · Stoneground flour · Butter, cream, yoghurt · Fresh & aged cheese · Ice cream ·
+  Cuts of meat · Smoked bacon & sausages · Cured ham & salami · Bread & pastries · Fresh & dried pasta ·
+  Olive oil · Infused oils & vinegars · Jams, chutneys & pickles · Tomato sauces & passata ·
+  Fresh & bottled juice · Farm wines · Craft ales · Cider · Gin & whisky ·
+  Honey & honeycomb · Candles & soaps · Dried herbs & lavender · Vanilla extract ·
+  Roasted nuts & almond butter · Yarn & woolens · Small leather goods ·
+  Saffron tins · Dried herb tins · Gift-boxed vanilla pods · Branded spice sets
+</div>
+
+</body>
+</html>

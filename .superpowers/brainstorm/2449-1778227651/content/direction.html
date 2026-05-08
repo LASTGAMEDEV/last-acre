@@ -1,0 +1,40 @@
+<h2>What kind of UI rework are we doing?</h2>
+<p class="subtitle">The game has 18 tabs, a dark green design system already in place, and a complex set of gameplay screens. What's the goal?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Apply the existing design system</h3>
+      <p>The tokens (colors, spacing, fonts, radii) are already in <code>constants/theme.ts</code>. The spec says what to do to every screen. We implement it: SubTabBar, GameRow, ActionButton, StatCard, new HUD, remove ScreenHeader. All 18 screens get consistent treatment. No new features or layouts invented.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Spec already exists — just execute</li><li>Predictable scope</li><li>Immediate visual consistency</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Won't fix deeper UX problems (18 tabs is a lot)</li><li>Navigation paradigm unchanged</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Design system + navigation rethink</h3>
+      <p>Apply the design system AND rethink the 18-tab structure. 18 tabs is too many for a bottom tab bar. Design a new navigation architecture — maybe 5–6 primary tabs with sub-navigation, or a dashboard home with jump points. Then implement the consistent visual treatment within that new structure.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Solves the real UX problem (tab overload)</li><li>More polished, app-like feel</li><li>Gives the game a coherent information architecture</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>More design work upfront</li><li>Navigation changes touch many files</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Full visual redesign from scratch</h3>
+      <p>Throw away the existing patterns. New visual language — different color palette, new card styles, new layouts per screen, possibly new animation system. Treat it as a v2 art direction pass, not just token application. The design system spec becomes a starting point, not the destination.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Maximum creative freedom</li><li>Can fix everything at once</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Very large scope — months of work</li><li>Risk of over-designing</li><li>Needs very clear new visual direction first</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

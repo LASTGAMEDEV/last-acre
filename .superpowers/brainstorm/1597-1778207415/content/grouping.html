@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI Rework — Complete Screen Inventory + Proposed Grouping</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f2f0;
+    color: #1a1a1a;
+    padding: 28px 20px 48px;
+  }
+  h2 { font-size: 20px; font-weight: 700; margin-bottom: 5px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 24px; line-height: 1.5; }
+
+  /* ─── Current state ─── */
+  h3 { font-size: 14px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .current-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .curr-col {
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border: 1.5px solid #e8e8e8;
+  }
+  .curr-head {
+    padding: 8px 10px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .curr-head .tab-num { font-size: 9px; opacity: 0.8; }
+  .bg1 { background: #388e3c; }
+  .bg2 { background: #1565c0; }
+  .bg3 { background: #6a1b9a; }
+  .bg4 { background: #bf360c; }
+  .bg5 { background: #00695c; }
+  .curr-items { padding: 6px 8px; }
+  .ci {
+    font-size: 10px;
+    padding: 4px 6px;
+    border-radius: 5px;
+    margin-bottom: 3px;
+    background: #f5f5f5;
+    color: #444;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .ci .ico { font-size: 10px; flex-shrink: 0; }
+  .ci .note { font-size: 8px; color: #aaa; margin-left: auto; }
+  .ci.prob { background: #fff3e0; }
+  .ci.prob .note { color: #ef6c00; }
+
+  .divider {
+    text-align: center;
+    font-size: 22px;
+    color: #aaa;
+    margin: 4px 0 20px;
+  }
+
+  /* ─── Proposed ─── */
+  .tabs-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .tab-col {
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .tab-header {
+    padding: 12px 10px 10px;
+    text-align: center;
+    border-bottom: 2px solid;
+  }
+  .tab-header .icon { font-size: 22px; margin-bottom: 3px; }
+  .tab-header .name { font-size: 12px; font-weight: 800; }
+  .tab-header .desc { font-size: 9px; margin-top: 2px; opacity: 0.65; }
+
+  .tab-grow .tab-header    { border-color: #4caf50; background: #f1f8e9; }
+  .tab-grow .name          { color: #2e7d32; }
+  .tab-animals .tab-header { border-color: #ff8f00; background: #fff8e1; }
+  .tab-animals .name       { color: #e65100; }
+  .tab-ops .tab-header     { border-color: #1565c0; background: #e3f2fd; }
+  .tab-ops .name           { color: #0d47a1; }
+  .tab-market .tab-header  { border-color: #6a1b9a; background: #f3e5f5; }
+  .tab-market .name        { color: #4a148c; }
+  .tab-office .tab-header  { border-color: #37474f; background: #eceff1; }
+  .tab-office .name        { color: #263238; }
+
+  .sub-list { padding: 8px; display: flex; flex-direction: column; gap: 3px; }
+  .sub-item {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 7px; border-radius: 7px;
+    font-size: 10px; font-weight: 600; color: #333;
+    background: #f9f9f9;
+  }
+  .sub-item .si { font-size: 11px; flex-shrink: 0; }
+  .sub-item .route { font-size: 8px; color: #aaa; font-weight: 400; font-family: monospace; display: block; }
+  .sub-item.grow-color   { border-left: 3px solid #4caf50; }
+  .sub-item.anim-color   { border-left: 3px solid #ff8f00; }
+  .sub-item.ops-color    { border-left: 3px solid #1565c0; }
+  .sub-item.market-color { border-left: 3px solid #6a1b9a; }
+  .sub-item.office-color { border-left: 3px solid #37474f; }
+
+  .tag {
+    font-size: 7px; font-weight: 700;
+    padding: 1px 4px; border-radius: 3px;
+    margin-left: auto; flex-shrink: 0;
+  }
+  .tag-moved   { background: #e3f2fd; color: #0d47a1; }
+  .tag-stays   { background: #e8f5e9; color: #2e7d32; }
+  .tag-new     { background: #fff3e0; color: #bf360c; }
+  .tag-merged  { background: #f3e5f5; color: #4a148c; }
+  .tag-future  { background: #f5f5f5; color: #aaa; }
+
+  .question {
+    background: #fff; border: 2px solid #e0e0e0; border-radius: 14px; padding: 18px 20px;
+  }
+  .question h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; color: #111; text-transform: none; letter-spacing: 0; }
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn { padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+  .btn-yes { background: #4caf50; color: #fff; }
+  .btn-yes:hover { background: #388e3c; }
+  .btn-no  { background: #fff; color: #555; border-color: #ddd; }
+  .btn-no:hover  { border-color: #4caf50; color: #4caf50; }
+  .response { margin-top: 12px; font-size: 12px; color: #888; display: none; }
+
+  @media (max-width: 900px) {
+    .current-grid, .tabs-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h2>Complete screen inventory → proposed grouping</h2>
+<p class="subtitle">The app already has 5 tabs with sub-navigation. Here's what exists today, and how it should be reorganised.</p>
+
+<h3>Current (5 tabs today)</h3>
+<div class="current-grid">
+  <div class="curr-col">
+    <div class="curr-head bg1">🌾 <span>Farm (granja)</span></div>
+    <div class="curr-items">
+      <div class="ci"><span class="ico">🟫</span>Fields<span class="note">tierras</span></div>
+      <div class="ci"><span class="ico">🐄</span>Animals<span class="note">animales</span></div>
+      <div class="ci"><span class="ico">🚜</span>Machinery<span class="note">maquinaria</span></div>
+      <div class="ci"><span class="ico">👷</span>Workers<span class="note">trabajadores</span></div>
+      <div class="ci prob"><span class="ico">🌱</span>Seed Lab<span class="note">dupe!</span></div>
+      <div class="ci"><span class="ico">💧</span>Water<span class="note">agua</span></div>
+    </div>
+  </div>
+  <div class="curr-col">
+    <div class="curr-head bg2">💰 <span>Market (mercado)</span></div>
+    <div class="curr-items">
+      <div class="ci"><span class="ico">📊</span>Prices/sell<span class="note">mercado</span></div>
+      <div class="ci"><span class="ico">💹</span>Economy<span class="note">economia</span></div>
+      <div class="ci"><span class="ico">🔨</span>Auction<span class="note">subasta</span></div>
+    </div>
+  </div>
+  <div class="curr-col">
+    <div class="curr-head bg3">🏭 <span>Processing (fabrica)</span></div>
+    <div class="curr-items">
+      <div class="ci prob"><span class="ico">🏭</span>Processing<span class="note">=procesado</span></div>
+    </div>
+  </div>
+  <div class="curr-col">
+    <div class="curr-head bg4">📋 <span>Office (gestion)</span></div>
+    <div class="curr-items">
+      <div class="ci"><span class="ico">🏠</span>Dashboard<span class="note">gestion</span></div>
+      <div class="ci"><span class="ico">🏦</span>Banking<span class="note">oficina</span></div>
+      <div class="ci"><span class="ico">📅</span>Calendar<span class="note">calendario</span></div>
+      <div class="ci prob"><span class="ico">🌱</span>Seeds<span class="note">dupe!</span></div>
+      <div class="ci"><span class="ico">🌿</span>Henil<span class="note">gestion</span></div>
+      <div class="ci"><span class="ico">⚡</span>Electricity<span class="note">gestion</span></div>
+      <div class="ci"><span class="ico">⚙️</span>Settings<span class="note">gestion</span></div>
+      <div class="ci"><span class="ico">📖</span>Guide<span class="note">gestion</span></div>
+    </div>
+  </div>
+  <div class="curr-col">
+    <div class="curr-head bg5">☀️ <span>Weather (clima)</span></div>
+    <div class="curr-items">
+      <div class="ci"><span class="ico">☀️</span>Forecast<span class="note">clima</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider">↓</div>
+<h3>Proposed (5 tabs, reorganised)</h3>
+
+<div class="tabs-grid">
+
+  <div class="tab-col tab-grow">
+    <div class="tab-header">
+      <div class="icon">🌾</div>
+      <div class="name">Grow</div>
+      <div class="desc">Crops, water, weather</div>
+    </div>
+    <div class="sub-list">
+      <div class="sub-item grow-color"><span class="si">🟫</span><span>Fields<span class="route">tierras</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item grow-color"><span class="si">💧</span><span>Water<span class="route">agua</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item grow-color"><span class="si">📅</span><span>Calendar<span class="route">calendario</span></span><span class="tag tag-moved">moved</span></div>
+      <div class="sub-item grow-color"><span class="si">☀️</span><span>Weather<span class="route">clima</span></span><span class="tag tag-moved">moved</span></div>
+    </div>
+  </div>
+
+  <div class="tab-col tab-animals">
+    <div class="tab-header">
+      <div class="icon">🐄</div>
+      <div class="name">Animals</div>
+      <div class="desc">Livestock, forage, breeds</div>
+    </div>
+    <div class="sub-list">
+      <div class="sub-item anim-color"><span class="si">🐄</span><span>Livestock<span class="route">animales</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item anim-color"><span class="si">🌿</span><span>Henil / Forage<span class="route">gestion→henil</span></span><span class="tag tag-moved">moved</span></div>
+      <div class="sub-item anim-color"><span class="si">🧬</span><span>Breeds<span class="route">future</span></span><span class="tag tag-future">spec</span></div>
+    </div>
+  </div>
+
+  <div class="tab-col tab-ops">
+    <div class="tab-header">
+      <div class="icon">⚙️</div>
+      <div class="name">Operations</div>
+      <div class="desc">Machines, workers, power</div>
+    </div>
+    <div class="sub-list">
+      <div class="sub-item ops-color"><span class="si">🚜</span><span>Machinery<span class="route">maquinaria</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item ops-color"><span class="si">👷</span><span>Workers<span class="route">trabajadores</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item ops-color"><span class="si">🏭</span><span>Processing<span class="route">procesado</span></span><span class="tag tag-moved">moved</span></div>
+      <div class="sub-item ops-color"><span class="si">⚡</span><span>Electricity<span class="route">gestion→elec.</span></span><span class="tag tag-moved">moved</span></div>
+    </div>
+  </div>
+
+  <div class="tab-col tab-market">
+    <div class="tab-header">
+      <div class="icon">📈</div>
+      <div class="name">Market</div>
+      <div class="desc">Prices, selling, auctions</div>
+    </div>
+    <div class="sub-list">
+      <div class="sub-item market-color"><span class="si">📊</span><span>Prices<span class="route">mercado</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item market-color"><span class="si">💹</span><span>Economy<span class="route">economia</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item market-color"><span class="si">🔨</span><span>Auction<span class="route">subasta</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item market-color"><span class="si">🛒</span><span>Shop<span class="route">tienda</span></span><span class="tag tag-moved">moved</span></div>
+      <div class="sub-item market-color"><span class="si">📋</span><span>Contracts<span class="route">oficina</span></span><span class="tag tag-moved">moved</span></div>
+      <div class="sub-item market-color"><span class="si">📦</span><span>Selling<span class="route">future</span></span><span class="tag tag-future">spec</span></div>
+    </div>
+  </div>
+
+  <div class="tab-col tab-office">
+    <div class="tab-header">
+      <div class="icon">🏦</div>
+      <div class="name">Office</div>
+      <div class="desc">Finance, contracts, admin</div>
+    </div>
+    <div class="sub-list">
+      <div class="sub-item office-color"><span class="si">🏠</span><span>Dashboard<span class="route">gestion→dash</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item office-color"><span class="si">🏦</span><span>Banking<span class="route">oficina</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item office-color"><span class="si">🛡</span><span>Insurance<span class="route">seguros</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item office-color"><span class="si">🤝</span><span>Co-op<span class="route">new screen</span></span><span class="tag tag-new">new</span></div>
+      <div class="sub-item office-color"><span class="si">🏅</span><span>Achievements<span class="route">logros</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item office-color"><span class="si">📖</span><span>Guide<span class="route">gestion→guide</span></span><span class="tag tag-stays">stays</span></div>
+      <div class="sub-item office-color"><span class="si">⚙️</span><span>Settings<span class="route">gestion→sett.</span></span><span class="tag tag-stays">stays</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="question">
+  <h3>Does this grouping look right? Electricity is confirmed in Operations (moved from gestion → ⚡ Power). Anything else to change?</h3>
+  <div class="btns">
+    <button class="btn btn-yes" onclick="respond('yes')">Yes — grouping confirmed</button>
+    <button class="btn btn-no" onclick="respond('adjust')">Move something</button>
+  </div>
+  <div class="response" id="resp">Tell me in the terminal.</div>
+</div>
+
+<script>
+function respond(choice) {
+  document.getElementById('resp').style.display = 'block';
+  document.getElementById('resp').textContent = choice === 'yes' ? '✓ Confirmed.' : 'Tell me what to move in the terminal.';
+  document.getElementById('resp').style.color = choice === 'yes' ? '#2e7d32' : '#888';
+  fetch('/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'click', choice, text: 'Final grouping: ' + choice })
+  });
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B vs C — Side by Side</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f2f0;
+    color: #1a1a1a;
+    padding: 24px 16px 48px;
+  }
+  h2 { font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 12px; margin-bottom: 24px; }
+
+  .col-headers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .col-head {
+    text-align: center;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px; font-weight: 700;
+  }
+  .col-b { background: #e8f5e9; color: #2e7d32; }
+  .col-c { background: #e3f2fd; color: #0d47a1; }
+
+  .row-group { margin-bottom: 28px; }
+  .row-label { font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* phone shell */
+  .phone {
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1.5px solid #ddd;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    position: relative;
+  }
+  .sb { height: 14px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; font-size: 6px; color: #ccc; }
+
+  /* ── B: Card style ── */
+  .b-hud { background: #4caf50; padding: 8px 10px 6px; }
+  .b-farm { font-size: 10px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+  .b-chips { display: flex; gap: 3px; }
+  .b-chip { flex:1; background: rgba(255,255,255,0.2); border-radius: 6px; padding: 3px 2px; text-align: center; }
+  .b-chip .v { font-size: 9px; font-weight: 700; color: #fff; }
+  .b-chip .l { font-size: 6px; color: rgba(255,255,255,0.7); }
+  .b-stabs { display: flex; gap: 3px; padding: 5px 6px 0; background: #fff; }
+  .b-stab { font-size: 8px; color: #ccc; padding: 3px 6px; border-radius: 5px 5px 0 0; font-weight: 600; }
+  .b-stab.on { background: #f1f8e9; color: #2e7d32; border: 1px solid #ddd; border-bottom: 1px solid #f1f8e9; }
+  .b-body { background: #f9faf9; padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+  .b-card { background: #fff; border-radius: 8px; padding: 7px 9px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; }
+  .b-name { font-size: 10px; font-weight: 700; color: #111; }
+  .b-sub  { font-size: 8px; color: #aaa; margin-top: 1px; }
+  .b-badge { font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 20px; background: #4caf50; color: #fff; }
+  .b-badge.w { background: #ff8f00; }
+  .b-badge.g { background: #e8e8e8; color: #999; }
+  .b-tabbar { background: #fff; height: 30px; display: flex; align-items: center; justify-content: space-around; border-top: 1px solid #eee; font-size: 7px; color: #ddd; }
+  .b-tabbar .on { color: #4caf50; font-weight: 700; }
+  .b-adv { background: #4caf50; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; }
+
+  /* ── C: Dense style ── */
+  .c-hud { background: #fff; border-bottom: 2px solid #e8f5e9; padding: 5px 8px; display: flex; align-items: center; gap: 6px; }
+  .c-day { background: #4caf50; color: #fff; font-size: 8px; font-weight: 800; padding: 2px 6px; border-radius: 20px; }
+  .c-money { font-size: 11px; font-weight: 700; color: #111; }
+  .c-season { font-size: 8px; color: #4caf50; margin-left: auto; font-weight: 600; }
+  .c-stabs { display: flex; background: #f7faf7; border-bottom: 1px solid #e8e8e8; }
+  .c-stab { flex:1; text-align:center; font-size: 7px; padding: 4px 1px; color: #bbb; font-weight: 600; border-right: 1px solid #f0f0f0; }
+  .c-stab.on { background: #fff; color: #2e7d32; font-weight: 700; }
+  .c-head { display: flex; padding: 3px 8px; background: #f7faf7; border-bottom: 1px solid #f0f0f0; }
+  .c-th { font-size: 6px; color: #ccc; font-weight: 700; text-transform: uppercase; }
+  .c-th.r { margin-left: auto; }
+  .c-tr { display: flex; align-items: center; padding: 5px 8px; border-bottom: 1px solid #f9f9f9; }
+  .c-dot { width: 5px; height: 5px; border-radius: 50%; margin-right: 5px; flex-shrink: 0; }
+  .c-dot.g { background: #4caf50; }
+  .c-dot.w { background: #ff8f00; }
+  .c-dot.e { background: #e0e0e0; }
+  .c-td  { font-size: 9px; color: #333; }
+  .c-sub { font-size: 7px; color: #bbb; }
+  .c-val { font-size: 9px; font-family: monospace; margin-left: auto; font-weight: 600; }
+  .c-val.gr { color: #4caf50; }
+  .c-val.or { color: #ff8f00; }
+  .c-val.dim { color: #ccc; }
+  .c-tabbar { background: #fff; height: 28px; display: flex; align-items: center; justify-content: space-around; border-top: 1.5px solid #e8f5e9; font-size: 7px; color: #ddd; }
+  .c-tabbar .on { color: #4caf50; font-weight: 700; }
+  .c-adv { background: #fff; border-top: 1px solid #e8e8e8; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #4caf50; }
+
+  /* vote section */
+  .vote-section {
+    background: #fff; border: 2px solid #e0e0e0; border-radius: 14px; padding: 16px 18px; margin-top: 24px;
+  }
+  .vote-section h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+  .vote-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .vote-btn {
+    flex: 1; min-width: 120px;
+    padding: 10px 16px; border-radius: 9px; cursor: pointer; border: 2px solid transparent;
+    font-size: 13px; font-weight: 700; text-align: center; transition: all 0.15s;
+  }
+  .vote-b { background: #e8f5e9; color: #2e7d32; }
+  .vote-b:hover, .vote-b.sel { background: #4caf50; color: #fff; border-color: #388e3c; }
+  .vote-c { background: #e3f2fd; color: #0d47a1; }
+  .vote-c:hover, .vote-c.sel { background: #1565c0; color: #fff; border-color: #0d47a1; }
+  .vote-mix { background: #f3e5f5; color: #4a148c; }
+  .vote-mix:hover, .vote-mix.sel { background: #6a1b9a; color: #fff; border-color: #4a148c; }
+  .vote-note { margin-top: 10px; font-size: 11px; color: #888; }
+</style>
+</head>
+<body>
+
+<h2>B vs C — three screens compared</h2>
+<p class="subtitle">Same data, same structure. The only difference is density and visual weight.</p>
+
+<div class="col-headers">
+  <div class="col-head col-b">B — Card-Heavy & Bold</div>
+  <div class="col-head col-c">C — Dense & Data-rich</div>
+</div>
+
+<!-- ── SCREEN 1: Fields ── -->
+<div class="row-group">
+  <div class="row-label">Fields screen</div>
+  <div class="pair">
+
+    <!-- B: Fields -->
+    <div class="phone" style="background:#f9faf9">
+      <div class="sb" style="background:#4caf50;color:rgba(255,255,255,0.5)"><span>9:41</span><span>●●●</span></div>
+      <div class="b-hud">
+        <div class="b-farm">Granja Norte · Day 42 · Summer</div>
+        <div class="b-chips">
+          <div class="b-chip"><div class="v">$12.4k</div><div class="l">Cash</div></div>
+          <div class="b-chip"><div class="v">3 ✓</div><div class="l">Ready</div></div>
+          <div class="b-chip"><div class="v">☀ Fair</div><div class="l">Weather</div></div>
+        </div>
+      </div>
+      <div class="b-stabs">
+        <div class="b-stab on">Fields</div><div class="b-stab">Water</div><div class="b-stab">Wthr</div>
+      </div>
+      <div class="b-body">
+        <div class="b-card"><div><div class="b-name">North Field</div><div class="b-sub">Wheat · 3 ha · loamy</div></div><div class="b-badge">Harvest</div></div>
+        <div class="b-card"><div><div class="b-name">East Pasture</div><div class="b-sub">Corn · 2 ha · 18d left</div></div><div class="b-badge g">18d</div></div>
+        <div class="b-card"><div><div class="b-name">South Plot</div><div class="b-sub">Empty · 1.5 ha</div></div><div style="font-size:8px;color:#4caf50">Plant ›</div></div>
+        <div class="b-card"><div><div class="b-name">River Field</div><div class="b-sub">Sunflower · 4 ha · 32d left</div></div><div class="b-badge g">32d</div></div>
+      </div>
+      <div class="b-tabbar"><span class="on">🌾</span><span>🐄</span><span>⚙️</span><span>📈</span><span>🏦</span></div>
+      <div class="b-adv">▶ Advance Day</div>
+    </div>
+
+    <!-- C: Fields -->
+    <div class="phone" style="background:#fff">
+      <div class="sb"><span>9:41</span><span>●●●</span></div>
+      <div class="c-hud">
+        <div class="c-day">D42</div>
+        <div class="c-money">$12,450</div>
+        <div class="c-season">☀ Summer</div>
+      </div>
+      <div class="c-stabs">
+        <div class="c-stab on">Fields</div><div class="c-stab">Water</div><div class="c-stab">Cal</div><div class="c-stab">Wthr</div>
+      </div>
+      <div class="c-head"><span class="c-th">Field / Crop</span><span class="c-th r">Status</span></div>
+      <div class="c-tr"><div class="c-dot g"></div><div><div class="c-td">North — Wheat 3ha</div><div class="c-sub">loamy · N:72 P:58 K:61</div></div><div class="c-val gr">Ready ✓</div></div>
+      <div class="c-tr"><div class="c-dot w"></div><div><div class="c-td">East — Corn 2ha</div><div class="c-sub">sandy · N:45 P:61 K:54</div></div><div class="c-val or">18d</div></div>
+      <div class="c-tr"><div class="c-dot e"></div><div><div class="c-td">South — Empty 1.5ha</div><div class="c-sub">clay · N:68 P:70 K:60</div></div><div class="c-val dim">—</div></div>
+      <div class="c-tr"><div class="c-dot w"></div><div><div class="c-td">River — Sunflower 4ha</div><div class="c-sub">loamy · N:55 P:50 K:58</div></div><div class="c-val or">32d</div></div>
+      <div class="c-tr"><div class="c-dot e"></div><div><div class="c-td">West — Empty 2ha</div><div class="c-sub">chalky · N:61 P:44 K:66</div></div><div class="c-val dim">—</div></div>
+      <div class="c-tabbar"><span class="on">🌾</span><span>🐄</span><span>⚙️</span><span>📈</span><span>🏦</span></div>
+      <div class="c-adv">▶ Advance Day</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCREEN 2: Prices ── -->
+<div class="row-group">
+  <div class="row-label">Market → Prices screen</div>
+  <div class="pair">
+
+    <!-- B: Prices -->
+    <div class="phone" style="background:#f9faf9">
+      <div class="sb" style="background:#4caf50;color:rgba(255,255,255,0.5)"><span>9:41</span><span>●●●</span></div>
+      <div class="b-hud">
+        <div class="b-farm">Granja Norte · Day 42 · Summer</div>
+        <div class="b-chips">
+          <div class="b-chip"><div class="v">$12.4k</div><div class="l">Cash</div></div>
+          <div class="b-chip"><div class="v">48 kg</div><div class="l">Wheat</div></div>
+          <div class="b-chip"><div class="v">☀ Fair</div><div class="l">Weather</div></div>
+        </div>
+      </div>
+      <div class="b-stabs">
+        <div class="b-stab on">Prices</div><div class="b-stab">Econ</div><div class="b-stab">Auct</div><div class="b-stab">Shop</div>
+      </div>
+      <div class="b-body">
+        <div class="b-card"><div><div class="b-name">Wheat</div><div class="b-sub">$0.42/kg · ↑ +4% · 48 kg</div></div><div class="b-badge">Sell</div></div>
+        <div class="b-card"><div><div class="b-name">Corn</div><div class="b-sub">$0.28/kg · ↓ −1% · 120 kg</div></div><div class="b-badge g">Hold</div></div>
+        <div class="b-card"><div><div class="b-name">Sunflower Oil</div><div class="b-sub">$3.20/L · ↑ +2% · 12 L</div></div><div class="b-badge">Sell</div></div>
+        <div class="b-card"><div><div class="b-name">Honey</div><div class="b-sub">$8.50/kg · → 0% · 4 kg</div></div><div class="b-badge g">Hold</div></div>
+      </div>
+      <div class="b-tabbar"><span>🌾</span><span>🐄</span><span>⚙️</span><span class="on">📈</span><span>🏦</span></div>
+      <div class="b-adv">▶ Advance Day</div>
+    </div>
+
+    <!-- C: Prices -->
+    <div class="phone" style="background:#fff">
+      <div class="sb"><span>9:41</span><span>●●●</span></div>
+      <div class="c-hud">
+        <div class="c-day">D42</div>
+        <div class="c-money">$12,450</div>
+        <div class="c-season">☀ Summer</div>
+      </div>
+      <div class="c-stabs">
+        <div class="c-stab on">Prices</div><div class="c-stab">Econ</div><div class="c-stab">Auct</div><div class="c-stab">Shop</div>
+      </div>
+      <div class="c-head"><span class="c-th">Product · Stock</span><span class="c-th r">Price · Δ</span></div>
+      <div class="c-tr"><div class="c-dot g"></div><div><div class="c-td">Wheat</div><div class="c-sub">48 kg in inventory</div></div><div class="c-val gr">$0.42 ↑+4%</div></div>
+      <div class="c-tr"><div class="c-dot w"></div><div><div class="c-td">Corn</div><div class="c-sub">120 kg in inventory</div></div><div class="c-val or">$0.28 ↓−1%</div></div>
+      <div class="c-tr"><div class="c-dot g"></div><div><div class="c-td">Sunflower Oil</div><div class="c-sub">12 L in inventory</div></div><div class="c-val gr">$3.20 ↑+2%</div></div>
+      <div class="c-tr"><div class="c-dot e"></div><div><div class="c-td">Honey</div><div class="c-sub">4 kg in inventory</div></div><div class="c-val dim">$8.50 →0%</div></div>
+      <div class="c-tr"><div class="c-dot e"></div><div><div class="c-td">Saffron</div><div class="c-sub">0 kg in inventory</div></div><div class="c-val dim">$142 ↑+1%</div></div>
+      <div class="c-tr"><div class="c-dot e"></div><div><div class="c-td">Milk</div><div class="c-sub">0 L in inventory</div></div><div class="c-val dim">$0.65 →0%</div></div>
+      <div class="c-tabbar"><span>🌾</span><span>🐄</span><span>⚙️</span><span class="on">📈</span><span>🏦</span></div>
+      <div class="c-adv">▶ Advance Day</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCREEN 3: Animals ── -->
+<div class="row-group">
+  <div class="row-label">Animals → Livestock screen</div>
+  <div class="pair">
+
+    <!-- B: Animals -->
+    <div class="phone" style="background:#f9faf9">
+      <div class="sb" style="background:#4caf50;color:rgba(255,255,255,0.5)"><span>9:41</span><span>●●●</span></div>
+      <div class="b-hud">
+        <div class="b-farm">Granja Norte · Day 42 · Summer</div>
+        <div class="b-chips">
+          <div class="b-chip"><div class="v">$12.4k</div><div class="l">Cash</div></div>
+          <div class="b-chip"><div class="v">12 🐄</div><div class="l">Cattle</div></div>
+          <div class="b-chip"><div class="v">Collect</div><div class="l">Today</div></div>
+        </div>
+      </div>
+      <div class="b-stabs">
+        <div class="b-stab on">Livestock</div><div class="b-stab">Henil</div><div class="b-stab">Breeds</div>
+      </div>
+      <div class="b-body">
+        <div class="b-card"><div><div class="b-name">12× Friesian Cow</div><div class="b-sub">Mature · 420 L milk today</div></div><div class="b-badge">Collect</div></div>
+        <div class="b-card"><div><div class="b-name">30× Hens</div><div class="b-sub">Mature · 28 eggs today</div></div><div class="b-badge">Collect</div></div>
+        <div class="b-card"><div><div class="b-name">4× Merino Lamb</div><div class="b-sub">Growing · 18d to mature</div></div><div class="b-badge w">18d</div></div>
+        <div class="b-card"><div><div class="b-name">2× Iberian Pig</div><div class="b-sub">Mature · no production</div></div><div class="b-badge g">Idle</div></div>
+      </div>
+      <div class="b-tabbar"><span>🌾</span><span class="on">🐄</span><span>⚙️</span><span>📈</span><span>🏦</span></div>
+      <div class="b-adv">▶ Advance Day</div>
+    </div>
+
+    <!-- C: Animals -->
+    <div class="phone" style="background:#fff">
+      <div class="sb"><span>9:41</span><span>●●●</span></div>
+      <div class="c-hud">
+        <div class="c-day">D42</div>
+        <div class="c-money">$12,450</div>
+        <div class="c-season">☀ Summer</div>
+      </div>
+      <div class="c-stabs">
+        <div class="c-stab on">Livestock</div><div class="c-stab">Henil</div><div class="c-stab">Breeds</div>
+      </div>
+      <div class="c-head"><span class="c-th">Animal · Count</span><span class="c-th r">Output</span></div>
+      <div class="c-tr"><div class="c-dot g"></div><div><div class="c-td">12× Friesian Cow</div><div class="c-sub">mature · establo</div></div><div class="c-val gr">420 L ✓</div></div>
+      <div class="c-tr"><div class="c-dot g"></div><div><div class="c-td">30× Hen</div><div class="c-sub">mature · gallinero</div></div><div class="c-val gr">28 eggs ✓</div></div>
+      <div class="c-tr"><div class="c-dot w"></div><div><div class="c-td">4× Merino Lamb</div><div class="c-sub">growing · corral</div></div><div class="c-val or">18d</div></div>
+      <div class="c-tr"><div class="c-dot e"></div><div><div class="c-td">2× Iberian Pig</div><div class="c-sub">mature · pocilga</div></div><div class="c-val dim">idle</div></div>
+      <div class="c-tr"><div class="c-dot e"></div><div><div class="c-td">6× Bee Colony</div><div class="c-sub">mature · colmena</div></div><div class="c-val dim">no hive</div></div>
+      <div class="c-tabbar"><span>🌾</span><span class="on">🐄</span><span>⚙️</span><span>📈</span><span>🏦</span></div>
+      <div class="c-adv">▶ Advance Day</div>
+    </div>
+  </div>
+</div>
+
+<!-- vote -->
+<div class="vote-section">
+  <h3>Key difference: B shows fewer rows but bigger, B shows badges clearly. C shows more rows, soil NPK inline, monospace numbers. Which do you prefer?</h3>
+  <div class="vote-row">
+    <div class="vote-btn vote-b" onclick="vote(this,'b')">B — Cards & Badges</div>
+    <div class="vote-btn vote-c" onclick="vote(this,'c')">C — Dense Rows</div>
+    <div class="vote-btn vote-mix" onclick="vote(this,'mix')">Mix — Cards for actions, dense for lists</div>
+  </div>
+  <div class="vote-note" id="vn"></div>
+</div>
+
+<script>
+function vote(el, choice) {
+  document.querySelectorAll('.vote-btn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  const notes = {
+    b: 'Bigger touch targets, clearer state, more game-like.',
+    c: 'More info visible, good for experienced players, compact.',
+    mix: 'Cards where action is needed (harvest, collect), dense rows for read-heavy screens (prices, soil).'
+  };
+  document.getElementById('vn').textContent = notes[choice];
+  fetch('/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'click', choice, text: 'B vs C: ' + choice })
+  });
+}
+</script>
+</body>
+</html>

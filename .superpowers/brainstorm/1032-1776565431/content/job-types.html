@@ -1,0 +1,137 @@
+<h2>Worker Job Types</h2>
+<p class="subtitle">15 roles across 5 departments — applicants may arrive pre-certified or not</p>
+
+<style>
+.job-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.job-table th { text-align: left; padding: 8px 12px; background: rgba(255,255,255,0.08); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #aaa; }
+.job-table td { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
+.job-table tr:last-child td { border-bottom: none; }
+.dept { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.dept-fields   { background: #2d4a1e; color: #7ec850; }
+.dept-animals  { background: #3a2a1a; color: #e08c3a; }
+.dept-machinery{ background: #1a2a3a; color: #5ab0e0; }
+.dept-processing{background: #2a1a3a; color: #b06ee0; }
+.dept-transport{ background: #1a3a2a; color: #3ac890; }
+.cert-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; background: rgba(255,255,255,0.1); color: #ccc; margin: 1px; }
+.role-name { font-weight: 600; color: #f0f0f0; }
+.section-header td { padding-top: 18px; padding-bottom: 4px; }
+.section-header .dept { font-size: 12px; padding: 3px 10px; }
+</style>
+
+<table class="job-table">
+  <thead>
+    <tr>
+      <th style="width:160px">Role</th>
+      <th style="width:100px">Dept</th>
+      <th>What They Do</th>
+      <th style="width:220px">Possible Pre-Certs</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- FIELDS -->
+    <tr class="section-header"><td colspan="4"><span class="dept dept-fields">🌾 Fields</span></td></tr>
+    <tr>
+      <td class="role-name">Field Hand</td>
+      <td><span class="dept dept-fields">Fields</span></td>
+      <td>Planting, weeding, manual harvesting, irrigation checks. Most common hire. Junior workers, rarely pre-certified.</td>
+      <td><span class="cert-tag">Pesticide Handler</span></td>
+    </tr>
+    <tr>
+      <td class="role-name">Agronomist</td>
+      <td><span class="dept dept-fields">Fields</span></td>
+      <td>Soil analysis, crop rotation planning, fertiliser programs, yield forecasting. Raises requests for major interventions. Senior role.</td>
+      <td><span class="cert-tag">Certified Agronomist</span> <span class="cert-tag">Soil Science Diploma</span> <span class="cert-tag">Pesticide Applicator</span></td>
+    </tr>
+    <tr>
+      <td class="role-name">Crop Scout</td>
+      <td><span class="dept dept-fields">Fields</span></td>
+      <td>Daily field walks to catch pests, disease, water stress early. Reports findings, triggers consultant/vet requests. Eyes on the ground.</td>
+      <td><span class="cert-tag">Pest ID Certificate</span> <span class="cert-tag">IPM Practitioner</span></td>
+    </tr>
+    <tr>
+      <td class="role-name">Irrigation Technician</td>
+      <td><span class="dept dept-fields">Fields</span></td>
+      <td>Manages water schedules, drip/sprinkler systems, aquifer draw. Requests approval for major water use. Maintains water infrastructure.</td>
+      <td><span class="cert-tag">Water Management Cert</span> <span class="cert-tag">Irrigation Systems License</span></td>
+    </tr>
+
+    <!-- ANIMALS -->
+    <tr class="section-header"><td colspan="4"><span class="dept dept-animals">🐄 Animals</span></td></tr>
+    <tr>
+      <td class="role-name">Livestock Hand</td>
+      <td><span class="dept dept-animals">Animals</span></td>
+      <td>Daily feeding, watering, mucking out, basic health checks. Flags anything unusual to the vet. Entry-level animal worker.</td>
+      <td><span class="cert-tag">Animal Welfare Cert</span></td>
+    </tr>
+    <tr>
+      <td class="role-name">Veterinarian</td>
+      <td><span class="dept dept-animals">Animals</span></td>
+      <td>Diagnoses illness, prescribes treatment, performs procedures. Always pre-certified. Requests approval for expensive treatments.</td>
+      <td><span class="cert-tag">Veterinary Degree ✦</span> <span class="cert-tag">Livestock Med License</span></td>
+    </tr>
+    <tr>
+      <td class="role-name">AI Inseminator</td>
+      <td><span class="dept dept-animals">Animals</span></td>
+      <td>Artificial insemination specialist. Manages breeding schedules, semen selection, pregnancy checks. High-value genetics work.</td>
+      <td><span class="cert-tag">AI Technician License ✦</span> <span class="cert-tag">Reproductive Science</span></td>
+    </tr>
+    <tr>
+      <td class="role-name">Farrier / Hoof Tech</td>
+      <td><span class="dept dept-animals">Animals</span></td>
+      <td>Hoof trimming and care for cattle, horses, pigs. Prevents lameness. Seasonal demand spikes. Can be hired per-visit or full-time.</td>
+      <td><span class="cert-tag">Registered Farrier ✦</span></td>
+    </tr>
+
+    <!-- MACHINERY -->
+    <tr class="section-header"><td colspan="4"><span class="dept dept-machinery">🚜 Machinery</span></td></tr>
+    <tr>
+      <td class="role-name">Tractor Operator</td>
+      <td><span class="dept dept-machinery">Machinery</span></td>
+      <td>Operates tractors and attached implements — ploughing, planting, spraying, baling. Requires machinery license for large vehicles.</td>
+      <td><span class="cert-tag">Tractor License</span> <span class="cert-tag">Sprayer Cert</span></td>
+    </tr>
+    <tr>
+      <td class="role-name">Combine / Harvester Op</td>
+      <td><span class="dept dept-machinery">Machinery</span></td>
+      <td>Operates combine harvesters, grain carts, forage harvesters. High seasonal demand. Often comes from contracting firms.</td>
+      <td><span class="cert-tag">Combine License ✦</span> <span class="cert-tag">Grain Handling Cert</span></td>
+    </tr>
+    <tr>
+      <td class="role-name">Farm Mechanic</td>
+      <td><span class="dept dept-machinery">Machinery</span></td>
+      <td>Maintains and repairs all machinery. Reduces breakdown frequency. Flags machines needing replacement. Saves money long-term.</td>
+      <td><span class="cert-tag">Agricultural Mechanics Cert</span> <span class="cert-tag">Welding License</span></td>
+    </tr>
+
+    <!-- PROCESSING -->
+    <tr class="section-header"><td colspan="4"><span class="dept dept-processing">🏭 Processing</span></td></tr>
+    <tr>
+      <td class="role-name">Processing Technician</td>
+      <td><span class="dept dept-processing">Processing</span></td>
+      <td>Operates processing equipment (grain drying, dairy, meat prep). Maintains quality standards. Requests approval for large batches.</td>
+      <td><span class="cert-tag">Food Safety Cert</span> <span class="cert-tag">HACCP Trained</span></td>
+    </tr>
+    <tr>
+      <td class="role-name">Quality Controller</td>
+      <td><span class="dept dept-processing">Processing</span></td>
+      <td>Tests outputs for contamination, grade, moisture, fat content. Can reject batches. Unlocks premium market access if rating stays high.</td>
+      <td><span class="cert-tag">Food Quality Inspector</span> <span class="cert-tag">Lab Testing Cert</span></td>
+    </tr>
+
+    <!-- TRANSPORT -->
+    <tr class="section-header"><td colspan="4"><span class="dept dept-transport">🚛 Transport</span></td></tr>
+    <tr>
+      <td class="role-name">Transport Driver</td>
+      <td><span class="dept dept-transport">Transport</span></td>
+      <td>Moves product to market, auction, or processing. Drives farm trucks and livestock trailers. Required for time-sensitive deliveries.</td>
+      <td><span class="cert-tag">HGV License</span> <span class="cert-tag">Livestock Transport Cert</span> <span class="cert-tag">ADR (Hazmat)</span></td>
+    </tr>
+
+  </tbody>
+</table>
+
+<div class="section" style="margin-top:20px; padding: 12px 16px; background: rgba(255,255,255,0.05); border-radius: 8px; font-size:13px;">
+  <span class="label">Pre-certification rule</span><br>
+  <span style="color:#ccc">Certs marked <strong>✦</strong> are <em>always</em> held by that role (e.g. a vet always has their degree). All others appear randomly — an applicant might have them, might not. Senior/experienced applicants are more likely to arrive certified.</span>
+</div>

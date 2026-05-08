@@ -1,0 +1,253 @@
+<h2>Processing Buildings — Full Catalogue</h2>
+<p class="subtitle">Every realistic farm processing facility. Click all you want to include.</p>
+
+<style>
+.cat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #666; margin: 20px 0 8px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 8px; margin-bottom: 4px; }
+.bld { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 9px; padding: 10px 12px; cursor: pointer; transition: all 0.12s; }
+.bld:hover { background: rgba(255,255,255,0.08); }
+.bld.selected { border-color: #7ec850; background: rgba(126,200,80,0.1); }
+.bld-top { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.bld-icon { font-size:20px; flex-shrink:0; }
+.bld-name { font-size:12px; font-weight:700; color:#f0f0f0; line-height:1.3; }
+.bld-chain { font-size:10px; color:#888; line-height:1.5; }
+.bld-tiers { font-size:10px; color:#5ab0e0; margin-top:3px; font-weight:600; }
+</style>
+
+<div class="cat-label">🌾 Grain & Starch</div>
+<div class="grid">
+  <div class="bld option" data-choice="grain_dryer" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🌡️</div><div class="bld-name">Grain Dryer & Elevator</div></div>
+    <div class="bld-chain">Wet grain → dried/stored grain. Required before most grain processing.</div>
+    <div class="bld-tiers">Pre-processing (1 tier)</div>
+  </div>
+  <div class="bld option" data-choice="flour_mill" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">⚙️</div><div class="bld-name">Flour Mill</div></div>
+    <div class="bld-chain">Wheat/barley/oats → wholemeal flour → white flour → specialty flours</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="rice_mill" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🍚</div><div class="bld-name">Rice Mill</div></div>
+    <div class="bld-chain">Paddy rice → brown rice → white rice → rice flour, rice cakes</div>
+    <div class="bld-tiers">3 tiers</div>
+  </div>
+  <div class="bld option" data-choice="bakery" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🍞</div><div class="bld-name">Bakery</div></div>
+    <div class="bld-chain">Flour + eggs/butter → bread, pastries, crackers, pasta, tortillas</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="starch" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🧪</div><div class="bld-name">Starch Factory</div></div>
+    <div class="bld-chain">Corn/potatoes → raw starch → refined starch → glucose syrup, cornflour</div>
+    <div class="bld-tiers">3 tiers</div>
+  </div>
+  <div class="bld option" data-choice="malting" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🌰</div><div class="bld-name">Malting House</div></div>
+    <div class="bld-chain">Barley → malted barley. Required input for brewery & distillery.</div>
+    <div class="bld-tiers">1 tier (prerequisite)</div>
+  </div>
+  <div class="bld option" data-choice="feed_mill" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🌽</div><div class="bld-name">Feed Mill</div></div>
+    <div class="bld-chain">Grain/soy/alfalfa → compound feed → medicated/specialist feed</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+</div>
+
+<div class="cat-label">🛢️ Oils, Fats & Sugar</div>
+<div class="grid">
+  <div class="bld option" data-choice="oil_press" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🛢️</div><div class="bld-name">Oil Press</div></div>
+    <div class="bld-chain">Sunflower/rapeseed/soy/flaxseed → crude oil → refined cooking oil → margarine</div>
+    <div class="bld-tiers">3 tiers</div>
+  </div>
+  <div class="bld option" data-choice="rendering" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🫙</div><div class="bld-name">Rendering Plant</div></div>
+    <div class="bld-chain">Animal fat/bones → lard, tallow, bone meal → soap, candles, fertiliser</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="sugar_refinery" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🍬</div><div class="bld-name">Sugar Refinery</div></div>
+    <div class="bld-chain">Sugarcane/sugarbeet → raw sugar → refined sugar → molasses, syrup</div>
+    <div class="bld-tiers">3 tiers</div>
+  </div>
+  <div class="bld option" data-choice="confectionery" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🍫</div><div class="bld-name">Confectionery Plant</div></div>
+    <div class="bld-chain">Sugar + dairy/nuts/fruit → chocolate, sweets, candy, caramel</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="biofuel" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">⛽</div><div class="bld-name">Biofuel Plant</div></div>
+    <div class="bld-chain">Corn/sugarcane/rapeseed → ethanol/biodiesel → blended farm fuel</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+</div>
+
+<div class="cat-label">🥛 Dairy</div>
+<div class="grid">
+  <div class="bld option" data-choice="dairy_plant" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🥛</div><div class="bld-name">Dairy Plant</div></div>
+    <div class="bld-chain">Milk → pasteurised milk → butter, cream, yoghurt, sour cream</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="cheese_dairy" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🧀</div><div class="bld-name">Cheese Dairy & Cave</div></div>
+    <div class="bld-chain">Milk → fresh cheese → semi-hard → aged hard cheese (months)</div>
+    <div class="bld-tiers">3–4 tiers</div>
+  </div>
+  <div class="bld option" data-choice="ice_cream" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🍦</div><div class="bld-name">Ice Cream Factory</div></div>
+    <div class="bld-chain">Cream + sugar + flavours → ice cream, gelato, frozen yoghurt</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="whey" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">💪</div><div class="bld-name">Whey Processing</div></div>
+    <div class="bld-chain">Cheese whey → whey powder → protein concentrate → animal feed</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+</div>
+
+<div class="cat-label">🥩 Meat & Eggs</div>
+<div class="grid">
+  <div class="bld option" data-choice="abattoir" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🏭</div><div class="bld-name">Abattoir</div></div>
+    <div class="bld-chain">Live animals → carcasses → primary cuts. Required before butchery/charcuterie.</div>
+    <div class="bld-tiers">1 tier (prerequisite)</div>
+  </div>
+  <div class="bld option" data-choice="butchery" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🔪</div><div class="bld-name">Butchery</div></div>
+    <div class="bld-chain">Primary cuts → retail cuts, mince, offal products</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="smokehouse" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">💨</div><div class="bld-name">Smokehouse</div></div>
+    <div class="bld-chain">Meat/fish → hot smoked → cold smoked (days–weeks)</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="charcuterie" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🥓</div><div class="bld-name">Charcuterie Plant</div></div>
+    <div class="bld-chain">Pork/beef → sausages → cured hams, salami, chorizo (weeks–months)</div>
+    <div class="bld-tiers">3 tiers</div>
+  </div>
+  <div class="bld option" data-choice="egg_grading" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🥚</div><div class="bld-name">Egg Grading & Packing</div></div>
+    <div class="bld-chain">Eggs → graded/packed eggs → powdered egg, liquid egg, mayonnaise</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+</div>
+
+<div class="cat-label">🍷 Beverages & Fermentation</div>
+<div class="grid">
+  <div class="bld option" data-choice="winery" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🍷</div><div class="bld-name">Winery</div></div>
+    <div class="bld-chain">Grapes → crushed must → fermented wine → barrel-aged wine (months–years)</div>
+    <div class="bld-tiers">3–4 tiers</div>
+  </div>
+  <div class="bld option" data-choice="brewery" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🍺</div><div class="bld-name">Brewery</div></div>
+    <div class="bld-chain">Malt + hops → wort → fermented beer → conditioned/kegged beer</div>
+    <div class="bld-tiers">3 tiers</div>
+  </div>
+  <div class="bld option" data-choice="distillery" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🥃</div><div class="bld-name">Distillery</div></div>
+    <div class="bld-chain">Fermented wash → new make spirit → cask-aged whisky/brandy/rum (years)</div>
+    <div class="bld-tiers">4–5 tiers</div>
+  </div>
+  <div class="bld option" data-choice="cider" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🍎</div><div class="bld-name">Cider Press</div></div>
+    <div class="bld-chain">Apples/pears → juice → fermented cider → aged/sparkling cider</div>
+    <div class="bld-tiers">3 tiers</div>
+  </div>
+  <div class="bld option" data-choice="juicery" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🧃</div><div class="bld-name">Juicery</div></div>
+    <div class="bld-chain">Fruit/veg → fresh juice → pasteurised juice → concentrate</div>
+    <div class="bld-tiers">3 tiers</div>
+  </div>
+  <div class="bld option" data-choice="vinegar" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🫙</div><div class="bld-name">Vinegar Plant</div></div>
+    <div class="bld-chain">Wine/cider/malt → raw vinegar → aged vinegar (balsamic = years)</div>
+    <div class="bld-tiers">2–3 tiers</div>
+  </div>
+</div>
+
+<div class="cat-label">🥦 Fruit, Veg & Herbs</div>
+<div class="grid">
+  <div class="bld option" data-choice="cannery" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🥫</div><div class="bld-name">Cannery</div></div>
+    <div class="bld-chain">Fruit/veg → washed/peeled → canned goods, preserved vegetables</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="drying" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">☀️</div><div class="bld-name">Drying Plant</div></div>
+    <div class="bld-chain">Fruit/herbs/mushrooms → sun-dried/dehydrated → powders, teas</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="freezing" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">❄️</div><div class="bld-name">Freezing Plant</div></div>
+    <div class="bld-chain">Fresh produce → blast-frozen goods → IQF vegetables, ready meals</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="jam" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🍓</div><div class="bld-name">Jam & Preserve Kitchen</div></div>
+    <div class="bld-chain">Fruit + sugar → jam, jelly, marmalade, chutney, pickles</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="essential_oil" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🌸</div><div class="bld-name">Essential Oil Distillery</div></div>
+    <div class="bld-chain">Flowers/herbs → crude extract → refined essential oil → cosmetics</div>
+    <div class="bld-tiers">3 tiers</div>
+  </div>
+</div>
+
+<div class="cat-label">🍯 Honey & Bees</div>
+<div class="grid">
+  <div class="bld option" data-choice="honey" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🍯</div><div class="bld-name">Honey Processing</div></div>
+    <div class="bld-chain">Raw honey → filtered honey → creamed/set honey → infused honey</div>
+    <div class="bld-tiers">2–3 tiers</div>
+  </div>
+  <div class="bld option" data-choice="beeswax" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🕯️</div><div class="bld-name">Beeswax & Cosmetics</div></div>
+    <div class="bld-chain">Beeswax → filtered wax → candles, lip balm, wood polish, cosmetics</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+</div>
+
+<div class="cat-label">🧵 Textiles & Leather</div>
+<div class="grid">
+  <div class="bld option" data-choice="cotton_gin" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🌿</div><div class="bld-name">Cotton Gin</div></div>
+    <div class="bld-chain">Raw cotton → lint cotton + cottonseed oil byproduct</div>
+    <div class="bld-tiers">1 tier (prerequisite)</div>
+  </div>
+  <div class="bld option" data-choice="wool_scouring" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🐑</div><div class="bld-name">Wool Scouring</div></div>
+    <div class="bld-chain">Raw fleece → scoured wool → carded wool (prerequisite for textile mill)</div>
+    <div class="bld-tiers">1 tier (prerequisite)</div>
+  </div>
+  <div class="bld option" data-choice="textile_mill" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">🧵</div><div class="bld-name">Textile Mill</div></div>
+    <div class="bld-chain">Clean cotton/wool/flax → spun yarn → woven fabric → finished cloth</div>
+    <div class="bld-tiers">3 tiers</div>
+  </div>
+  <div class="bld option" data-choice="tannery" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">👜</div><div class="bld-name">Tannery</div></div>
+    <div class="bld-chain">Raw hides → vegetable-tanned leather → finished leather goods</div>
+    <div class="bld-tiers">2–3 tiers</div>
+  </div>
+</div>
+
+<div class="cat-label">♻️ Waste & Soil</div>
+<div class="grid">
+  <div class="bld option" data-choice="compost" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">♻️</div><div class="bld-name">Compost Plant</div></div>
+    <div class="bld-chain">Organic waste/manure → raw compost → bagged compost → sell or spread</div>
+    <div class="bld-tiers">2 tiers</div>
+  </div>
+  <div class="bld option" data-choice="biochar" onclick="toggleSelect(this)">
+    <div class="bld-top"><div class="bld-icon">⬛</div><div class="bld-name">Biochar Kiln</div></div>
+    <div class="bld-chain">Crop waste/wood → biochar. Soil amendment that locks carbon, improves drainage.</div>
+    <div class="bld-tiers">1 tier</div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:20px; font-size:12px;">Multi-select — click everything you want. Total: 35 facilities.</p>

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI Rework — Aesthetic Direction</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f0f0f;
+    color: #e0e0e0;
+    min-height: 100vh;
+    padding: 32px 24px;
+  }
+  h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: #888; font-size: 14px; margin-bottom: 32px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  .card {
+    border: 2px solid #2a2a2a;
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s;
+    background: #1a1a1a;
+  }
+  .card:hover { border-color: #666; transform: translateY(-2px); }
+  .card.selected { border-color: #7eb87e; }
+
+  .mockup {
+    width: 100%;
+    height: 240px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ── A: Earthy Warm ── */
+  .mockup-a {
+    background: #1c1208;
+  }
+  .mockup-a .topbar {
+    background: #2d1e0a;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 10px;
+    border-bottom: 1px solid #4a3010;
+  }
+  .mockup-a .day-chip {
+    background: #c67c2a;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .mockup-a .money { color: #f0c060; font-size: 12px; font-weight: 600; }
+  .mockup-a .season { color: #8fb86a; font-size: 11px; }
+  .mockup-a .body { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .mockup-a .row {
+    background: #2a1c0e;
+    border: 1px solid #4a3010;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .mockup-a .row-name { color: #d4a060; font-size: 11px; font-weight: 600; }
+  .mockup-a .row-sub { color: #8a7050; font-size: 10px; }
+  .mockup-a .badge {
+    background: #c67c2a;
+    color: #fff;
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+  .mockup-a .tabs {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background: #2d1e0a;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    border-top: 1px solid #4a3010;
+    font-size: 9px;
+    color: #8a7050;
+  }
+  .mockup-a .tabs .active { color: #c67c2a; }
+
+  /* ── B: Dark Luxury ── */
+  .mockup-b {
+    background: #0a0a0f;
+  }
+  .mockup-b .topbar {
+    background: linear-gradient(180deg, #16111a 0%, #0d0a12 100%);
+    height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 10px;
+    border-bottom: 1px solid #2a1f35;
+  }
+  .mockup-b .day-chip {
+    background: linear-gradient(135deg, #b8902a, #e8c060);
+    color: #1a1000;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 9px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+  .mockup-b .money { color: #e8c060; font-size: 13px; font-weight: 700; letter-spacing: -0.5px; }
+  .mockup-b .season { color: #7a6090; font-size: 11px; }
+  .mockup-b .body { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .mockup-b .row {
+    background: linear-gradient(135deg, #16111a 0%, #1a1420 100%);
+    border: 1px solid #2a1f35;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .mockup-b .row-name { color: #e8c060; font-size: 11px; font-weight: 600; }
+  .mockup-b .row-sub { color: #5a4870; font-size: 10px; }
+  .mockup-b .badge {
+    background: linear-gradient(135deg, #b8902a, #e8c060);
+    color: #1a1000;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+  .mockup-b .tabs {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background: #16111a;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    border-top: 1px solid #2a1f35;
+    font-size: 9px;
+    color: #5a4870;
+  }
+  .mockup-b .tabs .active { color: #e8c060; }
+
+  /* ── C: Bright & Playful ── */
+  .mockup-c {
+    background: #f5f0e8;
+  }
+  .mockup-c .topbar {
+    background: #ffffff;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 10px;
+    border-bottom: 1px solid #e8e0d0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .mockup-c .day-chip {
+    background: #4caf50;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 20px;
+  }
+  .mockup-c .money { color: #2e7d32; font-size: 13px; font-weight: 700; }
+  .mockup-c .season { color: #ff8f00; font-size: 11px; font-weight: 600; }
+  .mockup-c .body { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .mockup-c .row {
+    background: #ffffff;
+    border: 1.5px solid #e8e0d0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .mockup-c .row-name { color: #1a1a1a; font-size: 11px; font-weight: 600; }
+  .mockup-c .row-sub { color: #888; font-size: 10px; }
+  .mockup-c .badge {
+    background: #4caf50;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+  .mockup-c .tabs {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background: #ffffff;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    border-top: 1px solid #e8e0d0;
+    font-size: 9px;
+    color: #aaa;
+    box-shadow: 0 -1px 4px rgba(0,0,0,0.06);
+  }
+  .mockup-c .tabs .active { color: #4caf50; }
+
+  /* ── D: Pixel/Retro ── */
+  .mockup-d {
+    background: #1a1028;
+    image-rendering: pixelated;
+  }
+  .mockup-d .topbar {
+    background: #2a1848;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 10px;
+    border-bottom: 3px solid #3d2a60;
+  }
+  .mockup-d .day-chip {
+    background: #ff6b6b;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.3px;
+  }
+  .mockup-d .money { color: #ffd700; font-size: 12px; font-weight: 700; font-family: monospace; }
+  .mockup-d .season { color: #7fd4ff; font-size: 11px; font-family: monospace; }
+  .mockup-d .body { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .mockup-d .row {
+    background: #2a1848;
+    border: 2px solid #3d2a60;
+    border-radius: 2px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .mockup-d .row-name { color: #ffe0ff; font-size: 10px; font-weight: 700; font-family: monospace; }
+  .mockup-d .row-sub { color: #7050a0; font-size: 9px; font-family: monospace; }
+  .mockup-d .badge {
+    background: #ff6b6b;
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-family: monospace;
+  }
+  .mockup-d .tabs {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background: #2a1848;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    border-top: 3px solid #3d2a60;
+    font-size: 8px;
+    font-family: monospace;
+    color: #5a4070;
+  }
+  .mockup-d .tabs .active { color: #ffd700; }
+
+  .card-label {
+    padding: 14px 16px;
+  }
+  .card-label h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .card-label p { font-size: 12px; color: #888; line-height: 1.5; }
+
+  .selected-indicator {
+    display: none;
+    width: 20px; height: 20px;
+    background: #7eb87e;
+    border-radius: 50%;
+    position: absolute;
+    top: 10px; right: 10px;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #fff;
+    font-weight: 700;
+  }
+  .card.selected .selected-indicator { display: flex; }
+
+  .cta {
+    margin-top: 28px;
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+  }
+  .cta span { color: #7eb87e; }
+</style>
+</head>
+<body>
+
+<h2>What visual direction for the new UI?</h2>
+<p class="subtitle">Choose an art direction. These are rough sketches — exact colors and fonts will be refined later.</p>
+
+<div class="grid">
+
+  <!-- A: Earthy Warm -->
+  <div class="card" onclick="selectCard(this,'a')">
+    <div style="position:relative">
+      <div class="selected-indicator">✓</div>
+      <div class="mockup mockup-a">
+        <div class="topbar">
+          <div class="day-chip">Day 42</div>
+          <div class="money">$12,450</div>
+          <div class="season">☀ Summer</div>
+        </div>
+        <div class="body">
+          <div class="row">
+            <div><div class="row-name">North Field</div><div class="row-sub">Wheat · 3 ha</div></div>
+            <div class="badge">18d left</div>
+          </div>
+          <div class="row">
+            <div><div class="row-name">East Pasture</div><div class="row-sub">Corn · 2 ha</div></div>
+            <div class="badge">Ready</div>
+          </div>
+          <div class="row">
+            <div><div class="row-name">South Plot</div><div class="row-sub">Empty</div></div>
+            <div style="color:#6a5040;font-size:10px">Plant ›</div>
+          </div>
+        </div>
+        <div class="tabs">
+          <span class="active">Fields</span><span>Shop</span><span>Animals</span><span>Office</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>A — Earthy & Warm</h3>
+      <p>Amber, terracotta, warm green. Feels like the physical soil and harvest. Cozy, organic, hand-crafted.</p>
+    </div>
+  </div>
+
+  <!-- B: Dark Luxury -->
+  <div class="card" onclick="selectCard(this,'b')">
+    <div style="position:relative">
+      <div class="selected-indicator">✓</div>
+      <div class="mockup mockup-b">
+        <div class="topbar">
+          <div class="day-chip">Day 42</div>
+          <div class="money">$12,450</div>
+          <div class="season">◆ Summer</div>
+        </div>
+        <div class="body">
+          <div class="row">
+            <div><div class="row-name">North Field</div><div class="row-sub">Wheat · 3 ha</div></div>
+            <div class="badge">18d left</div>
+          </div>
+          <div class="row">
+            <div><div class="row-name">East Pasture</div><div class="row-sub">Corn · 2 ha</div></div>
+            <div class="badge">Ready</div>
+          </div>
+          <div class="row">
+            <div><div class="row-name">South Plot</div><div class="row-sub">Empty</div></div>
+            <div style="color:#5a4870;font-size:10px">Plant ›</div>
+          </div>
+        </div>
+        <div class="tabs">
+          <span class="active">Fields</span><span>Shop</span><span>Animals</span><span>Office</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>B — Dark Luxury</h3>
+      <p>Near-black backgrounds, gold/amber accents. Premium tycoon feel — wealth and ambition. Like a board game box.</p>
+    </div>
+  </div>
+
+  <!-- C: Bright & Playful -->
+  <div class="card" onclick="selectCard(this,'c')">
+    <div style="position:relative">
+      <div class="selected-indicator">✓</div>
+      <div class="mockup mockup-c">
+        <div class="topbar">
+          <div class="day-chip">Day 42</div>
+          <div class="money">$12,450</div>
+          <div class="season">☀ Summer</div>
+        </div>
+        <div class="body">
+          <div class="row">
+            <div><div class="row-name">North Field</div><div class="row-sub">Wheat · 3 ha</div></div>
+            <div class="badge">18d left</div>
+          </div>
+          <div class="row">
+            <div><div class="row-name">East Pasture</div><div class="row-sub">Corn · 2 ha</div></div>
+            <div class="badge">Ready</div>
+          </div>
+          <div class="row">
+            <div><div class="row-name">South Plot</div><div class="row-sub">Empty</div></div>
+            <div style="color:#bbb;font-size:10px">Plant ›</div>
+          </div>
+        </div>
+        <div class="tabs">
+          <span class="active">Fields</span><span>Shop</span><span>Animals</span><span>Office</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>C — Bright & Clean</h3>
+      <p>Light/white background, vivid green accents, clear typography. Modern mobile app energy. App Store polished.</p>
+    </div>
+  </div>
+
+  <!-- D: Pixel/Retro -->
+  <div class="card" onclick="selectCard(this,'d')">
+    <div style="position:relative">
+      <div class="selected-indicator">✓</div>
+      <div class="mockup mockup-d">
+        <div class="topbar">
+          <div class="day-chip">DAY 42</div>
+          <div class="money">$12,450</div>
+          <div class="season">SUM</div>
+        </div>
+        <div class="body">
+          <div class="row">
+            <div><div class="row-name">NORTH FIELD</div><div class="row-sub">wheat · 3 ha</div></div>
+            <div class="badge">18D</div>
+          </div>
+          <div class="row">
+            <div><div class="row-name">EAST PASTURE</div><div class="row-sub">corn · 2 ha</div></div>
+            <div class="badge">DONE</div>
+          </div>
+          <div class="row">
+            <div><div class="row-name">SOUTH PLOT</div><div class="row-sub">empty</div></div>
+            <div style="color:#5a4070;font-size:9px;font-family:monospace">PLANT &gt;</div>
+          </div>
+        </div>
+        <div class="tabs">
+          <span class="active">FIELD</span><span>SHOP</span><span>ANIM</span><span>OFIC</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>D — Pixel / Retro</h3>
+      <p>Chunky pixel-inspired UI, limited palette, monospace text. Indie game character. Feels deliberate and playful.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="cta">Click a direction above — <span>or describe your own below.</span></p>
+
+<script>
+let selected = null;
+function selectCard(el, choice) {
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selected = choice;
+  fetch('/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'click', choice, text: el.querySelector('h3').textContent + ' — ' + el.querySelector('p').textContent })
+  });
+}
+</script>
+
+</body>
+</html>

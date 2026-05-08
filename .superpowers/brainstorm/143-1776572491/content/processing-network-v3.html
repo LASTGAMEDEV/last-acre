@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #111; color: #e0e0e0; font-family: -apple-system, sans-serif; padding: 20px; }
+h2 { font-size: 18px; margin-bottom: 4px; color: #f0f0f0; }
+.sub { font-size: 12px; color: #888; margin-bottom: 16px; }
+
+.scroll-wrap { overflow-x: auto; padding-bottom: 16px; }
+.network { display: flex; gap: 0; min-width: 950px; }
+.col { display: flex; flex-direction: column; gap: 7px; min-width: 190px; padding: 0 8px; border-right: 1px solid rgba(255,255,255,0.06); }
+.col:last-child { border-right: none; }
+.col-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #555; margin-bottom: 6px; text-align: center; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+
+.node { border-radius: 7px; padding: 7px 9px; font-size: 10px; line-height: 1.4; border: 1px solid transparent; }
+.node-name { font-weight: 700; font-size: 11px; margin-bottom: 2px; }
+.node-in { color: #666; font-size: 9px; }
+.node-out { color: #999; font-size: 9px; }
+.mod-badge { display:inline-block; background:#2a1a00; color:#e0a030; font-size:8px; padding:1px 4px; border-radius:3px; margin-left:4px; vertical-align:middle; }
+
+.grain   { background: #141e0a; border-color: #2a4010; }
+.grain .node-name { color: #8ec860; }
+.dairy   { background: #10101e; border-color: #252550; }
+.dairy .node-name { color: #8898e8; }
+.meat    { background: #1e100a; border-color: #402510; }
+.meat .node-name { color: #e89858; }
+.bev     { background: #180a18; border-color: #401840; }
+.bev .node-name { color: #c878c8; }
+.produce { background: #0a1818; border-color: #183030; }
+.produce .node-name { color: #68c8c8; }
+.oils    { background: #181808; border-color: #303010; }
+.oils .node-name { color: #c8c848; }
+.fibre   { background: #100a18; border-color: #251840; }
+.fibre .node-name { color: #9878d8; }
+.herbal  { background: #0a1810; border-color: #183028; }
+.herbal .node-name { color: #58d898; }
+.other   { background: #141414; border-color: #303030; }
+.other .node-name { color: #aaa; }
+.raw     { background: #0c0c0c; border-color: #222; }
+.raw .node-name { color: #777; font-size: 10px; }
+
+.gap { height: 10px; }
+
+.legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.leg { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #777; }
+.leg-dot { width: 9px; height: 9px; border-radius: 2px; }
+
+.note { font-size: 10px; color: #666; margin-top: 16px; line-height: 1.7; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px 16px; }
+.note strong { color: #999; }
+.mod-note { background: rgba(224,160,48,0.06); border-left: 3px solid #e0a030; padding: 10px 14px; border-radius: 6px; font-size: 11px; color: #c89828; margin-top: 14px; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<h2>Processing Network v3 — Realistic Farm Scale</h2>
+<p class="sub">Cleaned up to what real farms actually produce. <span style="color:#e0a030">⚠️ MODIFY</span> = might need scope adjustment.</p>
+
+<div class="legend">
+  <div class="leg"><div class="leg-dot" style="background:#2a4010"></div>Grain</div>
+  <div class="leg"><div class="leg-dot" style="background:#252550"></div>Dairy</div>
+  <div class="leg"><div class="leg-dot" style="background:#402510"></div>Meat & Eggs</div>
+  <div class="leg"><div class="leg-dot" style="background:#401840"></div>Beverages</div>
+  <div class="leg"><div class="leg-dot" style="background:#183030"></div>Fruit & Veg</div>
+  <div class="leg"><div class="leg-dot" style="background:#303010"></div>Oils</div>
+  <div class="leg"><div class="leg-dot" style="background:#251840"></div>Fibre</div>
+  <div class="leg"><div class="leg-dot" style="background:#183028"></div>Herbal</div>
+</div>
+
+<div class="scroll-wrap">
+<div class="network">
+
+<!-- RAW -->
+<div class="col">
+  <div class="col-label">Raw Farm Output</div>
+  <div class="node raw"><div class="node-name">🌾 Cereals</div><div class="node-out">wheat, barley, oats, corn, rye</div></div>
+  <div class="node raw"><div class="node-name">🥔 Root Crops</div><div class="node-out">potatoes, sugarbeet, sugarcane</div></div>
+  <div class="node raw"><div class="node-name">🌱 Legumes</div><div class="node-out">soy, alfalfa</div></div>
+  <div class="node raw"><div class="node-name">🫒 Olives</div><div class="node-out">green & black olives</div></div>
+  <div class="node raw"><div class="node-name">🥜 Almonds</div><div class="node-out">raw almonds</div></div>
+  <div class="node raw"><div class="node-name">🍅 Tomatoes</div><div class="node-out">fresh tomatoes</div></div>
+  <div class="node raw"><div class="node-name">🍓 Berries & Fruit</div><div class="node-out">strawberries, grapes</div></div>
+  <div class="node raw"><div class="node-name">🌿 Fibre Crops</div><div class="node-out">cotton, wool, flax</div></div>
+  <div class="node raw"><div class="node-name">🌸 Specialty Crops</div><div class="node-out">lavender, saffron, vanilla, ginseng</div></div>
+  <div class="node raw"><div class="node-name">🐄 Milk</div><div class="node-out">cow, goat, sheep, buffalo</div></div>
+  <div class="node raw"><div class="node-name">🥩 Live Animals</div><div class="node-out">cattle, pigs, sheep, poultry</div></div>
+  <div class="node raw"><div class="node-name">🥚 Eggs</div><div class="node-out">chicken, duck, quail</div></div>
+  <div class="node raw"><div class="node-name">🍯 Honey & Wax</div><div class="node-out">raw honey, beeswax</div></div>
+  <div class="node raw"><div class="node-name">🐖 Animal Byproducts</div><div class="node-out">hides, fat, bones</div></div>
+</div>
+
+<!-- TIER 1 -->
+<div class="col">
+  <div class="col-label">Tier 1 — Primary</div>
+  <div class="node grain"><div class="node-name">🌡️ Grain Dryer & Elevator</div><div class="node-in">← wheat, barley, oats, corn, rye</div><div class="node-out">→ dried/stored grain</div></div>
+  <div class="node grain"><div class="node-name">🌰 Malting House</div><div class="node-in">← barley, wheat, rye</div><div class="node-out">→ malted grain (req. brewery/distillery)</div></div>
+  <div class="gap"></div>
+  <div class="node dairy"><div class="node-name">🥛 Pasteuriser</div><div class="node-in">← raw milk</div><div class="node-out">→ pasteurised milk</div></div>
+  <div class="gap"></div>
+  <div class="node meat"><div class="node-name">🏭 Abattoir</div><div class="node-in">← live animals</div><div class="node-out">→ carcasses, hides, offal, fat, bones</div></div>
+  <div class="node meat"><div class="node-name">🥚 Egg Grading & Packing</div><div class="node-in">← eggs</div><div class="node-out">→ graded/packed eggs (sell direct)</div></div>
+  <div class="gap"></div>
+  <div class="node fibre"><div class="node-name">🌿 Cotton Gin</div><div class="node-in">← raw cotton</div><div class="node-out">→ lint cotton + cottonseed</div></div>
+  <div class="node fibre"><div class="node-name">🐑 Wool Scouring</div><div class="node-in">← raw fleece</div><div class="node-out">→ clean carded wool</div></div>
+  <div class="gap"></div>
+  <div class="node herbal"><div class="node-name">🌸 Herb Curing & Drying</div><div class="node-in">← saffron, vanilla, ginseng, lavender</div><div class="node-out">→ dried saffron, cured vanilla beans, dried ginseng</div></div>
+</div>
+
+<!-- TIER 2 -->
+<div class="col">
+  <div class="col-label">Tier 2 — Secondary</div>
+  <div class="node grain"><div class="node-name">⚙️ Flour Mill</div><div class="node-in">← dried wheat, oats, barley, rye</div><div class="node-out">→ wholemeal flour → white flour</div></div>
+  <div class="node grain"><div class="node-name">🌽 Feed Mill</div><div class="node-in">← grain, soy, alfalfa</div><div class="node-out">→ compound animal feed</div></div>
+  <div class="gap"></div>
+  <div class="node dairy"><div class="node-name">🧈 Creamery</div><div class="node-in">← pasteurised milk</div><div class="node-out">→ butter, cream, yoghurt, sour cream</div></div>
+  <div class="node dairy"><div class="node-name">🧀 Cheese Dairy</div><div class="node-in">← pasteurised milk</div><div class="node-out">→ fresh curd + whey byproduct</div></div>
+  <div class="gap"></div>
+  <div class="node meat"><div class="node-name">🔪 Butchery</div><div class="node-in">← carcasses</div><div class="node-out">→ retail cuts, mince, offal</div></div>
+  <div class="gap"></div>
+  <div class="node oils"><div class="node-name">🫒 Olive Press</div><div class="node-in">← olives</div><div class="node-out">→ extra virgin olive oil, pomace, brine</div></div>
+  <div class="node oils"><div class="node-name">🫙 Rendering Plant <span class="mod-badge">⚠️ MODIFY</span></div><div class="node-in">← animal fat, bones</div><div class="node-out">→ lard, tallow, bone meal fertiliser</div></div>
+  <div class="gap"></div>
+  <div class="node produce"><div class="node-name">🍅 Tomato Processing</div><div class="node-in">← tomatoes</div><div class="node-out">→ tomato paste → canned whole/crushed</div></div>
+  <div class="node produce"><div class="node-name">🧃 Juicery</div><div class="node-in">← strawberries, grapes, tomatoes</div><div class="node-out">→ fresh juice → pasteurised juice</div></div>
+  <div class="node produce"><div class="node-name">☀️ Drying Plant</div><div class="node-in">← tomatoes, strawberries, herbs</div><div class="node-out">→ sun-dried/dehydrated goods, herbal teas</div></div>
+  <div class="gap"></div>
+  <div class="node fibre"><div class="node-name">🧵 Textile Mill</div><div class="node-in">← lint cotton, clean wool, flax</div><div class="node-out">→ yarn → woven fabric</div></div>
+  <div class="node fibre"><div class="node-name">👜 Tannery</div><div class="node-in">← hides</div><div class="node-out">→ vegetable-tanned leather</div></div>
+  <div class="gap"></div>
+  <div class="node herbal"><div class="node-name">🌸 Essential Oil Distillery</div><div class="node-in">← lavender, herbs</div><div class="node-out">→ essential oils, floral waters</div></div>
+  <div class="node herbal"><div class="node-name">🥜 Nut Processing</div><div class="node-in">← almonds</div><div class="node-out">→ roasted almonds, almond flour, almond butter</div></div>
+</div>
+
+<!-- TIER 3 -->
+<div class="col">
+  <div class="col-label">Tier 3 — Value-Add</div>
+  <div class="node grain"><div class="node-name">🍞 Bakery</div><div class="node-in">← flour + eggs/butter/oil</div><div class="node-out">→ bread, pastries, crackers</div></div>
+  <div class="node grain"><div class="node-name">🥢 Pasta Factory</div><div class="node-in">← flour + eggs</div><div class="node-out">→ dried pasta, fresh pasta, noodles</div></div>
+  <div class="gap"></div>
+  <div class="node dairy"><div class="node-name">🍦 Ice Cream Factory <span class="mod-badge">⚠️ MODIFY</span></div><div class="node-in">← cream + sugar + eggs</div><div class="node-out">→ ice cream, gelato</div></div>
+  <div class="gap"></div>
+  <div class="node meat"><div class="node-name">💨 Smokehouse</div><div class="node-in">← meat cuts</div><div class="node-out">→ smoked meats, smoked fish</div></div>
+  <div class="node meat"><div class="node-name">🥓 Charcuterie Plant</div><div class="node-in">← pork/beef + salt/spices</div><div class="node-out">→ sausages, ham, salami, chorizo</div></div>
+  <div class="gap"></div>
+  <div class="node bev"><div class="node-name">🍷 Winery</div><div class="node-in">← grapes + yeast</div><div class="node-out">→ must → young wine</div></div>
+  <div class="node bev"><div class="node-name">🍺 Brewery</div><div class="node-in">← malted grain + hops</div><div class="node-out">→ wort → fermented beer</div></div>
+  <div class="node bev"><div class="node-name">🥃 Distillery</div><div class="node-in">← malted grain, molasses</div><div class="node-out">→ new make spirit</div></div>
+  <div class="node bev"><div class="node-name">🍎 Cider Press</div><div class="node-in">← apples, pears, strawberries</div><div class="node-out">→ fermented cider/fruit wine</div></div>
+  <div class="gap"></div>
+  <div class="node produce"><div class="node-name">🍅 Sauce & Condiment Factory</div><div class="node-in">← tomato paste + vinegar + spices</div><div class="node-out">→ ketchup, pasta sauce, salsa</div></div>
+  <div class="node produce"><div class="node-name">🍓 Jam & Preserve Kitchen</div><div class="node-in">← strawberries, grapes + sugar</div><div class="node-out">→ jam, jelly, marmalade, chutney, pickles</div></div>
+  <div class="node produce"><div class="node-name">🥫 Cannery</div><div class="node-in">← tomatoes, fruit, veg</div><div class="node-out">→ canned goods</div></div>
+  <div class="gap"></div>
+  <div class="node oils"><div class="node-name">🫙 Vinegar Plant</div><div class="node-in">← wine, cider, malt</div><div class="node-out">→ wine vinegar, cider vinegar, malt vinegar</div></div>
+  <div class="gap"></div>
+  <div class="node other"><div class="node-name">🕯️ Wax & Candle Workshop <span class="mod-badge">⚠️ MODIFY</span></div><div class="node-in">← beeswax + tallow</div><div class="node-out">→ candles, basic soaps, wood polish</div></div>
+  <div class="node other"><div class="node-name">🍯 Honey Processing</div><div class="node-in">← raw honey</div><div class="node-out">→ filtered, creamed, set, infused honey</div></div>
+</div>
+
+<!-- TIER 4 -->
+<div class="col">
+  <div class="col-label">Tier 4 — Premium</div>
+  <div class="node dairy"><div class="node-name">🧀 Aged Cheese Cave</div><div class="node-in">← fresh curd</div><div class="node-out">→ semi-hard → hard → aged cheese (months–years)</div></div>
+  <div class="gap"></div>
+  <div class="node bev"><div class="node-name">🍷 Wine Ageing Cellar</div><div class="node-in">← young wine</div><div class="node-out">→ barrel-aged fine wine (6mo–3yrs)</div></div>
+  <div class="node bev"><div class="node-name">🥃 Spirit Maturation</div><div class="node-in">← new make spirit</div><div class="node-out">→ cask-aged whisky/brandy/rum (3–12+ yrs)</div></div>
+  <div class="node bev"><div class="node-name">🍺 Beer Conditioning</div><div class="node-in">← fermented beer</div><div class="node-out">→ conditioned, bottled, kegged craft beer</div></div>
+  <div class="node bev"><div class="node-name">🧃 Juice Concentrate</div><div class="node-in">← pasteurised juice</div><div class="node-out">→ concentrate, cordials</div></div>
+  <div class="gap"></div>
+  <div class="node produce"><div class="node-name">🫒 Infused Olive Oils</div><div class="node-in">← extra virgin olive oil + herbs/garlic</div><div class="node-out">→ infused oils, premium dressings</div></div>
+  <div class="node produce"><div class="node-name">🫙 Aged Vinegars</div><div class="node-in">← raw vinegar + oak barrels</div><div class="node-out">→ aged balsamic, wine vinegar (aged)</div></div>
+  <div class="gap"></div>
+  <div class="node meat"><div class="node-name">🥩 Aged & Cured Meats</div><div class="node-in">← charcuterie base + time</div><div class="node-out">→ aged prosciutto, 24-month salami</div></div>
+  <div class="gap"></div>
+  <div class="node herbal"><div class="node-name">🌿 Specialty Extracts <span class="mod-badge">⚠️ MODIFY</span></div><div class="node-in">← dried saffron, vanilla, ginseng</div><div class="node-out">→ food-grade extracts only (vanilla extract, saffron extract for cooking)</div></div>
+</div>
+
+</div>
+</div>
+
+<div class="mod-note">
+  <strong>⚠️ Buildings flagged for modification:</strong><br>
+  • <strong>Rendering Plant</strong> — keep lard/tallow/bone meal but remove soap/cosmetic output<br>
+  • <strong>Ice Cream Factory</strong> — realistic on a dairy farm but small scale, not an industrial plant<br>
+  • <strong>Wax & Candle Workshop</strong> — farm-scale candles/soap yes, luxury cosmetics no<br>
+  • <strong>Specialty Extracts</strong> — food-grade vanilla/saffron extract for cooking only, not supplements
+</div>
+
+<div class="note" style="margin-top:10px">
+  <strong>Key connections:</strong>
+  Abattoir → Butchery + Charcuterie + Smokehouse + Tannery + Rendering &nbsp;|&nbsp;
+  Cheese Dairy → whey as animal feed &nbsp;|&nbsp;
+  Tomato Processing → Sauce Factory + Cannery &nbsp;|&nbsp;
+  Olive Press → Infused Oils + Vinegar &nbsp;|&nbsp;
+  Winery → Vinegar Plant &nbsp;|&nbsp;
+  Cider Press → Vinegar Plant &nbsp;|&nbsp;
+  Feed Mill → reduces animal feed costs
+</div>
+
+</body>
+</html>

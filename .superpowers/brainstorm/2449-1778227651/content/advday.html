@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advance Day — Button Placement</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f2f0;
+    padding: 28px 20px 48px;
+    color: #1a1a1a;
+  }
+  h2 { font-size: 19px; font-weight: 700; margin-bottom: 5px; }
+  .sub { font-size: 12px; color: #666; margin-bottom: 28px; }
+
+  .phones { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .phone-label { font-size: 11px; color: #888; font-weight: 600; }
+  .phone-note  { font-size: 10px; color: #aaa; max-width: 180px; text-align: center; }
+
+  /* phone shell */
+  .phone {
+    width: 200px;
+    height: 400px;
+    border-radius: 28px;
+    border: 2.5px solid #ccc;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* notch */
+  .notch { background: #111; height: 20px; display: flex; align-items: center; justify-content: center; }
+  .notch-pill { width: 48px; height: 8px; background: #222; border-radius: 10px; }
+
+  /* status bar */
+  .sb { background: #fff; height: 14px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 7px; color: #bbb; }
+
+  /* HUD */
+  .hud { background: #fff; padding: 7px 12px; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #4caf50; flex-shrink: 0; }
+  .hud-day { background: #4caf50; color: #fff; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 20px; }
+  .hud-money { font-size: 13px; font-weight: 700; color: #111; font-family: monospace; }
+  .hud-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .hud-weather { font-size: 10px; color: #888; }
+  .hud-season { font-size: 10px; color: #4caf50; font-weight: 600; }
+
+  /* subtabs */
+  .stabs { display: flex; background: #f7faf7; border-bottom: 1px solid #e8e8e8; flex-shrink: 0; }
+  .stab { flex:1; text-align:center; font-size: 9px; padding: 5px 2px; color: #bbb; font-weight: 600; border-right: 1px solid #f0f0f0; }
+  .stab.on { background: #fff; color: #2e7d32; font-weight: 700; box-shadow: inset 0 -2px 0 #4caf50; }
+  .stab:last-child { border: none; }
+
+  /* content */
+  .content { flex: 1; overflow: hidden; padding: 0; }
+  .c-head { display: flex; padding: 4px 10px; background: #f7faf7; border-bottom: 1px solid #f0f0f0; }
+  .c-th { font-size: 7px; color: #ccc; font-weight: 700; text-transform: uppercase; }
+  .c-th.r { margin-left: auto; }
+  .row { display: flex; align-items: center; padding: 7px 10px; border-bottom: 1px solid #f9f9f9; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+  .dot.g { background: #4caf50; }
+  .dot.o { background: #ff8f00; }
+  .dot.e { background: #e0e0e0; }
+  .r-main { font-size: 10px; font-weight: 600; color: #111; }
+  .r-sub  { font-size: 8px; color: #aaa; }
+  .r-val  { font-size: 10px; font-family: monospace; font-weight: 600; margin-left: auto; }
+  .r-val.g { color: #4caf50; }
+  .r-val.o { color: #ff8f00; }
+  .r-val.d { color: #ccc; }
+
+  /* ── ADVANCE DAY BUTTON VARIANTS ── */
+  /* Option 1: Full width, above tab bar */
+  .adv-full { background: #4caf50; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; letter-spacing: 0.5px; flex-shrink: 0; }
+  /* Option 2: Pill floating */
+  .adv-float-wrap { position: absolute; bottom: 50px; left: 0; right: 0; display: flex; justify-content: center; pointer-events: none; }
+  .adv-pill { background: #4caf50; height: 36px; padding: 0 28px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #fff; box-shadow: 0 4px 16px rgba(76,175,80,0.45); letter-spacing: 0.3px; }
+  /* Option 3: In tab bar as center tab */
+  .adv-center-tab { flex:1.5; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #4caf50; margin: 3px 0; border-radius: 10px; }
+  .adv-center-tab .ico { font-size: 16px; }
+  .adv-center-tab .lbl { font-size: 8px; color: #fff; font-weight: 700; }
+
+  /* tab bar */
+  .tabbar { background: #fff; height: 46px; display: flex; align-items: center; justify-content: space-around; border-top: 1.5px solid #e8f5e9; flex-shrink: 0; padding: 0 4px; }
+  .tab-item { flex:1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .tab-item .ico { font-size: 16px; line-height: 1; }
+  .tab-item .lbl { font-size: 7px; color: #ccc; }
+  .tab-item.on .lbl { color: #4caf50; font-weight: 700; }
+
+  /* notes */
+  .note-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 24px; }
+  .note-card { background: #fff; border-radius: 12px; padding: 12px 14px; border: 2px solid #e0e0e0; }
+  .note-card.rec { border-color: #4caf50; }
+  .note-title { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .note-body  { font-size: 11px; color: #666; line-height: 1.5; }
+  .rec-tag { font-size: 9px; background: #e8f5e9; color: #2e7d32; padding: 2px 7px; border-radius: 20px; font-weight: 700; margin-left: 6px; }
+
+  .vote { background: #fff; border: 2px solid #e0e0e0; border-radius: 14px; padding: 16px 18px; margin-top: 16px; }
+  .vote h3 { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+  .b1 { background: #e8f5e9; color: #2e7d32; } .b1:hover,.b1.s { background: #4caf50; color: #fff; }
+  .b2 { background: #fff3e0; color: #e65100; } .b2:hover,.b2.s { background: #ff8f00; color: #fff; }
+  .b3 { background: #e3f2fd; color: #0d47a1; } .b3:hover,.b3.s { background: #1565c0; color: #fff; }
+</style>
+</head>
+<body>
+
+<h2>Advance Day button — placement options</h2>
+<p class="sub">Three positions. Click to vote.</p>
+
+<div class="phones">
+
+  <!-- OPTION 1: Full width bar above tab bar -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="notch"><div class="notch-pill"></div></div>
+      <div class="sb"><span>9:41</span><span>●●●</span></div>
+      <div class="hud">
+        <div class="hud-day">Day 42</div>
+        <div class="hud-money">$12,450</div>
+        <div class="hud-right"><span class="hud-weather">☀</span><span class="hud-season">Summer</span></div>
+      </div>
+      <div class="stabs">
+        <div class="stab on">Fields</div><div class="stab">Water</div><div class="stab">Cal</div><div class="stab">Wthr</div>
+      </div>
+      <div class="content">
+        <div class="c-head"><span class="c-th">Field / Crop</span><span class="c-th r">Status</span></div>
+        <div class="row"><div class="dot g"></div><div><div class="r-main">North — Wheat 3ha</div><div class="r-sub">loamy · N:72 P:58 K:61</div></div><div class="r-val g">Ready ✓</div></div>
+        <div class="row"><div class="dot o"></div><div><div class="r-main">East — Corn 2ha</div><div class="r-sub">sandy · N:45 P:61 K:54</div></div><div class="r-val o">18d</div></div>
+        <div class="row"><div class="dot e"></div><div><div class="r-main">South — Empty 1.5ha</div><div class="r-sub">clay · N:68 P:70 K:60</div></div><div class="r-val d">—</div></div>
+        <div class="row"><div class="dot o"></div><div><div class="r-main">River — Sunflower 4ha</div><div class="r-sub">loamy · N:55 P:50 K:58</div></div><div class="r-val o">32d</div></div>
+        <div class="row"><div class="dot e"></div><div><div class="r-main">West — Empty 2ha</div><div class="r-sub">chalky · N:61 P:44 K:66</div></div><div class="r-val d">—</div></div>
+      </div>
+      <div class="adv-full">▶ &nbsp;Advance Day</div>
+      <div class="tabbar">
+        <div class="tab-item on"><div class="ico">🌾</div><div class="lbl">Grow</div></div>
+        <div class="tab-item"><div class="ico">🐄</div><div class="lbl">Animals</div></div>
+        <div class="tab-item"><div class="ico">⚙️</div><div class="lbl">Ops</div></div>
+        <div class="tab-item"><div class="ico">📈</div><div class="lbl">Market</div></div>
+        <div class="tab-item"><div class="ico">🏦</div><div class="lbl">Office</div></div>
+      </div>
+    </div>
+    <div class="phone-label">Option 1 — Full-width bar</div>
+    <div class="phone-note">Solid green band above the tab bar. Unmissable, consistent position always.</div>
+  </div>
+
+  <!-- OPTION 2: Floating pill -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="notch"><div class="notch-pill"></div></div>
+      <div class="sb"><span>9:41</span><span>●●●</span></div>
+      <div class="hud">
+        <div class="hud-day">Day 42</div>
+        <div class="hud-money">$12,450</div>
+        <div class="hud-right"><span class="hud-weather">☀</span><span class="hud-season">Summer</span></div>
+      </div>
+      <div class="stabs">
+        <div class="stab on">Fields</div><div class="stab">Water</div><div class="stab">Cal</div><div class="stab">Wthr</div>
+      </div>
+      <div class="content" style="position:relative">
+        <div class="c-head"><span class="c-th">Field / Crop</span><span class="c-th r">Status</span></div>
+        <div class="row"><div class="dot g"></div><div><div class="r-main">North — Wheat 3ha</div><div class="r-sub">loamy · N:72 P:58 K:61</div></div><div class="r-val g">Ready ✓</div></div>
+        <div class="row"><div class="dot o"></div><div><div class="r-main">East — Corn 2ha</div><div class="r-sub">sandy · N:45 P:61 K:54</div></div><div class="r-val o">18d</div></div>
+        <div class="row"><div class="dot e"></div><div><div class="r-main">South — Empty 1.5ha</div><div class="r-sub">clay · N:68 P:70 K:60</div></div><div class="r-val d">—</div></div>
+        <div class="row"><div class="dot o"></div><div><div class="r-main">River — Sunflower 4ha</div><div class="r-sub">loamy · N:55 P:50 K:58</div></div><div class="r-val o">32d</div></div>
+        <div class="row"><div class="dot e"></div><div><div class="r-main">West — Empty 2ha</div><div class="r-sub">chalky · N:61 P:44 K:66</div></div><div class="r-val d">—</div></div>
+      </div>
+      <div class="adv-float-wrap">
+        <div class="adv-pill">▶ &nbsp;Advance Day</div>
+      </div>
+      <div class="tabbar">
+        <div class="tab-item on"><div class="ico">🌾</div><div class="lbl">Grow</div></div>
+        <div class="tab-item"><div class="ico">🐄</div><div class="lbl">Animals</div></div>
+        <div class="tab-item"><div class="ico">⚙️</div><div class="lbl">Ops</div></div>
+        <div class="tab-item"><div class="ico">📈</div><div class="lbl">Market</div></div>
+        <div class="tab-item"><div class="ico">🏦</div><div class="lbl">Office</div></div>
+      </div>
+    </div>
+    <div class="phone-label">Option 2 — Floating pill</div>
+    <div class="phone-note">Elevated pill with green glow. More playful, slightly covers bottom content row.</div>
+  </div>
+
+  <!-- OPTION 3: Center tab in tab bar -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="notch"><div class="notch-pill"></div></div>
+      <div class="sb"><span>9:41</span><span>●●●</span></div>
+      <div class="hud">
+        <div class="hud-day">Day 42</div>
+        <div class="hud-money">$12,450</div>
+        <div class="hud-right"><span class="hud-weather">☀</span><span class="hud-season">Summer</span></div>
+      </div>
+      <div class="stabs">
+        <div class="stab on">Fields</div><div class="stab">Water</div><div class="stab">Cal</div><div class="stab">Wthr</div>
+      </div>
+      <div class="content">
+        <div class="c-head"><span class="c-th">Field / Crop</span><span class="c-th r">Status</span></div>
+        <div class="row"><div class="dot g"></div><div><div class="r-main">North — Wheat 3ha</div><div class="r-sub">loamy · N:72 P:58 K:61</div></div><div class="r-val g">Ready ✓</div></div>
+        <div class="row"><div class="dot o"></div><div><div class="r-main">East — Corn 2ha</div><div class="r-sub">sandy · N:45 P:61 K:54</div></div><div class="r-val o">18d</div></div>
+        <div class="row"><div class="dot e"></div><div><div class="r-main">South — Empty 1.5ha</div><div class="r-sub">clay · N:68 P:70 K:60</div></div><div class="r-val d">—</div></div>
+        <div class="row"><div class="dot o"></div><div><div class="r-main">River — Sunflower 4ha</div><div class="r-sub">loamy · N:55 P:50 K:58</div></div><div class="r-val o">32d</div></div>
+        <div class="row"><div class="dot e"></div><div><div class="r-main">West — Empty 2ha</div><div class="r-sub">chalky · N:61 P:44 K:66</div></div><div class="r-val d">—</div></div>
+      </div>
+      <div class="tabbar" style="height:52px">
+        <div class="tab-item on"><div class="ico">🌾</div><div class="lbl">Grow</div></div>
+        <div class="tab-item"><div class="ico">🐄</div><div class="lbl">Animals</div></div>
+        <div class="adv-center-tab"><div class="ico">▶</div><div class="lbl">Day</div></div>
+        <div class="tab-item"><div class="ico">📈</div><div class="lbl">Market</div></div>
+        <div class="tab-item"><div class="ico">🏦</div><div class="lbl">Office</div></div>
+      </div>
+    </div>
+    <div class="phone-label">Option 3 — Center tab</div>
+    <div class="phone-note">Advance Day lives in the tab bar as a raised green center action. Saves vertical space, looks like a camera app shutter.</div>
+  </div>
+
+</div>
+
+<div class="vote">
+  <h3>Which placement do you prefer?</h3>
+  <div class="btns">
+    <button class="btn b1" onclick="v(this,'1')">1 — Full-width bar</button>
+    <button class="btn b2" onclick="v(this,'2')">2 — Floating pill</button>
+    <button class="btn b3" onclick="v(this,'3')">3 — Center tab</button>
+  </div>
+</div>
+
+<script>
+function v(el, c) {
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('s'));
+  el.classList.add('s');
+  fetch('/event', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type:'click', choice:'adv-'+c, text:'Advance Day placement: '+c }) });
+}
+</script>
+</body>
+</html>

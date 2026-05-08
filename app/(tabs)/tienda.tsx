@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
@@ -21,7 +21,7 @@ const PRODUCT_CATEGORY_ORDER: ProductCategory[] = [
 
 const BUILDING_CATEGORY_ORDER: BuildingCategory[] = ['animal', 'production', 'silo', 'industrial', 'lab', 'upgrade'];
 
-// ── Seeds Tab ───────────────────────────────────────────────────────────────
+// â”€â”€ Seeds Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SeedsTab() {
   const { money, parcels, plantCrop } = useGameStore();
   const [selectedCrop, setSelectedCrop] = useState<string | null>(null);
@@ -43,10 +43,10 @@ function SeedsTab() {
               <Text style={styles.tierText}>{item.tier}</Text>
             </View>
             <Text style={styles.cropName}>{item.name}</Text>
-            <Text style={styles.detail}>🌱 {item.growthDays}d · {item.baseYield} {item.unit}/ha</Text>
-            <Text style={styles.detail}>💰 ${item.basePrice}/{item.unit}</Text>
-            <Text style={styles.detail}>🛒 ${item.seedCost.toLocaleString()}/ha</Text>
-            <Text style={styles.detail}>💧 {'●'.repeat(item.waterNeed)}{'○'.repeat(5 - item.waterNeed)}</Text>
+            <Text style={styles.detail}>ðŸŒ± {item.growthDays}d Â· {item.baseYield} {item.unit}/ha</Text>
+            <Text style={styles.detail}>ðŸ’° ${item.basePrice}/{item.unit}</Text>
+            <Text style={styles.detail}>ðŸ›’ ${item.seedCost.toLocaleString()}/ha</Text>
+            <Text style={styles.detail}>ðŸ’§ {'â—'.repeat(item.waterNeed)}{'â—‹'.repeat(5 - item.waterNeed)}</Text>
           </TouchableOpacity>
         )}
       />
@@ -66,7 +66,7 @@ function SeedsTab() {
                   <TouchableOpacity
                     key={p.id}
                     style={[styles.parcelBtn, money < cost && styles.btnDisabled]}
-                    onPress={() => { plantCrop(p.id, selectedCrop, p.hectares, false); setSelectedCrop(null); }}
+                    onPress={() => { plantCrop(p.id, selectedCrop, p.hectares); setSelectedCrop(null); }}
                     disabled={money < cost}
                   >
                     <Text style={styles.parcelBtnText}>{p.hectares} ha</Text>
@@ -82,7 +82,7 @@ function SeedsTab() {
   );
 }
 
-// ── Products Tab ────────────────────────────────────────────────────────────
+// â”€â”€ Products Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ProductsTab() {
   const { money, productInventory, buyProduct } = useGameStore();
 
@@ -102,7 +102,7 @@ function ProductsTab() {
                     <Text style={styles.productName}>{product.name}</Text>
                     <Text style={styles.productEffect}>{product.effectLabel}</Text>
                     <Text style={styles.productPack}>
-                      Pack {product.packSize} doses · ${product.packCost.toLocaleString()}
+                      Pack {product.packSize} doses Â· ${product.packCost.toLocaleString()}
                     </Text>
                   </View>
                   <View style={styles.productRight}>
@@ -127,7 +127,7 @@ function ProductsTab() {
   );
 }
 
-// ── Buildings Tab ───────────────────────────────────────────────────────────
+// â”€â”€ Buildings Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function BuildingsTab() {
   const { money, buildings, buyBuilding, purchaseProductionBuilding, productionBuildings, installEquipment } = useGameStore();
 
@@ -138,10 +138,10 @@ function BuildingsTab() {
   const handleBuyBuilding = (buildingId: string) => {
     const bt = BUILDING_TYPES.find(b => b.id === buildingId);
     if (bt?.category === 'production' && bt.animalTypeId) {
-      // Species-specific production buildings → production building state
+      // Species-specific production buildings â†’ production building state
       purchaseProductionBuilding(buildingId);
     } else {
-      // All other buildings (including vet/breeding/infrastructure) → generic buildings[]
+      // All other buildings (including vet/breeding/infrastructure) â†’ generic buildings[]
       buyBuilding(buildingId);
     }
   };
@@ -167,17 +167,17 @@ function BuildingsTab() {
                     {building.capacity && (
                       <Text style={styles.buildingCapacity}>
                         {cat === 'animal'
-                          ? `👥 Cap. ${building.capacity}`
-                          : `📦 ${(building.capacity / 1000).toFixed(0)}k kg/L`}
+                          ? `ðŸ‘¥ Cap. ${building.capacity}`
+                          : `ðŸ“¦ ${(building.capacity / 1000).toFixed(0)}k kg/L`}
                       </Text>
                     )}
                     <Text style={styles.buildingEffect}>{building.effectLabel}</Text>
                     <Text style={styles.buildingMaint}>
-                      🔧 ${building.maintenancePerDay}/day
+                      ðŸ”§ ${building.maintenancePerDay}/day
                     </Text>
                     <View style={styles.buildingFooter}>
                       {ownedCount > 0 && (
-                        <Text style={styles.ownedBadge}>✓ ×{ownedCount}</Text>
+                        <Text style={styles.ownedBadge}>âœ“ Ã—{ownedCount}</Text>
                       )}
                       {alreadyOwned ? (
                         <Text style={[styles.buildBtnText, { color: '#4caf50' }]}>Owned</Text>
@@ -222,7 +222,7 @@ function BuildingsTab() {
                         For: {bt2?.name ?? fitsOwnedBuilding.buildingTypeId}
                       </Text>
                       {alreadyInstalled ? (
-                        <Text style={{ color: '#4caf50', fontSize: 12 }}>✓ Installed</Text>
+                        <Text style={{ color: '#4caf50', fontSize: 12 }}>âœ“ Installed</Text>
                       ) : slotsFull ? (
                         <Text style={{ color: '#aaa', fontSize: 12 }}>All equipment slots full</Text>
                       ) : (
@@ -232,7 +232,7 @@ function BuildingsTab() {
                           disabled={!canAffordEq}
                         >
                           <Text style={{ color: canAffordEq ? '#90caf9' : '#555', fontSize: 13 }}>
-                            Install — ${eq.cost.toLocaleString()}
+                            Install â€” ${eq.cost.toLocaleString()}
                           </Text>
                         </TouchableOpacity>
                       )}
@@ -248,7 +248,7 @@ function BuildingsTab() {
   );
 }
 
-// ── Machinery Tab ────────────────────────────────────────────────────────────
+// â”€â”€ Machinery Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function MachineryTab() {
   const { money, machines, attachments, trailers, buyMachine, buyAttachment, buyTrailer } = useGameStore();
   const [section, setSection] = useState<'tractors' | 'combines' | 'trucks' | 'attachments'>('tractors');
@@ -265,10 +265,10 @@ function MachineryTab() {
     (attachments ?? []).filter((a: { typeId: string }) => a.typeId === typeId).length;
 
   const SECTION_LABELS = [
-    { key: 'tractors', label: '🚜 Tractors' },
-    { key: 'combines', label: '🌾 Combines' },
-    { key: 'trucks',   label: '🚛 Trucks' },
-    { key: 'attachments', label: '⚙️ Attachments' },
+    { key: 'tractors', label: 'ðŸšœ Tractors' },
+    { key: 'combines', label: 'ðŸŒ¾ Combines' },
+    { key: 'trucks',   label: 'ðŸš› Trucks' },
+    { key: 'attachments', label: 'âš™ï¸ Attachments' },
   ] as const;
 
   const renderMachineCard = (m: (typeof MACHINE_TYPES)[0], onBuy: () => void, owned: number) => (
@@ -277,12 +277,12 @@ function MachineryTab() {
         <Text style={mStyles.cardName}>{m.name}</Text>
         {owned > 0 && <Text style={mStyles.ownedPill}>Owned: {owned}</Text>}
       </View>
-      <Text style={mStyles.cardDetail}>💰 ${m.cost.toLocaleString()}</Text>
-      <Text style={mStyles.cardDetail}>🔧 ${m.maintenancePerDay}/day maintenance</Text>
-      {m.haPerDay !== undefined && <Text style={mStyles.cardDetail}>⚡ {m.haPerDay} ha/day</Text>}
+      <Text style={mStyles.cardDetail}>ðŸ’° ${m.cost.toLocaleString()}</Text>
+      <Text style={mStyles.cardDetail}>ðŸ”§ ${m.maintenancePerDay}/day maintenance</Text>
+      {m.haPerDay !== undefined && <Text style={mStyles.cardDetail}>âš¡ {m.haPerDay} ha/day</Text>}
       {m.capacityKg !== undefined && (
         <Text style={mStyles.cardDetail}>
-          📦 {m.capacityKg === 0 ? 'Needs trailer' : `${m.capacityKg.toLocaleString()} kg`}
+          ðŸ“¦ {m.capacityKg === 0 ? 'Needs trailer' : `${m.capacityKg.toLocaleString()} kg`}
         </Text>
       )}
       <TouchableOpacity
@@ -301,9 +301,9 @@ function MachineryTab() {
         <Text style={mStyles.cardName}>{a.name}</Text>
         {ownedAttachCount(a.id) > 0 && <Text style={mStyles.ownedPill}>Owned: {ownedAttachCount(a.id)}</Text>}
       </View>
-      <Text style={mStyles.cardDetail}>💰 ${a.cost.toLocaleString()}</Text>
-      <Text style={mStyles.cardDetail}>⚡ {a.haPerDay} ha/day</Text>
-      <Text style={mStyles.cardDetail}>🔧 {a.operation.charAt(0).toUpperCase() + a.operation.slice(1)}</Text>
+      <Text style={mStyles.cardDetail}>ðŸ’° ${a.cost.toLocaleString()}</Text>
+      <Text style={mStyles.cardDetail}>âš¡ {a.haPerDay} ha/day</Text>
+      <Text style={mStyles.cardDetail}>ðŸ”§ {a.operation.charAt(0).toUpperCase() + a.operation.slice(1)}</Text>
       <Text style={mStyles.cardDetail}>Fits: {a.compatibleTractorSizes.join(', ')} tractors</Text>
       <TouchableOpacity
         style={[mStyles.buyBtn, money < a.cost && mStyles.buyBtnDisabled]}
@@ -386,7 +386,7 @@ const mStyles = StyleSheet.create({
   buyBtnText:        { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
 });
 
-// ── Main Screen ─────────────────────────────────────────────────────────────
+// â”€â”€ Main Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function TiendaScreen() {
   const [activeTab, setActiveTab] = useState<ShopTab>('seeds');
 
@@ -396,10 +396,10 @@ export default function TiendaScreen() {
 
       <SubTabBar
         tabs={[
-          { id: 'seeds',     label: '🌾 Seeds' },
-          { id: 'products',  label: '🧪 Products' },
-          { id: 'buildings', label: '🏗️ Buildings' },
-          { id: 'machinery', label: '🚜 Machinery' },
+          { id: 'seeds',     label: 'ðŸŒ¾ Seeds' },
+          { id: 'products',  label: 'ðŸ§ª Products' },
+          { id: 'buildings', label: 'ðŸ—ï¸ Buildings' },
+          { id: 'machinery', label: 'ðŸšœ Machinery' },
         ]}
         active={activeTab}
         onSelect={id => setActiveTab(id as ShopTab)}

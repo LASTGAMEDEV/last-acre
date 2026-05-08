@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI Rework — Navigation Architecture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f0f0;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 28px 20px;
+  }
+  h2 { font-size: 20px; font-weight: 700; margin-bottom: 5px; color: #111; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 28px; line-height: 1.5; }
+
+  .options { display: flex; flex-direction: column; gap: 20px; }
+
+  .option {
+    background: #fff;
+    border: 2px solid #e0e0e0;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .option:hover { border-color: #4caf50; box-shadow: 0 4px 16px rgba(76,175,80,0.12); }
+  .option.selected { border-color: #4caf50; box-shadow: 0 4px 20px rgba(76,175,80,0.2); }
+
+  .option-header {
+    padding: 14px 18px 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .letter {
+    width: 32px; height: 32px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 15px;
+    flex-shrink: 0;
+  }
+  .option.selected .letter { background: #4caf50; color: #fff; }
+  .option-title h3 { font-size: 15px; font-weight: 700; color: #111; }
+  .option-title p { font-size: 12px; color: #888; margin-top: 2px; }
+
+  /* ── Phone mockup shared styles ── */
+  .phone-row {
+    display: flex;
+    gap: 12px;
+    padding: 0 18px 16px;
+    overflow-x: auto;
+  }
+  .phone {
+    flex-shrink: 0;
+    width: 160px;
+    height: 280px;
+    background: #f7faf7;
+    border-radius: 18px;
+    border: 1.5px solid #d4e8d4;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .phone-label {
+    font-size: 10px;
+    color: #888;
+    text-align: center;
+    margin-top: 6px;
+    font-style: italic;
+  }
+
+  /* status bar */
+  .status-bar {
+    background: #fff;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    font-size: 7px;
+    color: #999;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  /* ─────────────────────────────────────────────────
+     OPTION A: Dashboard-First
+  ───────────────────────────────────────────────── */
+  .dash-topbar {
+    background: #fff;
+    padding: 10px 10px 8px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .dash-title { font-size: 13px; font-weight: 700; color: #111; }
+  .dash-sub { font-size: 9px; color: #aaa; }
+  .hud-row {
+    display: flex;
+    gap: 4px;
+    padding: 8px 8px 6px;
+  }
+  .hud-chip {
+    flex: 1;
+    background: #f0faf0;
+    border: 1px solid #c8e6c9;
+    border-radius: 8px;
+    padding: 5px 4px;
+    text-align: center;
+  }
+  .hud-chip .val { font-size: 9px; font-weight: 700; color: #2e7d32; }
+  .hud-chip .lbl { font-size: 7px; color: #aaa; }
+  .dash-cards {
+    padding: 0 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .dash-card {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .dc-icon {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+  .dc-left { display: flex; align-items: center; }
+  .dc-name { font-size: 10px; font-weight: 600; color: #222; }
+  .dc-sub { font-size: 8px; color: #aaa; }
+  .dc-badge {
+    font-size: 8px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 20px;
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+  .dc-badge.warn { background: #fff3e0; color: #ef6c00; }
+  .dash-bottom {
+    position: absolute; bottom: 0; width: 100%;
+    background: #fff;
+    border-top: 1px solid #f0f0f0;
+    height: 34px;
+    display: flex; align-items: center; justify-content: space-around;
+    font-size: 7px; color: #ccc;
+    padding: 0 4px;
+  }
+  .dash-bottom .t-active { color: #4caf50; font-weight: 700; }
+
+  /* drill-in screen (second phone) */
+  .drill-topbar {
+    background: #fff;
+    height: 34px;
+    display: flex; align-items: center;
+    padding: 0 10px;
+    gap: 6px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .back-arrow { font-size: 14px; color: #4caf50; }
+  .drill-title { font-size: 12px; font-weight: 700; color: #111; }
+  .drill-list { padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+  .drill-row {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .dr-name { font-size: 10px; font-weight: 600; color: #222; }
+  .dr-sub { font-size: 8px; color: #aaa; }
+  .dr-right { font-size: 8px; color: #aaa; }
+  .dr-badge { background: #4caf50; color: #fff; font-size: 8px; font-weight: 700; padding: 2px 5px; border-radius: 20px; }
+
+  /* ─────────────────────────────────────────────────
+     OPTION B: 5 Primary Tabs + Sub-tabs
+  ───────────────────────────────────────────────── */
+  .tab5-bar {
+    position: absolute; bottom: 0; width: 100%;
+    background: #fff;
+    border-top: 1.5px solid #e8e8e8;
+    height: 38px;
+    display: flex; align-items: center; justify-content: space-around;
+    font-size: 7px;
+    color: #ccc;
+  }
+  .tab5-bar .t5a { color: #4caf50; font-weight: 700; }
+  .tab5-bar .t5 { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .tab5-bar .t5 .ico { font-size: 13px; line-height: 1; }
+  .subtab-bar {
+    background: #f7faf7;
+    padding: 6px 8px 0;
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid #e8e8e8;
+  }
+  .subtab {
+    font-size: 9px;
+    padding: 4px 8px;
+    border-radius: 6px 6px 0 0;
+    color: #aaa;
+    font-weight: 600;
+  }
+  .subtab.active {
+    background: #fff;
+    color: #4caf50;
+    border: 1px solid #e8e8e8;
+    border-bottom: 1px solid #fff;
+    margin-bottom: -1px;
+  }
+  .tab5-screen { height: calc(100% - 18px - 38px); overflow: hidden; }
+  .tab5-header {
+    background: #fff;
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .tab5-title { font-size: 13px; font-weight: 700; color: #111; }
+  .tab5-list { padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+
+  /* ─────────────────────────────────────────────────
+     OPTION C: Contextual Drawer (hamburger)
+  ───────────────────────────────────────────────── */
+  .ctx-topbar {
+    background: #fff;
+    height: 36px;
+    display: flex; align-items: center;
+    padding: 0 10px;
+    justify-content: space-between;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .hamburger { font-size: 14px; color: #444; }
+  .ctx-title { font-size: 12px; font-weight: 700; color: #111; }
+  .ctx-day { font-size: 9px; background: #4caf50; color: #fff; padding: 2px 7px; border-radius: 20px; font-weight: 700; }
+  .ctx-hud {
+    display: flex; gap: 4px;
+    padding: 8px 8px 6px;
+  }
+  .ctx-chip {
+    flex: 1;
+    background: #f0faf0;
+    border: 1px solid #c8e6c9;
+    border-radius: 8px;
+    padding: 5px 2px;
+    text-align: center;
+  }
+  .ctx-chip .val { font-size: 9px; font-weight: 700; color: #2e7d32; }
+  .ctx-chip .lbl { font-size: 7px; color: #aaa; }
+  .ctx-content { padding: 0 8px; display: flex; flex-direction: column; gap: 5px; }
+  .ctx-card {
+    background: #fff; border: 1px solid #e8e8e8; border-radius: 10px;
+    padding: 8px 10px;
+  }
+  .ctx-card-title { font-size: 10px; font-weight: 700; color: #222; margin-bottom: 4px; }
+  .ctx-mini-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+  .ctx-mini-label { font-size: 8px; color: #888; }
+  .ctx-mini-val { font-size: 8px; font-weight: 600; color: #4caf50; }
+  /* drawer overlay */
+  .drawer {
+    position: absolute; top: 0; left: 0; bottom: 0;
+    width: 120px;
+    background: #fff;
+    border-right: 1px solid #e8e8e8;
+    z-index: 10;
+    box-shadow: 2px 0 12px rgba(0,0,0,0.12);
+  }
+  .drawer-header { background: #4caf50; padding: 14px 10px 10px; }
+  .drawer-farm { font-size: 10px; font-weight: 700; color: #fff; }
+  .drawer-day { font-size: 8px; color: #a5d6a7; }
+  .drawer-items { padding: 8px 0; }
+  .drawer-item {
+    padding: 7px 12px;
+    font-size: 10px; font-weight: 600; color: #333;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .drawer-item.active { background: #e8f5e9; color: #2e7d32; }
+  .drawer-item .dico { font-size: 11px; }
+  .drawer-section { font-size: 7px; color: #bbb; text-transform: uppercase; letter-spacing: 1px; padding: 8px 12px 3px; }
+
+  .pros-cons {
+    display: flex; gap: 12px;
+    padding: 0 18px 16px;
+    font-size: 11px;
+  }
+  .pros { flex: 1; }
+  .cons { flex: 1; }
+  .pros h4 { color: #2e7d32; font-size: 11px; margin-bottom: 4px; }
+  .cons h4 { color: #c62828; font-size: 11px; margin-bottom: 4px; }
+  .pros li, .cons li { color: #555; margin-left: 14px; margin-bottom: 2px; line-height: 1.4; }
+
+  .cta { margin-top: 20px; text-align: center; font-size: 12px; color: #999; }
+  .cta span { color: #4caf50; }
+</style>
+</head>
+<body>
+
+<h2>How should the 18 screens be organised?</h2>
+<p class="subtitle">The current game has 18 tabs in a single bottom bar — too many. With a full redesign, the navigation structure is up for grabs. Three architectures:</p>
+
+<div class="options">
+
+  <!-- ── A: Dashboard-First ── -->
+  <div class="option" onclick="selectOption(this,'a')">
+    <div class="option-header">
+      <div class="letter">A</div>
+      <div class="option-title">
+        <h3>Dashboard-first with drill-down</h3>
+        <p>One home screen shows everything. Tap a section to drill into it.</p>
+      </div>
+    </div>
+    <div class="phone-row">
+      <!-- Home dashboard -->
+      <div>
+        <div class="phone">
+          <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+          <div class="dash-topbar">
+            <div class="dash-title">Granja Norte</div>
+            <div class="dash-sub">Day 42 · Summer</div>
+          </div>
+          <div class="hud-row">
+            <div class="hud-chip"><div class="val">$12.4k</div><div class="lbl">Cash</div></div>
+            <div class="hud-chip"><div class="val">3</div><div class="lbl">Ready</div></div>
+            <div class="hud-chip"><div class="val">☀</div><div class="lbl">Fair</div></div>
+          </div>
+          <div class="dash-cards">
+            <div class="dash-card">
+              <div class="dc-left"><div class="dc-icon" style="background:#e8f5e9">🌾</div><div><div class="dc-name">Fields</div><div class="dc-sub">5 parcels · 3 ready</div></div></div>
+              <div class="dc-badge">3 ready</div>
+            </div>
+            <div class="dash-card">
+              <div class="dc-left"><div class="dc-icon" style="background:#e3f2fd">🐄</div><div><div class="dc-name">Animals</div><div class="dc-sub">12 cattle · 4 chickens</div></div></div>
+              <div class="dc-badge">Collect</div>
+            </div>
+            <div class="dash-card">
+              <div class="dc-left"><div class="dc-icon" style="background:#fff3e0">💰</div><div><div class="dc-name">Market</div><div class="dc-sub">Wheat +4% today</div></div></div>
+              <div class="dc-badge warn">Sell</div>
+            </div>
+            <div class="dash-card">
+              <div class="dc-left"><div class="dc-icon" style="background:#fce4ec">🏦</div><div><div class="dc-name">Finance</div><div class="dc-sub">Loan due in 12d</div></div></div>
+              <div class="dc-badge warn">!</div>
+            </div>
+          </div>
+          <div class="dash-bottom">
+            <span class="t-active">Home</span><span>Advance Day</span>
+          </div>
+        </div>
+        <div class="phone-label">Home dashboard</div>
+      </div>
+      <!-- Drilled in -->
+      <div>
+        <div class="phone">
+          <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+          <div class="drill-topbar">
+            <div class="back-arrow">‹</div>
+            <div class="drill-title">Fields</div>
+          </div>
+          <div style="display:flex;gap:0;border-bottom:1px solid #f0f0f0;background:#fff;">
+            <div class="subtab active" style="margin-left:8px">My Parcels</div>
+            <div class="subtab">Shop</div>
+            <div class="subtab">Soil</div>
+          </div>
+          <div class="drill-list">
+            <div class="drill-row">
+              <div><div class="dr-name">North Field</div><div class="dr-sub">Wheat · 3 ha · Day 42</div></div>
+              <div class="dr-badge">Ready</div>
+            </div>
+            <div class="drill-row">
+              <div><div class="dr-name">East Pasture</div><div class="dr-sub">Corn · 2 ha · 18d left</div></div>
+              <div class="dr-right">18d</div>
+            </div>
+            <div class="drill-row">
+              <div><div class="dr-name">South Plot</div><div class="dr-sub">Empty · 1.5 ha</div></div>
+              <div class="dr-right" style="color:#4caf50">Plant ›</div>
+            </div>
+            <div class="drill-row">
+              <div><div class="dr-name">River Field</div><div class="dr-sub">Sunflower · 4 ha</div></div>
+              <div class="dr-right">32d</div>
+            </div>
+          </div>
+          <div class="dash-bottom">
+            <span class="t-active">Home</span><span>Advance Day</span>
+          </div>
+        </div>
+        <div class="phone-label">Drilled into Fields</div>
+      </div>
+    </div>
+    <ul class="pros-cons">
+      <li style="list-style:none;color:#2e7d32">✓ Single entry point, easy to scan</li>
+      <li style="list-style:none;color:#2e7d32">✓ Dashboard shows urgent actions immediately</li>
+      <li style="list-style:none;color:#c62828">✗ Two taps to reach any screen</li>
+    </ul>
+  </div>
+
+  <!-- ── B: 5 Primary Tabs ── -->
+  <div class="option" onclick="selectOption(this,'b')">
+    <div class="option-header">
+      <div class="letter">B</div>
+      <div class="option-title">
+        <h3>5 primary tabs + sub-navigation</h3>
+        <p>Farm · Market · Animals · Build · Finance. Each tab has sub-tabs inside.</p>
+      </div>
+    </div>
+    <div class="phone-row">
+      <!-- Farm tab -->
+      <div>
+        <div class="phone">
+          <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+          <div style="background:#fff;padding:8px 10px 0;border-bottom:1px solid #f0f0f0;">
+            <div style="font-size:13px;font-weight:700;color:#111;margin-bottom:6px">Farm</div>
+            <div class="subtab-bar" style="padding:0;background:transparent;border:none;gap:4px">
+              <div class="subtab active">Fields</div>
+              <div class="subtab">Soil</div>
+              <div class="subtab">Shop</div>
+              <div class="subtab">Weather</div>
+            </div>
+          </div>
+          <div class="tab5-list">
+            <div class="drill-row">
+              <div><div class="dr-name">North Field</div><div class="dr-sub">Wheat · 3 ha</div></div>
+              <div class="dr-badge">Ready</div>
+            </div>
+            <div class="drill-row">
+              <div><div class="dr-name">East Pasture</div><div class="dr-sub">Corn · 2 ha</div></div>
+              <div class="dr-right">18d</div>
+            </div>
+            <div class="drill-row">
+              <div><div class="dr-name">South Plot</div><div class="dr-sub">Empty · 1.5 ha</div></div>
+              <div class="dr-right" style="color:#4caf50">Plant ›</div>
+            </div>
+          </div>
+          <div class="tab5-bar">
+            <div class="t5 t5a"><div class="ico">🌾</div><span>Farm</span></div>
+            <div class="t5"><div class="ico">📈</div><span>Market</span></div>
+            <div class="t5"><div class="ico">🐄</div><span>Animals</span></div>
+            <div class="t5"><div class="ico">🏗</div><span>Build</span></div>
+            <div class="t5"><div class="ico">🏦</div><span>Finance</span></div>
+          </div>
+        </div>
+        <div class="phone-label">Farm tab · Fields sub-tab</div>
+      </div>
+      <!-- Market tab -->
+      <div>
+        <div class="phone">
+          <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+          <div style="background:#fff;padding:8px 10px 0;border-bottom:1px solid #f0f0f0;">
+            <div style="font-size:13px;font-weight:700;color:#111;margin-bottom:6px">Market</div>
+            <div class="subtab-bar" style="padding:0;background:transparent;border:none;gap:4px">
+              <div class="subtab active">Prices</div>
+              <div class="subtab">Sell</div>
+              <div class="subtab">Contracts</div>
+              <div class="subtab">Auction</div>
+            </div>
+          </div>
+          <div class="tab5-list">
+            <div class="drill-row">
+              <div><div class="dr-name">Wheat</div><div class="dr-sub">$0.42 / kg · +4% today</div></div>
+              <div class="dr-badge">Sell</div>
+            </div>
+            <div class="drill-row">
+              <div><div class="dr-name">Corn</div><div class="dr-sub">$0.28 / kg · −1%</div></div>
+              <div class="dr-right" style="color:#888">Hold</div>
+            </div>
+            <div class="drill-row">
+              <div><div class="dr-name">Sunflower Oil</div><div class="dr-sub">$3.20 / L · +2%</div></div>
+              <div class="dr-right" style="color:#4caf50">Sell ›</div>
+            </div>
+          </div>
+          <div class="tab5-bar">
+            <div class="t5"><div class="ico">🌾</div><span>Farm</span></div>
+            <div class="t5 t5a"><div class="ico">📈</div><span>Market</span></div>
+            <div class="t5"><div class="ico">🐄</div><span>Animals</span></div>
+            <div class="t5"><div class="ico">🏗</div><span>Build</span></div>
+            <div class="t5"><div class="ico">🏦</div><span>Finance</span></div>
+          </div>
+        </div>
+        <div class="phone-label">Market tab · Prices sub-tab</div>
+      </div>
+    </div>
+    <ul class="pros-cons">
+      <li style="list-style:none;color:#2e7d32">✓ One tap to major section, one more for sub-screen</li>
+      <li style="list-style:none;color:#2e7d32">✓ Clear grouping — familiar mobile pattern</li>
+      <li style="list-style:none;color:#c62828">✗ Need to decide how 18 screens map to 5 groups</li>
+    </ul>
+  </div>
+
+  <!-- ── C: Contextual Drawer ── -->
+  <div class="option" onclick="selectOption(this,'c')">
+    <div class="option-header">
+      <div class="letter">C</div>
+      <div class="option-title">
+        <h3>Contextual slide-out drawer</h3>
+        <p>Clean single-screen view. Hamburger opens a full navigation list. Frees up the bottom for a permanent HUD.</p>
+      </div>
+    </div>
+    <div class="phone-row">
+      <!-- Main view (drawer closed) -->
+      <div>
+        <div class="phone">
+          <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+          <div class="ctx-topbar">
+            <div class="hamburger">☰</div>
+            <div class="ctx-title">Fields</div>
+            <div class="ctx-day">Day 42</div>
+          </div>
+          <div class="ctx-hud">
+            <div class="ctx-chip"><div class="val">$12.4k</div><div class="lbl">Cash</div></div>
+            <div class="ctx-chip"><div class="val">☀ Fair</div><div class="lbl">Weather</div></div>
+            <div class="ctx-chip"><div class="val">3 ready</div><div class="lbl">Harvest</div></div>
+          </div>
+          <div class="ctx-content">
+            <div class="ctx-card">
+              <div class="ctx-card-title">Active Fields</div>
+              <div class="ctx-mini-row"><div class="ctx-mini-label">North · Wheat 3ha</div><div class="ctx-mini-val">Ready ✓</div></div>
+              <div class="ctx-mini-row"><div class="ctx-mini-label">East · Corn 2ha</div><div class="ctx-mini-val">18d</div></div>
+              <div class="ctx-mini-row"><div class="ctx-mini-label">South · Empty</div><div class="ctx-mini-val" style="color:#aaa">Plant ›</div></div>
+            </div>
+            <div class="ctx-card">
+              <div class="ctx-card-title">Soil Health</div>
+              <div class="ctx-mini-row"><div class="ctx-mini-label">North — Nitrogen</div><div class="ctx-mini-val">72</div></div>
+              <div class="ctx-mini-row"><div class="ctx-mini-label">North — Phosphorus</div><div class="ctx-mini-val" style="color:#ef6c00">38 ⚠</div></div>
+            </div>
+          </div>
+          <div class="dash-bottom" style="height:38px;justify-content:center;gap:0">
+            <div style="flex:1;text-align:center;font-size:8px;color:#4caf50;font-weight:700">Advance Day ›</div>
+          </div>
+        </div>
+        <div class="phone-label">Normal view</div>
+      </div>
+      <!-- Drawer open -->
+      <div>
+        <div class="phone" style="overflow:hidden">
+          <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+          <!-- blurred bg -->
+          <div style="position:absolute;top:18px;left:120px;right:0;bottom:0;background:rgba(255,255,255,0.4);z-index:5;backdrop-filter:blur(2px)"></div>
+          <div class="drawer">
+            <div class="drawer-header">
+              <div class="drawer-farm">Granja Norte</div>
+              <div class="drawer-day">Day 42 · Summer</div>
+            </div>
+            <div class="drawer-items">
+              <div class="drawer-section">Farm</div>
+              <div class="drawer-item active"><div class="dico">🌾</div>Fields</div>
+              <div class="drawer-item"><div class="dico">🧪</div>Soil & Fert.</div>
+              <div class="drawer-item"><div class="dico">🌤</div>Weather</div>
+              <div class="drawer-section">Economy</div>
+              <div class="drawer-item"><div class="dico">📈</div>Prices</div>
+              <div class="drawer-item"><div class="dico">📋</div>Contracts</div>
+              <div class="drawer-item"><div class="dico">🔨</div>Auction</div>
+              <div class="drawer-section">Operations</div>
+              <div class="drawer-item"><div class="dico">🐄</div>Animals</div>
+              <div class="drawer-item"><div class="dico">🚜</div>Machinery</div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label">Drawer open</div>
+      </div>
+    </div>
+    <ul class="pros-cons">
+      <li style="list-style:none;color:#2e7d32">✓ Maximum screen space for content</li>
+      <li style="list-style:none;color:#2e7d32">✓ All 18 screens visible in one list, easy to add more</li>
+      <li style="list-style:none;color:#c62828">✗ Navigation hidden by default — discoverability lower</li>
+      <li style="list-style:none;color:#c62828">✗ Less "game-like", more utility app</li>
+    </ul>
+  </div>
+
+</div>
+
+<p class="cta">Pick a navigation pattern — <span>or suggest a hybrid.</span></p>
+
+<script>
+let selected = null;
+function selectOption(el, choice) {
+  document.querySelectorAll('.option').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selected = choice;
+  fetch('/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'click',
+      choice,
+      text: el.querySelector('h3').textContent + ' — ' + el.querySelector('.option-title p').textContent
+    })
+  });
+}
+</script>
+
+</body>
+</html>

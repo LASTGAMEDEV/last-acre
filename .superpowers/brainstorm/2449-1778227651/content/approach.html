@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI Rework — Design Approach</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f2f0;
+    color: #1a1a1a;
+    padding: 28px 20px 48px;
+  }
+  h2 { font-size: 20px; font-weight: 700; margin-bottom: 5px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 28px; line-height: 1.5; }
+
+  .approaches { display: flex; flex-direction: column; gap: 24px; }
+
+  .approach {
+    background: #fff;
+    border: 2px solid #e0e0e0;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .approach:hover { border-color: #4caf50; }
+  .approach.selected { border-color: #4caf50; box-shadow: 0 4px 20px rgba(76,175,80,0.15); }
+
+  .approach-header {
+    padding: 16px 20px 12px;
+    display: flex; align-items: flex-start; gap: 14px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .letter {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: #e8f5e9; color: #2e7d32;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 16px; flex-shrink: 0;
+  }
+  .approach.selected .letter { background: #4caf50; color: #fff; }
+  .approach-title h3 { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 3px; }
+  .approach-title p  { font-size: 12px; color: #777; line-height: 1.5; }
+
+  /* ─── Phone strip ─── */
+  .phones {
+    display: flex; gap: 16px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+  .phone-label { font-size: 10px; color: #999; font-style: italic; }
+
+  .phone {
+    width: 170px; height: 300px;
+    border-radius: 20px;
+    border: 1.5px solid #ddd;
+    overflow: hidden;
+    background: #f7f7f7;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    position: relative;
+  }
+
+  /* status bar */
+  .sb { height: 16px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-size: 7px; color: #bbb; }
+
+  /* ─── APPROACH A: Minimal / Airy ─── */
+  .a-hud { background: #fff; padding: 10px 12px 0; border-bottom: 1px solid #f5f5f5; }
+  .a-hud-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .a-hud-item { flex:1; }
+  .a-hud-val { font-size: 13px; font-weight: 700; color: #111; }
+  .a-hud-lbl { font-size: 8px; color: #bbb; }
+  .a-tabs { display: flex; gap: 0; border-bottom: 1px solid #f0f0f0; }
+  .a-tab { flex:1; text-align:center; font-size: 9px; padding: 6px 2px; color: #ccc; }
+  .a-tab.active { color: #4caf50; border-bottom: 2px solid #4caf50; }
+  .a-subtabs { display: flex; gap: 4px; padding: 8px 10px 0; }
+  .a-subtab { font-size: 9px; color: #bbb; padding: 3px 8px; border-radius: 20px; }
+  .a-subtab.active { background: #e8f5e9; color: #2e7d32; font-weight: 600; }
+  .a-list { padding: 8px 10px; display: flex; flex-direction: column; gap: 1px; }
+  .a-row { padding: 10px 0; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; justify-content: space-between; }
+  .a-row:last-child { border: none; }
+  .a-row-name { font-size: 11px; font-weight: 600; color: #222; }
+  .a-row-sub { font-size: 9px; color: #bbb; }
+  .a-row-val { font-size: 11px; color: #4caf50; font-weight: 600; }
+  .a-bottom { position:absolute; bottom:0; width:100%; background:#fff; height:36px; display:flex; align-items:center; justify-content:center; border-top:1px solid #f0f0f0; font-size:11px; color:#4caf50; font-weight:600; }
+
+  /* ─── APPROACH B: Card Heavy / Bold ─── */
+  .b-hud { background: #4caf50; padding: 10px 12px 8px; }
+  .b-hud-title { font-size: 11px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+  .b-hud-row { display: flex; gap: 4px; }
+  .b-chip { flex:1; background: rgba(255,255,255,0.2); border-radius: 8px; padding: 4px 3px; text-align: center; }
+  .b-chip .val { font-size: 10px; font-weight: 700; color: #fff; }
+  .b-chip .lbl { font-size: 7px; color: rgba(255,255,255,0.7); }
+  .b-subtabs { display: flex; gap: 4px; padding: 8px 8px 0; background: #fff; }
+  .b-subtab { font-size: 9px; color: #bbb; padding: 4px 8px; border-radius: 6px 6px 0 0; font-weight: 600; }
+  .b-subtab.active { background: #f1f8e9; color: #2e7d32; border: 1px solid #e0e0e0; border-bottom: 1px solid #f1f8e9; }
+  .b-list { padding: 8px; display: flex; flex-direction: column; gap: 6px; background: #f9faf9; }
+  .b-card { background: #fff; border-radius: 10px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; align-items: center; justify-content: space-between; }
+  .b-card-name { font-size: 11px; font-weight: 700; color: #111; }
+  .b-card-sub { font-size: 9px; color: #aaa; margin-top: 1px; }
+  .b-badge { background: #4caf50; color: #fff; font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+  .b-badge.warn { background: #ff8f00; }
+  .b-bottom { position:absolute; bottom:0; width:100%; background:#4caf50; height:36px; display:flex; align-items:center; justify-content:center; border-top:none; font-size:11px; color:#fff; font-weight:700; letter-spacing:0.3px; }
+  .b-tab-bar { position:absolute; bottom:36px; width:100%; background:#fff; height:34px; display:flex; align-items:center; justify-content:space-around; border-top:1px solid #e8e8e8; font-size:7px; color:#ccc; }
+  .b-tab-bar .active { color: #4caf50; font-weight: 700; }
+
+  /* ─── APPROACH C: Dense / Data-rich ─── */
+  .c-hud { background: #fff; border-bottom: 2px solid #e8f5e9; padding: 6px 10px; display: flex; align-items: center; gap: 8px; }
+  .c-day { background: #4caf50; color: #fff; font-size: 9px; font-weight: 800; padding: 3px 8px; border-radius: 20px; }
+  .c-money { font-size: 12px; font-weight: 700; color: #111; }
+  .c-season { font-size: 9px; color: #4caf50; margin-left: auto; font-weight: 600; }
+  .c-subtabs { display: flex; gap: 0; background: #f7faf7; border-bottom: 1px solid #e8e8e8; overflow: hidden; }
+  .c-subtab { flex:1; text-align:center; font-size: 8px; padding: 5px 2px; color: #aaa; font-weight: 600; border-right: 1px solid #f0f0f0; }
+  .c-subtab.active { background: #fff; color: #2e7d32; font-weight: 700; }
+  .c-table { width: 100%; }
+  .c-thead { display: flex; padding: 4px 10px; background: #f7faf7; border-bottom: 1px solid #f0f0f0; }
+  .c-th { font-size: 7px; color: #bbb; font-weight: 700; text-transform: uppercase; }
+  .c-th:last-child { margin-left: auto; }
+  .c-tr { display: flex; align-items: center; padding: 6px 10px; border-bottom: 1px solid #f9f9f9; }
+  .c-tr:hover { background: #f7faf7; }
+  .c-td { font-size: 10px; color: #333; }
+  .c-td.mono { font-family: monospace; font-size: 10px; color: #2e7d32; font-weight: 600; margin-left: auto; }
+  .c-td.sub { font-size: 8px; color: #aaa; }
+  .c-dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf50; margin-right: 6px; flex-shrink: 0; }
+  .c-dot.warn { background: #ff8f00; }
+  .c-dot.empty { background: #e0e0e0; }
+  .c-bottom { position:absolute; bottom:0; width:100%; background:#fff; height:34px; display:flex; align-items:center; justify-content:space-around; border-top:1.5px solid #e8f5e9; font-size:7px; }
+  .c-bottom .active { color: #4caf50; font-weight: 700; }
+
+  /* pros/cons */
+  .pc { display: flex; gap: 16px; padding: 14px 20px 16px; }
+  .pros, .cons { flex:1; }
+  .pros h4 { color: #2e7d32; font-size: 11px; margin-bottom: 5px; }
+  .cons h4 { color: #c62828; font-size: 11px; margin-bottom: 5px; }
+  .pros li, .cons li { font-size: 11px; color: #555; margin-left: 14px; margin-bottom: 2px; line-height: 1.5; }
+
+  .rec { background: #e8f5e9; border-left: 3px solid #4caf50; padding: 10px 16px; margin: 0 20px 16px; border-radius: 0 8px 8px 0; font-size: 12px; color: #1b5e20; }
+
+  .cta { margin-top: 24px; text-align: center; font-size: 13px; color: #999; }
+  .cta span { color: #4caf50; }
+</style>
+</head>
+<body>
+
+<h2>How should the new UI feel?</h2>
+<p class="subtitle">Same Bright & Clean aesthetic, same 5-tab structure. The question is density and component weight — three approaches:</p>
+
+<div class="approaches">
+
+  <!-- ── A: Minimal / Airy ── -->
+  <div class="approach" onclick="pick(this,'a')">
+    <div class="approach-header">
+      <div class="letter">A</div>
+      <div class="approach-title">
+        <h3>Minimal & Airy</h3>
+        <p>Lots of white space. Thin separators instead of cards. Data in clean rows. The game disappears into the background — only numbers are visible.</p>
+      </div>
+    </div>
+    <div class="phones">
+      <div class="phone-wrap">
+        <div class="phone" style="background:#fff">
+          <div class="sb"><span>9:41</span><span>●●●</span></div>
+          <div class="a-hud">
+            <div class="a-hud-row">
+              <div class="a-hud-item"><div class="a-hud-val">$12,450</div><div class="a-hud-lbl">Cash</div></div>
+              <div class="a-hud-item"><div class="a-hud-val">Day 42</div><div class="a-hud-lbl">Summer</div></div>
+              <div class="a-hud-item"><div class="a-hud-val">☀ Fair</div><div class="a-hud-lbl">Weather</div></div>
+            </div>
+            <div class="a-tabs">
+              <div class="a-tab active">Grow</div><div class="a-tab">Animals</div><div class="a-tab">Ops</div><div class="a-tab">Market</div><div class="a-tab">Office</div>
+            </div>
+          </div>
+          <div class="a-subtabs">
+            <div class="a-subtab active">Fields</div>
+            <div class="a-subtab">Water</div>
+            <div class="a-subtab">Weather</div>
+          </div>
+          <div class="a-list">
+            <div class="a-row">
+              <div><div class="a-row-name">North Field</div><div class="a-row-sub">Wheat · 3 ha</div></div>
+              <div class="a-row-val">Ready ›</div>
+            </div>
+            <div class="a-row">
+              <div><div class="a-row-name">East Pasture</div><div class="a-row-sub">Corn · 2 ha</div></div>
+              <div class="a-row-val" style="color:#aaa">18d</div>
+            </div>
+            <div class="a-row">
+              <div><div class="a-row-name">South Plot</div><div class="a-row-sub">Empty · 1.5 ha</div></div>
+              <div class="a-row-val" style="color:#ccc">Plant ›</div>
+            </div>
+            <div class="a-row">
+              <div><div class="a-row-name">River Field</div><div class="a-row-sub">Sunflower · 4 ha</div></div>
+              <div class="a-row-val" style="color:#aaa">32d</div>
+            </div>
+          </div>
+          <div class="a-bottom">Advance Day ›</div>
+        </div>
+        <div class="phone-label">Fields screen</div>
+      </div>
+    </div>
+    <ul class="pc">
+      <li style="list-style:none;color:#2e7d32">✓ Clean, fast to scan</li>
+      <li style="list-style:none;color:#2e7d32">✓ Nothing competes with the data</li>
+      <li style="list-style:none;color:#c62828">✗ Feels like a spreadsheet, not a game</li>
+      <li style="list-style:none;color:#c62828">✗ Less visual feedback on state (ready, warning, empty)</li>
+    </ul>
+  </div>
+
+  <!-- ── B: Card Heavy / Bold ── -->
+  <div class="approach" onclick="pick(this,'b')">
+    <div class="approach-header">
+      <div class="letter">B</div>
+      <div class="approach-title">
+        <h3>Card-Heavy & Bold</h3>
+        <p>Each item is a card with elevation. Green HUD bar at top. Badges communicate state clearly. Feels like a game, not an app.</p>
+      </div>
+    </div>
+    <div class="phones">
+      <div class="phone-wrap">
+        <div class="phone" style="background:#f9faf9">
+          <div class="sb" style="background:#4caf50;color:rgba(255,255,255,0.6)"><span>9:41</span><span>●●●</span></div>
+          <div class="b-hud">
+            <div class="b-hud-title">Granja Norte · Summer</div>
+            <div class="b-hud-row">
+              <div class="b-chip"><div class="val">$12.4k</div><div class="lbl">Cash</div></div>
+              <div class="b-chip"><div class="val">Day 42</div><div class="lbl">Season</div></div>
+              <div class="b-chip"><div class="val">3 ready</div><div class="lbl">Harvest</div></div>
+              <div class="b-chip"><div class="val">☀ Fair</div><div class="lbl">Weather</div></div>
+            </div>
+          </div>
+          <div class="b-subtabs">
+            <div class="b-subtab active">Fields</div>
+            <div class="b-subtab">Water</div>
+            <div class="b-subtab">Weather</div>
+          </div>
+          <div class="b-list">
+            <div class="b-card">
+              <div><div class="b-card-name">North Field</div><div class="b-card-sub">Wheat · 3 ha · loamy</div></div>
+              <div class="b-badge">Harvest</div>
+            </div>
+            <div class="b-card">
+              <div><div class="b-card-name">East Pasture</div><div class="b-card-sub">Corn · 2 ha · 18d left</div></div>
+              <div style="font-size:9px;color:#aaa">18d</div>
+            </div>
+            <div class="b-card">
+              <div><div class="b-card-name">South Plot</div><div class="b-card-sub">Empty · 1.5 ha</div></div>
+              <div style="font-size:9px;color:#4caf50">Plant ›</div>
+            </div>
+          </div>
+          <div class="b-tab-bar">
+            <span class="active">🌾</span><span>🐄</span><span>⚙️</span><span>📈</span><span>🏦</span>
+          </div>
+          <div class="b-bottom">▶ Advance Day</div>
+        </div>
+        <div class="phone-label">Fields screen</div>
+      </div>
+    </div>
+    <ul class="pc">
+      <li style="list-style:none;color:#2e7d32">✓ Game-like energy — badges, colour, hierarchy</li>
+      <li style="list-style:none;color:#2e7d32">✓ State is instantly visible (ready / warning / empty)</li>
+      <li style="list-style:none;color:#2e7d32">✓ HUD anchors the player in time and money</li>
+      <li style="list-style:none;color:#c62828">✗ Slightly more visual noise than A</li>
+    </ul>
+    <div class="rec">★ Recommended — balances game feel with Bright & Clean aesthetic. Cards + green HUD is the natural direction for a tycoon game.</div>
+  </div>
+
+  <!-- ── C: Dense / Data-rich ── -->
+  <div class="approach" onclick="pick(this,'c')">
+    <div class="approach-header">
+      <div class="letter">C</div>
+      <div class="approach-title">
+        <h3>Dense & Data-rich</h3>
+        <p>Compact rows, colour-coded status dots, monospace numbers. More fields visible at once. Optimised for players who want maximum information density.</p>
+      </div>
+    </div>
+    <div class="phones">
+      <div class="phone-wrap">
+        <div class="phone" style="background:#fff">
+          <div class="sb"><span>9:41</span><span>●●●</span></div>
+          <div class="c-hud">
+            <div class="c-day">Day 42</div>
+            <div class="c-money">$12,450</div>
+            <div class="c-season">☀ Summer</div>
+          </div>
+          <div class="c-subtabs">
+            <div class="c-subtab active">Fields</div>
+            <div class="c-subtab">Water</div>
+            <div class="c-subtab">Cal</div>
+            <div class="c-subtab">Wthr</div>
+          </div>
+          <div class="c-thead">
+            <span class="c-th">Field</span>
+            <span class="c-th" style="margin-left:auto">Status</span>
+          </div>
+          <div class="c-table">
+            <div class="c-tr">
+              <div class="c-dot"></div>
+              <div>
+                <div class="c-td">North — Wheat 3ha</div>
+                <div class="c-td sub">loamy · N:72 P:58</div>
+              </div>
+              <div class="c-td mono" style="color:#4caf50">Ready ✓</div>
+            </div>
+            <div class="c-tr">
+              <div class="c-dot warn"></div>
+              <div>
+                <div class="c-td">East — Corn 2ha</div>
+                <div class="c-td sub">sandy · N:45 P:61</div>
+              </div>
+              <div class="c-td mono" style="color:#ff8f00">18d</div>
+            </div>
+            <div class="c-tr">
+              <div class="c-dot empty"></div>
+              <div>
+                <div class="c-td">South — Empty 1.5ha</div>
+                <div class="c-td sub">clay · N:68 P:70</div>
+              </div>
+              <div class="c-td mono" style="color:#ccc">—</div>
+            </div>
+            <div class="c-tr">
+              <div class="c-dot"></div>
+              <div>
+                <div class="c-td">River — Sunflower 4ha</div>
+                <div class="c-td sub">loamy · N:55 P:50</div>
+              </div>
+              <div class="c-td mono" style="color:#aaa">32d</div>
+            </div>
+            <div class="c-tr">
+              <div class="c-dot empty"></div>
+              <div>
+                <div class="c-td">West — Empty 2ha</div>
+                <div class="c-td sub">chalky · N:61 P:44</div>
+              </div>
+              <div class="c-td mono" style="color:#ccc">—</div>
+            </div>
+          </div>
+          <div class="c-bottom">
+            <span class="active">🌾 Grow</span><span>🐄</span><span>⚙️</span><span>📈</span><span>🏦</span>
+          </div>
+        </div>
+        <div class="phone-label">Fields screen</div>
+      </div>
+    </div>
+    <ul class="pc">
+      <li style="list-style:none;color:#2e7d32">✓ Maximum information per screen</li>
+      <li style="list-style:none;color:#2e7d32">✓ Great for experienced players who know the game</li>
+      <li style="list-style:none;color:#c62828">✗ Harder for new players to parse</li>
+      <li style="list-style:none;color:#c62828">✗ Less "game" feel — closer to a management dashboard</li>
+    </ul>
+  </div>
+
+</div>
+
+<p class="cta">Pick an approach — <span>or describe what you want to mix.</span></p>
+
+<script>
+function pick(el, choice) {
+  document.querySelectorAll('.approach').forEach(a => a.classList.remove('selected'));
+  el.classList.add('selected');
+  fetch('/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'click', choice, text: el.querySelector('h3').textContent })
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI Rework — Full Design Presentation</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f2f0;
+    color: #1a1a1a;
+    padding: 24px 20px 60px;
+  }
+  h1 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .top-sub { color: #666; font-size: 12px; margin-bottom: 32px; }
+
+  /* section wrapper */
+  .section {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .section-head {
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-num {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: #e8f5e9; color: #2e7d32;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px; flex-shrink: 0;
+  }
+  .section-head h2 { font-size: 15px; font-weight: 700; }
+  .section-head p { font-size: 11px; color: #888; margin-top: 1px; }
+  .section-body { padding: 16px 18px; }
+
+  /* ── 1. Color palette ── */
+  .palette { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .swatch { border-radius: 10px; padding: 10px 12px; min-width: 90px; }
+  .swatch .hex { font-size: 10px; font-family: monospace; margin-top: 4px; opacity: 0.7; }
+  .swatch .name { font-size: 11px; font-weight: 700; }
+
+  /* ── 2. Typography ── */
+  .type-samples { display: flex; flex-direction: column; gap: 8px; }
+  .type-row { display: flex; align-items: baseline; gap: 12px; }
+  .type-label { font-size: 10px; color: #aaa; width: 100px; flex-shrink: 0; }
+  .type-sample { }
+
+  /* ── 3. Core components ── */
+  .comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .comp { background: #f7faf7; border-radius: 10px; padding: 12px; }
+  .comp-title { font-size: 11px; font-weight: 700; color: #2e7d32; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* HUD */
+  .hud-demo {
+    background: #fff;
+    border: 1.5px solid #e8f0e8;
+    border-radius: 8px;
+    padding: 6px 10px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 2px solid #4caf50;
+  }
+  .hud-day { background: #4caf50; color: #fff; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 20px; }
+  .hud-money { font-size: 13px; font-weight: 700; color: #111; font-variant-numeric: tabular-nums; }
+  .hud-season { font-size: 10px; color: #4caf50; font-weight: 600; margin-left: auto; }
+  .hud-weather { font-size: 10px; color: #888; }
+
+  /* SubTabBar */
+  .stab-demo { display: flex; background: #f7faf7; border-radius: 6px; overflow: hidden; border: 1px solid #e8e8e8; }
+  .stab-item { flex:1; text-align:center; font-size: 10px; padding: 6px 4px; color: #bbb; font-weight: 600; border-right: 1px solid #f0f0f0; }
+  .stab-item.on { background: #fff; color: #2e7d32; font-weight: 700; box-shadow: inset 0 -2px 0 #4caf50; }
+  .stab-item:last-child { border: none; }
+
+  /* Status dot row */
+  .row-demo { display: flex; flex-direction: column; gap: 1px; }
+  .r { display: flex; align-items: center; padding: 7px 0; border-bottom: 1px solid #f5f5f5; gap: 6px; }
+  .r:last-child { border: none; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot.g { background: #4caf50; }
+  .dot.o { background: #ff8f00; }
+  .dot.e { background: #e0e0e0; }
+  .dot.r2 { background: #e53935; }
+  .r-main { font-size: 11px; font-weight: 600; color: #111; }
+  .r-sub  { font-size: 9px; color: #aaa; }
+  .r-val  { font-size: 11px; font-family: monospace; font-weight: 600; margin-left: auto; }
+  .r-val.g { color: #4caf50; }
+  .r-val.o { color: #ff8f00; }
+  .r-val.d { color: #ccc; }
+
+  /* Badge demo */
+  .badge-demo { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .badge {
+    font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+  }
+  .badge.green  { background: #e8f5e9; color: #2e7d32; }
+  .badge.orange { background: #fff3e0; color: #e65100; }
+  .badge.red    { background: #ffebee; color: #c62828; }
+  .badge.grey   { background: #f5f5f5; color: #888; }
+  .badge.solid  { background: #4caf50; color: #fff; }
+
+  /* Advance Day button */
+  .adv-demo {
+    background: #4caf50; border-radius: 8px; padding: 11px 0; text-align: center;
+    font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.3px;
+  }
+
+  /* ── 4. Primary tab bar ── */
+  .tabbar-demo {
+    background: #fff; border-top: 1.5px solid #e8f5e9;
+    display: flex; align-items: flex-end; padding: 4px 0 2px;
+    border-radius: 0 0 10px 10px;
+  }
+  .tab-item { flex:1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; }
+  .tab-item .ico { font-size: 18px; line-height: 1; }
+  .tab-item .lbl { font-size: 8px; color: #ccc; }
+  .tab-item.on .lbl { color: #4caf50; font-weight: 700; }
+  .tab-item .badge-dot {
+    width: 6px; height: 6px; background: #e53935; border-radius: 50%;
+    position: relative; top: -2px; left: 8px; margin-bottom: -6px;
+  }
+
+  /* ── 5. Screen map ── */
+  .screen-map { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .tab-map { border-radius: 10px; overflow: hidden; }
+  .tab-map-head { padding: 8px 10px; font-size: 11px; font-weight: 800; color: #fff; }
+  .bg-grow  { background: #4caf50; }
+  .bg-anim  { background: #ff8f00; }
+  .bg-ops   { background: #1565c0; }
+  .bg-mkt   { background: #6a1b9a; }
+  .bg-off   { background: #37474f; }
+  .tab-map-items { padding: 6px 8px; background: #fff; }
+  .mi { font-size: 9px; color: #555; padding: 3px 0; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; gap: 4px; }
+  .mi:last-child { border: none; }
+  .mi .mico { font-size: 9px; }
+  .mi.future { opacity: 0.4; font-style: italic; }
+
+  /* approve */
+  .approve {
+    background: #fff; border: 2px solid #e0e0e0; border-radius: 14px; padding: 18px 20px; margin-top: 24px;
+  }
+  .approve h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn { padding: 10px 20px; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+  .btn-yes { background: #4caf50; color: #fff; }
+  .btn-yes:hover { background: #388e3c; }
+  .btn-no  { background: #fff; color: #555; border-color: #ddd; }
+  .btn-no:hover { border-color: #4caf50; color: #4caf50; }
+  .resp { margin-top: 10px; font-size: 12px; color: #2e7d32; display: none; }
+
+  @media (max-width: 700px) {
+    .comp-grid { grid-template-columns: 1fr; }
+    .screen-map { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Full UI Redesign — Design System</h1>
+<p class="top-sub">Bright & Clean · Dense & Data-rich · 5 primary tabs + sub-navigation</p>
+
+<!-- ── 1. Colors ── -->
+<div class="section">
+  <div class="section-head">
+    <div class="section-num">1</div>
+    <div><h2>Color palette</h2><p>White base, vivid green primary, monochrome UI, semantic status colors</p></div>
+  </div>
+  <div class="section-body">
+    <div class="palette">
+      <div class="swatch" style="background:#ffffff;border:1.5px solid #e8e8e8;color:#111">
+        <div class="name">Background</div><div class="hex">#ffffff</div>
+      </div>
+      <div class="swatch" style="background:#f7faf7;border:1.5px solid #e8e8e8;color:#111">
+        <div class="name">Surface</div><div class="hex">#f7faf7</div>
+      </div>
+      <div class="swatch" style="background:#e8f0e8;border:1.5px solid #ddd;color:#111">
+        <div class="name">Border</div><div class="hex">#e8f0e8</div>
+      </div>
+      <div class="swatch" style="background:#111111;color:#fff">
+        <div class="name">Text</div><div class="hex">#111111</div>
+      </div>
+      <div class="swatch" style="background:#888888;color:#fff">
+        <div class="name">Secondary</div><div class="hex">#888888</div>
+      </div>
+      <div class="swatch" style="background:#4caf50;color:#fff">
+        <div class="name">Primary</div><div class="hex">#4caf50</div>
+      </div>
+      <div class="swatch" style="background:#2e7d32;color:#fff">
+        <div class="name">Primary Dark</div><div class="hex">#2e7d32</div>
+      </div>
+      <div class="swatch" style="background:#e8f5e9;color:#2e7d32;border:1.5px solid #c8e6c9">
+        <div class="name">Primary Tint</div><div class="hex">#e8f5e9</div>
+      </div>
+      <div class="swatch" style="background:#ff8f00;color:#fff">
+        <div class="name">Warning</div><div class="hex">#ff8f00</div>
+      </div>
+      <div class="swatch" style="background:#e53935;color:#fff">
+        <div class="name">Danger</div><div class="hex">#e53935</div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:#888">Status dots: green = ready/good, orange = pending/warning, red = urgent/overdue, grey = empty/inactive. No dark mode — this design is light-only.</p>
+  </div>
+</div>
+
+<!-- ── 2. Typography ── -->
+<div class="section">
+  <div class="section-head">
+    <div class="section-num">2</div>
+    <div><h2>Typography</h2><p>System sans-serif for labels, system monospace for all numbers</p></div>
+  </div>
+  <div class="section-body">
+    <div class="type-samples">
+      <div class="type-row">
+        <span class="type-label">Screen title</span>
+        <span class="type-sample" style="font-size:17px;font-weight:700;color:#111">Grow — Fields</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">Section header</span>
+        <span class="type-sample" style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:0.6px">Active parcels (5)</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">Row primary</span>
+        <span class="type-sample" style="font-size:12px;font-weight:600;color:#111">North Field — Wheat 3 ha</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">Row secondary</span>
+        <span class="type-sample" style="font-size:10px;color:#888">loamy · N:72 P:58 K:61 · Day 24 planted</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">Numbers (mono)</span>
+        <span class="type-sample" style="font-size:13px;font-weight:700;color:#111;font-family:monospace">$12,450 · 0.42/kg · +4%</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">Sub-tab label</span>
+        <span class="type-sample" style="font-size:11px;font-weight:700;color:#2e7d32">Fields</span>
+      </div>
+      <div class="type-row">
+        <span class="type-label">Badge</span>
+        <span class="badge solid">Harvest</span>
+        <span class="badge orange" style="margin-left:4px">18d left</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 3. Core components ── -->
+<div class="section">
+  <div class="section-head">
+    <div class="section-num">3</div>
+    <div><h2>Core components</h2><p>HUD · SubTabBar · Dense Row · Status Badges · Advance Day button</p></div>
+  </div>
+  <div class="section-body">
+    <div class="comp-grid">
+
+      <div class="comp">
+        <div class="comp-title">GameHUD (persistent top bar)</div>
+        <div class="hud-demo">
+          <div class="hud-day">Day 42</div>
+          <div class="hud-money">$12,450</div>
+          <div class="hud-weather">☀ Fair</div>
+          <div class="hud-season">Summer</div>
+        </div>
+        <p style="font-size:9px;color:#aaa;margin-top:8px">Always visible. Day chip in green. Money in monospace. Season + weather right-aligned. No farm name (too much noise). 2px green bottom border.</p>
+      </div>
+
+      <div class="comp">
+        <div class="comp-title">SubTabBar</div>
+        <div class="stab-demo">
+          <div class="stab-item on">Fields</div>
+          <div class="stab-item">Water</div>
+          <div class="stab-item">Calendar</div>
+          <div class="stab-item">Weather</div>
+        </div>
+        <p style="font-size:9px;color:#aaa;margin-top:8px">Active tab: white bg, green text, inset green bottom border. Inactive: light grey surface, grey text. Scrollable if >5 items. No icons — space is precious.</p>
+      </div>
+
+      <div class="comp">
+        <div class="comp-title">Dense Row (the workhorse)</div>
+        <div class="row-demo">
+          <div class="r">
+            <div class="dot g"></div>
+            <div><div class="r-main">North Field — Wheat 3 ha</div><div class="r-sub">loamy · N:72 P:58 K:61</div></div>
+            <div class="r-val g">Ready ✓</div>
+          </div>
+          <div class="r">
+            <div class="dot o"></div>
+            <div><div class="r-main">East Pasture — Corn 2 ha</div><div class="r-sub">sandy · N:45 P:61 K:54</div></div>
+            <div class="r-val o">18d</div>
+          </div>
+          <div class="r">
+            <div class="dot e"></div>
+            <div><div class="r-main">South Plot — Empty 1.5 ha</div><div class="r-sub">clay · N:68 P:70 K:60</div></div>
+            <div class="r-val d">—</div>
+          </div>
+        </div>
+        <p style="font-size:9px;color:#aaa;margin-top:8px">7px status dot. Primary label 12px bold. Sub-label 10px grey. Value right-aligned monospace. 1px bottom border between rows. ~38px row height.</p>
+      </div>
+
+      <div class="comp">
+        <div class="comp-title">Status badges</div>
+        <div class="badge-demo">
+          <span class="badge solid">Harvest</span>
+          <span class="badge solid" style="background:#4caf50">Collect</span>
+          <span class="badge orange">18d left</span>
+          <span class="badge red">Overdue!</span>
+          <span class="badge grey">Idle</span>
+          <span class="badge green">+4% today</span>
+        </div>
+        <p style="font-size:9px;color:#aaa;margin-top:8px">Solid green = actionable now. Orange tint = upcoming. Red tint = urgent/overdue. Grey = inactive. Green tint = positive signal. Pill shape (border-radius: 20px).</p>
+      </div>
+
+      <div class="comp" style="grid-column: 1 / -1">
+        <div class="comp-title">Primary tab bar</div>
+        <div class="tabbar-demo">
+          <div class="tab-item on">
+            <div class="ico">🌾</div>
+            <div class="lbl">Grow</div>
+          </div>
+          <div class="tab-item">
+            <div class="badge-dot"></div>
+            <div class="ico">🐄</div>
+            <div class="lbl">Animals</div>
+          </div>
+          <div class="tab-item">
+            <div class="ico">⚙️</div>
+            <div class="lbl">Operations</div>
+          </div>
+          <div class="tab-item">
+            <div class="ico">📈</div>
+            <div class="lbl">Market</div>
+          </div>
+          <div class="tab-item">
+            <div class="ico">🏦</div>
+            <div class="lbl">Office</div>
+          </div>
+        </div>
+        <p style="font-size:9px;color:#aaa;margin-top:8px">5 tabs. Active: icon at full opacity, label in green. Inactive: icon dimmed, label grey. Red notification dot when a tab has urgent items. White background, 1.5px green top border.</p>
+      </div>
+
+      <div class="comp" style="grid-column: 1 / -1">
+        <div class="comp-title">Advance Day button (persistent, bottom of screen)</div>
+        <div class="adv-demo">▶ Advance Day</div>
+        <p style="font-size:9px;color:#aaa;margin-top:8px">Full-width. Always visible above the tab bar. Solid green, white bold text. Replaces the old floating button and HUD advance button. Single consistent tap target.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── 4. Screen map ── -->
+<div class="section">
+  <div class="section-head">
+    <div class="section-num">4</div>
+    <div><h2>Complete screen map</h2><p>All 5 tabs and their confirmed sub-screens</p></div>
+  </div>
+  <div class="section-body">
+    <div class="screen-map">
+
+      <div class="tab-map">
+        <div class="tab-map-head bg-grow">🌾 Grow</div>
+        <div class="tab-map-items">
+          <div class="mi"><span class="mico">🟫</span> Fields</div>
+          <div class="mi"><span class="mico">💧</span> Water</div>
+          <div class="mi"><span class="mico">📅</span> Calendar</div>
+          <div class="mi"><span class="mico">☀️</span> Weather</div>
+        </div>
+      </div>
+
+      <div class="tab-map">
+        <div class="tab-map-head bg-anim">🐄 Animals</div>
+        <div class="tab-map-items">
+          <div class="mi"><span class="mico">🐄</span> Livestock</div>
+          <div class="mi"><span class="mico">🌿</span> Henil</div>
+          <div class="mi future"><span class="mico">🧬</span> Breeds</div>
+        </div>
+      </div>
+
+      <div class="tab-map">
+        <div class="tab-map-head bg-ops">⚙️ Operations</div>
+        <div class="tab-map-items">
+          <div class="mi"><span class="mico">🚜</span> Machinery</div>
+          <div class="mi"><span class="mico">👷</span> Workers</div>
+          <div class="mi"><span class="mico">🏭</span> Processing</div>
+          <div class="mi"><span class="mico">⚡</span> Electricity</div>
+          <div class="mi"><span class="mico">🌱</span> Seed Lab</div>
+        </div>
+      </div>
+
+      <div class="tab-map">
+        <div class="tab-map-head bg-mkt">📈 Market</div>
+        <div class="tab-map-items">
+          <div class="mi"><span class="mico">📊</span> Prices</div>
+          <div class="mi"><span class="mico">💹</span> Economy</div>
+          <div class="mi"><span class="mico">🔨</span> Auction</div>
+          <div class="mi"><span class="mico">🛒</span> Shop</div>
+          <div class="mi"><span class="mico">📋</span> Contracts</div>
+          <div class="mi future"><span class="mico">📦</span> Selling</div>
+        </div>
+      </div>
+
+      <div class="tab-map">
+        <div class="tab-map-head bg-off">🏦 Office</div>
+        <div class="tab-map-items">
+          <div class="mi"><span class="mico">🏠</span> Dashboard</div>
+          <div class="mi"><span class="mico">🏦</span> Banking</div>
+          <div class="mi"><span class="mico">🛡</span> Insurance</div>
+          <div class="mi"><span class="mico">🤝</span> Co-op</div>
+          <div class="mi"><span class="mico">📊</span> Rivals</div>
+          <div class="mi"><span class="mico">🏅</span> Achievements</div>
+          <div class="mi"><span class="mico">📖</span> Guide</div>
+          <div class="mi"><span class="mico">⚙️</span> Settings</div>
+        </div>
+      </div>
+
+    </div>
+    <p style="font-size:11px;color:#aaa;margin-top:10px">Faded italic = specced but not yet built. Everything else is an existing screen being reskinned and reorganised.</p>
+  </div>
+</div>
+
+<!-- approve -->
+<div class="approve">
+  <h3>Does this design look right? (Colors · Typography · Components · Screen map)</h3>
+  <div class="btns">
+    <button class="btn btn-yes" onclick="approve(this)">Approved — write the spec</button>
+    <button class="btn btn-no" onclick="reject(this)">Something needs changing</button>
+  </div>
+  <div class="resp" id="resp">✓ Writing the spec now.</div>
+</div>
+
+<script>
+function approve(el) {
+  document.getElementById('resp').style.display = 'block';
+  fetch('/event', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type:'click', choice:'approved', text:'Design approved' }) });
+}
+function reject(el) {
+  document.getElementById('resp').style.display = 'block';
+  document.getElementById('resp').textContent = 'Tell me what to change in the terminal.';
+  document.getElementById('resp').style.color = '#888';
+  fetch('/event', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type:'click', choice:'rejected', text:'Design rejected' }) });
+}
+</script>
+</body>
+</html>

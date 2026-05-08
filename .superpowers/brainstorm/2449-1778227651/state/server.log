@@ -1,0 +1,12 @@
+{"type":"owner-pid-invalid","pid":2447,"reason":"dead at startup"}
+{"type":"server-started","port":64156,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:64156","screen_dir":"C:\\Users\\SanGi\\.antigravity\\FArM TYCOON\\granja-tycoon\\.superpowers\\brainstorm\\2449-1778227651\\content","state_dir":"C:\\Users\\SanGi\\.antigravity\\FArM TYCOON\\granja-tycoon\\.superpowers\\brainstorm\\2449-1778227651\\state"}
+{"type":"screen-added","file":"C:\\Users\\SanGi\\.antigravity\\FArM TYCOON\\granja-tycoon\\.superpowers\\brainstorm\\2449-1778227651\\content\\aesthetic.html"}
+{"type":"screen-added","file":"C:\\Users\\SanGi\\.antigravity\\FArM TYCOON\\granja-tycoon\\.superpowers\\brainstorm\\2449-1778227651\\content\\approach.html"}
+{"type":"screen-added","file":"C:\\Users\\SanGi\\.antigravity\\FArM TYCOON\\granja-tycoon\\.superpowers\\brainstorm\\2449-1778227651\\content\\direction.html"}
+{"type":"screen-added","file":"C:\\Users\\SanGi\\.antigravity\\FArM TYCOON\\granja-tycoon\\.superpowers\\brainstorm\\2449-1778227651\\content\\grouping.html"}
+{"type":"screen-added","file":"C:\\Users\\SanGi\\.antigravity\\FArM TYCOON\\granja-tycoon\\.superpowers\\brainstorm\\2449-1778227651\\content\\navigation.html"}
+{"type":"screen-added","file":"C:\\Users\\SanGi\\.antigravity\\FArM TYCOON\\granja-tycoon\\.superpowers\\brainstorm\\2449-1778227651\\content\\bvc.html"}
+{"type":"screen-added","file":"C:\\Users\\SanGi\\.antigravity\\FArM TYCOON\\granja-tycoon\\.superpowers\\brainstorm\\2449-1778227651\\content\\design.html"}
+{"type":"screen-added","file":"C:\\Users\\SanGi\\.antigravity\\FArM TYCOON\\granja-tycoon\\.superpowers\\brainstorm\\2449-1778227651\\content\\advday.html"}
+{"type":"screen-added","file":"C:\\Users\\SanGi\\.antigravity\\FArM TYCOON\\granja-tycoon\\.superpowers\\brainstorm\\2449-1778227651\\content\\tabbar.html"}
+{"type":"server-stopped","reason":"idle timeout"}

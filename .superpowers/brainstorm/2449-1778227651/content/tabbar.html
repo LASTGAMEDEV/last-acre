@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Final Tab Bar</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f0; padding: 28px 20px 48px; color: #1a1a1a; }
+  h2 { font-size: 19px; font-weight: 700; margin-bottom: 5px; }
+  .sub { font-size: 12px; color: #666; margin-bottom: 28px; }
+
+  .phones { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .pw { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .pl { font-size: 10px; color: #888; font-weight: 600; }
+
+  .phone {
+    width: 200px; height: 380px;
+    border-radius: 28px; border: 2.5px solid #ccc;
+    overflow: hidden; background: #fff;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    display: flex; flex-direction: column;
+  }
+  .notch { background: #111; height: 20px; display: flex; align-items: center; justify-content: center; }
+  .notch-pill { width: 48px; height: 8px; background: #222; border-radius: 10px; }
+  .sb { background: #fff; height: 14px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 7px; color: #bbb; }
+  .hud { background: #fff; padding: 7px 12px; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #4caf50; flex-shrink: 0; }
+  .hud-day { background: #4caf50; color: #fff; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 20px; }
+  .hud-money { font-size: 13px; font-weight: 700; color: #111; font-family: monospace; }
+  .hud-r { margin-left: auto; font-size: 10px; color: #4caf50; font-weight: 600; }
+  .stabs { display: flex; background: #f7faf7; border-bottom: 1px solid #e8e8e8; flex-shrink: 0; }
+  .stab { flex:1; text-align:center; font-size: 8px; padding: 5px 2px; color: #bbb; font-weight: 600; border-right: 1px solid #f0f0f0; }
+  .stab.on { background: #fff; color: #2e7d32; font-weight: 700; box-shadow: inset 0 -2px 0 #4caf50; }
+  .stab:last-child { border: none; }
+  .content { flex: 1; overflow: hidden; }
+  .c-head { display: flex; padding: 4px 10px; background: #f7faf7; border-bottom: 1px solid #f0f0f0; }
+  .c-th { font-size: 7px; color: #ccc; font-weight: 700; text-transform: uppercase; }
+  .c-th.r { margin-left: auto; }
+  .row { display: flex; align-items: center; padding: 6px 10px; border-bottom: 1px solid #f9f9f9; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+  .dot.g { background: #4caf50; } .dot.o { background: #ff8f00; } .dot.e { background: #e0e0e0; }
+  .r-main { font-size: 10px; font-weight: 600; color: #111; }
+  .r-sub  { font-size: 8px; color: #aaa; }
+  .r-val  { font-size: 10px; font-family: monospace; font-weight: 600; margin-left: auto; }
+  .r-val.g { color: #4caf50; } .r-val.o { color: #ff8f00; } .r-val.d { color: #ccc; }
+
+  /* ── THE TAB BAR ── */
+  .tabbar {
+    background: #fff;
+    border-top: 1.5px solid #e8f5e9;
+    display: flex;
+    align-items: center;
+    height: 54px;
+    padding: 0 2px 2px;
+    flex-shrink: 0;
+  }
+  .t { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 100%; }
+  .t .ico { font-size: 18px; line-height: 1; }
+  .t .lbl { font-size: 8px; color: #ccc; font-weight: 600; }
+  .t.on .lbl { color: #4caf50; font-weight: 700; }
+  .t.on .ico { filter: none; }
+
+  /* center advance day */
+  .t-adv {
+    flex: 1.1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+  .adv-btn {
+    width: 44px; height: 44px;
+    background: #4caf50;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 12px rgba(76,175,80,0.5);
+    font-size: 18px;
+    margin-top: -14px;
+    position: relative;
+  }
+  .adv-lbl { font-size: 7px; font-weight: 700; color: #4caf50; margin-top: 1px; }
+
+  /* badge dot */
+  .bdot {
+    position: relative;
+  }
+  .bdot::after {
+    content: '';
+    position: absolute;
+    width: 7px; height: 7px;
+    background: #e53935;
+    border-radius: 50%;
+    top: 0; right: -2px;
+    border: 1px solid #fff;
+  }
+
+  /* maps */
+  .map-section { margin-top: 28px; }
+  .map-title { font-size: 13px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .map-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .map-col { border-radius: 10px; overflow: hidden; }
+  .map-head { padding: 8px 10px; font-size: 11px; font-weight: 800; color: #fff; }
+  .bg-farm { background: #43a047; }
+  .bg-ops  { background: #1565c0; }
+  .bg-mkt  { background: #6a1b9a; }
+  .bg-off  { background: #37474f; }
+  .map-items { background: #fff; padding: 6px 8px; }
+  .mi { font-size: 9px; color: #555; padding: 3px 0; border-bottom: 1px solid #f5f5f5; display: flex; align-items: center; gap: 4px; }
+  .mi:last-child { border: none; }
+  .mi.fut { opacity: 0.4; font-style: italic; }
+
+  .approve { background: #fff; border: 2px solid #e0e0e0; border-radius: 14px; padding: 16px 18px; margin-top: 20px; }
+  .approve h3 { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+  .btns { display: flex; gap: 8px; }
+  .btn { padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+  .btn-yes { background: #4caf50; color: #fff; }
+  .btn-yes:hover { background: #388e3c; }
+  .btn-no  { background: #fff; color: #555; border-color: #ddd; }
+  .btn-no:hover { border-color: #4caf50; color: #4caf50; }
+</style>
+</head>
+<body>
+
+<h2>Final tab bar — 2 + ▶ + 2</h2>
+<p class="sub">Farm &amp; Ops on the left · Advance Day center · Market &amp; Office on the right</p>
+
+<div class="phones">
+
+  <!-- Farm tab active -->
+  <div class="pw">
+    <div class="phone">
+      <div class="notch"><div class="notch-pill"></div></div>
+      <div class="sb"><span>9:41</span><span>●●●</span></div>
+      <div class="hud">
+        <div class="hud-day">Day 42</div>
+        <div class="hud-money">$12,450</div>
+        <div class="hud-r">☀ Summer</div>
+      </div>
+      <div class="stabs">
+        <div class="stab on">Fields</div>
+        <div class="stab">Animals</div>
+        <div class="stab">Water</div>
+        <div class="stab">Weather</div>
+      </div>
+      <div class="content">
+        <div class="c-head"><span class="c-th">Field / Crop</span><span class="c-th r">Status</span></div>
+        <div class="row"><div class="dot g"></div><div><div class="r-main">North — Wheat 3 ha</div><div class="r-sub">loamy · N:72 P:58 K:61</div></div><div class="r-val g">Ready ✓</div></div>
+        <div class="row"><div class="dot o"></div><div><div class="r-main">East — Corn 2 ha</div><div class="r-sub">sandy · N:45 P:61 K:54</div></div><div class="r-val o">18d</div></div>
+        <div class="row"><div class="dot e"></div><div><div class="r-main">South — Empty 1.5 ha</div><div class="r-sub">clay · N:68 P:70 K:60</div></div><div class="r-val d">—</div></div>
+        <div class="row"><div class="dot o"></div><div><div class="r-main">River — Sunflower 4 ha</div><div class="r-sub">loamy · N:55 P:50 K:58</div></div><div class="r-val o">32d</div></div>
+        <div class="row"><div class="dot e"></div><div><div class="r-main">West — Empty 2 ha</div><div class="r-sub">chalky · N:61 P:44</div></div><div class="r-val d">—</div></div>
+      </div>
+      <div class="tabbar">
+        <div class="t on"><div class="ico">🌿</div><div class="lbl">Farm</div></div>
+        <div class="t"><div class="ico">⚙️</div><div class="lbl">Ops</div></div>
+        <div class="t-adv">
+          <div class="adv-btn">▶</div>
+          <div class="adv-lbl">Day</div>
+        </div>
+        <div class="t"><div class="ico bdot">📈</div><div class="lbl">Market</div></div>
+        <div class="t"><div class="ico">🏦</div><div class="lbl">Office</div></div>
+      </div>
+    </div>
+    <div class="pl">Farm tab · Fields</div>
+  </div>
+
+  <!-- Market tab active -->
+  <div class="pw">
+    <div class="phone">
+      <div class="notch"><div class="notch-pill"></div></div>
+      <div class="sb"><span>9:41</span><span>●●●</span></div>
+      <div class="hud">
+        <div class="hud-day">Day 42</div>
+        <div class="hud-money">$12,450</div>
+        <div class="hud-r">☀ Summer</div>
+      </div>
+      <div class="stabs">
+        <div class="stab on">Prices</div>
+        <div class="stab">Economy</div>
+        <div class="stab">Auction</div>
+        <div class="stab">Shop</div>
+      </div>
+      <div class="content">
+        <div class="c-head"><span class="c-th">Product · Stock</span><span class="c-th r">Price · Δ</span></div>
+        <div class="row"><div class="dot g"></div><div><div class="r-main">Wheat</div><div class="r-sub">48 kg in stock</div></div><div class="r-val g">$0.42 ↑+4%</div></div>
+        <div class="row"><div class="dot o"></div><div><div class="r-main">Corn</div><div class="r-sub">120 kg in stock</div></div><div class="r-val o">$0.28 ↓−1%</div></div>
+        <div class="row"><div class="dot g"></div><div><div class="r-main">Sunflower Oil</div><div class="r-sub">12 L in stock</div></div><div class="r-val g">$3.20 ↑+2%</div></div>
+        <div class="row"><div class="dot e"></div><div><div class="r-main">Honey</div><div class="r-sub">4 kg in stock</div></div><div class="r-val d">$8.50 →0%</div></div>
+        <div class="row"><div class="dot e"></div><div><div class="r-main">Saffron</div><div class="r-sub">0 kg in stock</div></div><div class="r-val d">$142 ↑+1%</div></div>
+      </div>
+      <div class="tabbar">
+        <div class="t"><div class="ico">🌿</div><div class="lbl">Farm</div></div>
+        <div class="t"><div class="ico">⚙️</div><div class="lbl">Ops</div></div>
+        <div class="t-adv">
+          <div class="adv-btn">▶</div>
+          <div class="adv-lbl">Day</div>
+        </div>
+        <div class="t on"><div class="ico">📈</div><div class="lbl">Market</div></div>
+        <div class="t"><div class="ico">🏦</div><div class="lbl">Office</div></div>
+      </div>
+    </div>
+    <div class="pl">Market tab · Prices</div>
+  </div>
+
+  <!-- Office tab active -->
+  <div class="pw">
+    <div class="phone">
+      <div class="notch"><div class="notch-pill"></div></div>
+      <div class="sb"><span>9:41</span><span>●●●</span></div>
+      <div class="hud">
+        <div class="hud-day">Day 42</div>
+        <div class="hud-money">$12,450</div>
+        <div class="hud-r">☀ Summer</div>
+      </div>
+      <div class="stabs">
+        <div class="stab on">Dashboard</div>
+        <div class="stab">Banking</div>
+        <div class="stab">Insurance</div>
+        <div class="stab">Co-op</div>
+      </div>
+      <div class="content">
+        <div class="c-head"><span class="c-th">Overview</span><span class="c-th r">Value</span></div>
+        <div class="row"><div class="dot g"></div><div><div class="r-main">Net worth</div><div class="r-sub">land + livestock + cash</div></div><div class="r-val g">$84,200</div></div>
+        <div class="row"><div class="dot o"></div><div><div class="r-main">Loan due</div><div class="r-sub">12d remaining</div></div><div class="r-val o">$4,500</div></div>
+        <div class="row"><div class="dot g"></div><div><div class="r-main">Insurance</div><div class="r-sub">Drought + Frost active</div></div><div class="r-val g">Active ✓</div></div>
+        <div class="row"><div class="dot e"></div><div><div class="r-main">Co-op</div><div class="r-sub">Grain & Arable</div></div><div class="r-val d">Not joined</div></div>
+        <div class="row"><div class="dot g"></div><div><div class="r-main">Reputation</div><div class="r-sub">Established · 54 pts</div></div><div class="r-val g">54 / 100</div></div>
+      </div>
+      <div class="tabbar">
+        <div class="t"><div class="ico">🌿</div><div class="lbl">Farm</div></div>
+        <div class="t"><div class="ico">⚙️</div><div class="lbl">Ops</div></div>
+        <div class="t-adv">
+          <div class="adv-btn">▶</div>
+          <div class="adv-lbl">Day</div>
+        </div>
+        <div class="t"><div class="ico">📈</div><div class="lbl">Market</div></div>
+        <div class="t on"><div class="ico">🏦</div><div class="lbl">Office</div></div>
+      </div>
+    </div>
+    <div class="pl">Office tab · Dashboard</div>
+  </div>
+
+</div>
+
+<!-- Final screen map -->
+<div class="map-section">
+  <div class="map-title">Final screen map — 4 tabs + center action</div>
+  <div class="map-grid">
+    <div class="map-col">
+      <div class="map-head bg-farm">🌿 Farm</div>
+      <div class="map-items">
+        <div class="mi">🟫 Fields</div>
+        <div class="mi">🐄 Animals</div>
+        <div class="mi">🌿 Henil</div>
+        <div class="mi">💧 Water</div>
+        <div class="mi">📅 Calendar</div>
+        <div class="mi">☀️ Weather</div>
+        <div class="mi fut">🧬 Breeds</div>
+      </div>
+    </div>
+    <div class="map-col">
+      <div class="map-head bg-ops">⚙️ Ops</div>
+      <div class="map-items">
+        <div class="mi">🚜 Machinery</div>
+        <div class="mi">👷 Workers</div>
+        <div class="mi">🏭 Processing</div>
+        <div class="mi">⚡ Electricity</div>
+        <div class="mi">🌱 Seed Lab</div>
+      </div>
+    </div>
+    <div class="map-col">
+      <div class="map-head bg-mkt">📈 Market</div>
+      <div class="map-items">
+        <div class="mi">📊 Prices</div>
+        <div class="mi">💹 Economy</div>
+        <div class="mi">🔨 Auction</div>
+        <div class="mi">🛒 Shop</div>
+        <div class="mi">📋 Contracts</div>
+        <div class="mi fut">📦 Selling</div>
+      </div>
+    </div>
+    <div class="map-col">
+      <div class="map-head bg-off">🏦 Office</div>
+      <div class="map-items">
+        <div class="mi">🏠 Dashboard</div>
+        <div class="mi">🏦 Banking</div>
+        <div class="mi">🛡 Insurance</div>
+        <div class="mi">🤝 Co-op</div>
+        <div class="mi">📊 Rivals</div>
+        <div class="mi">🏅 Achievements</div>
+        <div class="mi">📖 Guide</div>
+        <div class="mi">⚙️ Settings</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="approve">
+  <h3>Does this all look right? Ready to write the spec?</h3>
+  <div class="btns">
+    <button class="btn btn-yes" onclick="go(true)">Yes — write the spec</button>
+    <button class="btn btn-no" onclick="go(false)">One more change</button>
+  </div>
+</div>
+
+<script>
+function go(yes) {
+  fetch('/event', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type:'click', choice: yes ? 'approved' : 'more', text: yes ? 'Final design approved' : 'More changes needed' }) });
+}
+</script>
+</body>
+</html>

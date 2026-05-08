@@ -19,8 +19,9 @@ export interface PlantedCrop {
   parcelId: string;
   plantedDay: number;
   hectares: number;
-  fertilized: boolean;
-  appliedFertilizerBonus?: number; // set by mid-growth fertilizeCrop; undefined = use cropType.fertilizerBonus
+  appliedN?: number;  // nitrogen fertilizer multiplier (e.g. 1.2); undefined = 1.0
+  appliedP?: number;  // phosphorus fertilizer multiplier
+  appliedK?: number;  // potassium fertilizer multiplier
   frostDamage?: number;    // 0–1 accumulated; ≥1.0 = crop killed
   droughtStress?: number;  // 0–1 accumulated
   moistureLevel?: number;  // 0–1 soil moisture; default 0.7
@@ -41,9 +42,7 @@ export function harvestAmount(
   droughtStress = 0,
 ): number {
   const soilMod     = computeSoilYieldModifier(soil);
-  const fertilizerMod = crop.fertilized
-    ? (crop.appliedFertilizerBonus ?? cropType.fertilizerBonus)
-    : 1.0;
+  const fertilizerMod = (crop.appliedN ?? 1.0) * (crop.appliedP ?? 1.0) * (crop.appliedK ?? 1.0);
   const weedMod     = hasWeeds ? 0.75 : 1.0;
   const frostMod    = Math.max(0, 1 - frostDamage * 0.7);
   const droughtMod  = Math.max(0, 1 - droughtStress * 0.8);
@@ -69,6 +68,9 @@ export interface SoilStats {
   compaction: number;     // 0–100, optimal 0–25 (lower = better)
   pH: number;             // 4.0–8.5, optimal 6.0–7.0
   microbialLife: number;  // 0–100, optimal 60–100
+  phosphorus: number;     // 0–100, optimal 50–80
+  potassium: number;      // 0–100, optimal 50–80
+  drainage: number;       // 0–100, optimal 60–100
 }
 
 export const SOIL_DEFAULTS: SoilStats = {
@@ -77,6 +79,9 @@ export const SOIL_DEFAULTS: SoilStats = {
   compaction: 20,
   pH: 6.5,
   microbialLife: 70,
+  phosphorus: 60,
+  potassium: 60,
+  drainage: 65,
 };
 
 /**
@@ -114,7 +119,34 @@ export function computeSoilYieldModifier(soil: SoilStats): number {
       ? 0.85 + (soil.microbialLife / 30) * 0.15 // 0.85 at 0, 1.0 at 30
       : Math.max(1.0, 1.0 + Math.min((soil.microbialLife - 60) / 400, 0.05)); // +0–5% above 60; neutral 30–60
 
-  return Math.max(0.3, nMod * omMod * compMod * pHMod * microMod);
+  // Phosphorus: optimal 50–80; 0.60–1.08
+  const p = soil.phosphorus ?? 60;
+  const pMod =
+    p < 30
+      ? 0.60 + (p / 30) * 0.40   // 0.60 at 0, 1.00 at 30
+      : p < 50
+      ? 1.00
+      : 1.0 + Math.min((p - 50) / 375, 0.08); // +0–8% from 50–80
+
+  // Potassium: optimal 50–80; 0.65–1.06
+  const k = soil.potassium ?? 60;
+  const kMod =
+    k < 30
+      ? 0.65 + (k / 30) * 0.35   // 0.65 at 0, 1.00 at 30
+      : k < 50
+      ? 1.00
+      : 1.0 + Math.min((k - 50) / 500, 0.06); // +0–6% from 50–80
+
+  // Drainage: poor drainage causes waterlogging; 0.60–1.00
+  const d = soil.drainage ?? 65;
+  const drainMod =
+    d < 30
+      ? 0.60 + (d / 30) * 0.20   // 0.60 at 0, 0.80 at 30
+      : d < 60
+      ? 0.80 + ((d - 30) / 30) * 0.20  // 0.80–1.00 from 30–60
+      : 1.00;
+
+  return Math.max(0.3, nMod * omMod * compMod * pHMod * microMod * pMod * kMod * drainMod);
 }
 
 export interface SoilTickParams {
@@ -126,6 +158,8 @@ export interface SoilTickParams {
   machineryUsedToday: boolean;
   /** true if today's rainfall was heavy (≥ 8 mm simulated) */
   heavyRainToday: boolean;
+  /** true if today is a drought day */
+  droughtToday: boolean;
   /** true if a pesticide was applied to this parcel today */
   pesticideAppliedToday: boolean;
   /** true if manure/compost was applied today */
@@ -144,6 +178,9 @@ export function advanceSoilStats(
   cropNitrogenDemand: number, // nitrogenDemand from CropType, 0 if fallow
 ): SoilStats {
   let { nitrogen, organicMatter, compaction, pH, microbialLife } = soil;
+  let phosphorus = soil.phosphorus ?? 60;
+  let potassium  = soil.potassium  ?? 60;
+  let drainage   = soil.drainage   ?? 65;
 
   // ── Nitrogen ──
   if (params.activeCropId) {
@@ -195,6 +232,25 @@ export function advanceSoilStats(
   const microTarget = Math.min(100, organicMatter * 12);
   microbialLife += (microTarget - microbialLife) * 0.01; // 1% convergence per day
 
+  // –– Phosphorus (slow natural recovery; bulk drain handled at harvest in store)
+  if (!params.activeCropId) {
+    phosphorus += 0.05; // very slow natural mineralisation when fallow
+  }
+
+  // –– Potassium (same pattern)
+  if (!params.activeCropId) {
+    potassium += 0.04;
+  }
+
+  // –– Drainage
+  if (params.heavyRainToday) {
+    drainage -= 12; // waterlogging event
+  } else if (params.droughtToday) {
+    drainage += 2;  // soil dries and cracks open, improving drainage
+  } else {
+    drainage += 0.3; // natural slow recovery
+  }
+
   // Clamp all values
   return {
     nitrogen:     Math.max(0, Math.min(100, nitrogen)),
@@ -202,5 +258,8 @@ export function advanceSoilStats(
     compaction:   Math.max(0, Math.min(100, compaction)),
     pH:           Math.max(4.0, Math.min(8.5, pH)),
     microbialLife: Math.max(0, Math.min(100, microbialLife)),
+    phosphorus:   Math.max(0, Math.min(100, phosphorus)),
+    potassium:    Math.max(0, Math.min(100, potassium)),
+    drainage:     Math.max(0, Math.min(100, drainage)),
   };
 }
