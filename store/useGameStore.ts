@@ -41,7 +41,8 @@ import {
   seasonKey,
 } from '../engine/productionBuildings';
 import { INSURANCE_PLANS, InsuranceType } from '../data/insuranceTypes';
-import { PROCESSING_RECIPES, PROCESSED_PRODUCTS, PROCESSED_ITEM_DEFS, ProcessingBatch, ProcessedItem } from '../data/processingTypes';
+import { PROCESSING_RECIPES, PROCESSED_PRODUCTS, PROCESSED_ITEM_DEFS, ProcessingBatch, ProcessedItem, getProcessingBuildingConfig } from '../data/processingTypes';
+import { tickProcessedInventory, getSellMultiplier, canUpgradeTier, getUpgradeCost } from '../engine/processing';
 import { MILESTONES, checkNewMilestones, MILESTONE_REWARDS } from '../data/milestones';
 import { sellRevenue, SellPressure, computeSellPressureModifier, sellPressureDuration } from '../engine/market';
 import { getSeason, generateForecast, applyDailyWeather } from '../engine/climate';
@@ -642,6 +643,9 @@ export interface GameState {
 
   // Production buildings
   productionBuildings: ProductionBuildingState[];
+
+  // Artisan processing buildings (new system)
+  processingBuildings: import('../engine/processing').ProcessingBuilding[];
   animalWelfareScores: Record<string, number>;   // animalTypeId â†’ 0â€“100
   milkGrades: Record<string, 'A' | 'B' | 'C'>;  // animalTypeId â†’ grade (dairy species only)
   // Organic certification tracking (farm-wide)
@@ -870,6 +874,13 @@ export interface GameState {
     marketId: 'local' | 'city' | 'export';
     returnOrders: ReturnOrder[];
   }) => void;
+
+  // Processing building actions
+  buyProcessingBuilding: (buildingTypeId: string) => void;
+  upgradeProcessingBuilding: (buildingId: string) => void;
+  assignWorkerToProcessingBuilding: (buildingId: string, workerId: string) => void;
+  unassignWorkerFromProcessingBuilding: (buildingId: string, workerId: string) => void;
+  installColdStorage: (buildingId: string) => void;
 
   // â”€â”€ World Map â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   mapFields: MapField[];
@@ -1162,6 +1173,7 @@ function makeInitialState() {
     npcPriceSignalDays: {} as Record<string, number>,
     deliveryJobs: [],
     productionBuildings: [],
+    processingBuildings: [] as import('../engine/processing').ProcessingBuilding[],
     animalWelfareScores: {},
     milkGrades: {},
     lastSyntheticInputDay: -999,
@@ -3217,41 +3229,50 @@ export const useGameStore = create<GameState>()(
 
             // Find eligible recipes (building owned, at least 1 batch available)
             const eligible = AUTO_RECIPES.filter((r: any) => {
-              if (!state.buildings.includes(r.requiredBuilding)) return false;
-              const stock = r.input.source === 'crop'
-                ? (currentInventory[r.input.itemId] ?? 0)
-                : (currentAnimalInv[r.input.itemId] ?? 0);
-              return stock >= r.input.amount;
+              if (!state.buildings.includes(r.buildingTypeId)) return false;
+              for (const input of r.inputs ?? []) {
+                let stock = 0;
+                if (input.source === 'crop') stock = currentInventory[input.itemId] ?? 0;
+                else if (input.source === 'animal') stock = currentAnimalInv[input.itemId] ?? 0;
+                if (stock < input.quantity) return false;
+              }
+              return true;
             });
 
             if (eligible.length > 0) {
-              // Pick the recipe with the most input stock
+              // Pick the recipe with the most total input stock
               const best = eligible.reduce((prev: any, cur: any) => {
-                const prevStock = prev.input.source === 'crop'
-                  ? (currentInventory[prev.input.itemId] ?? 0)
-                  : (currentAnimalInv[prev.input.itemId] ?? 0);
-                const curStock = cur.input.source === 'crop'
-                  ? (currentInventory[cur.input.itemId] ?? 0)
-                  : (currentAnimalInv[cur.input.itemId] ?? 0);
+                const prevStock = (prev.inputs ?? []).reduce((s: number, inp: any) => {
+                  if (inp.source === 'crop') return s + (currentInventory[inp.itemId] ?? 0);
+                  if (inp.source === 'animal') return s + (currentAnimalInv[inp.itemId] ?? 0);
+                  return s;
+                }, 0);
+                const curStock = (cur.inputs ?? []).reduce((s: number, inp: any) => {
+                  if (inp.source === 'crop') return s + (currentInventory[inp.itemId] ?? 0);
+                  if (inp.source === 'animal') return s + (currentAnimalInv[inp.itemId] ?? 0);
+                  return s;
+                }, 0);
                 return curStock > prevStock ? cur : prev;
               });
 
-              const outputAmount = Math.round(best.outputAmount * workerBonuses.processingOutputMult);
+              const outputAmount = Math.round(best.baseOutputQuantity * workerBonuses.processingOutputMult);
 
-              if (best.input.source === 'crop') {
-                (autoSellFinalInventory as any).__workerInventory = {
-                  ...currentInventory,
-                  [best.input.itemId]: (currentInventory[best.input.itemId] ?? 0) - best.input.amount,
-                };
-              } else {
-                (animals as any).__newAnimalInventory = {
-                  ...currentAnimalInv,
-                  [best.input.itemId]: (currentAnimalInv[best.input.itemId] ?? 0) - best.input.amount,
-                };
+              for (const input of best.inputs ?? []) {
+                if (input.source === 'crop') {
+                  (autoSellFinalInventory as any).__workerInventory = {
+                    ...((autoSellFinalInventory as any).__workerInventory ?? currentInventory),
+                    [input.itemId]: (((autoSellFinalInventory as any).__workerInventory ?? currentInventory)[input.itemId] ?? 0) - input.quantity,
+                  };
+                } else if (input.source === 'animal') {
+                  (animals as any).__newAnimalInventory = {
+                    ...((animals as any).__newAnimalInventory ?? currentAnimalInv),
+                    [input.itemId]: (((animals as any).__newAnimalInventory ?? currentAnimalInv)[input.itemId] ?? 0) - input.quantity,
+                  };
+                }
               }
 
               (autoSellFinalInventory as any).__supervisorProcess = {
-                productId: best.outputProductId,
+                productId: best.outputItemId,
                 amount: outputAmount,
               };
             }
@@ -4062,27 +4083,57 @@ export const useGameStore = create<GameState>()(
             }
           : null;
 
-        // Complete processing batches whose timer has expired
-        const completedBatches = (state.activeBatches ?? []).filter(b => b.completionDay <= newDay);
-        const remainingActiveBatches = (state.activeBatches ?? []).filter(b => b.completionDay > newDay);
+        // ── Processing batch tick ──
+        const outageActive = state.electricity?.outageActive ?? false;
+        let batchTickBatches = [...(state.activeBatches ?? [])] as ProcessingBatch[];
+        let procBuildings = [...(state.processingBuildings ?? [])] as import('../engine/processing').ProcessingBuilding[];
+
+        // During outages: pause all active batches (extend timer by 1 day)
+        if (outageActive) {
+          batchTickBatches = batchTickBatches.map(b => ({ ...b, completionDay: b.completionDay + 1 }));
+          summary.push({ id: `outage_pause_${newDay}`, icon: '⚡', title: 'Power outage — processing batches paused.', severity: 'warning' });
+        }
+
+        // Complete batches whose timer has expired
+        const completedBatches = batchTickBatches.filter(b => b.completionDay <= newDay);
+        let remainingActiveBatches = batchTickBatches.filter(b => b.completionDay > newDay);
+
+        // Clear activeBatchId on buildings whose batches completed
+        for (const cb of completedBatches) {
+          procBuildings = procBuildings.map(pb =>
+            pb.activeBatchId === cb.id ? { ...pb, activeBatchId: undefined } : pb
+          );
+        }
+
+        // Convert completed batches to inventory items with cold storage
         const completedItems: ProcessedItem[] = completedBatches.map(b => {
           const def = PROCESSED_ITEM_DEFS.find(d => d.id === b.outputItemId);
+          const building = procBuildings.find(pb => pb.id === b.buildingId);
+          const shelfLife = def?.shelfLifeDays ?? 365;
+          const csMult = building?.hasColdStorage && def ? def.coldStorageMultiplier : 1;
           return {
             itemId: b.outputItemId,
             quantity: b.outputQuantity,
             quality: b.quality,
             producedDay: b.completionDay,
-            expiryDay: b.completionDay + (def?.shelfLifeDays ?? 365),
+            expiryDay: b.completionDay + Math.round(shelfLife * csMult),
           };
         });
 
-        // Spoilage check â€” remove expired items
-        const currentProcessed = (state.processedInventory ?? []) as ProcessedItem[];
-        const nonExpiredProcessed = currentProcessed.filter(item => item.expiryDay > newDay);
-        const expiredCount = currentProcessed.length - nonExpiredProcessed.length;
+        // Spoilage, aging & value decay tick
+        const { survivingItems, destroyedEvents, warningEvents } = tickProcessedInventory(
+          [...(state.processedInventory ?? [])] as ProcessedItem[],
+          newDay
+        );
+        if (destroyedEvents.length > 0) {
+          destroyedEvents.forEach(ev => summary.push({ id: `spoil_${newDay}_${ev}`, icon: '🗑️', title: ev, severity: 'danger' }));
+        }
+        if (warningEvents.length > 0) {
+          warningEvents.forEach(ev => summary.push({ id: `warn_${newDay}_${ev}`, icon: '⚠️', title: ev, severity: 'warning' }));
+        }
 
         const finalProcessedInventory: ProcessedItem[] = [
-          ...nonExpiredProcessed,
+          ...survivingItems,
           ...completedItems,
           ...(supervisorItem ? [supervisorItem] : []),
         ];
@@ -6536,41 +6587,116 @@ export const useGameStore = create<GameState>()(
       processProduct: (recipeId, batches) => {
         if (batches <= 0) return;
         const state = get();
-        const wBonuses = getWorkerBonuses(state.workers ?? []);
         const recipe = PROCESSING_RECIPES.find(r => r.id === recipeId);
         if (!recipe) return;
-        if (!state.buildings.includes(recipe.requiredBuilding)) return;
-        const needed = recipe.input.amount * batches;
-        const cropQuality = recipe.input.source === 'crop'
-          ? (state.cropQualityMap?.[recipe.input.itemId] ?? 1.0)
-          : 1.0;
-        // 60% from input quality, up to 20pts from worker skill, 20pts base
-        const quality = Math.max(0, Math.min(100, Math.round(cropQuality * 60 + 20 + (wBonuses.processingOutputMult - 1) * 40)));
-        const makeNewBatches = (): ProcessingBatch[] =>
-          Array.from({ length: batches }, (_, i) => ({
-            id: `batch_${Date.now()}_${i}`,
-            recipeId,
-            startDay: state.day,
-            completionDay: state.day + recipe.processingDays,
-            outputItemId: recipe.outputItemId,
-            outputQuantity: Math.round(recipe.baseOutputQuantity * wBonuses.processingOutputMult),
-            quality,
-          }));
-        if (recipe.input.source === 'crop') {
-          const inStock = state.inventory[recipe.input.itemId] ?? 0;
-          if (inStock < needed) return;
-          set({
-            inventory: { ...state.inventory, [recipe.input.itemId]: inStock - needed },
-            activeBatches: [...(state.activeBatches ?? []), ...makeNewBatches()],
-          });
-        } else {
-          const inStock = state.animalInventory[recipe.input.itemId] ?? 0;
-          if (inStock < needed) return;
-          set({
-            animalInventory: { ...state.animalInventory, [recipe.input.itemId]: inStock - needed },
-            activeBatches: [...(state.activeBatches ?? []), ...makeNewBatches()],
-          });
+
+        // Find owned processing building for this recipe
+        const procBuildings = state.processingBuildings ?? [];
+        const building = procBuildings.find(b => b.buildingTypeId === recipe.buildingTypeId);
+        if (!building) return;
+        if (building.tier < recipe.minBuildingTier) return;
+        if (building.activeBatchId) return; // one batch at a time per building
+
+        // Check inputs
+        const maxBatches = (() => {
+          let max = Infinity;
+          for (const input of recipe.inputs) {
+            let stock = 0;
+            if (input.source === 'crop') stock = state.inventory[input.itemId] ?? 0;
+            else if (input.source === 'animal') stock = state.animalInventory[input.itemId] ?? 0;
+            else if (input.source === 'processed') {
+              stock = (state.processedInventory ?? []).filter((i: ProcessedItem) => i.itemId === input.itemId).reduce((s: number, i: ProcessedItem) => s + i.quantity, 0);
+            }
+            max = Math.min(max, Math.floor(stock / input.quantity));
+          }
+          return max === Infinity ? 0 : max;
+        })();
+        const actualBatches = Math.min(batches, maxBatches);
+        if (actualBatches <= 0) return;
+
+        // Calculate input quality (weighted average)
+        let inputQualitySum = 0;
+        let inputWeightSum = 0;
+        for (const input of recipe.inputs) {
+          let q = 50;
+          if (input.source === 'crop') q = state.cropQualityMap?.[input.itemId] ?? 50;
+          else if (input.source === 'processed') {
+            const items = (state.processedInventory ?? []).filter((i: ProcessedItem) => i.itemId === input.itemId);
+            if (items.length > 0) {
+              const totalQty = items.reduce((s: number, i: ProcessedItem) => s + i.quantity, 0);
+              q = items.reduce((s: number, i: ProcessedItem) => s + i.quality * i.quantity, 0) / totalQty;
+            }
+          }
+          inputQualitySum += q * input.quantity;
+          inputWeightSum += input.quantity;
         }
+        const inputQuality = inputWeightSum > 0 ? inputQualitySum / inputWeightSum : 50;
+
+        // Worker bonus: highest tier among assigned workers * 5 (capped at 20)
+        const assignedWorkers = (state.workers ?? []).filter((w: Worker) => building.assignedWorkerIds.includes(w.id));
+        const workerBonus = assignedWorkers.length > 0
+          ? Math.min(20, Math.max(...assignedWorkers.map((w: Worker) => (w.tier ?? 1) * 5)))
+          : 0;
+
+        // Quality formula from spec
+        const buildingBonus = { 1: 0, 2: 10, 3: 20 }[building.tier] ?? 0;
+        const ceiling = { 1: 70, 2: 85, 3: 100 }[building.tier] ?? 70;
+        const rawQuality = inputQuality * 0.6 + buildingBonus + workerBonus;
+        const quality = Math.max(0, Math.min(ceiling, Math.round(rawQuality)));
+
+        // Output quantity with tier multiplier
+        const tierMult = { 1: 1, 2: 2, 3: 4 }[building.tier] ?? 1;
+        const outputQty = Math.round(recipe.baseOutputQuantity * tierMult * actualBatches);
+
+        // Build input snapshot
+        const inputSnapshot: Record<string, number> = {};
+        for (const input of recipe.inputs) {
+          inputSnapshot[input.itemId] = (inputSnapshot[input.itemId] ?? 0) + input.quantity * actualBatches;
+        }
+
+        // Deduct inputs
+        const newInventory = { ...state.inventory };
+        const newAnimalInventory = { ...state.animalInventory };
+        let newProcessedInventory = [...(state.processedInventory ?? [])] as ProcessedItem[];
+
+        for (const input of recipe.inputs) {
+          const needed = input.quantity * actualBatches;
+          if (input.source === 'crop') {
+            newInventory[input.itemId] = (newInventory[input.itemId] ?? 0) - needed;
+          } else if (input.source === 'animal') {
+            newAnimalInventory[input.itemId] = (newAnimalInventory[input.itemId] ?? 0) - needed;
+          } else if (input.source === 'processed') {
+            let remaining = needed;
+            newProcessedInventory = newProcessedInventory.map((item: ProcessedItem) => {
+              if (item.itemId !== input.itemId || remaining <= 0) return item;
+              const take = Math.min(item.quantity, remaining);
+              remaining -= take;
+              return { ...item, quantity: item.quantity - take };
+            }).filter((item: ProcessedItem) => item.quantity > 0);
+          }
+        }
+
+        const batch: ProcessingBatch = {
+          id: `batch_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          buildingId: building.id,
+          recipeId,
+          startDay: state.day,
+          completionDay: state.day + recipe.processingDays,
+          inputSnapshot,
+          outputItemId: recipe.outputItemId,
+          outputQuantity: outputQty,
+          quality,
+        };
+
+        set({
+          inventory: newInventory,
+          animalInventory: newAnimalInventory,
+          processedInventory: newProcessedInventory,
+          activeBatches: [...(state.activeBatches ?? []), batch],
+          processingBuildings: procBuildings.map((b: import('../engine/processing').ProcessingBuilding) =>
+            b.id === building.id ? { ...b, activeBatchId: batch.id } : b
+          ),
+        });
       },
 
       sellProcessed: (productId, units) => {
@@ -6581,17 +6707,15 @@ export const useGameStore = create<GameState>()(
         const totalStock = items.reduce((s, i) => s + i.quantity, 0);
         const toSell = Math.min(units, totalStock);
         if (toSell <= 0) return;
-        const avgQuality = totalStock > 0
-          ? items.reduce((s, i) => s + i.quality * i.quantity, 0) / totalStock
-          : 50;
-        const qualityMult = 0.5 + (avgQuality / 100);
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
-        const revenue = Math.round(toSell * def.basePrice * qualityMult * prestigeBonus);
         let remaining = toSell;
+        let revenue = 0;
         const updatedInventory = (state.processedInventory ?? []).map(item => {
           if (item.itemId !== productId || remaining <= 0) return item;
           const take = Math.min(item.quantity, remaining);
           remaining -= take;
+          const mult = getSellMultiplier(item, state.day) * prestigeBonus;
+          revenue += Math.round(take * def.basePrice * mult);
           return { ...item, quantity: item.quantity - take };
         }).filter(item => item.quantity > 0);
         set({
@@ -6599,6 +6723,77 @@ export const useGameStore = create<GameState>()(
           processedInventory: updatedInventory,
           salesLog: [...state.salesLog, { day: state.day, amount: revenue, category: 'processed' }],
           totalRevenue: state.totalRevenue + revenue,
+        });
+      },
+
+      buyProcessingBuilding: (buildingTypeId) => {
+        const state = get();
+        const config = getProcessingBuildingConfig(buildingTypeId);
+        if (!config) return;
+        if (state.buildings.includes(buildingTypeId)) return;
+        if (state.money < config.baseCost) return;
+        const newBuilding: import('../engine/processing').ProcessingBuilding = {
+          id: `pb_${buildingTypeId}_${Date.now()}`,
+          buildingTypeId,
+          tier: 1,
+          assignedWorkerIds: [],
+          hasColdStorage: false,
+        };
+        set({
+          money: state.money - config.baseCost,
+          buildings: [...state.buildings, buildingTypeId],
+          processingBuildings: [...(state.processingBuildings ?? []), newBuilding],
+        });
+      },
+
+      upgradeProcessingBuilding: (buildingId) => {
+        const state = get();
+        const building = (state.processingBuildings ?? []).find(b => b.id === buildingId);
+        if (!building || !canUpgradeTier(building)) return;
+        const config = getProcessingBuildingConfig(building.buildingTypeId);
+        if (!config) return;
+        const cost = getUpgradeCost(building, config);
+        if (state.money < cost) return;
+        set({
+          money: state.money - cost,
+          processingBuildings: (state.processingBuildings ?? []).map(b =>
+            b.id === buildingId ? { ...b, tier: (b.tier + 1) as 1 | 2 | 3 } : b
+          ),
+        });
+      },
+
+      assignWorkerToProcessingBuilding: (buildingId, workerId) => {
+        const state = get();
+        const building = (state.processingBuildings ?? []).find(b => b.id === buildingId);
+        if (!building) return;
+        if (building.assignedWorkerIds.includes(workerId)) return;
+        set({
+          processingBuildings: (state.processingBuildings ?? []).map(b =>
+            b.id === buildingId ? { ...b, assignedWorkerIds: [...b.assignedWorkerIds, workerId] } : b
+          ),
+        });
+      },
+
+      unassignWorkerFromProcessingBuilding: (buildingId, workerId) => {
+        const state = get();
+        set({
+          processingBuildings: (state.processingBuildings ?? []).map(b =>
+            b.id === buildingId ? { ...b, assignedWorkerIds: b.assignedWorkerIds.filter(id => id !== workerId) } : b
+          ),
+        });
+      },
+
+      installColdStorage: (buildingId) => {
+        const state = get();
+        const building = (state.processingBuildings ?? []).find(b => b.id === buildingId);
+        if (!building || building.hasColdStorage) return;
+        const cost = 8000;
+        if (state.money < cost) return;
+        set({
+          money: state.money - cost,
+          processingBuildings: (state.processingBuildings ?? []).map(b =>
+            b.id === buildingId ? { ...b, hasColdStorage: true } : b
+          ),
         });
       },
 
@@ -7716,6 +7911,9 @@ export const useGameStore = create<GameState>()(
           resolveFieldEvent, clearWeeds, fertilizeCrop, listItem, withdrawListing, placeBid, clearDaySummary,
           buyInsurance, cancelInsurance,
           processProduct, sellProcessed,
+          buyProcessingBuilding, upgradeProcessingBuilding,
+          assignWorkerToProcessingBuilding, unassignWorkerFromProcessingBuilding,
+          installColdStorage,
           openTimeDeposit, closeTimeDeposit, resetGame, markTutorialSeen, markYearEndShown,
           installGreenhouse, removeGreenhouse, openFuture, joinCooperative, leaveCooperative,
           joinCoop, leaveCoop, deliverToCoop, voteAGM, submitCounterProposal, bookCoopEquipment,
@@ -7767,6 +7965,7 @@ export const useGameStore = create<GameState>()(
                                 (b.includes('bld_silage_pit_l') ? 40000 : 0);
         state.silageLevel    = state.silageLevel ?? 0;
         state.biogasMode     = state.biogasMode ?? 'income';
+        state.processingBuildings = state.processingBuildings ?? [];
         state.hatcheryCapacity = (b.includes('bld_hatchery_s') ? 50 : 0) +
                                   (b.includes('bld_hatchery_m') ? 150 : 0) +
                                   (b.includes('bld_hatchery_l') ? 400 : 0);

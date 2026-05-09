@@ -7,54 +7,67 @@ import HelpSheet from '../../components/HelpSheet';
 import {
   PROCESSING_RECIPES, PROCESSED_ITEM_DEFS, ProcessingRecipe,
   qualityLabel, qualityColor,
+  PROCESSING_BUILDING_CONFIGS, getProcessingBuildingConfig,
 } from '../../data/processingTypes';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 
-const BUILDING_GROUPS: { buildingId: string; label: string; icon: string }[] = [
-  { buildingId: 'bld_molino',      label: 'Flour Mill',             icon: '⚙️' },
-  { buildingId: 'bld_prensa',      label: 'Oil Press',              icon: '🛢️' },
-  { buildingId: 'bld_lacteo',      label: 'Dairy Plant',            icon: '🥛' },
-  { buildingId: 'bld_procesadora', label: 'Agricultural Processor', icon: '🏭' },
-  { buildingId: 'bld_bodega',      label: 'Winery',                 icon: '🍷' },
-];
+const STAGE_LABELS: Record<number, string> = {
+  1: 'Stage 1 — Basic Equipment',
+  2: 'Stage 2 — Processing Rooms',
+  3: 'Stage 3 — Craft Production',
+  4: 'Stage 4 — Premium & Aged',
+};
 
 type TabId = 'recipes' | 'batches' | 'inventory';
+
+function inputDisplayName(itemId: string, source: string): string {
+  if (source === 'crop') return CROP_TYPES.find(c => c.id === itemId)?.name ?? itemId;
+  if (source === 'animal') return ANIMAL_PRODUCTS.find(p => p.productType === itemId)?.name ?? itemId;
+  const def = PROCESSED_ITEM_DEFS.find(d => d.id === itemId);
+  return def?.name ?? itemId;
+}
+
+function inputUnit(itemId: string, source: string): string {
+  if (source === 'crop') return CROP_TYPES.find(c => c.id === itemId)?.unit ?? '';
+  if (source === 'animal') return ANIMAL_PRODUCTS.find(p => p.productType === itemId)?.unit ?? '';
+  return PROCESSED_ITEM_DEFS.find(d => d.id === itemId)?.unit ?? '';
+}
+
+function inputStock(
+  recipe: ProcessingRecipe,
+  inventory: Record<string, number>,
+  animalInventory: Record<string, number>,
+  processedInventory: { itemId: string; quantity: number }[]
+): number {
+  let max = Infinity;
+  for (const input of recipe.inputs) {
+    let stock = 0;
+    if (input.source === 'crop') stock = inventory[input.itemId] ?? 0;
+    else if (input.source === 'animal') stock = animalInventory[input.itemId] ?? 0;
+    else if (input.source === 'processed') {
+      stock = processedInventory.filter(i => i.itemId === input.itemId).reduce((s, i) => s + i.quantity, 0);
+    }
+    max = Math.min(max, Math.floor(stock / input.quantity));
+  }
+  return max === Infinity ? 0 : max;
+}
 
 export default function ProcesadoScreen() {
   const {
     buildings, inventory, animalInventory, processedInventory, activeBatches, day,
-    processProduct, sellProcessed,
+    processProduct, sellProcessed, processingBuildings, workers, money,
+    buyProcessingBuilding, upgradeProcessingBuilding,
+    assignWorkerToProcessingBuilding, unassignWorkerFromProcessingBuilding,
+    installColdStorage,
   } = useGameStore();
 
   const [activeTab, setActiveTab] = useState<TabId>('recipes');
   const [batchCounts, setBatchCounts] = useState<Record<string, number>>({});
+  const [expandedBuilding, setExpandedBuilding] = useState<string | null>(null);
 
   function getBatchCount(recipeId: string) { return batchCounts[recipeId] ?? 1; }
-
-  function maxBatches(recipe: ProcessingRecipe): number {
-    const stock = recipe.input.source === 'crop'
-      ? (inventory[recipe.input.itemId] ?? 0)
-      : (animalInventory[recipe.input.itemId] ?? 0);
-    return Math.floor(stock / recipe.input.amount);
-  }
-
-  function inputName(recipe: ProcessingRecipe): string {
-    if (recipe.input.source === 'crop') return CROP_TYPES.find(c => c.id === recipe.input.itemId)?.name ?? recipe.input.itemId;
-    return ANIMAL_PRODUCTS.find(p => p.productType === recipe.input.itemId)?.name ?? recipe.input.itemId;
-  }
-
-  function inputUnit(recipe: ProcessingRecipe): string {
-    if (recipe.input.source === 'crop') return CROP_TYPES.find(c => c.id === recipe.input.itemId)?.unit ?? '';
-    return ANIMAL_PRODUCTS.find(p => p.productType === recipe.input.itemId)?.unit ?? '';
-  }
-
-  function inputStock(recipe: ProcessingRecipe): number {
-    return recipe.input.source === 'crop'
-      ? (inventory[recipe.input.itemId] ?? 0)
-      : (animalInventory[recipe.input.itemId] ?? 0);
-  }
 
   const pendingBatches = (activeBatches ?? []).filter(b => b.completionDay > day);
   const readyBatches = (activeBatches ?? []).filter(b => b.completionDay <= day);
@@ -62,11 +75,10 @@ export default function ProcesadoScreen() {
   const totalInventoryValue = (processedInventory ?? []).reduce((s, item) => {
     const def = PROCESSED_ITEM_DEFS.find(d => d.id === item.itemId);
     if (!def) return s;
-    const qualityMult = 0.5 + (item.quality / 100);
-    return s + item.quantity * def.basePrice * qualityMult;
+    const mult = 0.5 + (item.quality / 100);
+    return s + item.quantity * def.basePrice * mult;
   }, 0);
 
-  // Group processed inventory by itemId, showing best-quality batch first
   const groupedInventory = PROCESSED_ITEM_DEFS.map(def => {
     const items = (processedInventory ?? []).filter(i => i.itemId === def.id);
     if (items.length === 0) return null;
@@ -78,106 +90,160 @@ export default function ProcesadoScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.screenTitle}>Processing</Text>
+      <Text style={styles.screenTitle}>🏭 Artisan Processing</Text>
       <Text style={styles.screenSubtitle}>Transform raw goods into finished products</Text>
 
       {/* Tab bar */}
       <View style={styles.tabBar}>
-        {([['recipes', '📋 Recipes'], ['batches', `⏳ Batches${pendingBatches.length > 0 ? ` (${pendingBatches.length})` : ''}`], ['inventory', `📦 Stock${(processedInventory ?? []).length > 0 ? ` ($${Math.round(totalInventoryValue).toLocaleString()})` : ''}`]] as [TabId, string][]).map(([id, label]) => (
-          <TouchableOpacity key={id} style={[styles.tabBtn, activeTab === id && styles.tabBtnActive]} onPress={() => setActiveTab(id)}>
-            <Text style={[styles.tabBtnText, activeTab === id && styles.tabBtnTextActive]}>{label}</Text>
-          </TouchableOpacity>
-        ))}
+        {(['recipes', 'batches', 'inventory'] as TabId[]).map(id => {
+          const label = id === 'recipes' ? `📋 Recipes` : id === 'batches' ? `⏳ Batches${pendingBatches.length > 0 ? ` (${pendingBatches.length})` : ''}` : `📦 Stock${(processedInventory ?? []).length > 0 ? ` ($${Math.round(totalInventoryValue).toLocaleString()})` : ''}`;
+          return (
+            <TouchableOpacity key={id} style={[styles.tabBtn, activeTab === id && styles.tabBtnActive]} onPress={() => setActiveTab(id)}>
+              <Text style={[styles.tabBtnText, activeTab === id && styles.tabBtnTextActive]}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* ── RECIPES TAB ─────────────────────────────────────────────────────── */}
       {activeTab === 'recipes' && (
         <>
-          {Object.values(inventory).some(v => v > 0) && (processedInventory ?? []).length === 0 && (
-            <HintCard id="hint_processing" title="Process crops for higher margins" body="Raw crops sell at base price, but processed goods (flour, oil, cheese) sell for 2–5× more. Select a recipe and tap Queue to start a batch." />
+          {(processedInventory ?? []).length === 0 && (
+            <HintCard id="hint_processing" title="Process crops for higher margins" body="Raw crops sell at base price, but processed goods sell for 2–5× more. Build a processing building, assign a worker, and queue a recipe." />
           )}
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 4 }}>
-            <HelpSheet title="Processing" body="Processing takes in-game days to complete. Inputs are consumed immediately when you queue a batch. Finished goods appear in Stock when complete. Each item has a shelf life — sell before it expires." />
+            <HelpSheet title="Processing" body="Processing takes in-game days. Each building needs a worker. Higher building tiers unlock more recipes and raise quality ceilings. Stage 4 products age and improve over time." />
             <Text style={{ color: '#555', fontSize: 11, marginLeft: 6 }}>How does processing work?</Text>
           </View>
 
-          {BUILDING_GROUPS.map(group => {
-            const owned = buildings.includes(group.buildingId);
-            const buildingType = BUILDING_TYPES.find(b => b.id === group.buildingId);
-            const groupRecipes = PROCESSING_RECIPES.filter(r => r.requiredBuilding === group.buildingId);
-
+          {[1, 2, 3, 4].map(stage => {
+            const stageBuildings = PROCESSING_BUILDING_CONFIGS.filter(c => c.stage === stage);
+            if (stageBuildings.length === 0) return null;
             return (
-              <View key={group.buildingId} style={styles.section}>
-                <View style={styles.buildingHeader}>
-                  <Text style={styles.buildingIcon}>{group.icon}</Text>
-                  <View style={styles.buildingInfo}>
-                    <Text style={styles.buildingName}>{group.label}</Text>
-                    {!owned && buildingType && (
-                      <Text style={styles.buildingLocked}>🔒 Build in Shop — ${buildingType.cost.toLocaleString()}</Text>
-                    )}
-                  </View>
-                  <View style={[styles.buildingBadge, owned ? styles.badgeOwned : styles.badgeLocked]}>
-                    <Text style={styles.badgeText}>{owned ? 'Active' : 'Not built'}</Text>
-                  </View>
-                </View>
-
-                {groupRecipes.map(recipe => {
-                  const b = getBatchCount(recipe.id);
-                  const max = maxBatches(recipe);
-                  const canQueue = owned && b > 0 && max >= b;
-                  const stock = inputStock(recipe);
-                  const unit = inputUnit(recipe);
-                  const name = inputName(recipe);
-                  const def = PROCESSED_ITEM_DEFS.find(d => d.id === recipe.outputItemId);
-                  const outputValue = def ? Math.round(recipe.baseOutputQuantity * b * def.basePrice * 0.8) : 0;
+              <View key={stage} style={styles.stageSection}>
+                <Text style={styles.stageLabel}>{STAGE_LABELS[stage]}</Text>
+                {stageBuildings.map(config => {
+                  const buildingType = BUILDING_TYPES.find(b => b.id === config.buildingTypeId);
+                  const ownedBuilding = (processingBuildings ?? []).find(pb => pb.buildingTypeId === config.buildingTypeId);
+                  const isOwned = !!ownedBuilding;
+                  const isExpanded = expandedBuilding === config.buildingTypeId;
+                  const recipes = PROCESSING_RECIPES.filter(r => r.buildingTypeId === config.buildingTypeId);
+                  const canUpgrade = ownedBuilding && ownedBuilding.tier < 3;
+                  const upgradeCost = canUpgrade ? (ownedBuilding.tier === 1 ? config.upgradeCostTier2 : config.upgradeCostTier3) : 0;
 
                   return (
-                    <View key={recipe.id} style={[styles.recipeCard, !owned && styles.recipeCardLocked]}>
-                      <View style={styles.recipeHeader}>
-                        <Text style={styles.recipeIcon}>{recipe.icon}</Text>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.recipeName}>{recipe.name}</Text>
-                          <Text style={styles.recipeTime}>⏱ {recipe.processingDays} day{recipe.processingDays !== 1 ? 's' : ''} · {recipe.input.amount * b} {unit} → {recipe.baseOutputQuantity * b} {def?.unit ?? ''}</Text>
+                    <View key={config.buildingTypeId} style={styles.buildingSection}>
+                      <TouchableOpacity style={styles.buildingHeader} onPress={() => setExpandedBuilding(isExpanded ? null : config.buildingTypeId)}>
+                        <Text style={styles.buildingIcon}>🏭</Text>
+                        <View style={styles.buildingInfo}>
+                          <Text style={styles.buildingName}>{config.name}</Text>
+                          {!isOwned && buildingType && (
+                            <Text style={styles.buildingLocked}>🔒 Build — ${buildingType.cost.toLocaleString()}</Text>
+                          )}
+                          {isOwned && (
+                            <Text style={styles.buildingTier}>Tier {ownedBuilding.tier} {ownedBuilding.hasColdStorage ? '❄️' : ''} · {ownedBuilding.assignedWorkerIds.length} worker{ownedBuilding.assignedWorkerIds.length !== 1 ? 's' : ''}</Text>
+                          )}
                         </View>
-                      </View>
+                        <View style={[styles.buildingBadge, isOwned ? styles.badgeOwned : styles.badgeLocked]}>
+                          <Text style={styles.badgeText}>{isOwned ? 'Owned' : 'Not built'}</Text>
+                        </View>
+                      </TouchableOpacity>
 
-                      <View style={styles.recipeFlow}>
-                        <View style={styles.flowItem}>
-                          <Text style={styles.flowLabel}>Input</Text>
-                          <Text style={styles.flowValue}>{recipe.input.amount * b} {unit}</Text>
-                          <Text style={styles.flowName}>{name}</Text>
-                          <Text style={styles.flowStock}>Stock: {Math.floor(stock)} {unit}</Text>
-                        </View>
-                        <Text style={styles.flowArrow}>→</Text>
-                        <View style={styles.flowItem}>
-                          <Text style={styles.flowLabel}>Output</Text>
-                          <Text style={styles.flowValue}>{recipe.baseOutputQuantity * b} {def?.unit ?? ''}</Text>
-                          <Text style={styles.flowName}>{recipe.name}</Text>
-                          <Text style={[styles.flowStock, { color: '#81c784' }]}>~${outputValue.toLocaleString()}</Text>
-                        </View>
-                      </View>
+                      {isExpanded && (
+                        <View style={styles.buildingDetails}>
+                          {!isOwned && buildingType && (
+                            <TouchableOpacity style={styles.actionBtn} onPress={() => buyProcessingBuilding(config.buildingTypeId)} disabled={money < buildingType.cost}>
+                              <Text style={styles.actionBtnText}>Buy Building — ${buildingType.cost.toLocaleString()}</Text>
+                            </TouchableOpacity>
+                          )}
+                          {isOwned && canUpgrade && (
+                            <TouchableOpacity style={styles.actionBtn} onPress={() => upgradeProcessingBuilding(ownedBuilding.id)} disabled={money < upgradeCost}>
+                              <Text style={styles.actionBtnText}>Upgrade to Tier {ownedBuilding.tier + 1} — ${upgradeCost.toLocaleString()}</Text>
+                            </TouchableOpacity>
+                          )}
+                          {isOwned && !ownedBuilding.hasColdStorage && (
+                            <TouchableOpacity style={styles.actionBtnSecondary} onPress={() => installColdStorage(ownedBuilding.id)} disabled={money < 8000}>
+                              <Text style={styles.actionBtnSecondaryText}>Install Cold Storage — $8,000</Text>
+                            </TouchableOpacity>
+                          )}
+                          {isOwned && (
+                            <View style={styles.workerSection}>
+                              <Text style={styles.workerLabel}>Assigned Workers ({config.role.replace(/_/g, ' ')})</Text>
+                              {ownedBuilding.assignedWorkerIds.map(wid => {
+                                const w = (workers ?? []).find(x => x.id === wid);
+                                return (
+                                  <View key={wid} style={styles.workerRow}>
+                                    <Text style={styles.workerName}>👤 {w?.name ?? wid} (Tier {w?.tier ?? 1})</Text>
+                                    <TouchableOpacity onPress={() => unassignWorkerFromProcessingBuilding(ownedBuilding.id, wid)}>
+                                      <Text style={styles.workerRemove}>❌</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                );
+                              })}
+                              {(workers ?? []).filter(w => !ownedBuilding.assignedWorkerIds.includes(w.id)).length > 0 && (
+                                <View style={styles.workerAssignRow}>
+                                  {(workers ?? []).filter(w => !ownedBuilding.assignedWorkerIds.includes(w.id)).map(w => (
+                                    <TouchableOpacity key={w.id} style={styles.workerAssignBtn} onPress={() => assignWorkerToProcessingBuilding(ownedBuilding.id, w.id)}>
+                                      <Text style={styles.workerAssignText}>+ {w.name}</Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              )}
+                            </View>
+                          )}
 
-                      <View style={styles.batchRow}>
-                        <TouchableOpacity style={styles.batchBtn} onPress={() => setBatchCounts(p => ({ ...p, [recipe.id]: Math.max(1, b - 1) }))} disabled={!owned}>
-                          <Text style={styles.batchBtnText}>−</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.batchCount}>{b} batch{b !== 1 ? 'es' : ''}</Text>
-                        <TouchableOpacity style={styles.batchBtn} onPress={() => setBatchCounts(p => ({ ...p, [recipe.id]: Math.min(max, b + 1) }))} disabled={!owned || b >= max}>
-                          <Text style={styles.batchBtnText}>+</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.batchBtn, styles.maxBtn]} onPress={() => setBatchCounts(p => ({ ...p, [recipe.id]: Math.max(1, max) }))} disabled={!owned || max <= 0}>
-                          <Text style={styles.batchBtnText}>Max</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.queueBtn, !canQueue && styles.queueBtnDisabled]}
-                          onPress={() => { processProduct(recipe.id, b); setBatchCounts(p => ({ ...p, [recipe.id]: 1 })); }}
-                          disabled={!canQueue}
-                        >
-                          <Text style={styles.queueBtnText}>
-                            {!owned ? '🔒' : max <= 0 ? 'No stock' : `Queue${b > 1 ? ` ×${b}` : ''}`}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
+                          {recipes.map(recipe => {
+                            const b = getBatchCount(recipe.id);
+                            const max = isOwned ? inputStock(recipe, inventory, animalInventory, processedInventory ?? []) : 0;
+                            const canQueue = isOwned && b > 0 && max >= b && ownedBuilding.tier >= recipe.minBuildingTier && ownedBuilding.assignedWorkerIds.length > 0 && !ownedBuilding.activeBatchId;
+                            const def = PROCESSED_ITEM_DEFS.find(d => d.id === recipe.outputItemId);
+                            const tierMult = ownedBuilding ? { 1: 1, 2: 2, 3: 4 }[ownedBuilding.tier] ?? 1 : 1;
+                            const outputValue = def ? Math.round(recipe.baseOutputQuantity * b * tierMult * def.basePrice * 0.8) : 0;
+                            const tierLocked = isOwned && ownedBuilding.tier < recipe.minBuildingTier;
+
+                            return (
+                              <View key={recipe.id} style={[styles.recipeCard, !isOwned && styles.recipeCardLocked]}>
+                                <View style={styles.recipeHeader}>
+                                  <Text style={styles.recipeIcon}>{recipe.icon}</Text>
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={styles.recipeName}>{recipe.name}</Text>
+                                    <Text style={styles.recipeTime}>⏱ {recipe.processingDays}d · {recipe.electricityKwhPerDay} kWh/day</Text>
+                                  </View>
+                                  {tierLocked && <Text style={styles.tierLock}>🔒 Tier {recipe.minBuildingTier}</Text>}
+                                </View>
+
+                                <View style={styles.inputsRow}>
+                                  {recipe.inputs.map((input, idx) => (
+                                    <View key={idx} style={styles.inputPill}>
+                                      <Text style={styles.inputPillText}>{input.quantity * b} {inputUnit(input.itemId, input.source)} {inputDisplayName(input.itemId, input.source)}</Text>
+                                    </View>
+                                  ))}
+                                  <Text style={styles.flowArrow}>→</Text>
+                                  <View style={styles.outputPill}>
+                                    <Text style={styles.outputPillText}>{recipe.baseOutputQuantity * b * tierMult} {def?.unit ?? ''} {def?.name ?? recipe.outputItemId}</Text>
+                                    <Text style={styles.outputValue}>~${outputValue.toLocaleString()}</Text>
+                                  </View>
+                                </View>
+
+                                <View style={styles.batchRow}>
+                                  <TouchableOpacity style={styles.batchBtn} onPress={() => setBatchCounts(p => ({ ...p, [recipe.id]: Math.max(1, b - 1) }))} disabled={!isOwned}>
+                                    <Text style={styles.batchBtnText}>−</Text>
+                                  </TouchableOpacity>
+                                  <Text style={styles.batchCount}>{b} batch{b !== 1 ? 'es' : ''}</Text>
+                                  <TouchableOpacity style={styles.batchBtn} onPress={() => setBatchCounts(p => ({ ...p, [recipe.id]: Math.min(max, b + 1) }))} disabled={!isOwned || b >= max}>
+                                    <Text style={styles.batchBtnText}>+</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity style={[styles.queueBtn, !canQueue && styles.queueBtnDisabled]} onPress={() => { processProduct(recipe.id, b); setBatchCounts(p => ({ ...p, [recipe.id]: 1 })); }} disabled={!canQueue}>
+                                    <Text style={styles.queueBtnText}>
+                                      {!isOwned ? '🔒' : tierLocked ? `Tier ${recipe.minBuildingTier}` : ownedBuilding.assignedWorkerIds.length === 0 ? 'No worker' : ownedBuilding.activeBatchId ? 'Busy' : max <= 0 ? 'No stock' : `Queue${b > 1 ? ` ×${b}` : ''}`}
+                                    </Text>
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
                     </View>
                   );
                 })}
@@ -196,7 +262,7 @@ export default function ProcesadoScreen() {
             <>
               {readyBatches.length > 0 && (
                 <>
-                  <Text style={styles.sectionLabel}>Ready to collect — advance a day to receive</Text>
+                  <Text style={styles.sectionLabel}>✅ Ready to collect — advance a day to receive</Text>
                   {readyBatches.map(batch => {
                     const recipe = PROCESSING_RECIPES.find(r => r.id === batch.recipeId);
                     const def = PROCESSED_ITEM_DEFS.find(d => d.id === batch.outputItemId);
@@ -204,7 +270,7 @@ export default function ProcesadoScreen() {
                       <View key={batch.id} style={[styles.batchCard, styles.batchCardReady]}>
                         <Text style={styles.batchTitle}>{recipe?.icon ?? '📦'} {recipe?.name ?? batch.outputItemId}</Text>
                         <Text style={styles.batchDetail}>{batch.outputQuantity} {def?.unit ?? ''} · <Text style={{ color: qualityColor(batch.quality) }}>{qualityLabel(batch.quality)} ({batch.quality})</Text></Text>
-                        <Text style={styles.batchReady}>✅ Ready</Text>
+                        <Text style={styles.batchReady}>Ready</Text>
                       </View>
                     );
                   })}
@@ -212,7 +278,7 @@ export default function ProcesadoScreen() {
               )}
               {pendingBatches.length > 0 && (
                 <>
-                  <Text style={[styles.sectionLabel, { marginTop: S.md }]}>In progress</Text>
+                  <Text style={[styles.sectionLabel, { marginTop: S.md }]}>⏳ In progress</Text>
                   {pendingBatches.map(batch => {
                     const recipe = PROCESSING_RECIPES.find(r => r.id === batch.recipeId);
                     const def = PROCESSED_ITEM_DEFS.find(d => d.id === batch.outputItemId);
@@ -244,7 +310,7 @@ export default function ProcesadoScreen() {
             <Text style={styles.emptyText}>No processed goods in stock. Complete a batch to see them here.</Text>
           ) : (
             <>
-              <Text style={styles.sectionLabel}>Processed stock — ${Math.round(totalInventoryValue).toLocaleString()} total value</Text>
+              <Text style={styles.sectionLabel}>📦 Processed stock — ${Math.round(totalInventoryValue).toLocaleString()} total value</Text>
               {(groupedInventory as any[]).map(({ def, totalQty, avgQuality, nearestExpiry }: any) => {
                 const expiryDaysLeft = nearestExpiry - day;
                 const expiryWarning = expiryDaysLeft <= def.shelfLifeDays * 0.25;
@@ -297,19 +363,35 @@ const styles = StyleSheet.create({
   tabBtnText: { color: C.textMuted, fontSize: 11, fontWeight: 'bold' },
   tabBtnTextActive: { color: C.text },
 
-  section: { marginTop: S.sm, paddingHorizontal: S.md },
-  sectionLabel: { color: C.textMuted, fontSize: F.size.sm, marginBottom: S.sm },
-  emptyText: { color: C.textMuted, fontSize: F.size.sm, textAlign: 'center', paddingVertical: 32 },
+  stageSection: { marginTop: S.sm, paddingHorizontal: S.md },
+  stageLabel: { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'bold', marginBottom: S.sm, marginTop: S.md },
 
-  buildingHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: S.sm, gap: 10 },
+  buildingSection: { marginBottom: S.sm },
+  buildingHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, gap: 10 },
   buildingIcon: { fontSize: 24 },
   buildingInfo: { flex: 1 },
   buildingName: { color: C.text, fontWeight: 'bold', fontSize: 15 },
   buildingLocked: { color: C.textMuted, fontSize: 11, marginTop: 2 },
+  buildingTier: { color: '#81c784', fontSize: 11, marginTop: 2 },
   buildingBadge: { borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: 3 },
   badgeOwned: { backgroundColor: '#1b3a1b' },
   badgeLocked: { backgroundColor: '#2a2a2a' },
   badgeText: { fontSize: 11, fontWeight: 'bold', color: '#aaa' },
+
+  buildingDetails: { backgroundColor: C.bgDeep, borderRadius: 10, padding: S.md, marginTop: 4 },
+  actionBtn: { backgroundColor: '#c8860a', borderRadius: R.md, padding: S.sm, alignItems: 'center', marginBottom: S.sm },
+  actionBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
+  actionBtnSecondary: { backgroundColor: '#2a4a6a', borderRadius: R.md, padding: S.sm, alignItems: 'center', marginBottom: S.sm },
+  actionBtnSecondaryText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
+
+  workerSection: { marginTop: S.sm, marginBottom: S.sm },
+  workerLabel: { color: C.textMuted, fontSize: 11, fontWeight: 'bold', marginBottom: 4 },
+  workerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 3 },
+  workerName: { color: C.text, fontSize: 12 },
+  workerRemove: { fontSize: 12, color: '#ff7043' },
+  workerAssignRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  workerAssignBtn: { backgroundColor: '#333', borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 4 },
+  workerAssignText: { color: '#81c784', fontSize: 11 },
 
   recipeCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: C.divider },
   recipeCardLocked: { opacity: 0.5 },
@@ -317,23 +399,27 @@ const styles = StyleSheet.create({
   recipeIcon: { fontSize: 22, marginTop: 2 },
   recipeName: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
   recipeTime: { color: C.textMuted, fontSize: 11, marginTop: 2 },
+  tierLock: { color: '#ff7043', fontSize: 11, fontWeight: 'bold' },
 
-  recipeFlow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.bgDeep, borderRadius: R.md, padding: 10, marginBottom: 10 },
-  flowItem: { flex: 1 },
-  flowLabel: { color: '#555', fontSize: F.size.xs, marginBottom: 2 },
-  flowValue: { color: C.text, fontSize: F.size.md, fontWeight: 'bold' },
-  flowName: { color: C.textMuted, fontSize: 11 },
-  flowStock: { color: C.textMuted, fontSize: 11, marginTop: 2 },
-  flowArrow: { color: '#c8860a', fontSize: 20, fontWeight: 'bold', paddingHorizontal: S.sm },
+  inputsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', backgroundColor: C.bgDeep, borderRadius: R.md, padding: 10, marginBottom: 10, gap: 6 },
+  inputPill: { backgroundColor: '#2a2a2a', borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 3 },
+  inputPillText: { color: C.textMuted, fontSize: 11 },
+  flowArrow: { color: '#c8860a', fontSize: 16, fontWeight: 'bold' },
+  outputPill: { backgroundColor: '#1b3a1b', borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 3 },
+  outputPillText: { color: '#81c784', fontSize: 11, fontWeight: 'bold' },
+  outputValue: { color: '#c8860a', fontSize: 11, marginTop: 2 },
 
   batchRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   batchBtn: { backgroundColor: C.divider, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6 },
-  maxBtn: { backgroundColor: '#2a2a4a' },
   batchBtnText: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
   batchCount: { color: C.text, fontSize: F.size.md, minWidth: 60, textAlign: 'center' },
   queueBtn: { flex: 1, backgroundColor: '#c8860a', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
   queueBtnDisabled: { backgroundColor: '#333' },
   queueBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
+
+  section: { marginTop: S.sm, paddingHorizontal: S.md },
+  sectionLabel: { color: C.textMuted, fontSize: F.size.sm, marginBottom: S.sm },
+  emptyText: { color: C.textMuted, fontSize: F.size.sm, textAlign: 'center', paddingVertical: 32 },
 
   batchCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: C.divider },
   batchCardReady: { borderColor: '#2e7d32' },

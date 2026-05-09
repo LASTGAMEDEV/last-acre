@@ -1,4 +1,4 @@
-export type BuildingCategory = 'animal' | 'silo' | 'industrial' | 'lab' | 'upgrade' | 'production';
+export type BuildingCategory = 'animal' | 'silo' | 'industrial' | 'lab' | 'upgrade' | 'production' | 'processing';
 
 export interface BuildingType {
   id: string;
@@ -756,6 +756,56 @@ export const BUILDING_TYPES: BuildingType[] = [
   { id: 'bld_wool_scouring_s',   name: 'Small Wool Scouring',   category: 'production', cost: 8000,  maintenancePerDay: 3,  buildingTier: 'small',  effectLabel: 'Washes raw wool before sale · +30% sale price on all wool' },
   { id: 'bld_wool_scouring_m',   name: 'Medium Wool Scouring',  category: 'production', cost: 18000, maintenancePerDay: 6,  buildingTier: 'medium', effectLabel: 'Washes raw wool before sale · +30% sale price on all wool' },
   { id: 'bld_wool_scouring_l',   name: 'Large Wool Scouring',   category: 'production', cost: 40000, maintenancePerDay: 14, buildingTier: 'large',  effectLabel: 'Washes raw wool before sale · +30% sale price on all wool' },
+
+  // ── Artisan Processing Buildings (Stage 1) ─────────────────────────────────
+  { id: 'bld_grain_dryer',      name: 'Grain Dryer & Store',      category: 'processing', cost: 18000, maintenancePerDay: 8,  effectLabel: 'Dries cereals for milling or malting' },
+  { id: 'bld_malting_floor',    name: 'Malting Floor',            category: 'processing', cost: 22000, maintenancePerDay: 10, effectLabel: 'Converts grain into malted grain' },
+  { id: 'bld_feed_mixer',       name: 'Feed Mixer',               category: 'processing', cost: 15000, maintenancePerDay: 6,  effectLabel: 'Blends grain, soy and alfalfa into compound feed' },
+  { id: 'bld_milk_pasteuriser', name: 'Milk Pasteuriser',         category: 'processing', cost: 28000, maintenancePerDay: 12, effectLabel: 'Pasteurises raw milk for dairy processing' },
+  { id: 'bld_abattoir',         name: 'Licensed Abattoir',        category: 'processing', cost: 45000, maintenancePerDay: 18, effectLabel: 'Slaughters livestock into carcasses and byproducts' },
+  { id: 'bld_egg_grader',       name: 'Egg Washer & Grader',      category: 'processing', cost: 12000, maintenancePerDay: 5,  effectLabel: 'Grades and packs eggs for premium prices' },
+  { id: 'bld_drying_rack',      name: 'Drying Rack & Kiln',       category: 'processing', cost: 14000, maintenancePerDay: 5,  effectLabel: 'Dries herbs, flowers, tomatoes and fruit' },
+  { id: 'bld_fibre_prep',       name: 'Fibre Prep',               category: 'processing', cost: 16000, maintenancePerDay: 6,  effectLabel: 'Cleans and prepares raw cotton and wool' },
+
+  // ── Artisan Processing Buildings (Stage 2) ─────────────────────────────────
+  { id: 'bld_flour_mill',       name: 'Stone Flour Mill',         category: 'processing', cost: 32000, maintenancePerDay: 12, effectLabel: 'Mills dried grain into stoneground flour' },
+  { id: 'bld_olive_press',      name: 'Olive Press',              category: 'processing', cost: 26000, maintenancePerDay: 10, effectLabel: 'Presses olives into extra virgin olive oil' },
+  { id: 'bld_nut_roaster',      name: 'Nut Roaster & Press',      category: 'processing', cost: 24000, maintenancePerDay: 9,  effectLabel: 'Roasts and presses almonds' },
+  { id: 'bld_dairy_room',       name: 'Dairy Room',               category: 'processing', cost: 30000, maintenancePerDay: 12, effectLabel: 'Makes butter, cream and yoghurt from pasteurised milk' },
+  { id: 'bld_cheese_room',      name: 'Cheese Room',              category: 'processing', cost: 35000, maintenancePerDay: 14, effectLabel: 'Makes fresh cheese and curds for ageing' },
+  { id: 'bld_farm_butchery',    name: 'Farm Butchery',            category: 'processing', cost: 28000, maintenancePerDay: 11, effectLabel: 'Butchers carcasses into retail cuts and sausages' },
+  { id: 'bld_lard_bone_room',   name: 'Lard & Bone Meal Room',    category: 'processing', cost: 18000, maintenancePerDay: 7,  effectLabel: 'Renders fat and bones into usable products' },
+  { id: 'bld_fruit_press',      name: 'Fruit Press',              category: 'processing', cost: 22000, maintenancePerDay: 8,  effectLabel: 'Presses grapes and strawberries into juice' },
+  { id: 'bld_tomato_kitchen',   name: 'Tomato Kitchen',           category: 'processing', cost: 20000, maintenancePerDay: 8,  effectLabel: 'Makes tomato paste, passata and sundried tomatoes' },
+  { id: 'bld_preserving_kitchen', name: 'Preserving Kitchen',     category: 'processing', cost: 24000, maintenancePerDay: 9,  effectLabel: 'Produces jams, chutneys and pickles' },
+  { id: 'bld_tinning_room',     name: 'Tinning & Packaging Room', category: 'processing', cost: 26000, maintenancePerDay: 10, effectLabel: 'Packages dried herbs and spices into gift tins' },
+  { id: 'bld_small_still',      name: 'Small Still',              category: 'processing', cost: 20000, maintenancePerDay: 8,  effectLabel: 'Distils essential oils and herbal waters' },
+  { id: 'bld_honey_room',       name: 'Honey Room',               category: 'processing', cost: 18000, maintenancePerDay: 7,  effectLabel: 'Processes raw honey into premium varieties' },
+  { id: 'bld_wax_workshop',     name: 'Wax Workshop',             category: 'processing', cost: 16000, maintenancePerDay: 6,  effectLabel: 'Makes candles and wraps from beeswax' },
+  { id: 'bld_wool_workshop',    name: 'Wool & Fibre Workshop',    category: 'processing', cost: 22000, maintenancePerDay: 8,  effectLabel: 'Spins wool and cotton into yarn' },
+  { id: 'bld_leather_workshop', name: 'Small Leather Workshop',   category: 'processing', cost: 20000, maintenancePerDay: 7,  effectLabel: 'Tans hides into leather goods' },
+
+  // ── Artisan Processing Buildings (Stage 3) ─────────────────────────────────
+  { id: 'bld_farm_bakery',       name: 'Farm Bakery',              category: 'processing', cost: 35000, maintenancePerDay: 14, effectLabel: 'Bakes bread, scones and pastries' },
+  { id: 'bld_pasta_workshop',    name: 'Pasta Workshop',           category: 'processing', cost: 28000, maintenancePerDay: 11, effectLabel: 'Makes fresh and dried pasta' },
+  { id: 'bld_ice_cream_churner', name: 'Ice Cream Churner',        category: 'processing', cost: 32000, maintenancePerDay: 12, effectLabel: 'Churns artisan ice cream and gelato' },
+  { id: 'bld_cheese_ageing',     name: 'Cheese Ageing Room',       category: 'processing', cost: 38000, maintenancePerDay: 15, effectLabel: 'Ages fresh curds into hard cheeses' },
+  { id: 'bld_curing_room',       name: 'Curing & Smoking Room',    category: 'processing', cost: 34000, maintenancePerDay: 13, effectLabel: 'Cures and smokes meats' },
+  { id: 'bld_farm_winery',       name: 'Farm Winery',              category: 'processing', cost: 45000, maintenancePerDay: 16, effectLabel: 'Ferments grape must into wine' },
+  { id: 'bld_micro_brewery',     name: 'Micro-Brewery',            category: 'processing', cost: 42000, maintenancePerDay: 15, effectLabel: 'Brews craft ales and stouts' },
+  { id: 'bld_cider_house',       name: 'Cider House',              category: 'processing', cost: 30000, maintenancePerDay: 11, effectLabel: 'Ferments juice into cider' },
+  { id: 'bld_small_distillery',  name: 'Small Batch Distillery',   category: 'processing', cost: 48000, maintenancePerDay: 18, effectLabel: 'Distils gin, vodka and new-make spirit' },
+  { id: 'bld_infused_oil_kitchen', name: 'Infused Oil Kitchen',    category: 'processing', cost: 22000, maintenancePerDay: 8,  effectLabel: 'Infuses olive oil with herbs and garlic' },
+  { id: 'bld_vinegar_barrel',    name: 'Vinegar Barrel Room',      category: 'processing', cost: 26000, maintenancePerDay: 9,  effectLabel: 'Ages wine and cider into vinegar' },
+  { id: 'bld_extract_kitchen',   name: 'Infusion & Extract Kitchen', category: 'processing', cost: 24000, maintenancePerDay: 9, effectLabel: 'Creates extracts and tinctures' },
+
+  // ── Artisan Processing Buildings (Stage 4) ─────────────────────────────────
+  { id: 'bld_cave_cheese',       name: 'Cave-Aged Cheese Cellar',  category: 'processing', cost: 55000, maintenancePerDay: 18, effectLabel: 'Ages hard cheese for 12–36 months' },
+  { id: 'bld_wine_cellar',       name: 'Wine Cellar',              category: 'processing', cost: 52000, maintenancePerDay: 16, effectLabel: 'Barrel-ages wine into reserve bottles' },
+  { id: 'bld_spirit_casks',      name: 'Spirit Maturation Casks',  category: 'processing', cost: 60000, maintenancePerDay: 20, effectLabel: 'Matures spirits into whisky and brandy' },
+  { id: 'bld_bottle_ales',       name: 'Bottle-Conditioned Ale Store', category: 'processing', cost: 32000, maintenancePerDay: 10, effectLabel: 'Conditions ales into gift-boxed beers' },
+  { id: 'bld_long_cured_meats',  name: 'Long-Cured Meat Chamber',  category: 'processing', cost: 48000, maintenancePerDay: 15, effectLabel: 'Ages cured meats into prosciutto' },
+  { id: 'bld_aged_balsamic',     name: 'Aged Balsamic Loft',       category: 'processing', cost: 38000, maintenancePerDay: 12, effectLabel: 'Ages vinegar in oak barrels' },
 ];
 
 export const BUILDING_CATEGORY_LABELS: Record<BuildingCategory, string> = {
@@ -765,4 +815,5 @@ export const BUILDING_CATEGORY_LABELS: Record<BuildingCategory, string> = {
   lab:        '🧪 Seed Lab',
   upgrade:    '⚡ Farm Upgrades',
   production: 'Production Buildings',
+  processing: '🏭 Artisan Processing',
 };
