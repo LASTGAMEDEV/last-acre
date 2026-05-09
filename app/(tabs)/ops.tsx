@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import MaquinariaScreen from './maquinaria';
-import TrabajadoresScreen from './trabajadores';
-import ProcesadoScreen from './procesado';
+import MaquinariaScreen from './_maquinaria';
+import TrabajadoresScreen from './_trabajadores';
+import ProcesadoScreen from './_procesado';
 import ElectricitySection from '../../components/ops/ElectricitySection';
 import SeedLabScreen from '../../components/ops/SeedLabScreen';
 import SubTabBar from '../../components/SubTabBar';

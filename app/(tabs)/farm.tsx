@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import TierrasScreen from './tierras';
-import AnimalesScreen from './animales';
-import AguaScreen from './agua';
-import CalendarioScreen from './calendario';
-import ClimaScreen from './clima';
+import TierrasScreen from './_tierras';
+import AnimalesScreen from './_animales';
+import AguaScreen from './_agua';
+import CalendarioScreen from './_calendario';
+import ClimaScreen from './_clima';
 import HenilAndBuildingsSection from '../../components/farm/HenilAndBuildingsSection';
 import SubTabBar from '../../components/SubTabBar';
 import { C } from '../../constants/theme';

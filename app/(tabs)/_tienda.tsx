@@ -43,7 +43,7 @@ function SeedsTab() {
               <Text style={styles.tierText}>{item.tier}</Text>
             </View>
             <Text style={styles.cropName}>{item.name}</Text>
-            <Text style={styles.detail}>ðŸŒ± {item.growthDays}d Â· {item.baseYield} {item.unit}/ha</Text>
+            <Text style={styles.detail}>ðŸŒ± {item.growthDays}d · {item.baseYield} {item.unit}/ha</Text>
             <Text style={styles.detail}>ðŸ’° ${item.basePrice}/{item.unit}</Text>
             <Text style={styles.detail}>ðŸ›’ ${item.seedCost.toLocaleString()}/ha</Text>
             <Text style={styles.detail}>ðŸ’§ {'â—'.repeat(item.waterNeed)}{'â—‹'.repeat(5 - item.waterNeed)}</Text>
@@ -102,7 +102,7 @@ function ProductsTab() {
                     <Text style={styles.productName}>{product.name}</Text>
                     <Text style={styles.productEffect}>{product.effectLabel}</Text>
                     <Text style={styles.productPack}>
-                      Pack {product.packSize} doses Â· ${product.packCost.toLocaleString()}
+                      Pack {product.packSize} doses · ${product.packCost.toLocaleString()}
                     </Text>
                   </View>
                   <View style={styles.productRight}>
@@ -232,7 +232,7 @@ function BuildingsTab() {
                           disabled={!canAffordEq}
                         >
                           <Text style={{ color: canAffordEq ? '#90caf9' : '#555', fontSize: 13 }}>
-                            Install â€” ${eq.cost.toLocaleString()}
+                            Install — ${eq.cost.toLocaleString()}
                           </Text>
                         </TouchableOpacity>
                       )}

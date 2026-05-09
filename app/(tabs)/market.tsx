@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import SubastaScreen from './subasta';
+import SubastaScreen from './_subasta';
 import ShopSection from '../../components/market/ShopSection';
 import MarketPricesSection from '../../components/market/MarketPricesSection';
 import EconomyStatsSection from '../../components/market/EconomyStatsSection';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import TiendaScreen from '../../app/(tabs)/tienda';
+import TiendaScreen from '../../app/(tabs)/_tienda';
 import SeedMarketSection from './SeedMarketSection';
 import { C, S } from '../../constants/theme';
 

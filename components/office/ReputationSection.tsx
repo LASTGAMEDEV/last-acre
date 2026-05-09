@@ -3,10 +3,10 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 
 import { useGameStore, FuturesPosition } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES, CropType } from '../../data/cropTypes';
-import CoopsSection from './CoopSection';
+import { PROCESSED_ITEM_DEFS } from '../../data/processingTypes';
 
 function ReputationSection() {
-  const { reputation, prices, futures, prestige, openFuture } = useGameStore();
+  const { reputation, prices, futures, prestige, openFuture, awardHistory, productAwardBonuses } = useGameStore();
   const rep = reputation ?? 50;
   const repColor = rep >= 80 ? '#4caf50' : rep >= 60 ? '#ffb74d' : rep >= 40 ? C.text : '#f44336';
   const repTier = rep >= 80 ? 'Excellent' : rep >= 65 ? 'Good' : rep >= 40 ? 'Average' : 'Poor';
@@ -55,8 +55,47 @@ function ReputationSection() {
         </View>
       )}
 
-      {/* Co-operatives */}
-      <CoopsSection />
+      {/* Awards */}
+      <View style={styles.repCard}>
+        <Text style={styles.sectionTitle}>🏆 Awards</Text>
+        {(awardHistory ?? []).length === 0 ? (
+          <Text style={styles.emptyText}>No awards yet</Text>
+        ) : (
+          <>
+            {(awardHistory ?? []).map((award: any, idx: number) => {
+              const def = PROCESSED_ITEM_DEFS.find(d => d.id === award.productId);
+              return (
+                <View key={idx} style={styles.awardRow}>
+                  <Text style={styles.awardBadge}>
+                    {award.award === 'gold' ? '🥇' : award.award === 'silver' ? '🥈' : '🥉'}
+                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.awardText}>
+                      {def?.name ?? award.productId} — {award.showName}
+                    </Text>
+                    <Text style={styles.awardDay}>Day {award.day}</Text>
+                  </View>
+                </View>
+              );
+            })}
+            {Object.keys(productAwardBonuses ?? {}).length > 0 && (
+              <View style={{ marginTop: 8 }}>
+                <Text style={{ color: C.textMuted, fontSize: F.size.sm, fontWeight: 'bold', marginBottom: 4 }}>
+                  Product Bonuses
+                </Text>
+                {Object.entries(productAwardBonuses).map(([pid, bonus]: [string, any]) => {
+                  const def = PROCESSED_ITEM_DEFS.find(d => d.id === pid);
+                  return (
+                    <Text key={pid} style={styles.bonusText}>
+                      {def?.name ?? pid}: +{bonus}% price
+                    </Text>
+                  );
+                })}
+              </View>
+            )}
+          </>
+        )}
+      </View>
 
       {/* Futures */}
       <View style={styles.futuresCard}>
@@ -221,6 +260,32 @@ const styles = StyleSheet.create({
   // Sections
   section: { backgroundColor: C.bgCard, borderRadius: R.lg, margin: S.md, padding: 14 },
   sectionTitle: { color: C.text, fontWeight: 'bold', fontSize: 15, marginBottom: 10 },
+  awardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0d1117',
+    borderRadius: R.sm,
+    padding: S.sm,
+    marginBottom: S.xs,
+  },
+  awardBadge: {
+    fontSize: F.size.xl,
+    marginRight: S.sm,
+  },
+  awardText: {
+    color: C.text,
+    fontSize: F.size.md,
+    fontWeight: 'bold',
+  },
+  awardDay: {
+    color: C.textMuted,
+    fontSize: F.size.sm,
+  },
+  bonusText: {
+    color: C.textDim,
+    fontSize: F.size.sm,
+    marginBottom: 2,
+  },
   emptyText: { color: '#555', fontSize: F.size.sm },
   apr: { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'normal' },
 

@@ -3,8 +3,6 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Switch } from 're
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import {
-  getReputationTier,
-  REPUTATION_TIERS,
   calcShopVisitors,
   VEG_BOX_TIERS,
   isOnlineEligible,
@@ -66,8 +64,6 @@ export default function SellingChannelsSection() {
     farmCafeWorkerIds,
     vegBoxSubscribers,
     restaurantContracts,
-    awardHistory,
-    productAwardBonuses,
     workers,
     inventory,
     processedInventory,
@@ -87,13 +83,6 @@ export default function SellingChannelsSection() {
   const [showAllWorkers, setShowAllWorkers] = useState(false);
 
   const rep = reputation ?? 0;
-  const currentTier = getReputationTier(rep);
-  const tierIndex = REPUTATION_TIERS.findIndex(t => t.label === currentTier.label);
-  const nextTier = REPUTATION_TIERS[tierIndex + 1];
-  const tierProgress = nextTier
-    ? ((rep - currentTier.min) / (nextTier.min - currentTier.min)) * 100
-    : 100;
-
   const season = getSeason(day);
   const todayDow = day % 7;
   const todayVisitors =
@@ -141,20 +130,6 @@ export default function SellingChannelsSection() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* ── Reputation Header ── */}
-      <Card>
-        <Text style={styles.repScore}>⭐ {rep} / 100</Text>
-        <Text style={styles.repTierLabel}>{currentTier.label}</Text>
-        <View style={styles.repBarBg}>
-          <View style={[styles.repBarFill, { width: `${tierProgress}%` }]} />
-        </View>
-        {nextTier && (
-          <Text style={styles.repNext}>
-            {Math.round(tierProgress)}% to {nextTier.label}
-          </Text>
-        )}
-      </Card>
-
       {/* ── Farm Shop Card ── */}
       <Card>
         <SectionTitle>🏪 Farm Shop — {TIER_NAMES[shopTier]}</SectionTitle>
@@ -410,44 +385,6 @@ export default function SellingChannelsSection() {
         </Card>
       )}
 
-      {/* ── Awards Card ── */}
-      <Card>
-        <SectionTitle>🏆 Awards</SectionTitle>
-        {(awardHistory ?? []).length === 0 && (
-          <Text style={styles.emptyText}>No awards yet</Text>
-        )}
-        {(awardHistory ?? []).map((award, idx) => {
-          const def = PROCESSED_ITEM_DEFS.find(d => d.id === award.productId);
-          return (
-            <View key={idx} style={styles.awardRow}>
-              <Text style={styles.awardBadge}>
-                {award.award === 'gold' ? '🥇' : award.award === 'silver' ? '🥈' : '🥉'}
-              </Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.awardText}>
-                  {def?.name ?? award.productId} — {award.showName}
-                </Text>
-                <Text style={styles.awardDay}>Day {award.day}</Text>
-              </View>
-            </View>
-          );
-        })}
-
-        {Object.keys(productAwardBonuses ?? {}).length > 0 && (
-          <View style={{ marginTop: S.sm }}>
-            <Text style={styles.subLabel}>Product Bonuses</Text>
-            {Object.entries(productAwardBonuses).map(([pid, bonus]) => {
-              const def = PROCESSED_ITEM_DEFS.find(d => d.id === pid);
-              return (
-                <Text key={pid} style={styles.bonusText}>
-                  {def?.name ?? pid}: +{bonus}% price
-                </Text>
-              );
-            })}
-          </View>
-        )}
-      </Card>
-
       <View style={{ height: S.xxl }} />
     </ScrollView>
   );
@@ -472,39 +409,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-
-  // Reputation
-  repScore: {
-    color: C.text,
-    fontSize: F.size.title,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  repTierLabel: {
-    color: C.textDim,
-    fontSize: F.size.xl,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginTop: S.xs,
-    marginBottom: S.sm,
-  },
-  repBarBg: {
-    height: 8,
-    backgroundColor: C.bgDeep,
-    borderRadius: R.pill,
-    overflow: 'hidden',
-  },
-  repBarFill: {
-    height: 8,
-    backgroundColor: C.green,
-    borderRadius: R.pill,
-  },
-  repNext: {
-    color: C.textMuted,
-    fontSize: F.size.sm,
-    textAlign: 'center',
-    marginTop: S.xs,
   },
 
   // Upgrade
@@ -721,34 +625,6 @@ const styles = StyleSheet.create({
     color: C.textMuted,
     fontSize: F.size.sm,
     marginTop: 2,
-  },
-
-  // Awards
-  awardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.bgDeep,
-    borderRadius: R.sm,
-    padding: S.sm,
-    marginBottom: S.xs,
-  },
-  awardBadge: {
-    fontSize: F.size.xl,
-    marginRight: S.sm,
-  },
-  awardText: {
-    color: C.text,
-    fontSize: F.size.md,
-    fontWeight: 'bold',
-  },
-  awardDay: {
-    color: C.textMuted,
-    fontSize: F.size.sm,
-  },
-  bonusText: {
-    color: C.textDim,
-    fontSize: F.size.sm,
-    marginBottom: 2,
   },
 
   emptyText: {
