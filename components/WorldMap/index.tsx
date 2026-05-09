@@ -68,7 +68,7 @@ export default function WorldMap() {
 
   const handleManage = useCallback((_parcelId: string) => {
     selectMapField(null);
-    router.push('/(tabs)/tierras');
+    router.push('/(tabs)/farm');
   }, [router, selectMapField]);
 
   const handleMiniMapTap = useCallback((canvasX: number, canvasY: number) => {

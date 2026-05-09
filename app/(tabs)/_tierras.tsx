@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { playSound } from '../../engine/sounds';
@@ -29,16 +29,16 @@ function geneGrade(v: number): string {
 }
 
 const SOIL_ICONS: Record<string, string> = {
-  loamy: 'ðŸŸ«', sandy: 'ðŸŸ¡', clay: 'ðŸ”µ', chalky: 'â¬œ',
+  loamy: '🟫', sandy: '🟡', clay: '🔵', chalky: '⬜',
 };
 
 const CROP_ICONS: Record<string, string> = {
-  grass: 'ðŸŒ¿', alfalfa: 'ðŸŒ±', barley: 'ðŸŒ¾', oats: 'ðŸŒ¾',
-  wheat: 'ðŸŒ¾', corn: 'ðŸŒ½', sorghum: 'ðŸŒ¾', rice: 'ðŸš',
-  potatoes: 'ðŸ¥”', sugarbeet: 'ðŸŒ°', soy: 'ðŸ«˜', sugarcane: 'ðŸŽ‹',
-  sunflower: 'ðŸŒ»', rapeseed: 'ðŸŒ¼', canola: 'ðŸŒ¼', cotton: 'ðŸ©·',
-  saffron: 'ðŸŒ¸', vanilla: 'ðŸŒº', lavender: 'ðŸ’œ', ginseng: 'ðŸ«š',
-  grapes: 'ðŸ‡', tomatoes: 'ðŸ…', strawberries: 'ðŸ“', olives: 'ðŸ«’', almonds: 'ðŸ¥œ',
+  grass: '🌿', alfalfa: '🌱', barley: '🌾', oats: '🌾',
+  wheat: '🌾', corn: '🌽', sorghum: '🌾', rice: '🍚',
+  potatoes: '🥔', sugarbeet: '🌰', soy: '🫘', sugarcane: '🎋',
+  sunflower: '🌻', rapeseed: '🌼', canola: '🌼', cotton: '🩷',
+  saffron: '🌸', vanilla: '🌺', lavender: '💜', ginseng: '🫚',
+  grapes: '🍇', tomatoes: '🍅', strawberries: '🍓', olives: '🫒', almonds: '🥜',
 };
 
 const SOIL_BAR_COLORS = {
@@ -100,9 +100,9 @@ function SoilTab({ parcel, onAmendment, onCoverCrop }: {
       </Text>
       <View style={{ flexDirection: 'row', gap: S.sm }}>
         {[
-          { id: 'lime' as const,      label: 'ðŸª¨ Lime',    hint: 'pH +0.5 · $120' },
-          { id: 'sulfur' as const,    label: 'ðŸŸ¡ Sulfur',  hint: 'pH âˆ’0.5 · $100' },
-          { id: 'subsoiler' as const, label: 'âš™ï¸ Subsoil', hint: 'Compact âˆ’18 · $200' },
+          { id: 'lime' as const,      label: '🪨 Lime',    hint: 'pH +0.5 · $120' },
+          { id: 'sulfur' as const,    label: '🟡 Sulfur',  hint: 'pH −0.5 · $100' },
+          { id: 'subsoiler' as const, label: '⚙️ Subsoil', hint: 'Compact −18 · $200' },
         ].map((a) => (
           <TouchableOpacity
             key={a.id}
@@ -122,10 +122,10 @@ function SoilTab({ parcel, onAmendment, onCoverCrop }: {
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
             {[
-              { id: 'rye',       label: 'ðŸŒ¾ Rye',      hint: 'Compact âˆ’8' },
-              { id: 'clover',    label: 'ðŸ€ Clover',    hint: 'N +20, OM +2%' },
-              { id: 'mustard',   label: 'ðŸŒ¼ Mustard',   hint: 'Pest âˆ’15%' },
-              { id: 'buckwheat', label: 'ðŸŒ¿ Buckwheat', hint: 'Microbes +10' },
+              { id: 'rye',       label: '🌾 Rye',      hint: 'Compact −8' },
+              { id: 'clover',    label: '🍀 Clover',    hint: 'N +20, OM +2%' },
+              { id: 'mustard',   label: '🌼 Mustard',   hint: 'Pest −15%' },
+              { id: 'buckwheat', label: '🌿 Buckwheat', hint: 'Microbes +10' },
             ].map((cc) => (
               <TouchableOpacity
                 key={cc.id}
@@ -161,7 +161,7 @@ function WaterParcelSection({ parcel }: { parcel: LandParcel }) {
         <Text style={{ color: C.text, fontWeight: 'bold', marginBottom: 4 }}>Water Source</Text>
         {connectedWell ? (
           <Text style={{ color: C.faint, fontSize: F.size.md }}>
-            Well — {connectedWell.status === 'active' && connectedWell.pumpTier
+            Well · {connectedWell.status === 'active' && connectedWell.pumpTier
               ? `Active (${wellFlowRate(connectedWell, aquiferLevel ?? 75).toFixed(0)} L/hr effective)`
               : connectedWell.status}
           </Text>
@@ -180,7 +180,7 @@ function WaterParcelSection({ parcel }: { parcel: LandParcel }) {
               style={btnStyle}
               onPress={() => assignHydrogeologist(parcel.id)}
             >
-              <Text style={btnTextStyle}>ðŸ” Start Hydrogeologist Survey</Text>
+              <Text style={btnTextStyle}>🔍 Start Hydrogeologist Survey</Text>
             </TouchableOpacity>
           ) : (
             <Text style={{ color: C.faint, fontSize: F.size.sm }}>
@@ -203,7 +203,7 @@ function WaterParcelSection({ parcel }: { parcel: LandParcel }) {
             const cost = pipeCost(wellIdx, targetIdx);
             return (
               <TouchableOpacity key={w.id} style={[btnStyle, { marginBottom: 4 }]} onPress={() => connectParcel(w.id, parcel.id)}>
-                <Text style={btnTextStyle}>Connect via pipe — ${cost.toLocaleString()}</Text>
+                <Text style={btnTextStyle}>Connect via pipe · ${cost.toLocaleString()}</Text>
               </TouchableOpacity>
             );
           })}
@@ -324,9 +324,9 @@ export default function TierrasScreen() {
 
     if (parcel.owned) {
       if (parcel.diseased) {
-        bg = '#2a1a00'; borderColor = '#8B4513'; statusIcon = 'ðŸ¦ ';
+        bg = '#2a1a00'; borderColor = '#8B4513'; statusIcon = '🦠';
       } else if (event) {
-        bg = '#5c1a1a'; borderColor = '#c62828'; statusIcon = 'âš ï¸';
+        bg = '#5c1a1a'; borderColor = '#c62828'; statusIcon = '⚠️';
       } else if (parcel.pestState?.detectedDay) {
         bg = '#3a1500'; borderColor = '#e65100'; statusIcon = '\ud83d\udc1b';
       } else if (parcel.hasWeeds) {
@@ -336,12 +336,12 @@ export default function TierrasScreen() {
       } else if (parcel.plantedCrop) {
         bg = '#1a3a1a'; borderColor = '#2e7d32';
       } else if (parcel.tilled) {
-        bg = '#2a1f0a'; borderColor = '#5d4037'; statusIcon = 'â¬›';
+        bg = '#2a1f0a'; borderColor = '#5d4037'; statusIcon = '⬛';
       } else {
         bg = '#1a2744'; borderColor = '#3a5080';
       }
-      mainIcon = parcel.plantedCrop ? (CROP_ICONS[parcel.plantedCrop.cropId] ?? 'ðŸŒ±') : '';
-      if (parcel.hasWeeds && !parcel.diseased) statusIcon = 'ðŸŒ¿';
+      mainIcon = parcel.plantedCrop ? (CROP_ICONS[parcel.plantedCrop.cropId] ?? '🌱') : '';
+      if (parcel.hasWeeds && !parcel.diseased) statusIcon = '🌿';
     }
 
     if (selected) borderColor = '#c8860a';
@@ -371,12 +371,12 @@ export default function TierrasScreen() {
               <Text style={{ fontSize: CELL_SIZE * 0.28, position: 'absolute', top: 1, right: 2 }}>{statusIcon}</Text>
             ) : null}
             {ready && !statusIcon ? (
-              <Text style={{ fontSize: CELL_SIZE * 0.22, color: '#a5d6a7', fontWeight: 'bold' }}>âœ“</Text>
+              <Text style={{ fontSize: CELL_SIZE * 0.22, color: '#a5d6a7', fontWeight: 'bold' }}>✓</Text>
             ) : null}
             <Text style={{ fontSize: CELL_SIZE * 0.2, color: '#88aacc', marginTop: 1 }}>{parcel.hectares}ha</Text>
           </>
         ) : (
-          <Text style={{ fontSize: CELL_SIZE * 0.3, opacity: 0.35 }}>ðŸ”’</Text>
+          <Text style={{ fontSize: CELL_SIZE * 0.3, opacity: 0.35 }}>🔒</Text>
         )}
       </TouchableOpacity>
     );
@@ -402,7 +402,7 @@ export default function TierrasScreen() {
             <Text style={styles.cardSub}>{parcel.hectares} ha</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.fertility}>â™¦ {parcel.fertility}/25</Text>
+            <Text style={styles.fertility}>♦ {parcel.fertility}/25</Text>
             {parcel.soilType && (
               <Text style={styles.soilBadge}>{SOIL_ICONS[parcel.soilType]} {parcel.soilType}</Text>
             )}
@@ -412,29 +412,29 @@ export default function TierrasScreen() {
         {/* Greenhouse badge / toggle */}
         {parcel.greenhouse ? (
           <View style={styles.ghRow}>
-            <Text style={styles.ghBadge}>ðŸ  Greenhouse</Text>
+            <Text style={styles.ghBadge}>🏠 Greenhouse</Text>
             <TouchableOpacity onPress={() => removeGreenhouse(parcel.id)}>
               <Text style={styles.ghRemove}>Remove</Text>
             </TouchableOpacity>
           </View>
         ) : totalGHSlots > usedGHSlots && !parcel.plantedCrop ? (
           <TouchableOpacity style={styles.ghInstallBtn} onPress={() => installGreenhouse(parcel.id)}>
-            <Text style={styles.smallBtnText}>ðŸ  Install GH ($2k)</Text>
+            <Text style={styles.smallBtnText}>🏠 Install GH ($2k)</Text>
           </TouchableOpacity>
         ) : null}
 
         {/* Irrigation badge / install */}
         {parcel.irrigated ? (
-          <Text style={styles.irrigatedBadge}>ðŸ’§ Irrigated +20% yield</Text>
+          <Text style={styles.irrigatedBadge}>💧 Irrigated +20% yield</Text>
         ) : money >= 3000 ? (
           <TouchableOpacity style={styles.irrigateBtn} onPress={() => installIrrigation(parcel.id)}>
-            <Text style={styles.smallBtnText}>ðŸ’§ Irrigate ($3k)</Text>
+            <Text style={styles.smallBtnText}>💧 Irrigate ($3k)</Text>
           </TouchableOpacity>
         ) : null}
 
         {parcel.diseased && (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#2a0a00', borderRadius: 6, padding: 8, marginBottom: 4 }}>
-            <Text style={{ color: '#ff8a65', fontSize: 11 }}>ðŸ¦  Blight · {parcel.diseasedDay ? `day ${day - parcel.diseasedDay} of 20` : 'active'}</Text>
+            <Text style={{ color: '#ff8a65', fontSize: 11 }}>🦠 Blight · {parcel.diseasedDay ? `day ${day - parcel.diseasedDay} of 20` : 'active'}</Text>
             <TouchableOpacity
               style={{ backgroundColor: '#4a1a00', borderRadius: 5, paddingHorizontal: 10, paddingVertical: 4 }}
               onPress={() => cureDisease(parcel.id)}
@@ -470,8 +470,8 @@ export default function TierrasScreen() {
 
         {parcel.plantedCrop ? (
           <Text style={styles.cropTag}>
-            ðŸŒ± {cropType?.name ?? parcel.plantedCrop.cropId}
-            {(parcel.plantedCrop.appliedN ?? 1.0) > 1.0 ? ' ✨' : ''}
+            🌱 {cropType?.name ?? parcel.plantedCrop.cropId}
+            {(parcel.plantedCrop.appliedN ?? 1.0) > 1.0 ? ' ?' : ''}
           </Text>
         ) : (
           <Text style={styles.emptyTag}>Empty</Text>
@@ -479,7 +479,7 @@ export default function TierrasScreen() {
 
         {frostInNext3Days && parcel.plantedCrop && !parcel.greenhouse && (
           <View style={styles.frostWarning}>
-            <Text style={styles.frostWarningText}>â„ï¸ Frost risk</Text>
+            <Text style={styles.frostWarningText}>❄️ Frost risk</Text>
           </View>
         )}
 
@@ -507,7 +507,7 @@ export default function TierrasScreen() {
           }
 
           if (!parcel.tilled && !parcel.plantedCrop) {
-            // Till assignment is done from Machinery â†’ Jobs; this button offers the contractor fallback
+            // Till assignment is done from Machinery → Jobs; this button offers the contractor fallback
             return (
               <TouchableOpacity
                 style={localStyles.opBtn}
@@ -566,7 +566,7 @@ export default function TierrasScreen() {
 
         {parcel.hasWeeds && (
           <View style={styles.weedRow}>
-            <Text style={styles.weedTag}>âš ï¸ Weeds</Text>
+            <Text style={styles.weedTag}>⚠️ Weeds</Text>
             {herbicideIds.length > 0 ? (
               <TouchableOpacity style={styles.resolveBtn} onPress={() => clearWeeds(parcel.id)}>
                 <Text style={styles.resolveBtnText}>Clear (1 dose)</Text>
@@ -580,7 +580,7 @@ export default function TierrasScreen() {
         {fieldEvent && (
           <View style={styles.eventAlert}>
             <Text style={styles.eventText}>
-              {fieldEvent.type === 'disease' ? 'ðŸ„ Disease' : 'ðŸ› Pest'}
+              {fieldEvent.type === 'disease' ? '🍄 Disease' : '🐛 Pest'}
             </Text>
             {(fieldEvent.type === 'disease' ? fungicideIds : insecticideIds).slice(0, 1).map(pid => (
               <TouchableOpacity key={pid} style={styles.resolveBtn} onPress={() => resolveFieldEvent(fieldEvent.id, pid)}>
@@ -607,7 +607,7 @@ export default function TierrasScreen() {
             <Text style={styles.cardTitle}>{parcel.name}</Text>
             <Text style={styles.cardSub}>{parcel.hectares} ha</Text>
           </View>
-          <Text style={styles.fertility}>â™¦ {parcel.fertility}/25</Text>
+          <Text style={styles.fertility}>♦ {parcel.fertility}/25</Text>
         </View>
         <Text style={styles.priceTag}>${cost.toLocaleString()}</Text>
         <TouchableOpacity
@@ -636,7 +636,7 @@ export default function TierrasScreen() {
       <View style={styles.headerRow}>
         <Text style={localStyles.screenTitle}>My Fields</Text>
         <TouchableOpacity style={styles.viewToggle} onPress={() => { setMapView(v => !v); setMapSelected(null); }}>
-          <Text style={styles.viewToggleText}>{mapView ? 'ðŸ“‹ List' : 'ðŸ—ºï¸ Map'}</Text>
+          <Text style={styles.viewToggleText}>{mapView ? '📋 List' : '🗺️ Map'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -659,20 +659,20 @@ export default function TierrasScreen() {
         style={styles.worldMapBtn}
         onPress={() => router.push('/world-map')}
       >
-        <Text style={styles.worldMapBtnText}>ðŸ—ºï¸  World Map</Text>
+        <Text style={styles.worldMapBtnText}>🗺️  World Map</Text>
       </TouchableOpacity>
 
       {/* Field events banner */}
       {activeFieldEvents.length > 0 && (
         <View style={styles.eventsBanner}>
           <Text style={styles.eventsBannerText}>
-            âš ï¸ {activeFieldEvents.length} active event{activeFieldEvents.length > 1 ? 's' : ''} — check your plots
+            ⚠️ {activeFieldEvents.length} active event{activeFieldEvents.length > 1 ? 's' : ''} · check your plots
           </Text>
         </View>
       )}
 
       {mapView ? (
-        /* â”€â”€ MAP VIEW â”€â”€ */
+        /* ── MAP VIEW ── */
         <View style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={{ paddingBottom: mapSelected ? 196 : 8 }}>
             <Text style={styles.sectionLabel}>
@@ -704,7 +704,7 @@ export default function TierrasScreen() {
             </View>
           </ScrollView>
 
-          {/* â”€â”€ SELECTED PARCEL PANEL â”€â”€ */}
+          {/* ── SELECTED PARCEL PANEL ── */}
           {mapSelected && (() => {
             const p = mapSelected;
             const event = getEventForParcel(p.id);
@@ -723,11 +723,11 @@ export default function TierrasScreen() {
                     <Text style={styles.mapPanelSub}>
                       {p.hectares} ha
                       {p.soilType ? ` · ${SOIL_ICONS[p.soilType]} ${p.soilType}` : ''}
-                      {p.owned ? ` · â™¦ ${p.fertility}/25` : ''}
+                      {p.owned ? ` · ♦ ${p.fertility}/25` : ''}
                     </Text>
                   </View>
                   <TouchableOpacity onPress={() => setMapSelected(null)} style={styles.mapPanelClose}>
-                    <Text style={styles.mapPanelCloseText}>âœ•</Text>
+                    <Text style={styles.mapPanelCloseText}>✕</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -745,12 +745,12 @@ export default function TierrasScreen() {
                     </TouchableOpacity>
                   ) : event ? (
                     <View style={styles.mapActionAlert}>
-                      <Text style={styles.mapActionAlertText}>âš ï¸ {event.type === 'disease' ? 'Disease' : 'Pest'} — treat with fungicide/insecticide</Text>
+                      <Text style={styles.mapActionAlertText}>⚠️ {event.type === 'disease' ? 'Disease' : 'Pest'} · treat with fungicide/insecticide</Text>
                     </View>
                   ) : p.hasWeeds ? (
                     <View style={styles.mapActionRow}>
                       <View style={styles.mapActionAlert}>
-                        <Text style={styles.mapActionAlertText}>ðŸŒ¿ Weeds affecting yield</Text>
+                        <Text style={styles.mapActionAlertText}>🌿 Weeds affecting yield</Text>
                       </View>
                       {herbicideIds.length > 0 && (
                         <TouchableOpacity
@@ -768,13 +768,13 @@ export default function TierrasScreen() {
                       disabled={storageFull}
                     >
                       <Text style={styles.mapActionText}>
-                        {storageFull ? 'Storage full' : `ðŸŒ¾ Harvest ${cropType?.name ?? ''}`}
+                        {storageFull ? 'Storage full' : `🌾 Harvest ${cropType?.name ?? ''}`}
                       </Text>
                     </TouchableOpacity>
                   ) : p.plantedCrop ? (
                     <View style={styles.mapActionInfo}>
                       <Text style={styles.mapActionInfoText}>
-                        ðŸŒ± {cropType?.name ?? ''} · {days}d to harvest
+                        🌱 {cropType?.name ?? ''} · {days}d to harvest
                       </Text>
                     </View>
                   ) : (
@@ -782,7 +782,7 @@ export default function TierrasScreen() {
                       style={[styles.mapActionBtn, styles.mapActionPlant]}
                       onPress={() => { setMapView(false); setPlantingParcel(p); setMapSelected(null); }}
                     >
-                      <Text style={styles.mapActionText}>ðŸŒ± Plant Crop</Text>
+                      <Text style={styles.mapActionText}>🌱 Plant Crop</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -791,16 +791,16 @@ export default function TierrasScreen() {
           })()}
         </View>
       ) : (
-        /* â”€â”€ LIST VIEW â”€â”€ */
+        /* ── LIST VIEW ── */
         <ScrollView>
           {/* Filter bar */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar}>
             {([
               { id: 'all',    label: `All (${owned.length})` },
-              { id: 'empty',  label: 'ðŸŸ¦ Empty' },
-              { id: 'growing',label: 'ðŸŒ± Growing' },
-              { id: 'ready',  label: 'ðŸŒ¾ Ready' },
-              { id: 'events', label: 'âš ï¸ Events' },
+              { id: 'empty',  label: '🟦 Empty' },
+              { id: 'growing',label: '🌱 Growing' },
+              { id: 'ready',  label: '🌾 Ready' },
+              { id: 'events', label: '⚠️ Events' },
             ] as { id: FieldFilter; label: string }[]).map(f => (
               <TouchableOpacity
                 key={f.id}
@@ -819,7 +819,7 @@ export default function TierrasScreen() {
             const readyCount = owned.filter(p => isReady(p)).length;
             return readyCount > 0 ? (
               <TouchableOpacity style={styles.batchHarvestBtn} onPress={() => { harvestAllReady(); playSound('harvest'); if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); }}>
-                <Text style={styles.batchHarvestText}>ðŸŒ¾ Harvest All Ready ({readyCount})</Text>
+                <Text style={styles.batchHarvestText}>🌾 Harvest All Ready ({readyCount})</Text>
               </TouchableOpacity>
             ) : null;
           })()}
@@ -830,7 +830,7 @@ export default function TierrasScreen() {
             if (idleCount === 0) return null;
             return batchModal ? (
               <View style={localStyles.batchBox}>
-                <Text style={localStyles.batchTitle}>ðŸŒ± Plant All Idle ({idleCount} plots)</Text>
+                <Text style={localStyles.batchTitle}>🌱 Plant All Idle ({idleCount} plots)</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
                   {CROP_TYPES.filter(c => c.seasons.includes(currentSeason)).map(c => (
                     <TouchableOpacity
@@ -863,7 +863,7 @@ export default function TierrasScreen() {
               </View>
             ) : (
               <TouchableOpacity style={localStyles.batchPlantBtn} onPress={() => setBatchModal(true)}>
-                <Text style={localStyles.batchPlantText}>ðŸŒ± Plant All Idle ({idleCount})</Text>
+                <Text style={localStyles.batchPlantText}>🌱 Plant All Idle ({idleCount})</Text>
               </TouchableOpacity>
             );
           })()}
@@ -944,13 +944,13 @@ export default function TierrasScreen() {
                         <Text style={[styles.cropOptionName, !inSeason && { color: '#555' }]}>{crop.name}</Text>
                         {inSeason && rotation && (
                           <View style={styles.rotationBadge}>
-                            <Text style={styles.rotationBadgeText}>ðŸ”„ +15% yield</Text>
+                            <Text style={styles.rotationBadgeText}>🔄 +15% yield</Text>
                           </View>
                         )}
                         {inSeason && soilMod !== 1.0 && (
                           <View style={[styles.rotationBadge, { borderColor: soilMod > 1 ? '#ff9800' : '#f44336', backgroundColor: soilMod > 1 ? '#2a1f00' : '#2a0000' }]}>
                             <Text style={[styles.rotationBadgeText, { color: soilMod > 1 ? '#ffb74d' : '#ef9a9a' }]}>
-                              {soilMod > 1 ? `ðŸŒ± +${Math.round((soilMod - 1) * 100)}% soil` : `âš ï¸ ${Math.round((soilMod - 1) * 100)}% soil`}
+                              {soilMod > 1 ? `🌱 +${Math.round((soilMod - 1) * 100)}% soil` : `⚠️ ${Math.round((soilMod - 1) * 100)}% soil`}
                             </Text>
                           </View>
                         )}
@@ -958,7 +958,7 @@ export default function TierrasScreen() {
                       <Text style={styles.cropOptionDetail}>
                         {inSeason
                           ? `${crop.growthDays}d · ${crop.baseYield} ${crop.unit}/ha`
-                          : `ðŸš« ${crop.seasons.join(', ')} only`}
+                          : `🚫 ${crop.seasons.join(', ')} only`}
                       </Text>
                       {inSeason && (
                         <Text style={{ fontSize: 10, color: estProfit >= 0 ? '#4caf50' : '#f44336', marginTop: 1 }}>
@@ -986,17 +986,17 @@ export default function TierrasScreen() {
                 return (
                   <View style={{ backgroundColor: '#0a2a0a', borderRadius: 8, padding: 10, marginTop: 8, borderLeftWidth: 3, borderLeftColor: '#4caf50' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={{ color: '#66bb6a', fontSize: 12, fontWeight: 'bold' }}>âœ… +15% Rotation Bonus</Text>
+                      <Text style={{ color: '#66bb6a', fontSize: 12, fontWeight: 'bold' }}>✅ +15% Rotation Bonus</Text>
                       <HelpSheet
                         title="Crop Rotation"
                         body="Planting a different crop than the previous one gives a +15% yield bonus. Rotating also slows fertility loss over time. Try to avoid planting the same high-drain crop twice in a row."
                       />
                     </View>
-                    <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>Different crop from last harvest — you get a yield boost.</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>Different crop from last harvest · you get a yield boost.</Text>
                   </View>
                 );
               }
-              // Same crop — suggest alternatives
+              // Same crop · suggest alternatives
               const lastCrop = CROP_TYPES.find(c => c.id === lastId);
               const alternatives = CROP_TYPES.filter(c =>
                 c.id !== lastId &&
@@ -1005,7 +1005,7 @@ export default function TierrasScreen() {
               ).slice(0, 3);
               return (
                 <View style={{ backgroundColor: '#2a1a00', borderRadius: 8, padding: 10, marginTop: 8, borderLeftWidth: 3, borderLeftColor: '#ffb74d' }}>
-                  <Text style={{ color: '#ffb74d', fontSize: 12, fontWeight: 'bold' }}>âš ï¸ No Rotation Bonus</Text>
+                  <Text style={{ color: '#ffb74d', fontSize: 12, fontWeight: 'bold' }}>⚠️ No Rotation Bonus</Text>
                   <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>Same as last crop ({lastCrop?.name}). Plant something else for +15% yield.</Text>
                   {alternatives.length > 0 && (
                     <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>
@@ -1053,7 +1053,7 @@ export default function TierrasScreen() {
               ];
               return (
                 <View style={{ backgroundColor: '#0d1117', borderRadius: 10, padding: 12, marginTop: 10, borderWidth: 1, borderColor: '#1e2a3a' }}>
-                  <Text style={{ color: C.text, fontSize: 11, fontWeight: 'bold', marginBottom: 8 }}>ðŸ“Š {crop.name} — Profit Preview</Text>
+                  <Text style={{ color: C.text, fontSize: 11, fontWeight: 'bold', marginBottom: 8 }}>📊 {crop.name} · Profit Preview</Text>
                   {rows.map(([label, value, color]) => (
                     <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
                       <Text style={{ color: C.textFaint, fontSize: 11 }}>{label}</Text>
@@ -1063,17 +1063,17 @@ export default function TierrasScreen() {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
                     <Text style={{ color: C.textFaint, fontSize: 11 }}>Fertility after harvest</Text>
                     <Text style={{ color: crop.fertilityDrain === 0 ? '#66bb6a' : crop.fertilityDrain >= 2 ? '#ef5350' : '#ffb74d', fontSize: 11, fontWeight: 'bold' }}>
-                      {crop.fertilityDrain === 0 ? 'âœ… No drain (fixes Nâ‚‚)' : `âš ï¸ -${crop.fertilityDrain} pt${crop.fertilityDrain > 1 ? 's' : ''}`}
+                      {crop.fertilityDrain === 0 ? '✅ No drain (fixes N₂)' : `⚠️ -${crop.fertilityDrain} pt${crop.fertilityDrain > 1 ? 's' : ''}`}
                     </Text>
                   </View>
                   {herbCost > 0 && (
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
-                      <Text style={{ color: C.textFaint, fontSize: 11 }}>âš ï¸ Herbicide (weeds)</Text>
+                      <Text style={{ color: C.textFaint, fontSize: 11 }}>⚠️ Herbicide (weeds)</Text>
                       <Text style={{ color: '#ffb74d', fontSize: 11, fontWeight: 'bold' }}>~-${herbCost.toLocaleString()}</Text>
                     </View>
                   )}
                   {herbCost > 0 && (
-                    <Text style={{ color: '#665500', fontSize: 9, marginBottom: 2 }}>* Yield shown at âˆ’25% weed penalty. Herbicide cost advisory only.</Text>
+                    <Text style={{ color: '#665500', fontSize: 9, marginBottom: 2 }}>* Yield shown at −25% weed penalty. Herbicide cost advisory only.</Text>
                   )}
                   <Text style={{ color: '#444', fontSize: 9, marginTop: 6 }}>* Estimate. Actual yield varies with weather, events, and workers.</Text>
                 </View>
@@ -1089,7 +1089,7 @@ export default function TierrasScreen() {
                 <View style={{ marginTop: 10 }}>
                   {availableSeeds.length > 0 && (
                     <>
-                      <Text style={{ color: C.textMuted, fontSize: 11, marginBottom: 6 }}>ðŸŒ± Seed (optional)</Text>
+                      <Text style={{ color: C.textMuted, fontSize: 11, marginBottom: 6 }}>🌱 Seed (optional)</Text>
                       <TouchableOpacity
                         style={{ backgroundColor: !selectedSeedId ? '#0f3460' : C.bgCard, borderRadius: 6, padding: 7, marginBottom: 4, borderWidth: !selectedSeedId ? 1 : 0, borderColor: '#4fc3f7' }}
                         onPress={() => setSelectedSeedId(null)}
@@ -1124,7 +1124,7 @@ export default function TierrasScreen() {
                       }
                     }}
                   >
-                    <Text style={styles.btnText}>ðŸŒ± Plant</Text>
+                    <Text style={styles.btnText}>🌱 Plant</Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -1163,10 +1163,10 @@ export default function TierrasScreen() {
                 <View style={styles.mapModalHeader}>
                   <View>
                     <Text style={styles.modalTitle}>{mapSelected.name}</Text>
-                    <Text style={styles.cardSub}>{mapSelected.hectares} ha · â™¦ Fertility {mapSelected.fertility}/25</Text>
+                    <Text style={styles.cardSub}>{mapSelected.hectares} ha · ♦ Fertility {mapSelected.fertility}/25</Text>
                   </View>
                   <TouchableOpacity onPress={() => { setMapSelected(null); setActiveParcelTab('info'); }}>
-                    <Text style={{ color: C.textMuted, fontSize: 18 }}>âœ•</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 18 }}>✕</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1174,9 +1174,9 @@ export default function TierrasScreen() {
                 {mapSelected.owned && (
                   <View style={{ flexDirection: 'row', marginBottom: S.sm, gap: S.xs }}>
                     {([
-                      { id: 'info' as const, label: 'ðŸ“‹ Info' },
-                      { id: 'soil' as const, label: 'ðŸŒ± Soil' },
-                      { id: 'water' as const, label: 'ðŸ’§ Water' },
+                      { id: 'info' as const, label: '📋 Info' },
+                      { id: 'soil' as const, label: '🌱 Soil' },
+                      { id: 'water' as const, label: '💧 Water' },
                     ]).map(tab => (
                       <TouchableOpacity
                         key={tab.id}
@@ -1214,8 +1214,8 @@ export default function TierrasScreen() {
                     ) : mapSelected.plantedCrop ? (
                       <>
                         <Text style={styles.cropTag}>
-                          {CROP_ICONS[mapSelected.plantedCrop.cropId] ?? 'ðŸŒ±'} {mapSelectedCropType?.name ?? mapSelected.plantedCrop.cropId}
-                          {(mapSelected.plantedCrop.appliedN ?? 1.0) > 1.0 ? ' ✨' : ''}
+                          {CROP_ICONS[mapSelected.plantedCrop.cropId] ?? '🌱'} {mapSelectedCropType?.name ?? mapSelected.plantedCrop.cropId}
+                          {(mapSelected.plantedCrop.appliedN ?? 1.0) > 1.0 ? ' ?' : ''}
                         </Text>
                         {mapSelectedReady ? (
                           <TouchableOpacity
@@ -1223,26 +1223,26 @@ export default function TierrasScreen() {
                             onPress={() => { harvestCrop(mapSelected.id); setMapSelected(null); setActiveParcelTab('info'); }}
                             disabled={totalInventory >= siloCapacity}
                           >
-                            <Text style={styles.btnText}>{totalInventory >= siloCapacity ? 'ðŸ“¦ Silo full' : 'ðŸŒ¾ Harvest'}</Text>
+                            <Text style={styles.btnText}>{totalInventory >= siloCapacity ? '📦 Silo full' : '🌾 Harvest'}</Text>
                           </TouchableOpacity>
                         ) : (
-                          <Text style={styles.daysLeft}>â³ {mapSelectedDays}d left</Text>
+                          <Text style={styles.daysLeft}>⏳ {mapSelectedDays}d left</Text>
                         )}
                         {(mapSelected.plantedCrop.appliedN ?? 1.0) <= 1.0 && mapSelectedFertilizer && (
                           <TouchableOpacity style={styles.fertilizeBtn} onPress={() => { fertilizeCrop(mapSelected.id, fertilizerIds[0]); }}>
-                            <Text style={styles.smallBtnText}>âœ¨ Fertilize (1 dose)</Text>
+                            <Text style={styles.smallBtnText}>✨ Fertilize (1 dose)</Text>
                           </TouchableOpacity>
                         )}
                       </>
                     ) : (
                       <TouchableOpacity style={styles.plantBtn} onPress={() => { setMapSelected(null); setPlantingParcel(mapSelected); setActiveParcelTab('info'); }}>
-                        <Text style={styles.btnText}>ðŸŒ± Plant</Text>
+                        <Text style={styles.btnText}>🌱 Plant</Text>
                       </TouchableOpacity>
                     )}
 
                     {mapSelected.owned && mapSelected.hasWeeds && (
                       <View style={styles.weedRow}>
-                        <Text style={styles.weedTag}>âš ï¸ Weeds</Text>
+                        <Text style={styles.weedTag}>⚠️ Weeds</Text>
                         {mapSelectedHerbicide ? (
                           <TouchableOpacity style={styles.resolveBtn} onPress={() => { clearWeeds(mapSelected.id); setMapSelected(p => p ? { ...p, hasWeeds: false } : p); }}>
                             <Text style={styles.resolveBtnText}>Clear</Text>
@@ -1256,7 +1256,7 @@ export default function TierrasScreen() {
                     {mapSelectedEvent && (
                       <View style={styles.eventAlert}>
                         <Text style={styles.eventText}>
-                          {mapSelectedEvent.type === 'disease' ? 'ðŸ„ Disease' : 'ðŸ› Pest'}
+                          {mapSelectedEvent.type === 'disease' ? '🍄 Disease' : '🐛 Pest'}
                         </Text>
                         {(mapSelectedEvent.type === 'disease' ? fungicideIds : insecticideIds).slice(0, 1).map(pid => (
                           <TouchableOpacity key={pid} style={styles.resolveBtn} onPress={() => { resolveFieldEvent(mapSelectedEvent.id, pid); setMapSelected(null); setActiveParcelTab('info'); }}>

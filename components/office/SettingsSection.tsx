@@ -264,7 +264,7 @@ function SettingsSection() {
           <View>
             <Text style={{ color: '#555', fontSize: 12, lineHeight: 18 }}>
               Prestige unlocks at Year 3 (Day 1080).{'\n'}
-              You're on day {day} — {1080 - day} days to go.{'\n'}
+              You&apos;re on day {day} — {1080 - day} days to go.{'\n'}
               On prestige: keep your records, gain a permanent revenue bonus, and start fresh with ${((prestige + 1) * 2000 + 3500).toLocaleString()} seed money.
             </Text>
             <View style={{ backgroundColor: '#0d1117', borderRadius: 8, padding: 8, marginTop: 8 }}>

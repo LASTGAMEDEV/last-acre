@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import {
   PlantedCrop, SoilType, getSoilModifier, harvestAmount,
@@ -106,7 +106,7 @@ import {
   nextGridTier, prevGridTier,
 } from '../engine/electricity';
 
-// â”€â”€ Machine / building helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Machine / building helpers ───────────────────────────────────────────────
 function getDailyMaintenance(machines: OwnedMachine[], buildings: string[]): number {
   const hasTaller = buildings.includes('bld_taller');
   const machineDiscount = hasTaller ? 0.75 : 1.0;
@@ -193,9 +193,9 @@ function estimateCropValue(parcel: LandParcel, prices: MarketPrice[]): number {
 export interface LandParcel {
   id: string;
   name: string;
-  /** @deprecated use soil.nitrogen — kept for save migration only */
+  /** @deprecated use soil.nitrogen · kept for save migration only */
   fertility: number;
-  // â”€â”€ Soil system â”€â”€
+  // ── Soil system ──
   soil: SoilStats;
   cropHistory: string[]; // last 4 harvested cropIds (oldest first)
   hectares: number;
@@ -208,8 +208,8 @@ export interface LandParcel {
   irrigated: boolean;
   tilled: boolean;
   seedEntryId?: string; // SeedEntry id used when this parcel was planted
-  soilType?: SoilType; // undefined on old saves â†’ treated as 'loamy'
-  diseased?: boolean;   // crop blight — reduces yield, spreads to neighbors
+  soilType?: SoilType; // undefined on old saves → treated as 'loamy'
+  diseased?: boolean;   // crop blight · reduces yield, spreads to neighbors
   diseasedDay?: number; // day disease started; crop dies after 20 days untreated
   pestState?: import('../engine/pests').PestState;
 }
@@ -217,7 +217,7 @@ export interface LandParcel {
 export type OwnedWorker = Worker;
 export type { Worker };
 
-// â”€â”€ Animal Shows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Animal Shows ─────────────────────────────────────────────────────────────
 export interface ShowEntry {
   animalId: string;
   seasonKey: string;
@@ -261,10 +261,10 @@ export interface MarketOrder {
 }
 
 export interface SeedGenes {
-  yield:    number; // multiplies harvest output (0.5–1.5)
-  drought:  number; // divides weather penalty severity (0.5–1.5)
-  growth:   number; // divides effective growthDays (0.5–1.5)
-  quality:  number; // multiplies processed output (0.5–1.5)
+  yield:    number; // multiplies harvest output (0.5·1.5)
+  drought:  number; // divides weather penalty severity (0.5·1.5)
+  growth:   number; // divides effective growthDays (0.5·1.5)
+  quality:  number; // multiplies processed output (0.5·1.5)
 }
 
 export interface SeedEntry {
@@ -303,7 +303,7 @@ export interface GameEvent {
   description: string;
   icon: string;
   expiresDay: number;    // day this event expires; 0 = already expired/one-shot
-  affectedIds?: string[]; // parcel IDs, animal ID, crop ID — depends on type
+  affectedIds?: string[]; // parcel IDs, animal ID, crop ID · depends on type
   modifier?: number;
 }
 
@@ -382,8 +382,8 @@ export interface ProductionBuildingState {
   id: string;                    // unique instance id e.g. 'pb_1711234567'
   buildingTypeId: string;        // e.g. 'bld_milking_parlour_s'
   animalTypeId: string;          // e.g. 'vaca'
-  hygiene: number;               // 0–100
-  capacity: number;              // daily throughput (animals/day) — copied from BuildingType.dailyCapacity at purchase time
+  hygiene: number;               // 0·100
+  capacity: number;              // daily throughput (animals/day) · copied from BuildingType.dailyCapacity at purchase time
   certificationTier: 'basic' | 'certified' | 'organic';
   certDaysAtThreshold: number;   // consecutive days meeting cert hygiene requirement
   certInspectionsPassed: number; // inspections passed at current tier level
@@ -443,29 +443,29 @@ export interface AuctionLot {
   playerWon: boolean | null;
 }
 
-// â”€â”€ Auction House â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Auction House ─────────────────────────────────────────────────────────────
 export type AuctionCategory = 'land' | 'animal' | 'crop' | 'machinery';
 
 export interface AuctionListing {
   id: string;
   category: AuctionCategory;
   sellerId: 'player' | string;      // 'player' or NPC farm id
-  // Payload — only the relevant field is set per category
+  // Payload · only the relevant field is set per category
   parcelId?: string;                 // land
   parcel?: LandParcel;               // land (kept for display, same as AuctionLot)
   animalId?: string;                 // animal (player-listed)
   animalTypeId?: string;             // animal (NPC-generated)
   animalGenes?: AnimalGenes;         // animal
-  animalBreedId?: string;            // animal — breed of the listed animal
-  animalBreedCrossParents?: [string, string]; // animal — F1/backcross display
-  animalSex?: 'male' | 'female';           // animal — preserved for withdrawal
-  animalBornDay?: number;                   // animal — preserved for withdrawal
-  machinePurchasedDay?: number;             // machinery — preserved for withdrawal
+  animalBreedId?: string;            // animal · breed of the listed animal
+  animalBreedCrossParents?: [string, string]; // animal · F1/backcross display
+  animalSex?: 'male' | 'female';           // animal · preserved for withdrawal
+  animalBornDay?: number;                   // animal · preserved for withdrawal
+  machinePurchasedDay?: number;             // machinery · preserved for withdrawal
   cropId?: string;                   // crop
   cropQuantity?: number;             // crop
   machineId?: string;                // machinery (player-listed)
   machineTypeId?: string;            // machinery (NPC-generated)
-  conditionScore?: number;           // machinery (0–100)
+  conditionScore?: number;           // machinery (0·100)
   // Auction terms
   startingBid: number;
   reservePrice: number;              // 0 = no reserve; hidden from bidders
@@ -627,7 +627,7 @@ export interface GameState {
   cooperative: { member: boolean; joinDay: number } | null;
   coopMemberships: Partial<Record<CoopId, CoopMembership>>;
   coopStates: Record<CoopId, CoopState>;
-  aquiferLevel: number;        // 0–100 (% of total capacity)
+  aquiferLevel: number;        // 0·100 (% of total capacity)
   wells: Well[];
   gridWaterActive: boolean;
   gridWaterDailyRate: number;  // $ per irrigated hectare per day
@@ -642,7 +642,7 @@ export interface GameState {
   employerReputation: number;
   bankrupt: boolean;
   sellPressures: { cropId: string; modifier: number; expiresDay: number }[];
-  breedingPairs: Record<string, string>; // femaleId â†’ preferred maleId
+  breedingPairs: Record<string, string>; // femaleId → preferred maleId
   activeEvents: GameEvent[];
   machineRepairs: MachineRepair[];
   attachments: OwnedAttachment[];
@@ -655,8 +655,8 @@ export interface GameState {
 
   // Artisan processing buildings (new system)
   processingBuildings: import('../engine/processing').ProcessingBuilding[];
-  animalWelfareScores: Record<string, number>;   // animalTypeId â†’ 0–100
-  milkGrades: Record<string, 'A' | 'B' | 'C'>;  // animalTypeId â†’ grade (dairy species only)
+  animalWelfareScores: Record<string, number>;   // animalTypeId → 0·100
+  milkGrades: Record<string, 'A' | 'B' | 'C'>;  // animalTypeId → grade (dairy species only)
   // Organic certification tracking (farm-wide)
   lastSyntheticInputDay: number;                  // day last pesticide/chemical fertilizer was used
   // Breeding & Veterinary infrastructure (Plan 2)
@@ -694,12 +694,12 @@ export interface GameState {
 
   seedVault: SeedEntry[];
   hybridJobs: HybridJob[];
-  cropQualityMap: Record<string, number>; // cropId â†’ quality gene from last harvested seed
+  cropQualityMap: Record<string, number>; // cropId → quality gene from last harvested seed
 
   // Animal feed tracking
   henilQueue: HenilBatch[];
-  grainMissedDays: number;   // 0–7 rolling: how many of last 7 days grain was short
-  hayMissedDays: number;     // 0–7 rolling: how many of last 7 days hay was short
+  grainMissedDays: number;   // 0·7 rolling: how many of last 7 days grain was short
+  hayMissedDays: number;     // 0·7 rolling: how many of last 7 days hay was short
   animalsManuallyFed: boolean; // true if player tapped Feed All this day (no-worker path)
 
   // Settings
@@ -891,7 +891,7 @@ export interface GameState {
   unassignWorkerFromProcessingBuilding: (buildingId: string, workerId: string) => void;
   installColdStorage: (buildingId: string) => void;
 
-  // â”€â”€ World Map â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── World Map ────────────────────────────────────────────────────────────
   mapFields: MapField[];
   mapPanX: number;
   mapPanY: number;
@@ -1313,7 +1313,7 @@ export const useGameStore = create<GameState>()(
         const workerBonuses = getWorkerBonuses(state.workers ?? []);
         const season = getSeason(newDay);
 
-        // Fuel price fluctuation (±$0.04/day, clamped $0.90–$1.80)
+        // Fuel price fluctuation (·$0.04/day, clamped $0.90·$1.80)
         const fuelDelta = (Math.random() - 0.5) * 0.08;
         const newFuelPrice = Math.min(1.80, Math.max(0.90, (state.fuelPrice ?? 1.20) + fuelDelta));
         const prevSeason = getSeason(state.day);
@@ -1346,23 +1346,23 @@ export const useGameStore = create<GameState>()(
 
         // Weather summary
         const WEATHER_INFO: Record<string, { icon: string; name: string; severity: DaySummaryEvent['severity'] }> = {
-          perfect:    { icon: 'âœ¨', name: 'Perfect day — ideal conditions',       severity: 'good' },
-          sunny:      { icon: 'â˜€ï¸', name: 'Sunny',                                severity: 'info' },
-          cloudy:     { icon: 'â˜ï¸', name: 'Cloudy',                               severity: 'info' },
-          rain:       { icon: 'ðŸŒ§ï¸', name: 'Rain — good for crops',               severity: 'info' },
-          heavy_rain: { icon: 'â›ˆï¸', name: 'Heavy rain',                           severity: 'warning' },
-          drought:    { icon: 'ðŸŒµ', name: 'Drought! Crops at risk',               severity: 'danger' },
-          frost:      { icon: 'â„ï¸', name: 'Frost! Crops at risk',                 severity: 'danger' },
-          hail:       { icon: 'ðŸŒ¨ï¸', name: 'Hail! Crops at risk',                  severity: 'danger' },
-          wind:       { icon: 'ðŸ’¨', name: 'Strong wind',                          severity: 'warning' },
-          fog:        { icon: 'ðŸŒ«ï¸', name: 'Fog',                                  severity: 'info' },
+          perfect:    { icon: '✨', name: 'Perfect day · ideal conditions',       severity: 'good' },
+          sunny:      { icon: '☀️', name: 'Sunny',                                severity: 'info' },
+          cloudy:     { icon: '☁️', name: 'Cloudy',                               severity: 'info' },
+          rain:       { icon: '🌧️', name: 'Rain · good for crops',               severity: 'info' },
+          heavy_rain: { icon: '⛈️', name: 'Heavy rain',                           severity: 'warning' },
+          drought:    { icon: '🌵', name: 'Drought! Crops at risk',               severity: 'danger' },
+          frost:      { icon: '❄️', name: 'Frost! Crops at risk',                 severity: 'danger' },
+          hail:       { icon: '🌨️', name: 'Hail! Crops at risk',                  severity: 'danger' },
+          wind:       { icon: '💨', name: 'Strong wind',                          severity: 'warning' },
+          fog:        { icon: '🌫️', name: 'Fog',                                  severity: 'info' },
         };
         if (todayWeather) {
-          const w = WEATHER_INFO[todayWeather.event] ?? { icon: 'ðŸŒ¤ï¸', name: todayWeather.event, severity: 'info' as const };
+          const w = WEATHER_INFO[todayWeather.event] ?? { icon: '🌤️', name: todayWeather.event, severity: 'info' as const };
           summary.push({ id: 'weather', icon: w.icon, title: w.name, severity: w.severity });
         }
 
-        // â”€â”€ Price engine tick (all commodities) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Price engine tick (all commodities) ────────────────────────────
         const priceTickResult = tickAllPrices({
           prices: state.prices,
           momentum: state.priceMomentum ?? {},
@@ -1427,13 +1427,13 @@ export const useGameStore = create<GameState>()(
           const bull = newNewsEvent.modifier >= 1;
           summary.push({
             id: 'news',
-            icon: bull ? 'ðŸ“ˆ' : 'ðŸ“‰',
+            icon: bull ? '📈' : '📉',
             title: newNewsEvent.description,
             severity: bull ? 'good' : 'warning',
           });
         }
 
-        // â”€â”€ Animal Show: open entry window at days 83–89 of each season quarter â”€â”€
+        // ── Animal Show: open entry window at days 83·89 of each season quarter ──
         const dayInSeason = (newDay - 1) % 90;
         const showWindowOpen = dayInSeason >= 82 && dayInSeason <= 88;
 
@@ -1448,16 +1448,16 @@ export const useGameStore = create<GameState>()(
         let newSeasonStartRevenue = 0;
 
         if (season !== prevSeason) {
-          const SEASON_ICONS: Record<string, string> = { spring: 'ðŸŒ¸', summer: 'â˜€ï¸', autumn: 'ðŸ‚', winter: 'â„ï¸' };
+          const SEASON_ICONS: Record<string, string> = { spring: '🌸', summer: '☀️', autumn: '🍂', winter: '❄️' };
           const enteringPeak = CROP_TYPES.filter(c => c.peakSeason === season).map(c => c.name);
           const leavingPeak  = CROP_TYPES.filter(c => c.peakSeason === prevSeason).map(c => c.name);
           summary.push({
             id: 'season_change',
-            icon: SEASON_ICONS[season] ?? 'ðŸ—“ï¸',
+            icon: SEASON_ICONS[season] ?? '🗓️',
             title: `${season.charAt(0).toUpperCase() + season.slice(1)} has arrived`,
             detail: [
-              enteringPeak.length ? `ðŸ“‰ Prices falling: ${enteringPeak.slice(0, 3).join(', ')}` : '',
-              leavingPeak.length  ? `ðŸ“ˆ Prices rising: ${leavingPeak.slice(0, 3).join(', ')}`   : '',
+              enteringPeak.length ? `📉 Prices falling: ${enteringPeak.slice(0, 3).join(', ')}` : '',
+              leavingPeak.length  ? `📈 Prices rising: ${leavingPeak.slice(0, 3).join(', ')}`   : '',
             ].filter(Boolean).join(' · '),
             severity: 'info',
           });
@@ -1468,15 +1468,15 @@ export const useGameStore = create<GameState>()(
           const harvestTarget = Math.max(5, Math.min(25, state.parcels.filter(p => p.owned).length * 2));
           const haTarget = Math.round(ownedHa + Math.max(5, Math.floor(ownedHa * 0.2)));
           newSeasonGoals = [
-            { id: `earn_${newDay}`, icon: 'ðŸ’°', label: `Earn $${earnTarget.toLocaleString()} this season`, type: 'earn', target: earnTarget, reward: 3000 },
-            { id: `harvest_${newDay}`, icon: 'ðŸŒ¾', label: `Harvest ${harvestTarget} times`, type: 'harvest_count', target: harvestTarget, reward: 2000 },
-            { id: `land_${newDay}`, icon: 'ðŸ—ºï¸', label: `Own ${haTarget}+ ha`, type: 'own_ha', target: haTarget, reward: 1500 },
+            { id: `earn_${newDay}`, icon: '💰', label: `Earn $${earnTarget.toLocaleString()} this season`, type: 'earn', target: earnTarget, reward: 3000 },
+            { id: `harvest_${newDay}`, icon: '🌾', label: `Harvest ${harvestTarget} times`, type: 'harvest_count', target: harvestTarget, reward: 2000 },
+            { id: `land_${newDay}`, icon: '🗺️', label: `Own ${haTarget}+ ha`, type: 'own_ha', target: haTarget, reward: 1500 },
           ];
           newSeasonGoalSeason = season;
           newSeasonStartMoney = state.money;
           newSeasonStartRevenue = state.totalRevenue;
 
-          // â”€â”€ Animal Show: resolve results at season transition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          // ── Animal Show: resolve results at season transition ──────────────
           const { geneScore: geneScoreShow } = require('../engine/animals');
           const prevSeasonStart = state.day - ((state.day - 1) % 90);
           const prevSeasonKey = `${prevSeason}_${prevSeasonStart}`;
@@ -1514,9 +1514,9 @@ export const useGameStore = create<GameState>()(
 
           for (const result of newShowResults) {
             if (result.placement === 1) {
-              summary.push({ id: `show_win_${result.id}`, icon: 'ðŸ†', title: `1st place at the County Show! +$${result.prize.toLocaleString()}`, detail: '', severity: 'good' });
+              summary.push({ id: `show_win_${result.id}`, icon: '🏆', title: `1st place at the County Show! +$${result.prize.toLocaleString()}`, detail: '', severity: 'good' });
             } else if (result.placement <= 3) {
-              summary.push({ id: `show_place_${result.id}`, icon: 'ðŸŽ–ï¸', title: `${result.placement === 2 ? '2nd' : '3rd'} place at the County Show! +$${result.prize.toLocaleString()}`, detail: '', severity: 'good' });
+              summary.push({ id: `show_place_${result.id}`, icon: '🎖️', title: `${result.placement === 2 ? '2nd' : '3rd'} place at the County Show! +$${result.prize.toLocaleString()}`, detail: '', severity: 'good' });
             }
           }
         }
@@ -1531,13 +1531,13 @@ export const useGameStore = create<GameState>()(
           activeFair = { id: `fair_${newDay}`, daysRemaining: 7, discount: 0.30 };
           summary.push({
             id: 'fair',
-            icon: 'ðŸŽª',
+            icon: '🎪',
             title: 'Farm Fair! Animals -30% for 7 days',
             severity: 'good',
           });
         }
 
-        // â”€â”€ Seasonal weather events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Seasonal weather events ──────────────────────────────────────────
         const EVENT_BY_SEASON: Record<string, ('heat_wave' | 'flood' | 'frost')[]> = {
           spring: ['flood'],
           summer: ['heat_wave'],
@@ -1547,23 +1547,23 @@ export const useGameStore = create<GameState>()(
         let seasonalEvent = state.seasonalEvent ?? null;
         // Expire old event
         if (seasonalEvent && newDay > seasonalEvent.endsDay) {
-          summary.push({ id: 'event_end', icon: 'âœ…', title: `${seasonalEvent.type.replace('_', ' ')} has passed`, severity: 'info' });
+          summary.push({ id: 'event_end', icon: '✅', title: `${seasonalEvent.type.replace('_', ' ')} has passed`, severity: 'info' });
           seasonalEvent = null;
         }
         // Chance to start new event (3% per day if none active)
         if (!seasonalEvent && Math.random() < 0.03) {
           const possible = EVENT_BY_SEASON[season] ?? ['heat_wave'];
           const type = possible[Math.floor(Math.random() * possible.length)];
-          const severity = 0.5 + Math.random() * 0.5; // 0.5–1.0
-          const durationDays = Math.round(5 + Math.random() * 10); // 5–15 days
+          const severity = 0.5 + Math.random() * 0.5; // 0.5·1.0
+          const durationDays = Math.round(5 + Math.random() * 10); // 5·15 days
           seasonalEvent = { type, startDay: newDay, endsDay: newDay + durationDays, severity };
-          const EVENT_ICONS: Record<string, string> = { heat_wave: 'ðŸŒ¡ï¸', flood: 'ðŸŒŠ', frost: 'â„ï¸' };
+          const EVENT_ICONS: Record<string, string> = { heat_wave: '🌡️', flood: '🌊', frost: '❄️' };
           const EVENT_NAMES: Record<string, string> = { heat_wave: 'Heat Wave', flood: 'Flood', frost: 'Early Frost' };
           summary.push({
             id: 'seasonal_event',
             icon: EVENT_ICONS[type],
             title: `${EVENT_NAMES[type]}! (${durationDays}d)`,
-            detail: type === 'heat_wave' ? 'âˆ’15% crop yield while active' : type === 'flood' ? 'Soil fertility draining faster' : 'Crops at risk of damage',
+            detail: type === 'heat_wave' ? '−15% crop yield while active' : type === 'flood' ? 'Soil fertility draining faster' : 'Crops at risk of damage',
             severity: 'danger',
           });
         }
@@ -1585,7 +1585,7 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // â”€â”€ NPC competitor sells â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── NPC competitor sells ─────────────────────────────────────────────
 
         // Map NPC farm IDs to map owner types
         const NPC_MAP_OWNER = NPC_FARM_GROUP;
@@ -1613,7 +1613,7 @@ export const useGameStore = create<GameState>()(
             const cropName = CT.find((c: any) => c.id === cropId)?.name ?? cropId;
             const sellEvent = {
               id: `npc_sell_${farm.id}_${newDay}`,
-              icon: 'ðŸ­',
+              icon: '🏭',
               title: `${farm.name} flooded the market`,
               detail: `Sold ${volume} ${cropName} · prices depressed ${Math.round((1 - pressureMod) * 100)}% for ${duration}d`,
               severity: 'warning' as const,
@@ -1633,7 +1633,7 @@ export const useGameStore = create<GameState>()(
               mapFields = mapFields.map(f => f.id === target.id ? { ...f, owner: mapOwner } : f);
               const buyEvent = {
                 id: `npc_buy_${farm.id}_${newDay}`,
-                icon: 'ðŸ´',
+                icon: '🏴',
                 title: `${farm.name} acquired new land!`,
                 detail: `${target.name} (~${target.approximateHa}ha) is now under rival control`,
                 severity: 'warning' as const,
@@ -1670,9 +1670,9 @@ export const useGameStore = create<GameState>()(
               }
               const loseEvent = {
                 id: `npc_lose_${farm.id}_${newDay}`,
-                icon: 'ðŸ“‰',
+                icon: '📉',
                 title: `${farm.name} is going bankrupt!`,
-                detail: `Foreclosure sale — ${farm.tier * 2}ha parcel available at 40% off`,
+                detail: `Foreclosure sale · ${farm.tier * 2}ha parcel available at 40% off`,
                 severity: 'info' as const,
               };
               summary.push(loseEvent);
@@ -1702,7 +1702,7 @@ export const useGameStore = create<GameState>()(
           priceHistory[p.cropId] = [...prev, p.price].slice(-90);
         }
 
-        // â”€â”€ Workers daily tick â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Workers daily tick ──────────────────────────────────────────────
         const tickedWorkers = (state.workers ?? []).map(w => tickWorker(w, newDay));
 
         // Weekly satisfaction pressure
@@ -1748,7 +1748,7 @@ export const useGameStore = create<GameState>()(
               id: `req_poach_${w.id}_${newDay}`,
               workerId: w.id,
               workerName: w.name,
-              workerIcon: WORKER_ROLE_CONFIG[w.role]?.icon ?? 'ðŸ‘·',
+              workerIcon: WORKER_ROLE_CONFIG[w.role]?.icon ?? '👷',
               type: 'poaching_alert',
               message: `${w.name} has been approached by a competitor farm offering $${offerWage}/day.`,
               cost: offerWage - w.wagePerDay,
@@ -1784,7 +1784,7 @@ export const useGameStore = create<GameState>()(
             id: `req_review_${w.id}_${newDay}`,
             workerId: w.id,
             workerName: w.name,
-            workerIcon: WORKER_ROLE_CONFIG[w.role]?.icon ?? 'ðŸ‘·',
+            workerIcon: WORKER_ROLE_CONFIG[w.role]?.icon ?? '👷',
             type: 'performance_review' as const,
             message: `${w.name} is due for a performance review.`,
             urgency: 'routine' as const,
@@ -1801,7 +1801,7 @@ export const useGameStore = create<GameState>()(
         ]);
         for (const w of finalWorkers) {
           if (busyWorkerIds.has(w.id)) continue;
-          const icon = WORKER_ROLE_CONFIG[w.role]?.icon ?? 'ðŸ‘·';
+          const icon = WORKER_ROLE_CONFIG[w.role]?.icon ?? '👷';
           if (w.satisfaction < 60 && Math.random() < 0.01) {
             personalRequests.push({
               id: `req_payrise_${w.id}_${newDay}`,
@@ -1857,9 +1857,9 @@ export const useGameStore = create<GameState>()(
               id: `req_strike_${newDay}`,
               workerId: 'all',
               workerName: 'All Staff',
-              workerIcon: 'âš ï¸',
+              workerIcon: '⚠️',
               type: 'disagreement',
-              message: `Charlie: "The whole team is at breaking point — average satisfaction is ${Math.round(avgSatisfaction)}%. You need to act now."`,
+              message: `Charlie: "The whole team is at breaking point · average satisfaction is ${Math.round(avgSatisfaction)}%. You need to act now."`,
               consequence: 'All workers may strike. Farm operations will halt.',
               urgency: 'urgent',
               postedDay: newDay,
@@ -1897,7 +1897,7 @@ export const useGameStore = create<GameState>()(
           ].filter(Boolean).join(' · ');
           summary.push({
             id: 'maintenance',
-            icon: 'ðŸ”§',
+            icon: '🔧',
             title: `-$${totalFixed.toLocaleString()} fixed costs`,
             detail,
             severity: 'info',
@@ -1910,7 +1910,7 @@ export const useGameStore = create<GameState>()(
         if (interest > 0) {
           summary.push({
             id: 'interest',
-            icon: 'ðŸ’°',
+            icon: '💰',
             title: `+$${Math.round(interest).toLocaleString()} interest`,
             detail: 'Savings account yield',
             severity: 'good',
@@ -1923,7 +1923,7 @@ export const useGameStore = create<GameState>()(
           if (daysLeft === 7 || daysLeft === 1) {
             summary.push({
               id: `loan_warn_${l.id}_${daysLeft}`,
-              icon: 'âš ï¸',
+              icon: '⚠️',
               title: `Loan due in ${daysLeft} day${daysLeft > 1 ? 's' : ''}`,
               detail: `$${Math.round(l.totalOwed).toLocaleString()} owed · pay in Office to avoid late fee`,
               severity: 'warning',
@@ -1951,8 +1951,8 @@ export const useGameStore = create<GameState>()(
           const lateFee = Math.round(loan.totalOwed * LATE_FEE_RATE);
           summary.push({
             id: `default_${loan.id}`,
-            icon: 'ðŸ’¸',
-            title: 'Loan defaulted — funds seized',
+            icon: '💸',
+            title: 'Loan defaulted · funds seized',
             detail: `$${Math.round(loan.totalOwed).toLocaleString()} + $${lateFee.toLocaleString()} late fee · credit score hit`,
             severity: 'danger',
           });
@@ -1966,7 +1966,7 @@ export const useGameStore = create<GameState>()(
               const crop = CROP_TYPES.find(cr => cr.id === c.cropId);
               summary.push({
                 id: `contract_warn_${c.id}`,
-                icon: 'âš ï¸',
+                icon: '⚠️',
                 title: `${crop?.name ?? c.cropId} contract expires in ${daysLeft}d`,
                 detail: `Delivered: ${c.delivered}/${c.amount} ${crop?.unit ?? ''}`,
                 severity: 'warning',
@@ -1993,8 +1993,8 @@ export const useGameStore = create<GameState>()(
           const crop = CROP_TYPES.find(cr => cr.id === c.cropId);
           summary.push({
             id: `contract_failed_${c.id}`,
-            icon: 'ðŸ’”',
-            title: `Contract failed — ${crop?.name ?? c.cropId}`,
+            icon: '💔',
+            title: `Contract failed · ${crop?.name ?? c.cropId}`,
             detail: `-$${penalty.toLocaleString()} penalty · ${c.delivered}/${c.amount} ${crop?.unit ?? ''} delivered`,
             severity: 'danger',
           });
@@ -2074,16 +2074,16 @@ export const useGameStore = create<GameState>()(
           const w = WEATHER_INFO[todayWeather!.event];
           summary.push({
             id: 'crop_destroyed',
-            icon: 'ðŸ’€',
+            icon: '💀',
             title: `${destroyedCount} plot${destroyedCount > 1 ? 's' : ''} destroyed`,
-            detail: `By ${w?.name.split('—')[0].trim() ?? 'extreme weather'}${weatherInsurancePayout > 0 ? ` — insurance covers $${weatherInsurancePayout.toLocaleString()}` : ''}`,
+            detail: `By ${w?.name.split('·')[0].trim() ?? 'extreme weather'}${weatherInsurancePayout > 0 ? ` · insurance covers $${weatherInsurancePayout.toLocaleString()}` : ''}`,
             severity: 'danger',
           });
           if (weatherInsurancePayout > 0) {
             summary.push({
               id: 'insurance_weather',
-              icon: 'ðŸ›¡ï¸',
-              title: `+$${weatherInsurancePayout.toLocaleString()} — insurance payout`,
+              icon: '🛡️',
+              title: `+$${weatherInsurancePayout.toLocaleString()} · insurance payout`,
               detail: `${destroyedCount} plot${destroyedCount > 1 ? 's' : ''} covered`,
               severity: 'good',
             });
@@ -2117,7 +2117,7 @@ export const useGameStore = create<GameState>()(
         if (fireDestroyedCount > 0) {
           summary.push({
             id: 'fire',
-            icon: 'ðŸ”¥',
+            icon: '🔥',
             title: `Fire! ${fireDestroyedCount} plot${fireDestroyedCount > 1 ? 's' : ''} destroyed`,
             detail: fireInsurancePayout > 0 ? `Insurance covers $${fireInsurancePayout.toLocaleString()}` : 'No fire insurance',
             severity: 'danger',
@@ -2125,8 +2125,8 @@ export const useGameStore = create<GameState>()(
           if (fireInsurancePayout > 0) {
             summary.push({
               id: 'insurance_fire',
-              icon: 'ðŸ›¡ï¸',
-              title: `+$${fireInsurancePayout.toLocaleString()} — fire insurance payout`,
+              icon: '🛡️',
+              title: `+$${fireInsurancePayout.toLocaleString()} · fire insurance payout`,
               severity: 'good',
             });
           }
@@ -2134,7 +2134,7 @@ export const useGameStore = create<GameState>()(
 
         const totalInsurancePayout = weatherInsurancePayout + fireInsurancePayout;
 
-        // ── Pest & Disease tick ──────────────────────────────────────────────────
+        // -- Pest & Disease tick --------------------------------------------------
         parcels = parcels.map(p => {
           if (!p.owned || !p.plantedCrop) return p;
 
@@ -2164,12 +2164,12 @@ export const useGameStore = create<GameState>()(
             const newSeverity = tickPestSeverity(pestState, config, state.beneficialInsectsActive);
             pestState = { ...pestState, severity: newSeverity };
 
-            // Detect if severity ≥ 7 (visible damage) and no consultant already flagged it
+            // Detect if severity = 7 (visible damage) and no consultant already flagged it
             if (newSeverity >= 7 && !pestState.detectedDay) {
               pestState = { ...pestState, detectedDay: newDay };
               summary.push({
                 id: `pest_visible_${p.id}_${newDay}`,
-                icon: '🐛',
+                icon: '??',
                 title: `Severe ${config.label} on ${p.name}`,
                 detail: `Visible crop damage. Apply ${config.treatment} immediately.`,
                 severity: 'warning',
@@ -2210,7 +2210,7 @@ export const useGameStore = create<GameState>()(
             const config = PEST_CONFIG[p.pestState.type];
             summary.push({
               id: `pest_scout_${parcelId}_${newDay}`,
-              icon: '🔬',
+              icon: '??',
               title: `Early ${config.label} detected on ${p.name}`,
               detail: `Consultant spotted early signs. Treat now before it spreads.`,
               severity: 'info',
@@ -2252,7 +2252,7 @@ export const useGameStore = create<GameState>()(
             }
           }
         }
-        // Disease spread: unresolved disease events can infect same-crop neighbors (±1 index)
+        // Disease spread: unresolved disease events can infect same-crop neighbors (·1 index)
         const spreadEvents: FieldEvent[] = [];
         for (const fe of fieldEvents.filter(e => e.type === 'disease' && !e.resolved)) {
           const infectedParcel = parcels.find(p => p.id === fe.parcelId);
@@ -2283,7 +2283,7 @@ export const useGameStore = create<GameState>()(
         if (spreadEvents.length > 0) {
           summary.push({
             id: 'disease_spread',
-            icon: 'ðŸ¦ ',
+            icon: '🦠',
             title: `Disease spread to ${spreadEvents.length} neighboring plot${spreadEvents.length > 1 ? 's' : ''}`,
             detail: 'Treat crops quickly to stop further spread',
             severity: 'danger',
@@ -2293,7 +2293,7 @@ export const useGameStore = create<GameState>()(
         for (const fe of newFieldEvents) {
           summary.push({
             id: fe.id,
-            icon: fe.type === 'disease' ? 'ðŸ¦ ' : 'ðŸ›',
+            icon: fe.type === 'disease' ? '🦠' : '🐛',
             title: fe.type === 'disease' ? 'Disease detected' : 'Pest detected',
             detail: plagaPayout > 0 ? `Pest insurance covers $${plagaPayout.toLocaleString()}` : 'Go to Fields to treat the crop',
             severity: 'warning',
@@ -2302,29 +2302,29 @@ export const useGameStore = create<GameState>()(
         if (plagaPayout > 0 && newFieldEvents.length > 0) {
           summary.push({
             id: 'insurance_plaga',
-            icon: 'ðŸ›¡ï¸',
-            title: `+$${plagaPayout.toLocaleString()} — pest insurance payout`,
+            icon: '🛡️',
+            title: `+$${plagaPayout.toLocaleString()} · pest insurance payout`,
             severity: 'good',
           });
         }
         const totalInsurancePayoutAll = totalInsurancePayout + plagaPayout;
 
         // TODO: apply doubled sick chance for underfed animals using state.grainMissedDays / state.hayMissedDays
-        // Veterinary events: 1.5% chance per animal to get sick; untreated for 14d â†’ death
+        // Veterinary events: 1.5% chance per animal to get sick; untreated for 14d → death
         let animals = state.animals;
         const newSickIds: string[] = [];
         const diedIds: string[] = [];
         // ORDERING NOTE: the livestock disposal fee block (further below) reads
         // diedIds.length BEFORE the apiary colony-collapse block appends to it.
-        // This is intentional — bee colony collapse is not a carcass disposal event.
+        // This is intentional · bee colony collapse is not a carcass disposal event.
         // If you add new death sources after the disposal fee block, document their
         // fee treatment here.
 
-        // â”€â”€ Quarantine graduation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Quarantine graduation ─────────────────────────────────────────────
         animals = animals.map((a: OwnedAnimal) => {
           if (!a.quarantineUntilDay) return a;
           if (newDay < a.quarantineUntilDay) return a;
-          // Period over — 2% residual disease risk even with pen
+          // Period over · 2% residual disease risk even with pen
           const escaped = Math.random() < 0.02;
           if (escaped) {
             newSickIds.push(a.id);
@@ -2341,7 +2341,7 @@ export const useGameStore = create<GameState>()(
           };
         });
 
-        // â”€â”€ Pregnancy scanner: due-date warnings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Pregnancy scanner: due-date warnings ─────────────────────────────────
         const hasPregScanner = (state.productionBuildings ?? []).some(pb =>
           pb.buildingTypeId.startsWith('bld_calving_pen') &&
           pb.equipmentSlots.includes('eq_pregnancy_scanner')
@@ -2364,7 +2364,7 @@ export const useGameStore = create<GameState>()(
           if (imminentBirths.length > 0) {
             summary.push({
               id: `preg_scanner_warning_${newDay}`,
-              icon: 'ðŸ¤°',
+              icon: '🤰',
               title: `${imminentBirths.length} animal${imminentBirths.length > 1 ? 's' : ''} due to give birth within 3 days`,
               detail: 'Check calving pen capacity in Management',
               severity: 'warning',
@@ -2372,7 +2372,7 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // â”€â”€ Sick bay auto-isolation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Sick bay auto-isolation ───────────────────────────────────────────
         const hasVetWorker = (state.workers ?? []).some((w: Worker) => w.role === 'veterinarian');
         const sickBayCap = state.sickBayCapacity ?? 0;
 
@@ -2404,9 +2404,9 @@ export const useGameStore = create<GameState>()(
           });
         }
 
-        // Sickness spread — must run BEFORE death filter
+        // Sickness spread · must run BEFORE death filter
         animals = animals.map((a: OwnedAnimal) => {
-          if (a.inIsolation) return a; // isolated — cannot contract illness from spread
+          if (a.inIsolation) return a; // isolated · cannot contract illness from spread
           if (a.sick) return a;
           const baseSickChance = (a.traits ?? []).includes('hardy') ? 0.006 : 0.015;
           const hardinessDiv = a.genes?.hardiness ?? 1.0;
@@ -2418,7 +2418,7 @@ export const useGameStore = create<GameState>()(
           return a;
         });
 
-        // Death filter — runs AFTER sickness spread
+        // Death filter · runs AFTER sickness spread
         animals = animals.filter((a: OwnedAnimal) => {
           if (a.sick && a.sicknessDay !== undefined && newDay - a.sicknessDay >= 14) {
             diedIds.push(a.id);
@@ -2427,7 +2427,7 @@ export const useGameStore = create<GameState>()(
           return true;
         });
 
-        // â”€â”€ Brooder house: young poultry mortality â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Brooder house: young poultry mortality ────────────────────────────────
         const BROODER_SPECIES = new Set(['gallina', 'pato', 'codorniz']);
         const hasBrooder = (state.buildings ?? []).some(bid =>
           bid === 'bld_brooder_house_s' || bid === 'bld_brooder_house_m' || bid === 'bld_brooder_house_l'
@@ -2444,7 +2444,7 @@ export const useGameStore = create<GameState>()(
           return true;
         });
 
-        // â”€â”€ Hatchery: incubation queue hatching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Hatchery: incubation queue hatching ───────────────────────────────
         let newIncubationQueue = [...(state.incubationQueue ?? [])];
         {
           const HATCH_RATE = 0.80;
@@ -2473,7 +2473,7 @@ export const useGameStore = create<GameState>()(
             animals = [...animals, ...newChicks];
             summary.push({
               id: `hatch_${newDay}_${batch.batchId}`,
-              icon: 'ðŸ£',
+              icon: '🐣',
               title: `${chickCount} ${batch.typeId === 'gallina' ? 'chick' : batch.typeId === 'pato' ? 'duckling' : 'quail chick'}${chickCount > 1 ? 's' : ''} hatched`,
               detail: `from ${batch.eggCount} eggs placed ${newDay - batch.startDay} days ago`,
               severity: 'info' as const,
@@ -2481,14 +2481,14 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // â”€â”€ Weaner accommodation: post-weaning pig mortality â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Weaner accommodation: post-weaning pig mortality ─────────────────────
         const hasWeanerAccom = (state.buildings ?? []).some(bid =>
           bid === 'bld_weaner_accommodation_s' || bid === 'bld_weaner_accommodation_m' || bid === 'bld_weaner_accommodation_l'
         );
         animals = animals.filter((a: OwnedAnimal) => {
           if (a.typeId !== 'cerdo') return true;
           const agedays = newDay - a.bornDay;
-          if (agedays < 28 || agedays > 56) return true; // only weaners (28–56 days)
+          if (agedays < 28 || agedays > 56) return true; // only weaners (28·56 days)
           const mortalityRate = hasWeanerAccom ? 0.003 : 0.02; // 0.3% vs 2% per day
           if (Math.random() < mortalityRate) {
             diedIds.push(a.id);
@@ -2498,32 +2498,32 @@ export const useGameStore = create<GameState>()(
         });
 
         if (newSickIds.length > 0) {
-          summary.push({ id: 'animals_sick', icon: 'ðŸ¤’', title: `${newSickIds.length} animal${newSickIds.length > 1 ? 's' : ''} fell sick`, detail: 'Treat within 14 days or they will die', severity: 'warning' });
+          summary.push({ id: 'animals_sick', icon: '🤒', title: `${newSickIds.length} animal${newSickIds.length > 1 ? 's' : ''} fell sick`, detail: 'Treat within 14 days or they will die', severity: 'warning' });
         }
         if (diedIds.length > 0) {
-          summary.push({ id: 'animals_died', icon: 'ðŸ’€', title: `${diedIds.length} animal${diedIds.length > 1 ? 's' : ''} died from untreated sickness`, severity: 'danger' });
+          summary.push({ id: 'animals_died', icon: '💀', title: `${diedIds.length} animal${diedIds.length > 1 ? 's' : ''} died from untreated sickness`, severity: 'danger' });
         }
 
-        // â”€â”€ Animal disposal fee â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Animal disposal fee ───────────────────────────────────────────────
         const hasRenderer = (state.buildings ?? []).includes('bld_rendering_incinerator');
         let disposalFee = 0;
         if (diedIds.length > 0 && !hasRenderer) {
           disposalFee = diedIds.length * 80;
           summary.push({
             id: `disposal_fee_${newDay}`,
-            icon: 'ðŸ’€',
-            title: `${diedIds.length} animal${diedIds.length > 1 ? 's' : ''} died — disposal fee`,
+            icon: '💀',
+            title: `${diedIds.length} animal${diedIds.length > 1 ? 's' : ''} died · disposal fee`,
             detail: `$${disposalFee} callout fee. Build a Rendering Unit to avoid this.`,
             severity: 'warning',
           });
         }
 
-        // â”€â”€ Sheep dip: autumn lameness event â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Sheep dip: autumn lameness event ──────────────────────────────────────
         {
           const prevSeason = seasonKey(newDay - 1);
           const currentSeason = seasonKey(newDay);
           if (currentSeason === 'autumn' && prevSeason !== 'autumn') {
-            // Season just changed to autumn — run annual sheep dip check
+            // Season just changed to autumn · run annual sheep dip check
             const hasSheepDip = (state.buildings ?? []).includes('bld_sheep_dip');
             const sheep = animals.filter((a: OwnedAnimal) => a.typeId === 'oveja' && !a.sick);
             sheep.forEach((s: OwnedAnimal) => {
@@ -2538,7 +2538,7 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // â”€â”€ Apiary shelter: winter colony collapse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Apiary shelter: winter colony collapse ────────────────────────────────
         {
           const prevSeasonApiary = seasonKey(newDay - 1);
           const currSeasonApiary = seasonKey(newDay);
@@ -2547,7 +2547,7 @@ export const useGameStore = create<GameState>()(
             const bees = animals.filter((a: OwnedAnimal) => a.typeId === 'abeja' && !a.sick);
             let collapseCount = 0;
             // Note: collapsed colonies push to diedIds but do NOT incur the livestock
-            // disposal fee (computed earlier in this function) — colony collapse is
+            // disposal fee (computed earlier in this function) · colony collapse is
             // environmental loss, not a carcass disposal event.
             bees.forEach((bee: OwnedAnimal) => {
               const collapseChance = hasApiaryShelter ? 0.04 : 0.20; // 4% vs 20% per colony
@@ -2560,7 +2560,7 @@ export const useGameStore = create<GameState>()(
             if (collapseCount > 0) {
               summary.push({
                 id: `apiary_collapse_${newDay}`,
-                icon: 'ðŸ',
+                icon: '🐝',
                 title: `${collapseCount} bee ${collapseCount > 1 ? 'colonies' : 'colony'} collapsed`,
                 detail: hasApiaryShelter
                   ? 'Shelter reduced losses. Consider adding a queen rearing unit.'
@@ -2575,7 +2575,7 @@ export const useGameStore = create<GameState>()(
         const parcelAdditions: LandParcel[] = [];
         let moneyDelta = 0;
 
-        // â”€â”€ Random events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Random events ────────────────────────────────────────────────────
 
         let activeEvents: GameEvent[] = (state.activeEvents ?? [])
           .filter(e => e.expiresDay > newDay);
@@ -2587,7 +2587,7 @@ export const useGameStore = create<GameState>()(
           if (r.readyDay !== null && newDay >= r.readyDay) {
             summary.push({
               id: `repair_done_${r.machineId}`,
-              icon: 'ðŸ”§',
+              icon: '🔧',
               title: 'Machine repair complete',
               detail: 'Machine is back to full capacity',
               severity: 'good',
@@ -2701,7 +2701,7 @@ export const useGameStore = create<GameState>()(
                   day: newDay,
                   type: 'plaga' as InsuranceType,
                   payout: compensation,
-                  description: `Pest outbreak — ${affectedHa}ha of ${affectedIds[0]} affected`,
+                  description: `Pest outbreak · ${affectedHa}ha of ${affectedIds[0]} affected`,
                 });
                 moneyDelta += compensation;
               }
@@ -2731,7 +2731,7 @@ export const useGameStore = create<GameState>()(
             }
           }
 
-          // Push timed events to activeEvents (skip equipment_failure — handled above)
+          // Push timed events to activeEvents (skip equipment_failure · handled above)
           // windfall_subsidy uses durationDays:1 to block a second subsidy the next day
           if (newEventTemplate.type !== 'equipment_failure' && newEventTemplate.durationDays > 0) {
             const newEvent: GameEvent = {
@@ -2767,7 +2767,7 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // â”€â”€ Auction House â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Auction House ────────────────────────────────────────────────────
         const { geneScore } = require('../engine/animals');
         const { ANIMAL_TYPES: AT_AUCTION } = require('../data/animalTypes');
 
@@ -2784,7 +2784,7 @@ export const useGameStore = create<GameState>()(
         const updatedListings: AuctionListing[] = (state.listings ?? []).map((listing: AuctionListing) => {
           if (listing.resolved) return listing;
 
-          // â”€â”€ NPC bidding on crop / machinery listings (daily) â”€â”€
+          // ── NPC bidding on crop / machinery listings (daily) ──
           if (listing.category === 'crop' || listing.category === 'machinery') {
             const candidateNpcs = [...(npcFarms ?? [])].sort(() => Math.random() - 0.5).slice(0, 3);
             let updated = { ...listing };
@@ -2810,7 +2810,7 @@ export const useGameStore = create<GameState>()(
             listing = updated;
           }
 
-          // â”€â”€ NPC bidding on land listings (existing logic) â”€â”€
+          // ── NPC bidding on land listings (existing logic) ──
           if (listing.category === 'land' && !listing.resolved) {
             const daysLeft = listing.expiresDay - newDay;
             const aiBidChance = daysLeft <= 3 ? 0.5 : daysLeft <= 7 ? 0.25 : 0.1;
@@ -2830,9 +2830,9 @@ export const useGameStore = create<GameState>()(
             }
           }
 
-          // â”€â”€ NPC bidding on animal event listings (batch on event day) â”€â”€
+          // ── NPC bidding on animal event listings (batch on event day) ──
           if (listing.category === 'animal' && isAnimalEventDay && !listing.resolved) {
-            // Simulate 2–4 NPC bids up to a valuation based on gene score
+            // Simulate 2·4 NPC bids up to a valuation based on gene score
             const score = listing.animalGenes ? geneScore(listing.animalGenes) : 1.0;
             const animalTypeDef = AT_AUCTION.find((a: any) => a.typeId === listing.animalTypeId || a.id === listing.animalTypeId);
             const baseValue = animalTypeDef ? animalTypeDef.buyCost * score : 500;
@@ -2849,7 +2849,7 @@ export const useGameStore = create<GameState>()(
             listing = { ...listing, currentBid, bids: newBids };
           }
 
-          // â”€â”€ Resolution: land, crop, machinery (expires), animal (event day) â”€â”€
+          // ── Resolution: land, crop, machinery (expires), animal (event day) ──
           const shouldResolve =
             (listing.category !== 'animal' && newDay >= listing.expiresDay) ||
             (listing.category === 'animal' && isAnimalEventDay);
@@ -2898,7 +2898,7 @@ export const useGameStore = create<GameState>()(
           }
 
           if (!playerSold && listing.sellerId === 'player') {
-            // Reserve not met — return item to player
+            // Reserve not met · return item to player
             if (listing.category === 'crop' && listing.cropId && listing.cropQuantity) {
               auctionInventoryDelta[listing.cropId] = (auctionInventoryDelta[listing.cropId] ?? 0) + listing.cropQuantity;
             } else if (listing.category === 'machinery' && listing.machineId && listing.machineTypeId) {
@@ -2927,15 +2927,15 @@ export const useGameStore = create<GameState>()(
             const labelMap: Record<AuctionCategory, string> = { land: 'Land', animal: 'Animal', crop: 'Crop lot', machinery: 'Machine' };
             summary.push({
               id: `auction_won_${listing.id}`,
-              icon: 'ðŸ†',
-              title: `Auction won — ${labelMap[listing.category]}`,
+              icon: '🏆',
+              title: `Auction won · ${labelMap[listing.category]}`,
               detail: `Paid $${listing.playerBid?.toLocaleString()}`,
               severity: 'good',
             });
           } else if (listing.playerBid !== null && !playerWon) {
             summary.push({
               id: `auction_lost_${listing.id}`,
-              icon: 'ðŸ˜”',
+              icon: '😔',
               title: 'Auction lost',
               detail: `Your bid $${listing.playerBid?.toLocaleString()} · Final $${listing.currentBid.toLocaleString()}`,
               severity: 'warning',
@@ -2943,7 +2943,7 @@ export const useGameStore = create<GameState>()(
           } else if (playerSold) {
             summary.push({
               id: `auction_sold_${listing.id}`,
-              icon: 'ðŸ’°',
+              icon: '💰',
               title: 'Your listing sold',
               detail: `+$${listing.currentBid.toLocaleString()}`,
               severity: 'good',
@@ -2951,8 +2951,8 @@ export const useGameStore = create<GameState>()(
           } else if (listing.sellerId === 'player' && !reserveMet) {
             summary.push({
               id: `auction_unsold_${listing.id}`,
-              icon: 'ðŸ“‹',
-              title: 'Reserve not met — item returned',
+              icon: '📋',
+              title: 'Reserve not met · item returned',
               detail: `Highest bid: $${listing.currentBid.toLocaleString()}`,
               severity: 'warning',
             });
@@ -2995,7 +2995,7 @@ export const useGameStore = create<GameState>()(
           });
           summary.push({
             id: `auction_new_${newDay}`,
-            icon: 'ðŸ·ï¸',
+            icon: '🏷️',
             title: 'New land auction available',
             detail: `${hectares} ha · fertility ${fertility}/25 · starting $${startingBid.toLocaleString()}`,
             severity: 'info',
@@ -3059,14 +3059,14 @@ export const useGameStore = create<GameState>()(
           }
           summary.push({
             id: `animal_auction_event_${newDay}`,
-            icon: 'ðŸ„',
+            icon: '🐄',
             title: 'Animal Auction Event',
             detail: `${animalCount} new animals listed · next event Day ${nextAnimalAuctionDay}`,
             severity: 'info',
           });
         }
 
-        // Trim resolved listings — keep 20 most recent resolved
+        // Trim resolved listings · keep 20 most recent resolved
         const resolvedListings = updatedListings.filter(l => l.resolved).slice(-20);
         const activeListings = updatedListings.filter(l => !l.resolved);
         const trimmedListings = [...activeListings, ...resolvedListings];
@@ -3089,8 +3089,8 @@ export const useGameStore = create<GameState>()(
           const payout = Math.round(timeDepositPayout(d));
           summary.push({
             id: `deposit_matured_${d.id}`,
-            icon: 'ðŸ¦',
-            title: `Time deposit matured — +$${payout.toLocaleString()}`,
+            icon: '🏦',
+            title: `Time deposit matured · +$${payout.toLocaleString()}`,
             detail: `$${d.amount.toLocaleString()} at ${(d.rate * 100).toFixed(0)}% for ${d.termDays}d`,
             severity: 'good',
           });
@@ -3115,8 +3115,8 @@ export const useGameStore = create<GameState>()(
           const crop = CROP_TYPES.find(c => c.id === f.cropId);
           summary.push({
             id: `futures_settled_${f.id}`,
-            icon: toDeliver > 0 ? 'ðŸ“Š' : 'âš ï¸',
-            title: `Futures contract settled — ${crop?.name ?? f.cropId}`,
+            icon: toDeliver > 0 ? '📊' : '⚠️',
+            title: `Futures contract settled · ${crop?.name ?? f.cropId}`,
             detail: toDeliver > 0
               ? `Sold ${toDeliver.toLocaleString()} ${crop?.unit ?? ''} @ $${f.lockPrice.toFixed(2)} · +$${futuresIncome.toLocaleString()}`
               : `Short ${shortfall.toLocaleString()} ${crop?.unit ?? ''} · -$${futuresPenalty.toLocaleString()} penalty`,
@@ -3130,7 +3130,7 @@ export const useGameStore = create<GameState>()(
           ])
         );
 
-        // â”€â”€ Market Orders: execute if price target met â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Market Orders: execute if price target met ──────────────────
         let marketOrderIncome = 0;
         const marketOrderInventoryDelta: Record<string, number> = {};
         const updatedMarketOrders = (state.marketOrders ?? []).map((o: MarketOrder) => {
@@ -3140,8 +3140,8 @@ export const useGameStore = create<GameState>()(
             marketOrderInventoryDelta[o.cropId] = (marketOrderInventoryDelta[o.cropId] ?? 0) + o.quantity;
             summary.push({
               id: `order_expired_${o.id}`,
-              icon: 'ðŸ“‹',
-              title: `Market order expired — ${CROP_TYPES.find(c => c.id === o.cropId)?.name ?? o.cropId}`,
+              icon: '📋',
+              title: `Market order expired · ${CROP_TYPES.find(c => c.id === o.cropId)?.name ?? o.cropId}`,
               detail: `${o.quantity.toLocaleString()} units returned to inventory`,
               severity: 'warning',
             });
@@ -3157,8 +3157,8 @@ export const useGameStore = create<GameState>()(
             const crop = CROP_TYPES.find(c => c.id === o.cropId);
             summary.push({
               id: `order_executed_${o.id}`,
-              icon: 'âœ…',
-              title: `Market order filled — ${crop?.name ?? o.cropId} · +$${revenue.toLocaleString()}`,
+              icon: '✅',
+              title: `Market order filled · ${crop?.name ?? o.cropId} · +$${revenue.toLocaleString()}`,
               detail: `Sold ${o.quantity.toLocaleString()} ${crop?.unit ?? ''} @ $${currentPrice.toFixed(2)}`,
               severity: 'good',
             });
@@ -3173,7 +3173,7 @@ export const useGameStore = create<GameState>()(
           ])
         );
 
-        // â”€â”€ Seed Lab: settle completed hybrid jobs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Seed Lab: settle completed hybrid jobs ──────────────────────
         const completedJobs = state.hybridJobs.filter(j => newDay >= j.readyDay);
         let nextSeedVault = [...(state.seedVault ?? [])];
         for (const job of completedJobs) {
@@ -3236,7 +3236,7 @@ export const useGameStore = create<GameState>()(
         if (autoSellLog.length > 0) {
           summary.push({
             id: 'auto_sell',
-            icon: 'ðŸ¤–',
+            icon: '🤖',
             title: `Auto-sold ${autoSellLog.length} crop type${autoSellLog.length > 1 ? 's' : ''} · +$${Math.round(autoSellIncome).toLocaleString()}`,
             detail: autoSellLog.slice(0, 3).map(s => {
               const c = CROP_TYPES.find(cr => cr.id === s.cropId);
@@ -3287,7 +3287,7 @@ export const useGameStore = create<GameState>()(
               const { _autoCollect: _, ...rest } = a;
               return rest;
             });
-            // We store this as a side effect — will be used in set() below
+            // We store this as a side effect · will be used in set() below
             (animals as any).__newAnimalInventory = newAnimalInventory;
           }
 
@@ -3431,11 +3431,11 @@ export const useGameStore = create<GameState>()(
         let newSilageLevel = state.silageLevel ?? 0;
         const harvestedCropIdsForSet = workerHarvestedIds ?? state.harvestedCropIds;
 
-        // â”€â”€ Fuel tracking for job day â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Fuel tracking for job day ────────────────────────────────────────
         let currentFuel = state.fuel ?? 200;
         const fuelPausedNames: string[] = [];
 
-        // â”€â”€ Process TractorJobs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Process TractorJobs ──────────────────────────────────────────────
         let tractorSlurryDrain = 0;
         const completedTractorJobIds: string[] = [];
         for (const job of (state.tractorJobs ?? [])) {
@@ -3456,7 +3456,7 @@ export const useGameStore = create<GameState>()(
             );
             summary.push({
               id: `tj_${job.id}`,
-              icon: 'ðŸšœ',
+              icon: '🚜',
               title: 'Tilling Complete',
               detail: `${job.parcelIds.length} parcel(s) tilled`,
               severity: 'good' as const,
@@ -3474,17 +3474,17 @@ export const useGameStore = create<GameState>()(
             });
             summary.push({
               id: `tj_${job.id}`,
-              icon: 'ðŸ’Š',
+              icon: '💊',
               title: 'Spraying Complete',
               detail: `${job.parcelIds.length} parcel(s) sprayed`,
               severity: 'good' as const,
             });
           } else if (job.operation === 'plant') {
             // Crop was already set at assignJob time with plantedDay = completesDay
-            // No parcel state change needed here — just record in summary
+            // No parcel state change needed here · just record in summary
             summary.push({
               id: `tj_${job.id}`,
-              icon: 'ðŸŒ±',
+              icon: '🌱',
               title: 'Planting Complete',
               detail: `${job.parcelIds.length} parcel(s) planted`,
               severity: 'good' as const,
@@ -3496,12 +3496,12 @@ export const useGameStore = create<GameState>()(
                 ? { ...p, fertility: Math.min(25, (p.fertility ?? 1) + 1) }
                 : p
             );
-            // Drain the whole tank — one shared tank, so assign (not +=); Math.max(0,”¦)
+            // Drain the whole tank · one shared tank, so assign (not +=); Math.max(0,··)
             // at the accumulation block prevents negatives regardless of job count.
             tractorSlurryDrain = state.slurryLevel ?? 0;
             summary.push({
               id: `tj_${job.id}`,
-              icon: 'ðŸ’§',
+              icon: '💧',
               title: 'Slurry Spread Complete',
               detail: `${job.parcelIds.length} parcel(s) received +1 soil fertility`,
               severity: 'good' as const,
@@ -3512,7 +3512,7 @@ export const useGameStore = create<GameState>()(
           (j: TractorJob) => !completedTractorJobIds.includes(j.id)
         );
 
-        // â”€â”€ Process HarvestJobs (incremental — combine harvests N ha/day) â”€â”€â”€â”€
+        // ── Process HarvestJobs (incremental · combine harvests N ha/day) ────
         let updatedHarvestJobs = [...(state.harvestJobs ?? [])];
         let harvestInventory = { ...inventoryForSet };
         const siloCapForHarvest = getSiloCapacity(state.buildings);
@@ -3587,7 +3587,7 @@ export const useGameStore = create<GameState>()(
         }
         updatedHarvestJobs = updatedHarvestJobs.filter((hj: HarvestJob) => hj.processedHa < hj.totalHa);
 
-        // â”€â”€ Delivery job processing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Delivery job processing ───────────────────────────────────────────
         const hasMechanic = (state.workers ?? []).some(
           (w: Worker) => w.role === 'farm_mechanic'
         );
@@ -3613,7 +3613,7 @@ export const useGameStore = create<GameState>()(
                 breakdownDaysAdded: job.breakdownDaysAdded + delay,
               });
               deliveryEvents.push({
-                msg: `ðŸ”§ Truck broke down on the way to ${job.marketId} — delayed ${delay}d`,
+                msg: `🔧 Truck broke down on the way to ${job.marketId} · delayed ${delay}d`,
                 jobId: job.id,
               });
             } else {
@@ -3622,7 +3622,7 @@ export const useGameStore = create<GameState>()(
             continue;
           }
 
-          // returnDay reached — process completion
+          // returnDay reached · process completion
           deliveryRevenue += job.expectedRevenue;
 
           if (job.needsMaintenance && !hasMechanic) {
@@ -3650,7 +3650,7 @@ export const useGameStore = create<GameState>()(
           }
 
           deliveryEvents.push({
-            msg: `ðŸš› Truck returned from ${job.marketId} — $${job.expectedRevenue.toLocaleString()}`,
+            msg: `🚛 Truck returned from ${job.marketId} · $${job.expectedRevenue.toLocaleString()}`,
             jobId: job.id,
           });
           // Completed job is NOT pushed to updatedDeliveryJobs (removed from queue)
@@ -3658,10 +3658,10 @@ export const useGameStore = create<GameState>()(
 
         // Push delivery events into day summary
         for (const { msg, jobId } of deliveryEvents) {
-          const isBreakdown = msg.startsWith('ðŸ”§');
+          const isBreakdown = msg.startsWith('🔧');
           summary.push({
             id: `delivery_${jobId}`,
-            icon: isBreakdown ? 'ðŸ”§' : 'ðŸš›',
+            icon: isBreakdown ? '🔧' : '🚛',
             title: msg,
             severity: isBreakdown ? 'warning' : 'good',
           });
@@ -3671,14 +3671,14 @@ export const useGameStore = create<GameState>()(
           const uniqueNames = [...new Set(fuelPausedNames)];
           summary.push({
             id: 'fuel_paused',
-            icon: 'â›½',
-            title: `Fuel too low — ${uniqueNames.join(', ')} idle`,
+            icon: '⛽',
+            title: `Fuel too low · ${uniqueNames.join(', ')} idle`,
             detail: `Refuel in the Machinery tab to resume jobs`,
             severity: 'danger',
           });
         }
 
-        // â”€â”€ Crop disease spread â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Crop disease spread ──────────────────────────────────────────────
         const hasShelter = state.buildings.includes('bld_shelter');
         const anyDisease = finalParcels.some(p => p.owned && p.diseased);
         const fieldWorkerCount = (state.workers ?? []).filter(w => w.role === 'field_hand').length;
@@ -3692,7 +3692,7 @@ export const useGameStore = create<GameState>()(
           }
           // Destroy crop if diseased > 20 days untreated
           if (p.diseased && p.diseasedDay && newDay - p.diseasedDay > 20) {
-            summary.push({ id: `blight_${p.id}`, icon: 'ðŸ¦ ', title: `Blight destroyed crop on ${p.name}`, severity: 'danger' });
+            summary.push({ id: `blight_${p.id}`, icon: '🦠', title: `Blight destroyed crop on ${p.name}`, severity: 'danger' });
             return { ...p, plantedCrop: null, diseased: false, diseasedDay: undefined };
           }
           if (!p.plantedCrop || p.diseased) return p;
@@ -3706,10 +3706,10 @@ export const useGameStore = create<GameState>()(
         // Announce new outbreaks (parcels that just became diseased this day)
         const newlyDiseased = finalParcels.filter(p => p.diseased && p.diseasedDay === newDay);
         if (newlyDiseased.length > 0) {
-          summary.push({ id: 'blight_new', icon: 'ðŸ¦ ', title: `Crop blight on ${newlyDiseased.length} plot${newlyDiseased.length > 1 ? 's' : ''}`, detail: 'Treat quickly or lose the crop', severity: 'danger' });
+          summary.push({ id: 'blight_new', icon: '🦠', title: `Crop blight on ${newlyDiseased.length} plot${newlyDiseased.length > 1 ? 's' : ''}`, detail: 'Treat quickly or lose the crop', severity: 'danger' });
         }
 
-        // â”€â”€ Soil daily tick â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Soil daily tick ──────────────────────────────────────────────────
         const parcelsWithSoil = finalParcels.map((p) => {
           if (!p.owned) return p;
           const cropType = p.plantedCrop
@@ -3735,7 +3735,7 @@ export const useGameStore = create<GameState>()(
         });
         finalParcels = parcelsWithSoil;
 
-        // â”€â”€ Price alert triggers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Price alert triggers ─────────────────────────────────────────────
         let priceAlerts = [...(state.priceAlerts ?? [])];
         let alertSellIncome = 0;
         const alertSalesEntries: SaleRecord[] = [];
@@ -3754,8 +3754,8 @@ export const useGameStore = create<GameState>()(
               harvestInventory = { ...harvestInventory, [alert.cropId]: 0 };
               const cropName = CROP_TYPES.find(c => c.id === alert.cropId)?.name ?? alert.cropId;
               alertSalesEntries.push({ day: newDay, amount: revenue, category: 'crops' as const });
-              const dirLabel = alert.direction === 'below' ? 'â‰¤' : 'â‰¥';
-              summary.push({ id: `alert_${alert.id}`, icon: 'ðŸŽ¯', title: `Price alert: sold ${qty.toLocaleString()} ${cropName}`, detail: `${dirLabel}$${alert.targetPrice.toFixed(2)} hit · $${revenue.toLocaleString()} total`, severity: 'good' });
+              const dirLabel = alert.direction === 'below' ? '≤' : '≥';
+              summary.push({ id: `alert_${alert.id}`, icon: '🎯', title: `Price alert: sold ${qty.toLocaleString()} ${cropName}`, detail: `${dirLabel}$${alert.targetPrice.toFixed(2)} hit · $${revenue.toLocaleString()} total`, severity: 'good' });
             }
             triggeredAlertIds.push(alert.id);
           }
@@ -3775,7 +3775,7 @@ export const useGameStore = create<GameState>()(
         if (cropsReady.length > 0) {
           summary.push({
             id: 'crops_ready',
-            icon: 'ðŸŒ¾',
+            icon: '🌾',
             title: `${cropsReady.length} plot${cropsReady.length > 1 ? 's' : ''} ready to harvest`,
             detail: cropsReady.slice(0, 3).map(p => {
               const c = CROP_TYPES.find(ct => ct.id === p.plantedCrop!.cropId);
@@ -3792,7 +3792,7 @@ export const useGameStore = create<GameState>()(
 
         const declinedTemplates = newDay % 180 === 0 ? [] : state.declinedTemplates;
 
-        // â”€â”€ Pest control: feed loss â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Pest control: feed loss ───────────────────────────────────────────
         const hasPestControl = (state.buildings ?? []).includes('bld_pest_control_station');
         let pestHayLoss = 0;
         if (!hasPestControl) {
@@ -3800,7 +3800,7 @@ export const useGameStore = create<GameState>()(
           pestHayLoss = Math.floor(currentHay * 0.015);
         }
 
-        // â”€â”€ Feed deduction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Feed deduction ────────────────────────────────────────────────────
         {
           const { computeFeedNeeded, GRAIN_CROP_IDS: GRAIN_IDS } = require('../engine/animals');
           const { ANIMAL_TYPES: AT_FEED } = require('../data/animalTypes');
@@ -3817,7 +3817,7 @@ export const useGameStore = create<GameState>()(
           const shouldFeed = hasAnimalWorker || state.animalsManuallyFed;
 
           if (shouldFeed && (grainKg > 0 || hayKg > 0)) {
-            // â”€â”€ Grain deduction â”€â”€
+            // ── Grain deduction ──
             if (grainKg > 0) {
               const grainAvail = GRAIN_IDS.reduce(
                 (s: number, id: string) => s + (harvestInventory[id] ?? 0), 0
@@ -3866,7 +3866,7 @@ export const useGameStore = create<GameState>()(
               newGrainMissed = Math.max(0, newGrainMissed - 1);
             }
 
-            // â”€â”€ Hay deduction â”€â”€
+            // ── Hay deduction ──
             if (hayKg > 0) {
               const hayAvail = Math.max(0, (animalInventory['hay'] ?? 0) - pestHayLoss);
               if (hayAvail >= hayKg) {
@@ -3884,7 +3884,7 @@ export const useGameStore = create<GameState>()(
                   newHayMissed = Math.max(0, newHayMissed - 1);
                   summary.push({
                     id: 'feed_silage_used',
-                    icon: 'ðŸŒ¿',
+                    icon: '🌿',
                     title: 'Silage used as hay substitute',
                     detail: `${Math.round(silageForFeed)} kg silage fed to ruminants`,
                     severity: 'info' as const,
@@ -3894,9 +3894,9 @@ export const useGameStore = create<GameState>()(
                   newHayMissed = Math.min(7, newHayMissed + 1);
                   summary.push({
                     id: 'feed_hay_empty',
-                    icon: 'ðŸŒ¾',
+                    icon: '🌾',
                     title: 'Hay and silage stock depleted',
-                    detail: 'Ruminants are underfed — grow grass and fill the Henil or Silage Pit',
+                    detail: 'Ruminants are underfed · grow grass and fill the Henil or Silage Pit',
                     severity: 'warning' as const,
                   });
                 }
@@ -3911,7 +3911,7 @@ export const useGameStore = create<GameState>()(
             if (!hasAnimalWorker) {
               summary.push({
                 id: 'feed_not_fed',
-                icon: 'ðŸ„',
+                icon: '🐄',
                 title: 'Animals not fed today',
                 detail: 'Tap "Feed Animals" before advancing day, or hire an animal keeper',
                 severity: 'warning',
@@ -3920,7 +3920,7 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // â”€â”€ Henil: process ready batches â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Henil: process ready batches ──────────────────────────────────────
         const readyBatches = (state.henilQueue ?? []).filter((b: HenilBatch) => b.readyDay <= newDay);
         if (readyBatches.length > 0) {
           const hayProduced = readyBatches.reduce(
@@ -3932,7 +3932,7 @@ export const useGameStore = create<GameState>()(
           };
           summary.push({
             id: `henil_ready_${newDay}`,
-            icon: 'ðŸŒ¿',
+            icon: '🌿',
             title: `Henil: ${hayProduced.toLocaleString()} kg hay ready`,
             detail: `${readyBatches.length} batch${readyBatches.length > 1 ? 'es' : ''} dried`,
             severity: 'good',
@@ -3940,7 +3940,7 @@ export const useGameStore = create<GameState>()(
         }
         const updatedHenilQueue = (state.henilQueue ?? []).filter((b: HenilBatch) => b.readyDay > newDay);
 
-        // â”€â”€ Production buildings processing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Production buildings processing ───────────────────────────────
         const isCoopMember = state.cooperative?.member ?? false;
         let productionBuildingContractorFees = 0;
         const newProductionBuildings = (state.productionBuildings ?? []).map(pb => {
@@ -3974,9 +3974,9 @@ export const useGameStore = create<GameState>()(
               productionBuildingContractorFees += fee;
               summary.push({
                 id: `contractor_fee_${pb.id}`,
-                icon: 'ðŸšš',
-                title: `Contractor processing ${bt.name} — $${fee}`,
-                detail: manned ? 'Building at capacity — upgrade to process full herd' : 'Building unmanned — assign a farmhand',
+                icon: '🚚',
+                title: `Contractor processing ${bt.name} · $${fee}`,
+                detail: manned ? 'Building at capacity · upgrade to process full herd' : 'Building unmanned · assign a farmhand',
                 severity: 'warning',
               });
             }
@@ -4003,15 +4003,15 @@ export const useGameStore = create<GameState>()(
               newHygiene = Math.max(0, newHygiene - 10); // hygiene penalty on failed inspection
               summary.push({
                 id: `inspect_fail_${pb.id}`,
-                icon: 'ðŸ”',
-                title: `Inspector failed ${bt.name} — $${fine} fine`,
-                detail: 'Hygiene âˆ’10. Improve sanitation to avoid repeat visits.',
+                icon: '🔍',
+                title: `Inspector failed ${bt.name} · $${fine} fine`,
+                detail: 'Hygiene −10. Improve sanitation to avoid repeat visits.',
                 severity: 'danger',
               });
             } else {
               summary.push({
                 id: `inspect_pass_${pb.id}`,
-                icon: 'ðŸ”',
+                icon: '🔍',
                 title: `Inspector passed ${bt.name}`,
                 severity: 'good',
               });
@@ -4024,9 +4024,9 @@ export const useGameStore = create<GameState>()(
           if (currentSeason !== prevSeason && pb.lastDeepCleanSeason !== prevSeason) {
             summary.push({
               id: `deep_clean_${pb.id}`,
-              icon: 'ðŸ§¹',
+              icon: '🧹',
               title: `${bt.name} needs a deep clean`,
-              detail: 'Assign a farmhand or pay a contractor ($150–$400) in the Management tab',
+              detail: 'Assign a farmhand or pay a contractor ($150·$400) in the Management tab',
               severity: 'warning',
             });
             // Hygiene penalty for skipping
@@ -4046,7 +4046,7 @@ export const useGameStore = create<GameState>()(
           );
 
           if (newCert.certificationTier !== pb.certificationTier) {
-            const emoji = newCert.certificationTier === 'organic' ? 'ðŸŒ¿' : newCert.certificationTier === 'certified' ? 'âœ…' : 'â¬‡ï¸';
+            const emoji = newCert.certificationTier === 'organic' ? '🌿' : newCert.certificationTier === 'certified' ? '✅' : '⬇️';
             summary.push({
               id: `cert_change_${pb.id}`,
               icon: emoji,
@@ -4062,7 +4062,7 @@ export const useGameStore = create<GameState>()(
           };
         });
 
-        // Welfare scores — recalculate per species
+        // Welfare scores · recalculate per species
         const newWelfareScores: Record<string, number> = { ...(state.animalWelfareScores ?? {}) };
         const newMilkGrades: Record<string, 'A' | 'B' | 'C'> = { ...(state.milkGrades ?? {}) };
 
@@ -4086,9 +4086,9 @@ export const useGameStore = create<GameState>()(
             newMilkGrades[pb.animalTypeId] = milkGrade(pb.hygiene, hasMilkAnalyser);
           }
         }
-        // â”€â”€ End production buildings processing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── End production buildings processing ───────────────────────────
 
-        // â”€â”€ Mastitis / low-hygiene warnings (fires at most every 3 days) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Mastitis / low-hygiene warnings (fires at most every 3 days) ─────────
         {
           for (const pb of newProductionBuildings) {
             if (!DAIRY_SPECIES.has(pb.animalTypeId)) continue;
@@ -4098,16 +4098,16 @@ export const useGameStore = create<GameState>()(
                 pb.animalTypeId === 'cabra' ? 'goat' : 'buffalo';
               summary.push({
                 id: `mastitis_${pb.animalTypeId}_${newDay}`,
-                icon: 'ðŸ¦ ',
+                icon: '🦠',
                 title: `Low hygiene in ${speciesLabel} dairy`,
-                detail: `Hygiene ${Math.round(pb.hygiene)}/100 — Grade C milk likely. Clean the parlour and reduce herd density.`,
+                detail: `Hygiene ${Math.round(pb.hygiene)}/100 · Grade C milk likely. Clean the parlour and reduce herd density.`,
                 severity: 'warning' as const,
               });
             }
           }
         }
 
-        // â”€â”€ Slurry accumulation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Slurry accumulation ───────────────────────────────────────────────────
         const SLURRY_LITRES_PER_DAY: Partial<Record<string, number>> = {
           vaca: 35, bufalo: 30, cabra: 12, cerdo: 8, oveja: 5,
         };
@@ -4135,8 +4135,8 @@ export const useGameStore = create<GameState>()(
             slurryFine = 400;
             summary.push({
               id: `slurry_fine_${newDay}`,
-              icon: 'âš ï¸',
-              title: 'Environmental fine — no slurry storage',
+              icon: '⚠️',
+              title: 'Environmental fine · no slurry storage',
               detail: `$${slurryFine} fine. Build a Slurry Tank to avoid these.`,
               severity: 'warning',
             });
@@ -4147,8 +4147,8 @@ export const useGameStore = create<GameState>()(
               slurryFine = 300;
               summary.push({
                 id: `slurry_overflow_${newDay}`,
-                icon: 'âš ï¸',
-                title: 'Slurry tank full — overflow fine',
+                icon: '⚠️',
+                title: 'Slurry tank full · overflow fine',
                 detail: `$${slurryFine} fine. Spread slurry to free capacity.`,
                 severity: 'warning',
               });
@@ -4156,7 +4156,7 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // â”€â”€ Weigh Crate: flag optimal slaughter weight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Weigh Crate: flag optimal slaughter weight ────────────────────────────
         const hasWeighCrate = (state.buildings ?? []).includes('bld_weigh_crate') &&
           (state.buildings ?? []).includes('bld_cattle_crush');
         if (hasWeighCrate) {
@@ -4224,7 +4224,7 @@ export const useGameStore = create<GameState>()(
             }
           : null;
 
-        // ── Processing batch tick ──
+        // -- Processing batch tick --
         const outageActive = state.electricity?.outageActive ?? false;
         let batchTickBatches = [...(state.activeBatches ?? [])] as ProcessingBatch[];
         let procBuildings = [...(state.processingBuildings ?? [])] as import('../engine/processing').ProcessingBuilding[];
@@ -4232,7 +4232,7 @@ export const useGameStore = create<GameState>()(
         // During outages: pause all active batches (extend timer by 1 day)
         if (outageActive) {
           batchTickBatches = batchTickBatches.map(b => ({ ...b, completionDay: b.completionDay + 1 }));
-          summary.push({ id: `outage_pause_${newDay}`, icon: '⚡', title: 'Power outage — processing batches paused.', severity: 'warning' });
+          summary.push({ id: `outage_pause_${newDay}`, icon: '?', title: 'Power outage · processing batches paused.', severity: 'warning' });
         }
 
         // Complete batches whose timer has expired
@@ -4267,10 +4267,10 @@ export const useGameStore = create<GameState>()(
           newDay
         );
         if (destroyedEvents.length > 0) {
-          destroyedEvents.forEach(ev => summary.push({ id: `spoil_${newDay}_${ev}`, icon: '🗑️', title: ev, severity: 'danger' }));
+          destroyedEvents.forEach(ev => summary.push({ id: `spoil_${newDay}_${ev}`, icon: '???', title: ev, severity: 'danger' }));
         }
         if (warningEvents.length > 0) {
-          warningEvents.forEach(ev => summary.push({ id: `warn_${newDay}_${ev}`, icon: '⚠️', title: ev, severity: 'warning' }));
+          warningEvents.forEach(ev => summary.push({ id: `warn_${newDay}_${ev}`, icon: '??', title: ev, severity: 'warning' }));
         }
 
         const finalProcessedInventory: ProcessedItem[] = [
@@ -4281,7 +4281,7 @@ export const useGameStore = create<GameState>()(
 
         const processedInventoryForSet = finalProcessedInventory;
 
-        // â”€â”€ Biogas upgrader income â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Biogas upgrader income ────────────────────────────────────────────
         const hasBiogasUpgrader = (state.buildings ?? []).includes('bld_biogas_upgrader');
         let biogasIncome = 0;
         if (hasBiogasUpgrader) {
@@ -4295,9 +4295,9 @@ export const useGameStore = create<GameState>()(
               currentFuel += biogasFuelLitres;
               summary.push({
                 id: `biogas_fuel_${newDay}`,
-                icon: 'â›½',
+                icon: '⛽',
                 title: `Biogas fuel +${biogasFuelLitres} L`,
-                detail: `${biogasAnimalCount} animals producing biogas â†’ free fuel`,
+                detail: `${biogasAnimalCount} animals producing biogas → free fuel`,
                 severity: 'info' as const,
               });
             } else {
@@ -4306,7 +4306,7 @@ export const useGameStore = create<GameState>()(
               if (biogasIncome > 0) {
                 summary.push({
                   id: `biogas_income_${newDay}`,
-                  icon: 'âš¡',
+                  icon: '⚡',
                   title: `Biogas income +$${biogasIncome}`,
                   detail: `${biogasAnimalCount} animals producing biogas`,
                   severity: 'info' as const,
@@ -4316,7 +4316,7 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // â”€â”€ Water system tick â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Water system tick ──────────────────────────────────────────────────────
 
         // 1. Advance survey / drilling timers
         let updatedWells = (state.wells ?? []).map(well => {
@@ -4324,7 +4324,7 @@ export const useGameStore = create<GameState>()(
             const spots = generateSurveySpots(well.parcelId, newDay);
             summary.push({
               id: `survey_${well.id}`,
-              icon: 'ðŸ”',
+              icon: '🔍',
               title: 'Hydrogeologist survey complete',
               detail: `${spots.length} drilling spots found. Check the Water tab.`,
               severity: 'info' as const,
@@ -4341,7 +4341,7 @@ export const useGameStore = create<GameState>()(
               const actualCost = depth * costPerMetre;
               summary.push({
                 id: `drill_ok_${well.id}`,
-                icon: 'ðŸ’§',
+                icon: '💧',
                 title: 'Well drilled successfully',
                 detail: `${depth}m deep. Final cost: $${actualCost.toLocaleString()}. Install a pump to activate.`,
                 severity: 'good' as const,
@@ -4350,8 +4350,8 @@ export const useGameStore = create<GameState>()(
             } else {
               summary.push({
                 id: `drill_fail_${well.id}`,
-                icon: 'ðŸª¨',
-                title: 'Drilling failed — dry rock',
+                icon: '🪨',
+                title: 'Drilling failed · dry rock',
                 detail: 'The team hit dry rock. Try a different spot or commission a new survey.',
                 severity: 'warning' as const,
               });
@@ -4393,7 +4393,7 @@ export const useGameStore = create<GameState>()(
         if (newAquifer < 20 && (state.aquiferLevel ?? 75) >= 20) {
           summary.push({
             id: `aquifer_low_${newDay}`,
-            icon: 'âš ï¸',
+            icon: '⚠️',
             title: 'Aquifer critically low',
             detail: 'Underground water reserves are running low. Enable grid water in the Water tab.',
             severity: 'warning' as const,
@@ -4412,12 +4412,12 @@ export const useGameStore = create<GameState>()(
           ? [{ day: newDay, amount: deliveryRevenue, category: 'crops' as const }]
           : [];
 
-        // â”€â”€ Co-op season/annual tick variables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Co-op season/annual tick variables ────────────────────────────────
         let updatedCoopMemberships = { ...(state.coopMemberships ?? {}) } as typeof state.coopMemberships;
         let updatedCoopStates = { ...state.coopStates };
         let coopMoneyDelta = 0; // net money change from co-op events this tick
 
-        // â”€â”€ Co-op season-end delivery assessment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Co-op season-end delivery assessment ─────────────────────────────
         if (newDay % 90 === 0) {
           const coopIds: CoopId[] = ['grain', 'horticulture', 'livestock'];
           const currentSeasonNum = getCoopSeason(newDay);
@@ -4434,14 +4434,14 @@ export const useGameStore = create<GameState>()(
               const recentOffences = membership.offenceHistory.filter(d => newDay - d < 3 * 360);
 
               if (recentOffences.length >= 1) {
-                // Second offence within 3 years â†’ expulsion
+                // Second offence within 3 years → expulsion
                 const redemptionValue = membership.shares * membership.sharePrice * 0.5;
                 coopMoneyDelta += redemptionValue;
                 const { [coopId]: _expelled, ...restMemberships } = updatedCoopMemberships;
                 updatedCoopMemberships = restMemberships as typeof updatedCoopMemberships;
                 summary.push({
                   id: `coop_expelled_${coopId}_${newDay}`,
-                  icon: 'âš ï¸',
+                  icon: '⚠️',
                   title: `${COOP_NAMES[coopId]}: Expelled for repeated delivery failure`,
                   detail: `Equity redeemed at 50% ($${Math.round(redemptionValue).toLocaleString()})`,
                   severity: 'danger',
@@ -4452,7 +4452,7 @@ export const useGameStore = create<GameState>()(
                 coopMoneyDelta -= penalty;
                 summary.push({
                   id: `coop_shortfall_${coopId}_${newDay}`,
-                  icon: 'âš ï¸',
+                  icon: '⚠️',
                   title: `${COOP_NAMES[coopId]}: Delivery shortfall`,
                   detail: `Penalty $${Math.round(penalty).toLocaleString()}. Benefits suspended next season.`,
                   severity: 'warning',
@@ -4469,7 +4469,7 @@ export const useGameStore = create<GameState>()(
                 };
               }
             } else {
-              // Met obligation — clear for next season
+              // Met obligation · clear for next season
               updatedCoopMemberships = {
                 ...updatedCoopMemberships,
                 [coopId]: { ...membership, seasonDelivered: 0, seasonObligation: 0 },
@@ -4506,7 +4506,7 @@ export const useGameStore = create<GameState>()(
                 updatedCoopMemberships = restMbrs as typeof updatedCoopMemberships;
                 summary.push({
                   id: `coop_dissolved_${coopId}_${newDay}`,
-                  icon: 'ðŸ’¥',
+                  icon: '💥',
                   title: `${COOP_NAMES[coopId]} has dissolved`,
                   detail: `Equity redeemed at 40% ($${Math.round(redemption).toLocaleString()})`,
                   severity: 'danger',
@@ -4538,7 +4538,7 @@ export const useGameStore = create<GameState>()(
           });
         }
 
-        // â”€â”€ Co-op annual events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Co-op annual events ───────────────────────────────────────────────
         if (newDay % 360 === 0) {
           const coopIds: CoopId[] = ['grain', 'horticulture', 'livestock'];
           coopIds.forEach((coopId) => {
@@ -4571,7 +4571,7 @@ export const useGameStore = create<GameState>()(
               coopMoneyDelta += dividend;
               summary.push({
                 id: `coop_dividend_${coopId}_${newDay}`,
-                icon: 'ðŸŒ¾',
+                icon: '🌾',
                 title: `${COOP_NAMES[coopId]} dividend: +$${Math.round(dividend).toLocaleString()}`,
                 severity: 'good',
               });
@@ -4592,7 +4592,7 @@ export const useGameStore = create<GameState>()(
                 };
                 summary.push({
                   id: `coop_redeemed_${coopId}_${newDay}`,
-                  icon: 'ðŸ’°',
+                  icon: '💰',
                   title: `${COOP_NAMES[coopId]}: Shares redeemed for $${Math.round(redemptionAmt).toLocaleString()}`,
                   severity: 'good',
                 });
@@ -4601,7 +4601,7 @@ export const useGameStore = create<GameState>()(
           });
         }
 
-        // â”€â”€ AGM trigger at start of spring (day 1, 361, 721, ”¦) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── AGM trigger at start of spring (day 1, 361, 721, ··) ──────────────
         if (isStartOfSpring(newDay) && newDay > 1) {
           const coopIds: CoopId[] = ['grain', 'horticulture', 'livestock'];
           coopIds.forEach((coopId) => {
@@ -4612,7 +4612,7 @@ export const useGameStore = create<GameState>()(
             updatedCoopStates[coopId] = { ...updatedCoopStates[coopId], pendingAGM: proposal };
             summary.push({
               id: `coop_agm_${coopId}_${newDay}`,
-              icon: 'ðŸ“‹',
+              icon: '📋',
               title: `${COOP_NAMES[coopId]} AGM`,
               detail: `Review the board's proposal in the Co-ops tab.`,
               severity: 'info',
@@ -4620,7 +4620,7 @@ export const useGameStore = create<GameState>()(
           });
         }
 
-        // â”€â”€ Electricity tick â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Electricity tick ─────────────────────────────────────────────────
         {
           const el = state.electricity;
           const todayEvent = (todayWeather?.event ?? 'sunny') as WeatherEvent;
@@ -4633,7 +4633,7 @@ export const useGameStore = create<GameState>()(
             finalMoney += g.amount;
             summary.push({
               id: `grant_${g.dueDay}`,
-              icon: 'ðŸ’°',
+              icon: '💰',
               title: `${g.label} arrived: +$${g.amount.toLocaleString()}`,
               severity: 'good',
             });
@@ -4645,7 +4645,7 @@ export const useGameStore = create<GameState>()(
           if (outageActive && outageEndDay !== null && newDay >= outageEndDay) {
             outageActive = false;
             outageEndDay = null;
-            summary.push({ id: `outage_end_${newDay}`, icon: 'âš¡', title: 'Power restored — grid outage has ended.', severity: 'info' });
+            summary.push({ id: `outage_end_${newDay}`, icon: '⚡', title: 'Power restored · grid outage has ended.', severity: 'info' });
           }
 
           // Roll for new outage (only if not already in outage)
@@ -4653,7 +4653,7 @@ export const useGameStore = create<GameState>()(
             const duration = rollOutageDuration();
             outageActive = true;
             outageEndDay = newDay + duration;
-            summary.push({ id: `outage_start_${newDay}`, icon: 'âš¡', title: `Grid outage! Power cut for ~${duration} day(s). Activate diesel generator if available.`, severity: 'danger' });
+            summary.push({ id: `outage_start_${newDay}`, icon: '⚡', title: `Grid outage! Power cut for ~${duration} day(s). Activate diesel generator if available.`, severity: 'danger' });
           }
 
           // Generation sources
@@ -4702,7 +4702,7 @@ export const useGameStore = create<GameState>()(
           if (newDay === billDueDay - 3 && newBillEstimate > 1) {
             summary.push({
               id: `elec_warn_${newDay}`,
-              icon: 'âš¡',
+              icon: '⚡',
               title: `Electricity bill ~$${Math.round(newBillEstimate)} due in 3 days`,
               severity: 'warning',
             });
@@ -4713,12 +4713,12 @@ export const useGameStore = create<GameState>()(
             if (bill > 0) {
               if (finalMoney >= bill) {
                 electricityBillDeduction = bill;
-                summary.push({ id: `elec_bill_${newDay}`, icon: 'âš¡', title: `Electricity bill paid: $${bill.toLocaleString()}`, severity: 'info' });
+                summary.push({ id: `elec_bill_${newDay}`, icon: '⚡', title: `Electricity bill paid: $${bill.toLocaleString()}`, severity: 'info' });
               } else {
                 const downgraded = prevGridTier(gridTier);
                 if (downgraded) {
                   gridTier = downgraded;
-                  summary.push({ id: `elec_nopower_${newDay}`, icon: 'âš¡', title: `Can't pay electricity bill ($${bill}) — grid downgraded to ${GRID_TIER_CONFIG[gridTier].label}`, severity: 'danger' });
+                  summary.push({ id: `elec_nopower_${newDay}`, icon: '⚡', title: `Can't pay electricity bill ($${bill}) · grid downgraded to ${GRID_TIER_CONFIG[gridTier].label}`, severity: 'danger' });
                 }
               }
             }
@@ -4742,14 +4742,14 @@ export const useGameStore = create<GameState>()(
             if ((el.solarPanelCount ?? 0) > 0 && !damagedSources.includes('solar')) {
               damagedSources.push('solar');
               solarPanelHealth = 0;
-              summary.push({ id: `lightning_solar_${newDay}`, icon: 'âš¡', title: 'Lightning struck the solar array — repairs needed (Electrical Engineer)', severity: 'danger' });
+              summary.push({ id: `lightning_solar_${newDay}`, icon: '⚡', title: 'Lightning struck the solar array · repairs needed (Electrical Engineer)', severity: 'danger' });
             }
           }
           if (rollLightningDamage(todayEvent, (el.surgeProtectedBuildings ?? []).includes('wind_turbines'))) {
             if ((el.windTurbineCount ?? 0) > 0 && !damagedSources.includes('wind')) {
               damagedSources.push('wind');
               windTurbineHealth = 0;
-              summary.push({ id: `lightning_wind_${newDay}`, icon: 'âš¡', title: 'Lightning struck the wind turbines — repairs needed (Electrical Engineer)', severity: 'danger' });
+              summary.push({ id: `lightning_wind_${newDay}`, icon: '⚡', title: 'Lightning struck the wind turbines · repairs needed (Electrical Engineer)', severity: 'danger' });
             }
           }
 
@@ -4758,7 +4758,7 @@ export const useGameStore = create<GameState>()(
             ? (el.biomassFuelDaysRemaining ?? 0) - 1
             : (el.biomassFuelDaysRemaining ?? 0);
           if (el.biomassCHPBuilt && biomassFuelDaysRemaining === 0 && (el.biomassFuelDaysRemaining ?? 0) === 1) {
-            summary.push({ id: `biomass_empty_${newDay}`, icon: 'âš¡', title: 'Biomass CHP fuel exhausted — load straw to resume power', severity: 'warning' });
+            summary.push({ id: `biomass_empty_${newDay}`, icon: '⚡', title: 'Biomass CHP fuel exhausted · load straw to resume power', severity: 'warning' });
           }
 
           // Generator fuel burn
@@ -4766,7 +4766,7 @@ export const useGameStore = create<GameState>()(
           if ((el.generatorActive ?? false) && el.generatorModel) {
             generatorFuelLitres = Math.max(0, generatorFuelLitres - calcGeneratorFuelBurn(el.generatorModel));
             if (generatorFuelLitres === 0 && (el.generatorFuelLitres ?? 0) > 0) {
-              summary.push({ id: `gen_empty_${newDay}`, icon: 'âš¡', title: 'Generator fuel empty — generator shut down', severity: 'warning' });
+              summary.push({ id: `gen_empty_${newDay}`, icon: '⚡', title: 'Generator fuel empty · generator shut down', severity: 'warning' });
             }
           }
           const generatorActive = (el.generatorActive ?? false) && generatorFuelLitres > 0;
@@ -4807,7 +4807,7 @@ export const useGameStore = create<GameState>()(
         }
         // End electricity tick
 
-        // ── Selling Channels tick ────────────────────────────────────────────────
+        // -- Selling Channels tick ------------------------------------------------
         let sellingRevenue = 0;
         let newReputation = state.reputation ?? 0;
         let newReputationHistory = [...(state.reputationHistory ?? [])];
@@ -4855,7 +4855,7 @@ export const useGameStore = create<GameState>()(
               newOnlineShopAllocations[rc.productId] = (newOnlineShopAllocations[rc.productId] ?? 0) - delivered;
             } else {
               newReputation -= 3;
-              summary.push({ id: `rest_fail_${rc.id}`, icon: '🍽️', title: `Restaurant contract failed`, detail: `Short delivery to ${rc.buyerName}`, severity: 'danger' });
+              summary.push({ id: `rest_fail_${rc.id}`, icon: '???', title: `Restaurant contract failed`, detail: `Short delivery to ${rc.buyerName}`, severity: 'danger' });
             }
             rc.nextDeliveryDay += rc.cycleDays;
           }
@@ -4887,7 +4887,7 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // 5. Farm café
+        // 5. Farm caf·
         if (state.farmCafeOpen && state.farmShop.tier >= 3) {
           const hasCafeWorker = state.farmCafeWorkerIds.length > 0;
           if (hasCafeWorker) {
@@ -5138,7 +5138,7 @@ export const useGameStore = create<GameState>()(
         const climateModifier = 1.0 + rawClimateDelta * droughtScale;
         const { harvestAmount } = require('../engine/crops');
         const rawUnits = harvestAmount(crop, cropType, parcel.soil ?? SOIL_DEFAULTS, climateModifier, parcel.hasWeeds, 1.0, crop.frostDamage ?? 0, crop.droughtStress ?? 0) * pestYieldModifier(parcel.pestState?.severity ?? 0);
-        // Field event penalty: âˆ’25% yield per unresolved disease/pest event
+        // Field event penalty: −25% yield per unresolved disease/pest event
         const unresolvedEvents = state.fieldEvents.filter(e => e.parcelId === parcelId && !e.resolved).length;
         const fieldEventMod = Math.pow(0.75, unresolvedEvents);
         // Water Tower: +5% yield (improved irrigation access)
@@ -5265,7 +5265,7 @@ export const useGameStore = create<GameState>()(
         const sexMult = sex === 'male' ? 0.7 : 1.0;
         const cost = Math.round(animalType.buyCost * fairMult * sexMult);
         if (state.money < cost) return;
-        // Dairy animals (cows & goats) arrive already freshened — mid-lactation adult
+        // Dairy animals (cows & goats) arrive already freshened · mid-lactation adult
         const isDairy = typeId === 'vaca' || typeId === 'cabra' || typeId === 'bufalo';
         const freshenOffset = isDairy ? Math.floor(Math.random() * 120 + 30) : 0;
         // born far enough in the past to be mature + freshened
@@ -5313,7 +5313,7 @@ export const useGameStore = create<GameState>()(
       },
 
       feedAnimals: () => {
-        // Manual feeding button — only available when no animal worker.
+        // Manual feeding button · only available when no animal worker.
         // Sets flag so advanceDay knows animals were fed today.
         const state = get();
         const hasAnimalWorker = (state.workers ?? []).some(
@@ -5390,7 +5390,7 @@ export const useGameStore = create<GameState>()(
         const motherParents = animal.parentIds;
         const fatherParents = father?.parentIds;
         // Grandparents recorded only when both parents have known lineage.
-        // Partial lineage (one side unknown) is intentionally omitted — simplifies UI display.
+        // Partial lineage (one side unknown) is intentionally omitted · simplifies UI display.
         const grandparentIds: [string, string, string, string] | undefined =
           (motherParents && fatherParents)
             ? [motherParents[0], motherParents[1], fatherParents[0], fatherParents[1]]
@@ -5453,7 +5453,7 @@ export const useGameStore = create<GameState>()(
             }, 0);
           const mortalityChance = calvingCap > 0 ? 0.05 : 0.25;
           if (Math.random() < mortalityChance) {
-            // Offspring did not survive — abort
+            // Offspring did not survive · abort
             return;
           }
         }
@@ -5680,7 +5680,7 @@ export const useGameStore = create<GameState>()(
 
       sellAnimalProduct: (productType, units) => {
         const state = get();
-        // Milk grade multiplier — dairy products only
+        // Milk grade multiplier · dairy products only
         const DAIRY_PRODUCT_SPECIES: Record<string, string> = {
           milk: 'vaca',
           goat_milk: 'cabra',
@@ -6026,7 +6026,7 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // Lock in expected revenue — matches sellCrop formula exactly
+        // Lock in expected revenue · matches sellCrop formula exactly
         const secaderoBonus = hasSecadero(state.buildings) ? 1.05 : 1.0;
         const prestigeBonus = 1 + 0.05 * (state.prestige ?? 0);
         const coopBonus = 1.0;
@@ -7746,7 +7746,7 @@ export const useGameStore = create<GameState>()(
         const existing = worker.certifications.find(c => c.id === certId);
         const cert = existing ?? {
           id: certId,
-          name: node.name.replace('ðŸ“œ ', ''),
+          name: node.name.replace('📜 ', ''),
           studyProgressHours: 0,
           totalHours: 60,
           examFeePaid: false,
@@ -7915,7 +7915,7 @@ export const useGameStore = create<GameState>()(
         });
       },
 
-      // ── Pest & Disease actions ───────────────────────────────────────────────
+      // -- Pest & Disease actions -----------------------------------------------
       treatPest: (parcelId, productId) => {
         const state = get();
         const parcel = state.parcels.find(p => p.id === parcelId);
@@ -7965,7 +7965,7 @@ export const useGameStore = create<GameState>()(
         set({ cropConsultantParcelIds: parcelIds });
       },
 
-      // ── Selling Channels actions ───────────────────────────────────────────
+      // -- Selling Channels actions -------------------------------------------
       buyFarmShopUpgrade: () => {
         const state = get();
         const nextTier = (state.farmShop.tier + 1) as 1 | 2 | 3;
@@ -8155,7 +8155,7 @@ export const useGameStore = create<GameState>()(
         });
       },
 
-      // â”€â”€ Water system actions (Task 4) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── Water system actions (Task 4) ────────────────────────────────────
       assignHydrogeologist: (parcelId) => {
         const state = get();
         // Require hired hydrogeologist
@@ -8164,7 +8164,7 @@ export const useGameStore = create<GameState>()(
         // Only one active survey at a time
         const busySurvey = (state.wells ?? []).some(w => w.status === 'surveying');
         if (busySurvey) return;
-        const surveyDays = 5 + Math.floor(Math.random() * 6); // 5–10 days
+        const surveyDays = 5 + Math.floor(Math.random() * 6); // 5·10 days
         const newWell: Well = {
           id: `well_${Date.now()}`,
           parcelId,
@@ -8184,7 +8184,7 @@ export const useGameStore = create<GameState>()(
         // Estimate cost to verify budget (use midpoint estimate)
         const estCost = (spot.estimatedCostMin + spot.estimatedCostMax) / 2;
         if (state.money < estCost) return;
-        const drillingDays = 5 + Math.floor(Math.random() * 3); // 5–7 days
+        const drillingDays = 5 + Math.floor(Math.random() * 3); // 5·7 days
         set({
           wells: (state.wells ?? []).map(w =>
             w.id === wellId
@@ -8286,7 +8286,7 @@ export const useGameStore = create<GameState>()(
           return { getItem: () => null, setItem: () => {}, removeItem: () => {} };
         }
       }),
-      // Only persist data — never persist action functions (Zustand v5 requirement)
+      // Only persist data · never persist action functions (Zustand v5 requirement)
       partialize: (state: GameState) => {
         const {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars

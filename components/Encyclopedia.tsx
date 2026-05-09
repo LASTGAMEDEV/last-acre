@@ -329,7 +329,7 @@ export default function Encyclopedia() {
         <ScrollView contentContainerStyle={{ padding: 10, gap: 6 }} showsVerticalScrollIndicator={false}>
           {filteredResults.length === 0 ? (
             <View style={enc.searchEmpty}>
-              <Text style={enc.searchEmptyText}>No results for "{searchQuery.trim()}"</Text>
+              <Text style={enc.searchEmptyText}>No results for &quot;{searchQuery.trim()}&quot;</Text>
             </View>
           ) : (
             filteredResults.map(item => (
