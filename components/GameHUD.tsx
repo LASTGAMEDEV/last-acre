@@ -4,7 +4,6 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useGameStore } from '../store/useGameStore';
 import { getSeason, WeatherEvent } from '../engine/climate';
 import { SEASON_THEME, C, S, F, R, MIN_TOUCH } from '../constants/theme';
-import { playSound } from '../engine/sounds';
 import { MACHINE_TYPES } from '../data/machineTypes';
 import { BUILDING_TYPES } from '../data/buildingTypes';
 import type { CoopId } from '../engine/cooperativeTypes';
@@ -34,7 +33,7 @@ export default function GameHUD() {
   const {
     money, day, savings, loans, contracts, seasonalEvent,
     farmName, workers, machines, buildings,
-    advanceDay, advanceDays,
+    advanceDays,
     todayWeather, recurringContracts, buyers,
     coopMemberships,
   } = useGameStore();
@@ -138,30 +137,6 @@ export default function GameHUD() {
           )}
 
           <View style={{ flex: 1 }} />
-
-          {/* Advance button */}
-          <TouchableOpacity
-            style={[styles.advanceBtn, { backgroundColor: theme.accent, shadowColor: theme.accent }]}
-            onPress={() => { playSound('dayAdvance'); advanceDay(); }}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.advanceDayNum}>Day {day}</Text>
-            <Text style={styles.advanceLabel}>▶ Advance</Text>
-          </TouchableOpacity>
-
-          {/* Skip buttons */}
-          <View style={styles.skipRow}>
-            {([5, 10, 30] as const).map(n => (
-              <TouchableOpacity
-                key={n}
-                style={[styles.skipBtn, { borderColor: theme.accent }]}
-                onPress={() => { playSound('dayAdvance'); advanceDays(n); }}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.skipLabel, { color: theme.accent }]}>+{n}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
         </View>
       </View>
 
@@ -266,36 +241,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.divider,
     marginHorizontal: S.xs,
   },
-  advanceBtn: {
-    borderRadius: R.md,
-    paddingHorizontal: S.sm,
-    paddingVertical: S.xs,
-    alignItems: 'center',
-    minHeight: MIN_TOUCH,
-    justifyContent: 'center',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  advanceDayNum: { color: C.white, fontSize: 8, opacity: 0.8 },
-  advanceLabel:  { color: C.white, fontSize: F.size.xs, fontWeight: F.weight.heavy },
-  skipRow: {
-    flexDirection: 'row',
-    gap: S.xs,
-  },
-  skipBtn: {
-    borderWidth: 1,
-    borderRadius: R.sm,
-    paddingHorizontal: S.sm,
-    minHeight: MIN_TOUCH,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  skipLabel: {
-    fontSize: 9,
-    fontWeight: F.weight.bold,
-  },
+
   warnStrip: {
     backgroundColor: '#3a1a00',
     paddingHorizontal: S.md,

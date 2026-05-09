@@ -16,7 +16,9 @@ export type WorkerRole =
   // Office
   | 'farm_admin' | 'security_guard' | 'dept_foreman'
   // Standalone (legacy – water system)
-  | 'hydrogeologist';
+  | 'hydrogeologist'
+  // Pest & Disease
+  | 'crop_consultant';
 
 export type ContractType = 'permanent' | 'seasonal' | 'casual';
 
@@ -390,6 +392,17 @@ export const WORKER_ROLE_CONFIG: Record<WorkerRole, WorkerRoleConfig> = {
       { id: 'hg_survey', name: 'Well Survey', tier: 1, isCert: false },
       { id: 'hg_aquifer', name: 'Aquifer Analysis', tier: 2, isCert: false },
       { id: 'hg_master', name: 'Senior Hydrogeologist', tier: 4, isCert: false },
+    ],
+  },
+  crop_consultant: {
+    id: 'crop_consultant', name: 'Crop Consultant', icon: '🔬',
+    department: 'fields',
+    wageRangeJunior: [150, 200], wageRangeSenior: [250, 350],
+    autonomyCeiling: 'high', alwaysPrecertified: true,
+    skillTree: [
+      { id: 'cc_scout', name: 'Scouting', tier: 1, isCert: false },
+      { id: 'cc_ipm', name: 'Integrated Pest Management', tier: 2, isCert: false },
+      { id: 'cc_master', name: 'Senior Consultant', tier: 4, isCert: false },
     ],
   },
 };

@@ -47,6 +47,14 @@ import { MILESTONES, checkNewMilestones, MILESTONE_REWARDS } from '../data/miles
 import { sellRevenue, SellPressure, computeSellPressureModifier, sellPressureDuration } from '../engine/market';
 import { getSeason, generateForecast, applyDailyWeather } from '../engine/climate';
 import type { WeatherEvent } from '../engine/climate';
+import {
+  baseOutbreakChance,
+  tickPestSeverity,
+  shouldSpread,
+  pestYieldModifier,
+  pickPestType,
+  PEST_CONFIG,
+} from '../engine/pests';
 import { ENCLOSURE_BUILDINGS } from '../constants/enclosures';
 import {
   Worker, WorkerRole, WorkerRequest, WorkerJobPosting, Consultant,
@@ -203,6 +211,7 @@ export interface LandParcel {
   soilType?: SoilType; // undefined on old saves â†’ treated as 'loamy'
   diseased?: boolean;   // crop blight â€” reduces yield, spreads to neighbors
   diseasedDay?: number; // day disease started; crop dies after 20 days untreated
+  pestState?: import('../engine/pests').PestState;
 }
 
 export type OwnedWorker = Worker;
@@ -911,6 +920,42 @@ export interface GameState {
   toggleGenerator: () => void;
   serviceEquipment: (type: 'solar' | 'wind' | 'battery') => void;
   addSurgeProtector: (buildingId: string) => void;
+
+  // Pest & Disease
+  beneficialInsectsActive: boolean;
+  cropConsultantParcelIds: string[];
+  treatPest: (parcelId: string, productId: string) => void;
+  buyBeneficialInsects: () => void;
+  assignCropConsultant: (parcelIds: string[]) => void;
+
+  // Selling Channels
+  reputationHistory: { day: number; delta: number; reason: string }[];
+  farmShop: {
+    tier: 0 | 1 | 2 | 3;
+    openDays: boolean[];
+    openHours: number;
+    assignedWorkerIds: string[];
+  };
+  restaurantContracts: import('../engine/sellingChannels').RestaurantContract[];
+  vegBoxSubscribers: import('../engine/sellingChannels').VegBoxSubscriber[];
+  onlineShopActive: boolean;
+  onlineShopAllocations: Record<string, number>;
+  farmCafeOpen: boolean;
+  farmCafeWorkerIds: string[];
+  awardHistory: import('../engine/sellingChannels').ShowAward[];
+  productAwardBonuses: Record<string, number>;
+
+  // Selling channel actions
+  buyFarmShopUpgrade: () => void;
+  setShopHours: (openDays: boolean[], openHours: number) => void;
+  assignShopWorker: (workerId: string) => void;
+  unassignShopWorker: (workerId: string) => void;
+  toggleOnlineShop: () => void;
+  setOnlineAllocation: (productId: string, units: number) => void;
+  toggleFarmCafe: () => void;
+  assignCafeWorker: (workerId: string) => void;
+  unassignCafeWorker: (workerId: string) => void;
+  enterAgriculturalShow: (productId: string, batchId: string) => void;
 }
 
 const FIELD_NAMES: string[] = [
@@ -1229,6 +1274,18 @@ function makeInitialState() {
       surgeProtectedBuildings: [],
       damagedSources: [],
     },
+    beneficialInsectsActive: false,
+    cropConsultantParcelIds: [],
+    reputationHistory: [],
+    farmShop: { tier: 0 as const, openDays: [true, true, true, true, true, true, false], openHours: 8, assignedWorkerIds: [] },
+    restaurantContracts: [],
+    vegBoxSubscribers: [],
+    onlineShopActive: false,
+    onlineShopAllocations: {},
+    farmCafeOpen: false,
+    farmCafeWorkerIds: [],
+    awardHistory: [],
+    productAwardBonuses: {},
   };
 }
 
@@ -2076,6 +2133,90 @@ export const useGameStore = create<GameState>()(
         }
 
         const totalInsurancePayout = weatherInsurancePayout + fireInsurancePayout;
+
+        // ── Pest & Disease tick ──────────────────────────────────────────────────
+        parcels = parcels.map(p => {
+          if (!p.owned || !p.plantedCrop) return p;
+
+          const cropType = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
+          if (!cropType) return p;
+
+          let pestState = p.pestState;
+
+          // 1. Chance of new outbreak on clean parcel
+          if (!pestState) {
+            const chance = baseOutbreakChance(
+              cropType,
+              season,
+              resolvedWeather?.event ?? 'sunny',
+              p.cropHistory ?? [],
+              state.beneficialInsectsActive,
+            );
+            if (Math.random() < chance) {
+              const pestType = pickPestType(cropType, season);
+              pestState = { type: pestType, severity: 0.5 };
+            }
+          }
+
+          // 2. Grow existing infestation
+          if (pestState) {
+            const config = PEST_CONFIG[pestState.type];
+            const newSeverity = tickPestSeverity(pestState, config, state.beneficialInsectsActive);
+            pestState = { ...pestState, severity: newSeverity };
+
+            // Detect if severity ≥ 7 (visible damage) and no consultant already flagged it
+            if (newSeverity >= 7 && !pestState.detectedDay) {
+              pestState = { ...pestState, detectedDay: newDay };
+              summary.push({
+                id: `pest_visible_${p.id}_${newDay}`,
+                icon: '🐛',
+                title: `Severe ${config.label} on ${p.name}`,
+                detail: `Visible crop damage. Apply ${config.treatment} immediately.`,
+                severity: 'warning',
+              });
+            }
+          }
+
+          return { ...p, pestState };
+        });
+
+        // 3. Spread to adjacent parcels
+        const infested = parcels.filter(p => p.pestState && p.pestState.severity >= 3);
+        for (const source of infested) {
+          const config = PEST_CONFIG[source.pestState!.type];
+          if (!shouldSpread(source.pestState!.severity, config.spreadRate, state.beneficialInsectsActive)) continue;
+
+          const sourceIdx = parcels.findIndex(p => p.id === source.id);
+          const candidates = parcels.filter((p, idx) =>
+            Math.abs(idx - sourceIdx) <= 2 && !p.pestState && p.plantedCrop && p.owned
+          );
+          if (candidates.length === 0) continue;
+          const target = candidates[Math.floor(Math.random() * candidates.length)];
+          parcels = parcels.map(p =>
+            p.id === target.id ? { ...p, pestState: { type: source.pestState!.type, severity: 0.3 } } : p
+          );
+        }
+
+        // 4. Crop consultant early detection
+        for (const parcelId of (state.cropConsultantParcelIds ?? [])) {
+          const p = parcels.find(lp => lp.id === parcelId);
+          if (!p?.pestState || p.pestState.detectedDay) continue;
+          if (p.pestState.severity >= 1.5) {
+            parcels = parcels.map(lp =>
+              lp.id === parcelId
+                ? { ...lp, pestState: { ...lp.pestState!, detectedDay: newDay } }
+                : lp
+            );
+            const config = PEST_CONFIG[p.pestState.type];
+            summary.push({
+              id: `pest_scout_${parcelId}_${newDay}`,
+              icon: '🔬',
+              title: `Early ${config.label} detected on ${p.name}`,
+              detail: `Consultant spotted early signs. Treat now before it spreads.`,
+              severity: 'info',
+            });
+          }
+        }
 
         // Field events
         let fieldEvents = state.fieldEvents.filter(e => !e.resolved || newDay - e.startDay < 30);
@@ -3427,7 +3568,7 @@ export const useGameStore = create<GameState>()(
             const waterScale = (cropType.waterNeed ?? 3) / 5;
             const climateModifier = 1.0 + (baseClimate - 1.0) * waterScale;
             const units = Math.min(
-              Math.round(harvestAmount(parcel.plantedCrop!, cropType, parcel.soil ?? SOIL_DEFAULTS, climateModifier, parcel.hasWeeds, 1.0, parcel.plantedCrop!.frostDamage ?? 0, parcel.plantedCrop!.droughtStress ?? 0)),
+              Math.round(harvestAmount(parcel.plantedCrop!, cropType, parcel.soil ?? SOIL_DEFAULTS, climateModifier, parcel.hasWeeds, 1.0, parcel.plantedCrop!.frostDamage ?? 0, parcel.plantedCrop!.droughtStress ?? 0) * pestYieldModifier(parcel.pestState?.severity ?? 0)),
               siloCapForHarvest - currentTotal,
             );
             const newFertility = Math.max(1, parcel.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonuses.fertilityDrainMult));
@@ -4666,9 +4807,107 @@ export const useGameStore = create<GameState>()(
         }
         // End electricity tick
 
+        // ── Selling Channels tick ────────────────────────────────────────────────
+        let sellingRevenue = 0;
+        let newReputation = state.reputation ?? 0;
+        let newReputationHistory = [...(state.reputationHistory ?? [])];
+        let newAwardHistory = [...state.awardHistory];
+        let newProductAwardBonuses = { ...state.productAwardBonuses };
+        let newRestaurantContracts = [...state.restaurantContracts];
+        let newVegBoxSubscribers = [...state.vegBoxSubscribers];
+        let newOnlineShopAllocations = { ...state.onlineShopAllocations };
+
+        const { calcShopVisitors, calcShopPrice, wholesalePrice, calcOnlineOrders, calcCafeRevenue, VEG_BOX_TIERS } = require('../engine/sellingChannels');
+        const dayOfWeek = (newDay - 1) % 7;
+
+        // 1. Farm Shop
+        if (state.farmShop.tier > 0) {
+          const isOpen = state.farmShop.openDays[dayOfWeek];
+          const hasWorker = state.farmShop.assignedWorkerIds.length > 0;
+          if (isOpen && hasWorker) {
+            const visitors = calcShopVisitors(state.farmShop.tier, season, dayOfWeek, newReputation, state.farmShop.openHours);
+            // Sell to visitors from inventory
+            const inventoryItems = Object.entries(state.inventory).filter(([_, qty]) => qty > 0);
+            if (inventoryItems.length > 0) {
+              for (let v = 0; v < visitors; v++) {
+                const [itemId, qty] = inventoryItems[Math.floor(Math.random() * inventoryItems.length)];
+                if ((state.inventory[itemId] ?? 0) > 0) {
+                  const crop = CROP_TYPES.find(c => c.id === itemId);
+                  const basePrice = state.prices.find(p => p.cropId === itemId)?.price ?? (crop?.basePrice ?? 10);
+                  const quality = state.cropQualityMap?.[itemId] ?? 50;
+                  const price = calcShopPrice(basePrice, quality, newReputation, newProductAwardBonuses[itemId] ?? 0);
+                  newOnlineShopAllocations[itemId] = (newOnlineShopAllocations[itemId] ?? 0) - 1;
+                  sellingRevenue += price;
+                }
+              }
+            }
+          }
+        }
+
+        // 2. Restaurant contracts delivery
+        for (const rc of newRestaurantContracts) {
+          if (newDay >= rc.nextDeliveryDay) {
+            const inStock = state.inventory[rc.productId] ?? 0;
+            const delivered = Math.min(inStock, rc.quantityPerCycle);
+            if (delivered >= rc.quantityPerCycle) {
+              newReputation += 0.5;
+              sellingRevenue += delivered * rc.pricePerUnit;
+              newOnlineShopAllocations[rc.productId] = (newOnlineShopAllocations[rc.productId] ?? 0) - delivered;
+            } else {
+              newReputation -= 3;
+              summary.push({ id: `rest_fail_${rc.id}`, icon: '🍽️', title: `Restaurant contract failed`, detail: `Short delivery to ${rc.buyerName}`, severity: 'danger' });
+            }
+            rc.nextDeliveryDay += rc.cycleDays;
+          }
+        }
+
+        // 3. Veg box weekly delivery (every 7 days)
+        if (newDay % 7 === 0 && state.vegBoxSubscribers.length > 0) {
+          for (const sub of state.vegBoxSubscribers) {
+            const tier = VEG_BOX_TIERS[sub.tier];
+            const weeklyRevenue = sub.count * tier.weeklyFee;
+            sellingRevenue += weeklyRevenue;
+          }
+        }
+
+        // 4. Online shop daily orders
+        if (state.onlineShopActive && state.farmShop.tier >= 2) {
+          const onlineItems = Object.entries(state.onlineShopAllocations).filter(([_, qty]) => qty > 0);
+          const orders = calcOnlineOrders(newReputation, onlineItems.length);
+          for (let o = 0; o < orders; o++) {
+            const [itemId, qty] = onlineItems[Math.floor(Math.random() * onlineItems.length)];
+            if ((state.onlineShopAllocations[itemId] ?? 0) > 0) {
+              const crop = CROP_TYPES.find(c => c.id === itemId);
+              const basePrice = state.prices.find(p => p.cropId === itemId)?.price ?? (crop?.basePrice ?? 10);
+              const quality = state.cropQualityMap?.[itemId] ?? 50;
+              const price = calcShopPrice(basePrice, quality, newReputation, newProductAwardBonuses[itemId] ?? 0);
+              newOnlineShopAllocations[itemId] = (newOnlineShopAllocations[itemId] ?? 0) - 1;
+              sellingRevenue += price;
+            }
+          }
+        }
+
+        // 5. Farm café
+        if (state.farmCafeOpen && state.farmShop.tier >= 3) {
+          const hasCafeWorker = state.farmCafeWorkerIds.length > 0;
+          if (hasCafeWorker) {
+            const visitors = calcShopVisitors(1, season, dayOfWeek, newReputation, 8);
+            const cafeRev = calcCafeRevenue(visitors, 12, 60);
+            sellingRevenue += cafeRev;
+          }
+        }
+
+        // 6. Reputation decay (weekly)
+        if (newDay % 7 === 0) {
+          const eventsThisWeek = newReputationHistory.filter(h => h.day >= newDay - 7).length;
+          if (eventsThisWeek === 0) {
+            newReputation = Math.max(0, newReputation - 0.05);
+          }
+        }
+        newReputation = Math.min(100, Math.max(0, newReputation));
+
         set({
           day: newDay,
-          money: finalMoney + showPrizeMoney + deliveryRevenue - deliveryRepairCost - productionBuildingContractorFees - slurryFine - disposalFee + biogasIncome + (moneyAfterDrilling - state.money) + coopMoneyDelta - electricityBillDeduction,
           wells: updatedWells,
           aquiferLevel: newAquifer,
           showWindowOpen,
@@ -4731,7 +4970,6 @@ export const useGameStore = create<GameState>()(
           animalsManuallyFed: false,
           henilQueue: updatedHenilQueue,
           harvestedCropIds: harvestedCropIdsForSet,
-          reputation,
           bankrupt: isBankrupt || state.bankrupt,
           sellPressures,
           processedInventory: processedInventoryForSet,
@@ -4775,6 +5013,18 @@ export const useGameStore = create<GameState>()(
           coopStates: updatedCoopStates,
           workers: finalWorkers,
           pendingRequests: newPendingRequests,
+          reputation: newReputation,
+          reputationHistory: newReputationHistory,
+          farmShop: state.farmShop,
+          restaurantContracts: newRestaurantContracts,
+          vegBoxSubscribers: newVegBoxSubscribers,
+          onlineShopActive: state.onlineShopActive,
+          onlineShopAllocations: newOnlineShopAllocations,
+          farmCafeOpen: state.farmCafeOpen,
+          farmCafeWorkerIds: state.farmCafeWorkerIds,
+          awardHistory: newAwardHistory,
+          productAwardBonuses: newProductAwardBonuses,
+          money: state.money + sellingRevenue + showPrizeMoney + deliveryRevenue - deliveryRepairCost - productionBuildingContractorFees - slurryFine - disposalFee + biogasIncome + (moneyAfterDrilling - state.money) + coopMoneyDelta - electricityBillDeduction,
         });
       },
 
@@ -4887,7 +5137,7 @@ export const useGameStore = create<GameState>()(
         const droughtScale = rawClimateDelta < 0 ? 1.0 / seedGenes.drought : 1.0;
         const climateModifier = 1.0 + rawClimateDelta * droughtScale;
         const { harvestAmount } = require('../engine/crops');
-        const rawUnits = harvestAmount(crop, cropType, parcel.soil ?? SOIL_DEFAULTS, climateModifier, parcel.hasWeeds, 1.0, crop.frostDamage ?? 0, crop.droughtStress ?? 0);
+        const rawUnits = harvestAmount(crop, cropType, parcel.soil ?? SOIL_DEFAULTS, climateModifier, parcel.hasWeeds, 1.0, crop.frostDamage ?? 0, crop.droughtStress ?? 0) * pestYieldModifier(parcel.pestState?.severity ?? 0);
         // Field event penalty: âˆ’25% yield per unresolved disease/pest event
         const unresolvedEvents = state.fieldEvents.filter(e => e.parcelId === parcelId && !e.resolved).length;
         const fieldEventMod = Math.pow(0.75, unresolvedEvents);
@@ -7288,7 +7538,7 @@ export const useGameStore = create<GameState>()(
           const rotationMod = p.lastCropId && p.lastCropId !== p.plantedCrop.cropId ? 1.15 : 1.0;
           const irrigationMod = p.irrigated ? 1.20 : 1.0;
           const soilMod = getSoilModifier(p.soilType, p.plantedCrop.cropId);
-          const rawUnits = harvestAmount(p.plantedCrop, cropType, p.soil ?? SOIL_DEFAULTS, climateModifier, p.hasWeeds, yieldBonus, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0);
+          const rawUnits = harvestAmount(p.plantedCrop, cropType, p.soil ?? SOIL_DEFAULTS, climateModifier, p.hasWeeds, yieldBonus, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0) * pestYieldModifier(p.pestState?.severity ?? 0);
           const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationMod * soilMod), siloCapacity - totalInventory);
           totalInventory += units;
           newInventory[p.plantedCrop.cropId] = (newInventory[p.plantedCrop.cropId] ?? 0) + units;
@@ -7665,6 +7915,142 @@ export const useGameStore = create<GameState>()(
         });
       },
 
+      // ── Pest & Disease actions ───────────────────────────────────────────────
+      treatPest: (parcelId, productId) => {
+        const state = get();
+        const parcel = state.parcels.find(p => p.id === parcelId);
+        if (!parcel?.pestState) return;
+
+        const config = PEST_CONFIG[parcel.pestState.type];
+        const inStock = state.productInventory[productId] ?? 0;
+        if (inStock <= 0) return;
+
+        // Check product matches required treatment type
+        const TREATMENT_MAP: Record<string, string[]> = {
+          fungicide:   ['fungal', 'blight'],
+          insecticide: ['insect'],
+          nematicide:  ['nematode'],
+        };
+        const { PRODUCT_TYPES } = require('../data/productTypes');
+        const product = PRODUCT_TYPES.find((p: any) => p.id === productId);
+        if (!product) return;
+        const treatable = TREATMENT_MAP[product.category] ?? [];
+        if (!treatable.includes(parcel.pestState.type)) return;
+
+        set({
+          parcels: state.parcels.map(p =>
+            p.id === parcelId ? { ...p, pestState: undefined } : p
+          ),
+          productInventory: { ...state.productInventory, [productId]: inStock - 1 },
+        });
+      },
+
+      buyBeneficialInsects: () => {
+        const state = get();
+        if (state.beneficialInsectsActive) return;
+        const COST = 2400;
+        if (state.money < COST) return;
+        set({ money: state.money - COST, beneficialInsectsActive: true });
+      },
+
+      assignCropConsultant: (parcelIds) => {
+        const state = get();
+        const hasConsultant = (state.workers ?? []).some(w => w.role === 'crop_consultant');
+        if (!hasConsultant) return;
+        // Limit to 20 ha total
+        const totalHa = state.parcels
+          .filter(p => parcelIds.includes(p.id))
+          .reduce((s, p) => s + p.hectares, 0);
+        if (totalHa > 20) return;
+        set({ cropConsultantParcelIds: parcelIds });
+      },
+
+      // ── Selling Channels actions ───────────────────────────────────────────
+      buyFarmShopUpgrade: () => {
+        const state = get();
+        const nextTier = (state.farmShop.tier + 1) as 1 | 2 | 3;
+        if (nextTier > 3) return;
+        const costs = [0, 15000, 45000, 120000];
+        const cost = costs[nextTier];
+        if (state.money < cost) return;
+        set({
+          money: state.money - cost,
+          farmShop: { ...state.farmShop, tier: nextTier },
+        });
+      },
+
+      setShopHours: (openDays, openHours) => {
+        const state = get();
+        set({ farmShop: { ...state.farmShop, openDays, openHours } });
+      },
+
+      assignShopWorker: (workerId) => {
+        const state = get();
+        if (state.farmShop.assignedWorkerIds.includes(workerId)) return;
+        set({
+          farmShop: { ...state.farmShop, assignedWorkerIds: [...state.farmShop.assignedWorkerIds, workerId] },
+        });
+      },
+
+      unassignShopWorker: (workerId) => {
+        const state = get();
+        set({
+          farmShop: { ...state.farmShop, assignedWorkerIds: state.farmShop.assignedWorkerIds.filter(id => id !== workerId) },
+        });
+      },
+
+      toggleOnlineShop: () => {
+        const state = get();
+        if (!state.onlineShopActive && state.farmShop.tier < 2) return;
+        set({ onlineShopActive: !state.onlineShopActive });
+      },
+
+      setOnlineAllocation: (productId, units) => {
+        const state = get();
+        set({
+          onlineShopAllocations: { ...state.onlineShopAllocations, [productId]: units },
+        });
+      },
+
+      toggleFarmCafe: () => {
+        const state = get();
+        if (!state.farmCafeOpen && state.farmShop.tier < 3) return;
+        set({ farmCafeOpen: !state.farmCafeOpen });
+      },
+
+      assignCafeWorker: (workerId) => {
+        const state = get();
+        if (state.farmCafeWorkerIds.includes(workerId)) return;
+        set({
+          farmCafeWorkerIds: [...state.farmCafeWorkerIds, workerId],
+        });
+      },
+
+      unassignCafeWorker: (workerId) => {
+        const state = get();
+        set({
+          farmCafeWorkerIds: state.farmCafeWorkerIds.filter(id => id !== workerId),
+        });
+      },
+
+      enterAgriculturalShow: (productId, batchId) => {
+        const state = get();
+        // Simplified: just award based on quality
+        const { judgeAward, awardPriceBonus } = require('../engine/sellingChannels');
+        const quality = state.cropQualityMap?.[productId] ?? 50;
+        const award = judgeAward(quality);
+        if (award) {
+          const bonus = awardPriceBonus(award);
+          const currentBonus = state.productAwardBonuses[productId] ?? 0;
+          const newBonus = Math.min(60, currentBonus + bonus);
+          set({
+            productAwardBonuses: { ...state.productAwardBonuses, [productId]: newBonus },
+            awardHistory: [...state.awardHistory, { day: state.day, productId, showName: 'County Show', award }],
+            reputation: Math.min(100, state.reputation + (award === 'gold' ? 5 : award === 'silver' ? 3 : 1)),
+          });
+        }
+      },
+
       installIrrigation: (parcelId) => {
         const state = get();
         const parcel = state.parcels.find(p => p.id === parcelId && p.owned);
@@ -7936,6 +8322,10 @@ export const useGameStore = create<GameState>()(
           upgradeGridTier, buySolarPanels, buyWindTurbines, buildBiogasPlant, buildBiomassCHP,
           loadBiomassStraw, buildHeatPipeNetwork, buyBatteryBanks, buyGenerator, refuelGenerator,
           toggleGenerator, serviceEquipment, addSurgeProtector,
+          treatPest, buyBeneficialInsects, assignCropConsultant,
+          buyFarmShopUpgrade, setShopHours, assignShopWorker, unassignShopWorker,
+          toggleOnlineShop, setOnlineAllocation, toggleFarmCafe,
+          assignCafeWorker, unassignCafeWorker, enterAgriculturalShow,
           ...dataState
         } = state;
         return {

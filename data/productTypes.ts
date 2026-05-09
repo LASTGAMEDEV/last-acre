@@ -1,4 +1,4 @@
-export type ProductCategory = 'fertilizer_solid' | 'fertilizer_liquid' | 'herbicide' | 'fungicide' | 'insecticide';
+export type ProductCategory = 'fertilizer_solid' | 'fertilizer_liquid' | 'herbicide' | 'fungicide' | 'insecticide' | 'nematicide';
 
 export interface ProductType {
   id: string;
@@ -153,6 +153,26 @@ export const PRODUCT_TYPES: ProductType[] = [
     packCost: 1180,
     effectLabel: 'Combats fungi + pests + weeds',
   },
+
+  // ── Nematicides ────────────────────────────────────────────────
+  {
+    id: 'nematicide_basic',
+    name: 'Basic Nematicide',
+    category: 'nematicide',
+    cost: 90,
+    packSize: 5,
+    packCost: 410,
+    effectLabel: 'Clears root nematodes',
+  },
+  {
+    id: 'nematicide_systemic',
+    name: 'Systemic Nematicide',
+    category: 'nematicide',
+    cost: 170,
+    packSize: 5,
+    packCost: 780,
+    effectLabel: 'Eliminates nematodes + protects 30 days',
+  },
 ];
 
 export const CATEGORY_LABELS: Record<ProductCategory, string> = {
@@ -161,4 +181,5 @@ export const CATEGORY_LABELS: Record<ProductCategory, string> = {
   herbicide:         '🌿 Herbicides',
   fungicide:         '🍄 Fungicides',
   insecticide:       '🐛 Insecticides',
+  nematicide:        '🪱 Nematicides',
 };

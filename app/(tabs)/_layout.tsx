@@ -14,6 +14,7 @@ import GameHUD from '../../components/GameHUD';
 import EventBanner from '../../components/EventBanner';
 import MilestonePopup from '../../components/MilestonePopup';
 import FirstMission from '../../components/FirstMission';
+import CustomTabBar from '../../components/CustomTabBar';
 
 export default function TabLayout() {
   const { day, parcels, loans, contracts, seasonGoals, musicEnabled, soundEnabled } = useGameStore();
@@ -53,6 +54,7 @@ export default function TabLayout() {
       <MilestonePopup />
 
       <Tabs
+        tabBar={props => <CustomTabBar {...props} />}
         screenOptions={{
           headerShown: false,
           tabBarStyle: { backgroundColor: theme.tabBar, borderTopColor: theme.accent + '33' },
@@ -61,27 +63,10 @@ export default function TabLayout() {
           tabBarLabelStyle: { fontSize: 10 },
         }}
       >
-        {/* ── 5 visible combined tabs ── */}
-        <Tabs.Screen name="granja"   options={{ title: 'Farm',       tabBarLabel: '🌾 Farm',       tabBarBadge: farmBadge }} />
-        <Tabs.Screen name="mercado"  options={{ title: 'Market',     tabBarLabel: '💰 Market' }} />
-        <Tabs.Screen name="fabrica"  options={{ title: 'Processing', tabBarLabel: '🏭 Processing' }} />
-        <Tabs.Screen name="gestion"  options={{ title: 'Office',     tabBarLabel: '📋 Office',     tabBarBadge: officeBadge }} />
-        <Tabs.Screen name="clima"    options={{ title: 'Weather',    tabBarLabel: '☀️ Weather' }} />
-
-        {/* ── Hidden legacy screens (content accessed via combined tabs) ── */}
-        <Tabs.Screen name="tierras"      options={{ href: null }} />
-        <Tabs.Screen name="animales"     options={{ href: null }} />
-        <Tabs.Screen name="maquinaria"   options={{ href: null }} />
-        <Tabs.Screen name="trabajadores" options={{ href: null }} />
-        <Tabs.Screen name="economia"     options={{ href: null }} />
-        <Tabs.Screen name="subasta"      options={{ href: null }} />
-        <Tabs.Screen name="tienda"       options={{ href: null }} />
-        <Tabs.Screen name="procesado"    options={{ href: null }} />
-        <Tabs.Screen name="seguros"      options={{ href: null }} />
-        <Tabs.Screen name="oficina"      options={{ href: null }} />
-        <Tabs.Screen name="calendario"   options={{ href: null }} />
-        <Tabs.Screen name="logros"       options={{ href: null }} />
-        <Tabs.Screen name="agua"         options={{ href: null }} />
+        <Tabs.Screen name="farm"   options={{ title: 'Farm',   tabBarLabel: '🌿 Farm',   tabBarBadge: farmBadge }} />
+        <Tabs.Screen name="ops"    options={{ title: 'Ops',    tabBarLabel: '⚙️ Ops' }} />
+        <Tabs.Screen name="market" options={{ title: 'Market', tabBarLabel: '📈 Market' }} />
+        <Tabs.Screen name="office" options={{ title: 'Office', tabBarLabel: '🏦 Office', tabBarBadge: officeBadge }} />
       </Tabs>
 
       <DaySummaryModal />
@@ -91,4 +76,3 @@ export default function TabLayout() {
     </View>
   );
 }
-

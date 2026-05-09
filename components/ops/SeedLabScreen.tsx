@@ -1,26 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import TierrasScreen from './tierras';
-import AnimalesScreen from './animales';
-import MaquinariaScreen from './maquinaria';
-import TrabajadoresScreen from './trabajadores';
-import AguaScreen from './agua';
-import { useGameStore, SeedEntry, SeedGenes, HybridJob } from '../../store/useGameStore';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { useGameStore, SeedGenes } from '../../store/useGameStore';
 import { CROP_TYPES } from '../../data/cropTypes';
 import HelpSheet from '../../components/HelpSheet';
-import SubTabBar from '../../components/SubTabBar';
 import { C, S, F, R } from '../../constants/theme';
-
-type FarmTab = 'fields' | 'animals' | 'machinery' | 'workers' | 'seedlab' | 'water';
-
-const TABS: { id: FarmTab; label: string }[] = [
-  { id: 'fields',    label: '🌾 Fields' },
-  { id: 'animals',   label: '🐄 Animals' },
-  { id: 'machinery', label: '🚜 Machinery' },
-  { id: 'workers',   label: '👨‍🌾 Workers' },
-  { id: 'seedlab',   label: '🌱 Seed Lab' },
-  { id: 'water',     label: '💧 Water' },
-];
 
 function geneGrade(v: number): string {
   if (v >= 1.4) return 'S';
@@ -51,7 +34,7 @@ function GeneChips({ genes }: { genes: SeedGenes }) {
   );
 }
 
-function SeedLabScreen() {
+export default function SeedLabScreen() {
   const {
     buildings, money, day, seedVault, hybridJobs,
     startHybridization,
@@ -277,25 +260,4 @@ const slStyles = StyleSheet.create({
   genBadge:           { backgroundColor: '#ffd70033', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2 },
   genBadgeText:       { color: '#ffd700', fontSize: F.size.xs, fontWeight: 'bold' },
   vaultQty:           { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'bold' },
-});
-
-export default function GranjaScreen() {
-  const [tab, setTab] = useState<FarmTab>('fields');
-
-  return (
-    <View style={styles.container}>
-      <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as FarmTab)} />
-
-      {tab === 'fields'    && <TierrasScreen />}
-      {tab === 'animals'   && <AnimalesScreen />}
-      {tab === 'machinery' && <MaquinariaScreen />}
-      {tab === 'workers'   && <TrabajadoresScreen />}
-      {tab === 'seedlab'   && <SeedLabScreen />}
-      {tab === 'water'     && <AguaScreen />}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
 });

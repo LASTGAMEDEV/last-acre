@@ -13,6 +13,7 @@ import { getSeason } from '../../engine/climate';
 import { getSoilModifier, SoilStats, SOIL_DEFAULTS, computeSoilYieldModifier } from '../../engine/crops';
 import { wellFlowRate, PUMP_SPECS, pipeCost } from '../../engine/water';
 import { PRODUCT_TYPES } from '../../data/productTypes';
+import { PEST_CONFIG } from '../../engine/pests';
 import ContractorModal from '../../components/ContractorModal';
 import { getContractorCost, ContractorOperation } from '../../engine/machinery';
 import HelpSheet from '../../components/HelpSheet';
@@ -234,7 +235,7 @@ export default function TierrasScreen() {
     clearWeeds, fertilizeCrop, installGreenhouse, removeGreenhouse, installIrrigation,
     seedVault, selectSeedForParcel,
     tractorJobs, harvestJobs, assignJob, assignHarvestJob, hireContractor,
-    cureDisease, plantCropBatch, hapticEnabled,
+    cureDisease, treatPest, plantCropBatch, hapticEnabled,
     applySoilAmendment, plantCoverCrop,
   } = useGameStore();
 
@@ -326,6 +327,8 @@ export default function TierrasScreen() {
         bg = '#2a1a00'; borderColor = '#8B4513'; statusIcon = 'ðŸ¦ ';
       } else if (event) {
         bg = '#5c1a1a'; borderColor = '#c62828'; statusIcon = 'âš ï¸';
+      } else if (parcel.pestState?.detectedDay) {
+        bg = '#3a1500'; borderColor = '#e65100'; statusIcon = '\ud83d\udc1b';
       } else if (parcel.hasWeeds) {
         bg = '#3d2800'; borderColor = '#e65100';
       } else if (parcel.plantedCrop && ready) {
@@ -381,6 +384,7 @@ export default function TierrasScreen() {
 
   const fungicideIds = PRODUCT_TYPES.filter(p => p.category === 'fungicide' && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
   const insecticideIds = PRODUCT_TYPES.filter(p => p.category === 'insecticide' && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
+  const nematicideIds = PRODUCT_TYPES.filter(p => p.category === 'nematicide' && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
   const herbicideIds = PRODUCT_TYPES.filter(p => p.category === 'herbicide' && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
   const fertilizerIds = PRODUCT_TYPES.filter(p => (p.category === 'fertilizer_solid' || p.category === 'fertilizer_liquid') && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
 
@@ -438,6 +442,29 @@ export default function TierrasScreen() {
             >
               <Text style={{ color: money >= 150 ? '#ffb74d' : '#555', fontSize: 11, fontWeight: 'bold' }}>Treat $150</Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {parcel.pestState?.detectedDay && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#2a0a00', borderRadius: 6, padding: 8, marginBottom: 4 }}>
+            <Text style={{ color: '#ff8a65', fontSize: 11 }}>
+              {'\ud83d\udc1b'} {PEST_CONFIG[parcel.pestState.type].label} &middot; severity {parcel.pestState.severity.toFixed(1)}/10
+            </Text>
+            {(() => {
+              const treatmentCategory = PEST_CONFIG[parcel.pestState.type].treatment;
+              const available = PRODUCT_TYPES.filter(p => p.category === treatmentCategory && (productInventory[p.id] ?? 0) > 0);
+              if (available.length > 0) {
+                return (
+                  <TouchableOpacity
+                    style={{ backgroundColor: '#4a1a00', borderRadius: 5, paddingHorizontal: 10, paddingVertical: 4 }}
+                    onPress={() => treatPest(parcel.id, available[0].id)}
+                  >
+                    <Text style={{ color: '#ffb74d', fontSize: 11, fontWeight: 'bold' }}>Treat (1 unit)</Text>
+                  </TouchableOpacity>
+                );
+              }
+              return <Text style={{ color: '#ef9a9a', fontSize: 11 }}>No {treatmentCategory}</Text>;
+            })()}
           </View>
         )}
 
@@ -1238,6 +1265,52 @@ export default function TierrasScreen() {
                         ))}
                         {(mapSelectedEvent.type === 'disease' ? fungicideIds : insecticideIds).length === 0 && (
                           <Text style={styles.noProductText}>No {mapSelectedEvent.type === 'disease' ? 'fungicide' : 'insecticide'}</Text>
+                        )}
+                      </View>
+                    )}
+
+                    {/* Pests section */}
+                    {mapSelected.owned && (
+                      <View style={{ marginTop: S.sm }}>
+                        {!mapSelected.pestState?.detectedDay ? (
+                          <Text style={{ color: '#555', fontSize: 11 }}>No active infestation</Text>
+                        ) : (
+                          <View style={{ backgroundColor: '#2a0a00', borderRadius: R.sm, padding: S.sm }}>
+                            <Text style={{ color: '#ff8a65', fontSize: F.size.sm, fontWeight: 'bold', marginBottom: S.xs }}>
+                              {'\ud83d\udc1b'} {PEST_CONFIG[mapSelected.pestState.type].label}
+                            </Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: S.xs }}>
+                              <Text style={{ color: C.textMuted, fontSize: 11, marginRight: 8 }}>Severity</Text>
+                              <View style={{ flex: 1, height: 8, backgroundColor: C.bgCard, borderRadius: 4 }}>
+                                <View style={{
+                                  width: `${Math.min(10, mapSelected.pestState.severity) * 10}%` as any,
+                                  height: 8,
+                                  borderRadius: 4,
+                                  backgroundColor: mapSelected.pestState.severity <= 5 ? '#ffa726' : mapSelected.pestState.severity <= 8 ? '#ef5350' : '#b71c1c',
+                                }} />
+                              </View>
+                              <Text style={{ color: C.textMuted, fontSize: 11, marginLeft: 8 }}>{mapSelected.pestState.severity.toFixed(1)}/10</Text>
+                            </View>
+                            {(() => {
+                              const treatmentCategory = PEST_CONFIG[mapSelected.pestState.type].treatment;
+                              const available = PRODUCT_TYPES.filter(p => p.category === treatmentCategory && (productInventory[p.id] ?? 0) > 0);
+                              return available.length > 0 ? (
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                                  {available.map(prod => (
+                                    <TouchableOpacity
+                                      key={prod.id}
+                                      style={[styles.resolveBtn, { minHeight: 44, justifyContent: 'center' }]}
+                                      onPress={() => { treatPest(mapSelected.id, prod.id); setMapSelected(p => p ? { ...p, pestState: undefined } : p); }}
+                                    >
+                                      <Text style={styles.resolveBtnText}>{prod.name} (1 unit)</Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              ) : (
+                                <Text style={styles.noProductText}>No {treatmentCategory} available</Text>
+                              );
+                            })()}
+                          </View>
                         )}
                       </View>
                     )}
