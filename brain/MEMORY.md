@@ -1,24 +1,20 @@
 # MEMORY.md — The Shared Brain
 
-> This is the living memory. All agents read this first.
-> Updated: 2026-05-10
+&gt; This is the living memory. All agents read this first.
+&gt; Updated: 2026-05-10
 
 ---
 
-## 📝 AGENT WRITE PROTOCOL
+## ⚡ Quick Status — Update This Every Session
 
-**Every agent must WRITE to these files after working.** Not just read.
-
-| After doing this... | Update this file... | How |
-|---------------------|---------------------|-----|
-| Implement a feature | `specs.md` | Mark spec ✅, add notes |
-| Make a decision | `decisions.md` | Log what was decided and why |
-| Do research | `research.md` | Dump findings, link sources |
-| Start/end a task | `current-task.md` | Update status |
-| Have a session | `DAILY/YYYY-MM-DD.md` | Log what happened |
-| Review code | `specs.md` or `decisions.md` | Note changes needed |
-
-**Rule: If you don't write it down, it didn't happen.**
+| Field | Value |
+|-------|-------|
+| **Last agent** | Jose |
+| **Last session** | 2026-05-10 |
+| **What happened** | Brain structure set up in Obsidian; SYNC-PROTOCOL, HANDOFF, INBOX, templates all created |
+| **Current task** | None — Jose deciding next feature |
+| **Next agent should** | Read HANDOFF.md, then set current-task.md |
+| **Code health** | Unknown — run `npx tsc --noEmit` and `npx expo lint` |
 
 ---
 
@@ -59,80 +55,23 @@
 
 ---
 
-## 🤖 Agent Team — ALL CONNECTED
+## 🤖 Agent Team
 
 ### DOMINGO (Coordinator)
 - **Role:** Mission control, keeps everything in sync
 - **Personality:** Hype friend, bright, protective, kinetic
-- **Location:** Linux server (remote)
-- **Access:** Reads/writes brain via GitHub push/pull
 - **Job:** Track state, dispatch work, consolidate results, keep morale up
 - **Always reads:** This file + specs + current-task before acting
-- **Always writes:** DAILY logs, current-task updates, MEMORY.md updates
 
 ### Kimi (Implementation Engine)
 - **Role:** Code builder, fast and cost-effective
-- **Location:** Connected to Obsidian (plugin)
-- **Access:** Reads/writes brain directly in Obsidian
 - **When to spawn:** "Build this feature", "Write this module", "Refactor"
 - **Guardrails:** Must read `docs/superpowers/ai-coding-rules` before coding
-- **Always writes:** specs.md (mark things done), code, technical notes
 
-### Claude (Spec Designer + QA)
-- **Role:** Designs specs, then reviews implementations
-- **Location:** Connected to Obsidian (plugin)
-- **Access:** Reads/writes brain directly in Obsidian
-- **When to spawn:** "Design the spec for X", "Review this", "Audit"
-- **Always writes:** specs.md (creates them), decisions.md, review notes
+### Claude (Review & Polish)
+- **Role:** QA, edge-case hunter, architecture auditor
+- **When to spawn:** "Review this", "Find security issues", "Audit design"
 
 ---
 
 ## 🗂️ Brain Structure
-
-```
-brain/
-├── MEMORY.md              ← You are here (long-term memory)
-├── AGENTS/
-│   ├── DOMINGO.md         ← My full personality + our history
-│   ├── KIMI.md            ← Kimi context and preferences
-│   └── CLAUDE.md          ← Claude context and preferences
-├── PROJECTS/
-│   └── farm-tycoon/
-│       ├── specs.md       ← Game specs & current state
-│       ├── current-task.md ← What we're doing RIGHT NOW
-│       ├── decisions.md   ← Why we chose X over Y
-│       ├── backlog.md     ← Future features
-│       └── research.md    ← Research findings
-├── DAILY/
-│   └── 2026-05-10.md      ← Today's session log
-└── REFERENCE/
-    ├── ai-coding-rules.md  ← Link to guardrails
-    ├── agriculture-data.md  ← Real farming data for game
-    └── competitors.md       ← Farm Manager 2026, etc.
-```
-
----
-
-## 🔑 Important Rules
-
-1. **Always read MEMORY.md first** before doing anything
-2. **Update files after every session** — if you don't write, you don't remember
-3. **current-task.md** = single source of truth for what's happening now
-4. **decisions.md** = capture why we made choices (prevents re-debating)
-5. **Text > Brain** — memory is limited, files survive
-
----
-
-## 📌 Current Status
-
-- Brain structure: ✅ Created by Jose in Obsidian
-- ACP harnesses: ❌ Not configured yet (Kimi Code + Claude Code)
-- Git sync: ⚠️ Needs `brain/` added to GitHub repo
-- Next task: Research realistic agriculture mechanics
-
----
-
-## 🎯 Next Actions
-
-1. Push `brain/` to GitHub
-2. Start research on realistic ag mechanics

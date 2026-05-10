@@ -144,11 +144,36 @@ The ESLint rule `react/no-unescaped-entities` catches these as **errors**, not w
 
 ---
 
+## Your Role If You Are Kimi
+
+**You are an executor, not a designer.**
+
+Before writing a single line of code, locate the plan file for this feature in
+`docs/superpowers/plans/` and the design spec in `docs/superpowers/specs/`.
+If there is no plan file, stop and ask for one — do not invent an approach.
+
+The plan file tells you:
+- Exactly which files to create or modify
+- The precise state shape, action signatures, and data types to use
+- Which files are off-limits
+- The step-by-step order to implement in
+- The verification checklist to run when done
+
+**If something is not in the plan, do not do it.** Do not refactor nearby code.
+Do not add extra features. Do not rename things. Do not create new top-level tabs.
+Do not make architectural decisions. If you hit a case the plan didn't anticipate,
+stop and flag it rather than inventing a solution.
+
+Claude Code writes the specs and plans. You implement them exactly.
+
+---
+
 ## Commit & Workflow Rules
 
-This project is worked on by two AI assistants + the owner:
-- **Kimi Code** handles feature implementation.
-- **Claude Code** handles fixes, architecture decisions, code review, and cleanup.
+This project is worked on by three AI assistants + the owner:
+- **ClawdBot** — the user's planning assistant; defines what to build.
+- **Claude Code** — writes technical specs and implementation plans; reviews code; fixes bugs; commits.
+- **Kimi Code** — implements features by following Claude Code's plan files exactly.
 
 To keep them in sync:
 

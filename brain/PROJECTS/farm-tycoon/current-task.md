@@ -1,87 +1,51 @@
+
 # Current Task
 
-> Updated: 2026-05-10
-> Status: ACTIVE
+> What are we building RIGHT NOW? One thing at a time.
+> Update this whenever the mission changes.
+> Last updated: 2026-05-10
 
 ---
 
-## 🎯 BREAKTHROUGH: All 3 Agents Connected!
+## 🎯 Mission
 
-**Kimi + Claude = now connected to Obsidian via plugin!**
-
-This changes EVERYTHING. The workflow is now real.
-
----
-
-## ✅ Agent Connections
-
-| Agent | Location | Brain Access | Status |
-|-------|----------|-------------|--------|
-| **DOMINGO** | Linux server | GitHub push/pull | ✅ Active |
-| **Kimi** | Obsidian plugin | Direct read/write | ✅ **JUST CONNECTED** |
-| **Claude** | Obsidian plugin | Direct read/write | ✅ **JUST CONNECTED** |
+**Feature:** _(waiting for Jose to set)_
+**Assigned to:** _(TBD)_
+**Started:** _(TBD)_
 
 ---
 
-## 🔄 New Workflow
+## 📋 What "Done" Looks Like
 
-```
-You (Jose) in Obsidian:
-├── Tell Kimi: "Build X" → Kimi reads brain/specs → writes code
-├── Tell Claude: "Spec Y" → Claude writes spec in brain/
-├── Edit brain files directly
-└── git push
-
-DOMINGO (server):
-├── git pull → reads brain updates
-├── Tracks state, coordinates
-├── Updates MEMORY.md, current-task.md
-└── git push
-
-Back in Obsidian:
-└── git pull → sees DOMINGO's updates
-```
+_(Write this before starting. What exactly does success look like?)_
 
 ---
 
-## ❌ What DOMINGO Did Wrong (Fixed)
+## 📝 Spec Location
 
-- ❌ Wrote an Encyclopedia spec — **NOT MY JOB**
-- **Claude writes specs.** DOMINGO coordinates. Period.
-- Deleted the spec. Won't happen again.
+_(Link to spec file once it exists — `docs/superpowers/specs/YYYY-MM-DD-name-design.md`)_
 
 ---
 
-## 🎯 Next Actions
+## 🔄 Progress
 
-**Jose decides:**
-1. What does he want Kimi to build?
-2. What does he want Claude to spec?
-3. What does he want DOMINGO to research/track?
-
-**DOMINGO's job:**
-- Stay synced via GitHub
-- Track what everyone is doing
-- Update brain state
-- NO speccing, NO coding
+- [ ] Spec written
+- [ ] Plan written
+- [ ] Kimi implements
+- [ ] Claude reviews
+- [ ] TypeScript clean (`npx tsc --noEmit`)
+- [ ] ESLint clean (`npx expo lint`)
+- [ ] Jose approves
+- [ ] Pushed to GitHub
 
 ---
 
 ## 🚧 Blockers
 
-| Blocker | Status |
-|---------|--------|
-| ACP harnesses | ✅ REPLACED by Obsidian plugin connection |
-| GitHub push auth | ✅ FIXED |
-| Brain sync | ✅ WORKING |
-| All 3 agents | ✅ CONNECTED |
+_(none)_
 
 ---
 
-## 📝 Notes
+## 📓 Session Notes
 
-- Jose figured out the Obsidian plugin connection himself — beast mode
-- Need to know: WHICH plugin? (document for future reference)
-- Brain is now a true shared workspace
-- Encyclopedia spec deferred — Claude writes it when Jose asks
-- Save export deferred — not on roadmap
+_(Each agent appends notes here during their session)_

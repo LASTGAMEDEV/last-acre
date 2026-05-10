@@ -1,58 +1,40 @@
+
 # Decisions Log
 
-> Why we chose X over Y. Capture this so we don't re-debate.
-> Last updated: 2026-05-10
+> Any non-obvious choice made about the game, architecture, or workflow.
+> If a future agent might question WHY we did X, write it here.
+> Format: decision → why → date + who.
 
 ---
 
-## 🗓️ 2026-05-08 — Early Decisions
+## Architecture
 
-### Migrated from local to GitHub
-- **Decision:** Move game from `C:\Users\SanGi\.antigravity\FArM TYCOON\granja-tycoon` to GitHub
-- **Why:** Durability and backup security. "In case of anything happening."
-- **Context:** Jose values backup security
+### Save key: `granja-tycoon-save-vN`
+Bump N whenever a feature adds or changes required fields in the Zustand store shape. Prevents save corruption on app update.
+_2026-05-10 — Jose/Claude_
 
-### Native OS beta distribution
-- **Decision:** Use operative system native ways to carry out betas
-- **Why:** Simplest distribution path
-- **Alternative considered:** TestFlight, Google Play beta — rejected for complexity
-
-### Refund policy for Kickstarter
-- **Decision:** Refunds available but privileges revoked
-- **Why:** Fair to backers while protecting project integrity
-
-### Stretch goals = realistic
-- **Decision:** Stretch goals grounded in actual ag engineering, not fantasy
-- **Why:** Jose's domain expertise is the differentiator
-
-### Kickstarter backing transfers to 3D game
-- **Decision:** Price of backing now deducted from future 3D game
-- **Why:** Builds long-term community and rewards early supporters
+### Zustand v5 + Expo web: no `persist` with `AsyncStorage` on web
+Zustand's persist middleware with AsyncStorage breaks on Expo web due to ESM/import.meta issues. Use localStorage adapter or skip persistence on web.
+_Prior session — Claude_
 
 ---
 
-## 🗓️ 2026-05-09 — Design Decisions
+## Game Design
 
-### Design system being overwritten
-- **Decision:** New spec replacing old design system + polish/haptics/chart rivals
-- **Why:** Evolving vision — the game is growing
-- **Status:** In progress
+_(no game design decisions logged yet — add them as you make them)_
 
 ---
 
-## 🗓️ 2026-05-10 — Brain Setup
+## Workflow
 
-### Obsidian as shared brain
-- **Decision:** Use markdown files in game folder as shared memory
-- **Why:** Universal format, human-readable, all agents can read/write
-- **Alternative considered:** Database, Notion — rejected for simplicity
+### Push to GitHub immediately after any change — not just session end
+Prevents work loss if a session crashes or context gets lost mid-task.
+_2026-05-10 — Jose_
 
----
+### Obsidian vault = granja-tycoon/ folder
+The vault is opened directly from the repo root. `brain/`, `docs/`, `projects/` all live inside the same git repo. One push syncs everything for all agents.
+_2026-05-10 — Jose_
 
-## ❓ Open Decisions
-
-| Topic | Options | Status |
-|-------|---------|--------|
-| Website tech stack | Custom build vs template vs skill-assisted | Undecided |
-| Kickstarter timeline | When to launch? | Undecided |
-| 3D game engine | Unity vs Unreal vs Godot | Undecided |
+### Kimi implements, Claude reviews — don't let Kimi self-review
+Kimi is fast but misses edge cases and security issues. Claude runs `npx tsc --noEmit && npx expo lint` after every Kimi session and reviews against the spec before committing.
+_Prior session — Jose/Claude_

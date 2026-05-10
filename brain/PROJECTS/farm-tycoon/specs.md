@@ -1,61 +1,28 @@
-# FArM TYCOON — Game Specs & State
+# Farm Tycoon — Spec Index (brain mirror)
 
-> Last updated: 2026-05-10 by DOMINGO
-> Repo: https://github.com/LASTGAMEDEV/last-acre
-
----
-
-## 🎮 Game Overview
-
-**Name:** FArM TYCOON
-**Platform:** Mobile
-**Genre:** Agriculture simulation / tycoon
-**Core Philosophy:** Realistic agriculture based on real-world farming systems
-**Target:** Perfect mechanical foundation for future 3D "Anno 117 style" game
-
-**Developer:** Jose — agricultural engineering student, Madrid, Spain
-**Domain Expert:** Archie (Irish farmer friend)
-**Studio:** lastgamestudio
+> Full spec index lives at `projects/farm-tycoon/specs.md`.
+> Full spec files live in `docs/superpowers/specs/`.
+> Implementation plan files live in `docs/superpowers/plans/`.
+> This file is a brief mirror for DOMINGO context.
 
 ---
 
-## ✅ Implemented Systems (Ready)
+## Current Save Key
 
-| System | Status | Notes |
-|--------|--------|-------|
-| Basic farming mechanics | ✅ | Core loop working |
-| Processing system | ✅ | Raw → processed goods |
-| Selling channels | ✅ | Market dynamics, contracts |
-| Pest & disease cycle | ✅ | IPM, resistance, treatment |
-| Design system | ✅ | New spec implemented |
-| Regional market | ✅ | Working |
+`granja-tycoon-save-v9` — bump when any feature changes the store shape.
 
 ---
 
-## ❌ Not Implemented
+## Shipped Features (34)
 
-| System | Status | Why |
-|--------|--------|-----|
-| **Encyclopedia** | ❌ Not started | Needs spec (Claude's job) |
-| **Save Export** | ❌ Not started | Deferred — not doing for now |
+Workers · Futures trading · Animal genetics · Machinery overhaul · Random events & NPC farms · World map · Animal shows · Commodity exchange · Encyclopedia search · Fuel system · Onboarding rework · Price alerts UI · Profit preview & help buttons · Regional market · Save export/import · Auction house · Polish (haptics/chart/rivals) · Realistic animal production · Animal production buildings · Transportation · Climate depth & recurring contracts · Compound realism stack · Design system · NPK/drainage/soil rework · Pest & disease cycles · Water system · Co-op mechanics · Animal breeds · Realistic price engine · Electricity system · Processing system · Selling channels · UI rework (navigation)
 
 ---
 
-## 🎯 Current Focus
+## Specs Written, Not Yet Implemented (13)
 
-**Encyclopedia** — the ONLY remaining pre-ship feature
-
-**Spec status:** NOT WRITTEN YET
-- Claude writes specs, not DOMINGO
-- When Jose wants to spec it → route to Claude (or Jose specs it)
+Active soil degradation · Tillage system · Organic certification · Government subsidies · Land leasing · Storage quality decay · Pollination system · Manure management · Feed ration balancing · Precision agriculture · Night operations · Hedgerows & biodiversity · Community supported agriculture
 
 ---
 
-## 📝 Decisions Log
-
-| Date | Decision |
-|------|----------|
-| 2026-05-10 | Save export deferred |
-| 2026-05-10 | Encyclopedia = only remaining pre-ship feature |
-| 2026-05-10 | DOMINGO does NOT write specs — that's Claude's role |
-
+See `projects/farm-tycoon/specs.md` for full file paths and status table.
