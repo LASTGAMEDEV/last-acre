@@ -5,22 +5,46 @@
 
 ---
 
-## 🎯 What We're Doing Right Now
+## 🎯 BREAKTHROUGH: All 3 Agents Connected!
 
-**Encyclopedia** — the ONLY remaining pre-ship feature
+**Kimi + Claude = now connected to Obsidian via plugin!**
 
----
-
-## ✅ Completed Today
-
-1. ✅ Brain structure created in Obsidian
-2. ✅ All files populated with known context
-3. ✅ Pushed `brain/` to GitHub repo
-4. ✅ DOMINGO configured for direct push to repo
+This changes EVERYTHING. The workflow is now real.
 
 ---
 
-## ❌ What DOMINGO Did Wrong
+## ✅ Agent Connections
+
+| Agent | Location | Brain Access | Status |
+|-------|----------|-------------|--------|
+| **DOMINGO** | Linux server | GitHub push/pull | ✅ Active |
+| **Kimi** | Obsidian plugin | Direct read/write | ✅ **JUST CONNECTED** |
+| **Claude** | Obsidian plugin | Direct read/write | ✅ **JUST CONNECTED** |
+
+---
+
+## 🔄 New Workflow
+
+```
+You (Jose) in Obsidian:
+├── Tell Kimi: "Build X" → Kimi reads brain/specs → writes code
+├── Tell Claude: "Spec Y" → Claude writes spec in brain/
+├── Edit brain files directly
+└── git push
+
+DOMINGO (server):
+├── git pull → reads brain updates
+├── Tracks state, coordinates
+├── Updates MEMORY.md, current-task.md
+└── git push
+
+Back in Obsidian:
+└── git pull → sees DOMINGO's updates
+```
+
+---
+
+## ❌ What DOMINGO Did Wrong (Fixed)
 
 - ❌ Wrote an Encyclopedia spec — **NOT MY JOB**
 - **Claude writes specs.** DOMINGO coordinates. Period.
@@ -30,31 +54,16 @@
 
 ## 🎯 Next Actions
 
-**When Jose wants to spec the Encyclopedia:**
-- Option A: Claude writes the spec (when ACP configured)
-- Option B: Jose writes the spec himself
-- Option C: Jose tells DOMINGO what he wants → DOMINGO asks Claude to spec it
+**Jose decides:**
+1. What does he want Kimi to build?
+2. What does he want Claude to spec?
+3. What does he want DOMINGO to research/track?
 
-**DOMINGO's actual job:**
-- Track state
-- Keep brain updated
-- Coordinate between agents (when they exist)
-- Research (when asked)
-- Push/pull brain files
-
-**NOT my job:**
-- Write specs ❌
-- Write code ❌
-- Design systems ❌
-
----
-
-## ❌ Not Implemented
-
-| System | Status | Why |
-|--------|--------|-----|
-| **Encyclopedia** | ❌ Not started | Needs spec |
-| **Save Export** | ❌ Not started | Deferred |
+**DOMINGO's job:**
+- Stay synced via GitHub
+- Track what everyone is doing
+- Update brain state
+- NO speccing, NO coding
 
 ---
 
@@ -62,15 +71,17 @@
 
 | Blocker | Status |
 |---------|--------|
-| ACP harnesses (Kimi/Claude) | ⏸️ DEFERRED — no API budget |
+| ACP harnesses | ✅ REPLACED by Obsidian plugin connection |
 | GitHub push auth | ✅ FIXED |
 | Brain sync | ✅ WORKING |
-| Encyclopedia spec | ⏳ Waiting for spec writer (Claude or Jose) |
+| All 3 agents | ✅ CONNECTED |
 
 ---
 
 ## 📝 Notes
 
-- DOMINGO stays in lane from now on
-- Encyclopedia is the ONLY thing left — but it's not DOMINGO's job to spec it
-- Jose calls the shots on what happens next
+- Jose figured out the Obsidian plugin connection himself — beast mode
+- Need to know: WHICH plugin? (document for future reference)
+- Brain is now a true shared workspace
+- Encyclopedia spec deferred — Claude writes it when Jose asks
+- Save export deferred — not on roadmap

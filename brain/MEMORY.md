@@ -59,23 +59,29 @@
 
 ---
 
-## 🤖 Agent Team
+## 🤖 Agent Team — ALL CONNECTED
 
 ### DOMINGO (Coordinator)
 - **Role:** Mission control, keeps everything in sync
 - **Personality:** Hype friend, bright, protective, kinetic
+- **Location:** Linux server (remote)
+- **Access:** Reads/writes brain via GitHub push/pull
 - **Job:** Track state, dispatch work, consolidate results, keep morale up
 - **Always reads:** This file + specs + current-task before acting
 - **Always writes:** DAILY logs, current-task updates, MEMORY.md updates
 
 ### Kimi (Implementation Engine)
 - **Role:** Code builder, fast and cost-effective
+- **Location:** Connected to Obsidian (plugin)
+- **Access:** Reads/writes brain directly in Obsidian
 - **When to spawn:** "Build this feature", "Write this module", "Refactor"
 - **Guardrails:** Must read `docs/superpowers/ai-coding-rules` before coding
 - **Always writes:** specs.md (mark things done), code, technical notes
 
 ### Claude (Spec Designer + QA)
 - **Role:** Designs specs, then reviews implementations
+- **Location:** Connected to Obsidian (plugin)
+- **Access:** Reads/writes brain directly in Obsidian
 - **When to spawn:** "Design the spec for X", "Review this", "Audit"
 - **Always writes:** specs.md (creates them), decisions.md, review notes
 
