@@ -29,10 +29,12 @@ git pull origin main
 Then in Obsidian: **Reload vault** (Ctrl+R) to see updates.
 
 **Read in this order:**
-1. `brain/MEMORY.md` — What's the state? Who's doing what?
-2. `brain/PROJECTS/farm-tycoon/current-task.md` — What's the current mission?
-3. `brain/PROJECTS/farm-tycoon/specs.md` — What specs exist?
-4. `docs/ai-coding-rules.md` — Guardrails (Kimi especially)
+1. `brain/PROJECTS/farm-tycoon/HANDOFF.md` — What's happening RIGHT NOW?
+2. `brain/MEMORY.md` — Who are we? What's the project?
+3. `brain/PROJECTS/farm-tycoon/current-task.md` — What's the current mission?
+4. `brain/PROJECTS/farm-tycoon/specs.md` — What specs exist?
+5. `docs/ai-coding-rules.md` — Guardrails (Kimi especially)
+6. `brain/INBOX.md` — Anything left mid-session that needs handling?
 
 ### For DOMINGO (on server)
 
@@ -42,9 +44,11 @@ git pull origin main
 ```
 
 **Read in this order:**
-1. `brain/MEMORY.md`
-2. `brain/PROJECTS/farm-tycoon/current-task.md`
-3. Check what Kimi/Claude wrote since last session
+1. `brain/PROJECTS/farm-tycoon/HANDOFF.md` — What's happening RIGHT NOW?
+2. `brain/MEMORY.md`
+3. `brain/PROJECTS/farm-tycoon/current-task.md`
+4. `brain/INBOX.md` — Anything left mid-session?
+5. Check what Kimi/Claude wrote since last session
 
 ---
 
@@ -54,13 +58,23 @@ git pull origin main
 
 After finishing work:
 
-1. **Update the relevant brain file:**
-   - Built a feature? → Update `specs.md` (mark ✅)
-   - Found a bug? → Add to `backlog.md`
-   - Made a decision? → Log in `decisions.md`
-   - Did research? → Dump in `research.md`
+1. **Update `brain/PROJECTS/farm-tycoon/HANDOFF.md`** — mandatory, always:
+   ```markdown
+   ### [Agent] — YYYY-MM-DD HH:MM
+   - Did: X
+   - Left off: exact state of the thing (file, function, what's broken/working)
+   - Next agent should: specific next action
+   - Blockers: anything blocking progress
+   ```
 
-2. **Update `DAILY/YYYY-MM-DD.md`:**
+2. **Update the relevant brain file:**
+   - Built a feature? → Update `specs.md` (mark ✅) + update progress in `current-task.md`
+   - Found a bug? → Add to `backlog.md`
+   - Made a non-obvious decision? → Log in `decisions.md`
+   - Did research? → Dump in `research.md`
+   - Not sure where it goes? → Dump in `brain/INBOX.md`
+
+3. **Update `DAILY/YYYY-MM-DD.md`:**
    ```markdown
    ## Kimi Session — 2026-05-10 14:00
    - Implemented: Encyclopedia search UI
@@ -68,7 +82,7 @@ After finishing work:
    - Next: Need Jose to review
    ```
 
-3. **Push to GitHub:**
+4. **Push to GitHub:**
    ```bash
    cd "C:\Users\SanGi\.antigravity\FArM TYCOON\granja-tycoon"
    git add brain/
@@ -224,13 +238,23 @@ git push origin main
 Every agent, every time:
 
 ```
-□ git pull origin main
+START:
+□ git pull origin main  (+ reload Obsidian Ctrl+R)
+□ Read HANDOFF.md       ← most important, tells you right now state
+□ Read INBOX.md         ← anything left mid-session to handle?
 □ Read MEMORY.md
 □ Read current-task.md
-□ Read specs.md (if building)
-□ Read ai-coding-rules (if coding)
-□ Do work
-□ Update relevant brain files
+□ Read specs.md         (if building)
+□ Read ai-coding-rules  (if coding)
+
+WORK:
+□ Do the thing
+□ Dump anything mid-session into INBOX.md if unsure where it goes
+
+END:
+□ Update HANDOFF.md     ← mandatory, always, before anything else
+□ Update relevant brain files (specs/backlog/decisions/research/current-task)
+□ Update DAILY/YYYY-MM-DD.md
 □ git add brain/
 □ git commit -m "WHO: What changed"
 □ git push origin main

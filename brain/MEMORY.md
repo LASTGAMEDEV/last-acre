@@ -5,6 +5,19 @@
 
 ---
 
+## ⚡ Quick Status — Update This Every Session
+
+| Field | Value |
+|-------|-------|
+| **Last agent** | Jose |
+| **Last session** | 2026-05-10 |
+| **What happened** | Brain structure set up in Obsidian; SYNC-PROTOCOL, HANDOFF, INBOX, templates all created |
+| **Current task** | None — Jose deciding next feature |
+| **Next agent should** | Read HANDOFF.md, then set current-task.md |
+| **Code health** | Unknown — run `npx tsc --noEmit` and `npx expo lint` |
+
+---
+
 ## 👤 The Human
 
 **Name:** Jose
