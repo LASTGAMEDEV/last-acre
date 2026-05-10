@@ -7,9 +7,7 @@
 
 ## 🎯 What We're Doing Right Now
 
-**Primary:** Brain setup ✅ COMPLETE — pushed to GitHub
-
-**NEW TASK:** Research on realistic agriculture mechanics — ✅ COMPLETE
+**Primary:** Encyclopedia Spec — the ONLY remaining pre-ship feature
 
 ---
 
@@ -19,34 +17,41 @@
 2. ✅ All files populated with known context
 3. ✅ Pushed `brain/` to GitHub repo
 4. ✅ DOMINGO configured for direct push to repo
-5. ✅ MASSIVE research dump in `research.md`
-   - Soil mechanics (pH, NPK, organic matter, compaction)
-   - Pest & disease cycles (IPM, resistance, beneficial insects)
-   - Processing systems (raw → primary → secondary)
-   - Market dynamics (channels, volatility, cooperatives, CAP)
-   - Weather systems (historical data, microclimates)
-   - Livestock depth (genetics, feed conversion, health, biosecurity)
-   - Additional mechanics (water rights, cover crops, no-till, precision ag)
+5. ✅ Encyclopedia spec written (`encyclopedia-spec.md`)
+   - Categories: Crops, Animals, Machinery, Pests, Diseases, Processing, Soil
+   - 4-tier unlock system (Discovered → Basic → Advanced → Complete)
+   - Cross-references between entries
+   - Archie's tips at Tier 4 (flavor + personality)
+   - Search/filter UI planned
 
 ---
 
-## 📋 Next Steps
+## 🎯 Next Actions
 
-### For Jose:
-1. **Pull from GitHub** to get updated `research.md`
-2. **Read `research.md`** in Obsidian
-3. **Pick priorities** — what mechanics excite you most?
-4. **Tell DOMINGO** → I'll write specs for those mechanics
+1. **Jose reviews `encyclopedia-spec.md`**
+   - Does the structure make sense?
+   - Are the categories right?
+   - Modify anything you want
 
-### Priority Recommendations (from research):
-| Priority | Mechanic | Why |
-|----------|----------|-----|
-| 🔥 1 | Soil pH + NPK | Strategic depth, easy to implement |
-| 🔥 2 | Pest/disease IPM | Skill tree potential, very engaging |
-| 🔥 3 | Processing system | Value chain = economic depth |
-| 🔥 4 | Market board | Contracts vs spot = decisions |
-| 2nd 5 | Weather integration | Historical data = differentiation |
-| 2nd 6 | Livestock genetics | Long-term breeding progression |
+2. **Tell DOMINGO what's wrong/right**
+   - I'll refine the spec
+
+3. **Jose implements** (with spec as blueprint)
+
+4. **Content phase:** Fill entries with your real ag knowledge
+   - This is where your expertise shines
+   - Archie's tips = personality
+
+**Save export?** Not for now. Not on the roadmap.
+
+---
+
+## ❌ Not Implemented
+
+| System | Status | Why |
+|--------|--------|-----|
+| **Encyclopedia** | 🔄 Spec written | Awaiting approval |
+| **Save Export** | ❌ Not started | Deferred — not doing for now |
 
 ---
 
@@ -57,12 +62,13 @@
 | ACP harnesses (Kimi/Claude) | ⏸️ DEFERRED — no API budget |
 | GitHub push auth | ✅ FIXED — token configured |
 | Brain sync | ✅ WORKING — both sides can push/pull |
+| Encyclopedia spec | 🔄 Awaiting Jose review |
 
 ---
 
 ## 📝 Notes
 
-- Research is comprehensive — can be implemented in phases
-- Jose's ag engineering knowledge = can validate realism
-- Archie (Irish farmer) = additional domain expert input
-- Perfectionist standards apply — specs must be tight before code
+- Everything else IS implemented — my earlier research was off-base
+- Encyclopedia is the ONLY thing between you and ship-ready
+- Jose's ag knowledge = the content. I provide structure.
+- Archie's tips = secret sauce for personality
