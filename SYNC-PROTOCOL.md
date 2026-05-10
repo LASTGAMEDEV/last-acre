@@ -11,6 +11,8 @@
 
 **After EVERY session:** Push brain changes to GitHub.
 
+**After ANY change — Obsidian or game code:** Push to GitHub immediately. Don't wait until "end of session." Every edit that matters gets committed and pushed.
+
 **No exceptions.** If you don't sync, you're working with stale data.
 
 ---
