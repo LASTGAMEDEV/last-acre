@@ -149,8 +149,8 @@ The ESLint rule `react/no-unescaped-entities` catches these as **errors**, not w
 **You are an executor, not a designer.**
 
 Before writing a single line of code, locate the plan file for this feature in
-`docs/superpowers/plans/`. If there is no plan file, stop and ask for one —
-do not invent an approach.
+`docs/superpowers/plans/` and the design spec in `docs/superpowers/specs/`.
+If there is no plan file, stop and ask for one — do not invent an approach.
 
 The plan file tells you:
 - Exactly which files to create or modify
