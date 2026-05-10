@@ -7,43 +7,62 @@
 
 ## 🎯 What We're Doing Right Now
 
-**Primary:** Setting up the "Obsidian brain" — shared workspace for all agents
+**Primary:** Brain setup ✅ COMPLETE — pushed to GitHub
 
-**Sub-tasks:**
-1. ✅ Create brain folder structure
-2. ✅ Populate initial knowledge (specs, agents, memory)
-3. ⏳ User sets up Obsidian vault on Windows
-4. ⏳ Sync brain folder to GitHub repo
-5. ⏳ Configure ACP harnesses (Kimi Code + Claude Code) — DEFERRED until needed
+**NEW TASK:** Research on realistic agriculture mechanics — ✅ COMPLETE
 
 ---
 
-## 📋 Immediate Next Steps
+## ✅ Completed Today
 
-### For Jose (on Windows):
-1. Open `C:\Users\SanGi\.antigravity\FArM TYCOON\granja-tycoon` as Obsidian vault
-2. Create `brain/` folder in that directory (or pull from GitHub if I push it)
-3. Start using these markdown files as your project dashboard
+1. ✅ Brain structure created in Obsidian
+2. ✅ All files populated with known context
+3. ✅ Pushed `brain/` to GitHub repo
+4. ✅ DOMINGO configured for direct push to repo
+5. ✅ MASSIVE research dump in `research.md`
+   - Soil mechanics (pH, NPK, organic matter, compaction)
+   - Pest & disease cycles (IPM, resistance, beneficial insects)
+   - Processing systems (raw → primary → secondary)
+   - Market dynamics (channels, volatility, cooperatives, CAP)
+   - Weather systems (historical data, microclimates)
+   - Livestock depth (genetics, feed conversion, health, biosecurity)
+   - Additional mechanics (water rights, cover crops, no-till, precision ag)
 
-### For DOMINGO (me):
-1. Keep tracking state in these files
-2. Once user confirms setup, start the research task: realistic ag mechanics
-3. When ACP harnesses are configured, start spawning Kimi for implementation
+---
+
+## 📋 Next Steps
+
+### For Jose:
+1. **Pull from GitHub** to get updated `research.md`
+2. **Read `research.md`** in Obsidian
+3. **Pick priorities** — what mechanics excite you most?
+4. **Tell DOMINGO** → I'll write specs for those mechanics
+
+### Priority Recommendations (from research):
+| Priority | Mechanic | Why |
+|----------|----------|-----|
+| 🔥 1 | Soil pH + NPK | Strategic depth, easy to implement |
+| 🔥 2 | Pest/disease IPM | Skill tree potential, very engaging |
+| 🔥 3 | Processing system | Value chain = economic depth |
+| 🔥 4 | Market board | Contracts vs spot = decisions |
+| 2nd 5 | Weather integration | Historical data = differentiation |
+| 2nd 6 | Livestock genetics | Long-term breeding progression |
 
 ---
 
 ## 🚧 Blockers
 
-| Blocker | Status | Resolution |
-|---------|--------|------------|
-| ACP harnesses not configured | ⏸️ Deferred | Will configure when we need them |
-| Obsidian not set up on Windows | ⏳ Waiting for user | User needs to open folder as vault |
-| Sync between Windows and server | ⚠️ Git is the bridge | Push brain/ to GitHub |
+| Blocker | Status |
+|---------|--------|
+| ACP harnesses (Kimi/Claude) | ⏸️ DEFERRED — no API budget |
+| GitHub push auth | ✅ FIXED — token configured |
+| Brain sync | ✅ WORKING — both sides can push/pull |
 
 ---
 
 ## 📝 Notes
 
-- Jose asked about multi-harness setup first — now pivoting to "get the brain working"
-- The game folder path is the natural vault location
-- We can iterate on this structure — nothing is permanent
+- Research is comprehensive — can be implemented in phases
+- Jose's ag engineering knowledge = can validate realism
+- Archie (Irish farmer) = additional domain expert input
+- Perfectionist standards apply — specs must be tight before code
