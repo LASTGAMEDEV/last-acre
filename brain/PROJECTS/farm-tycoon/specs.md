@@ -19,9 +19,9 @@ Workers · Futures trading · Animal genetics · Machinery overhaul · Random ev
 
 ---
 
-## Specs Written, Not Yet Implemented (13)
+## Specs Written, Not Yet Implemented
 
-Active soil degradation · Tillage system · Organic certification · Government subsidies · Land leasing · Storage quality decay · Pollination system · Manure management · Feed ration balancing · Precision agriculture · Night operations · Hedgerows & biodiversity · Community supported agriculture
+_(none — all cleared 2026-05-10)_
 
 ---
 

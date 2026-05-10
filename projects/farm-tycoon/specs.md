@@ -58,26 +58,6 @@ ClawdBot (plan with user)
 
 ---
 
-## Specs Written, Not Yet Implemented
-
-| Feature | Spec | Notes |
-|---------|------|-------|
-| Active soil degradation | `docs/specs/01-active-soil-degradation.md` | — |
-| Tillage system | `docs/specs/02-tillage-system-choice.md` | — |
-| Organic certification | `docs/specs/03-organic-certification.md` | — |
-| Government subsidies | `docs/specs/04-government-subsidies.md` | — |
-| Land leasing | `docs/specs/05-land-leasing.md` | — |
-| Storage quality decay | `docs/specs/06-storage-quality-decay.md` | — |
-| Pollination system | `docs/specs/07-pollination-system.md` | — |
-| Manure management | `docs/specs/08-manure-management.md` | — |
-| Feed ration balancing | `docs/specs/09-feed-ration-balancing.md` | — |
-| Precision agriculture | `docs/specs/10-precision-agriculture.md` | — |
-| Night operations | `docs/specs/11-night-operations.md` | — |
-| Hedgerows & biodiversity | `docs/specs/12-hedgerows-biodiversity.md` | — |
-| Community supported agriculture | `docs/specs/13-community-supported-agriculture.md` | — |
-
----
-
 ## Current Save Key
 
 `granja-tycoon-save-v9` — bump this when any new feature changes the store shape.
