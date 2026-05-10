@@ -13,15 +13,20 @@
 
 ---
 
-## Shipped Features (34)
+## Implemented in Code (34)
 
 Workers · Futures trading · Animal genetics · Machinery overhaul · Random events & NPC farms · World map · Animal shows · Commodity exchange · Encyclopedia search · Fuel system · Onboarding rework · Price alerts UI · Profit preview & help buttons · Regional market · Save export/import · Auction house · Polish (haptics/chart/rivals) · Realistic animal production · Animal production buildings · Transportation · Climate depth & recurring contracts · Compound realism stack · Design system · NPK/drainage/soil rework · Pest & disease cycles · Water system · Co-op mechanics · Animal breeds · Realistic price engine · Electricity system · Processing system · Selling channels · UI rework (navigation)
 
 ---
 
-## Specs Written, Not Yet Implemented
+## Specced in Obsidian (4)
 
-_(none — all cleared 2026-05-10)_
+| Spec | File | Key dependency |
+|------|------|---------------|
+| Precision Agriculture | `docs/superpowers/specs/2026-05-10-precision-agriculture-design.md` | Soil system, pest system |
+| Pollination System | `docs/superpowers/specs/2026-05-10-pollination-system-design.md` | Pest/spray system, colmena buildings |
+| Manure & Composting | `docs/superpowers/specs/2026-05-10-manure-composting-design.md` | Biogas plant, soil NPK system |
+| Feed Ration Balancing | `docs/superpowers/specs/2026-05-10-feed-ration-balancing-design.md` | Animal production, feed mill |
 
 ---
 

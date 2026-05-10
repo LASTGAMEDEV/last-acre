@@ -212,6 +212,18 @@ export interface LandParcel {
   diseased?: boolean;   // crop blight · reduces yield, spreads to neighbors
   diseasedDay?: number; // day disease started; crop dies after 20 days untreated
   pestState?: import('../engine/pests').PestState;
+  linkedColmenaId?: string;       // building ID of assigned apiary
+  pesticideSprayedDay?: number;   // day pesticide was last applied on this parcel
+  soilAnalysis?: import('../engine/precision').SoilAnalysis;
+  precisionApplied: boolean;
+  yieldHistory: import('../engine/precision').YieldEntry[];
+  weedDetectedDay?: number;
+  compostNPKReleaseRemaining?: {
+    nitrogen: number;
+    phosphorus: number;
+    potassium: number;
+    daysLeft: number;
+  };
 }
 
 export type OwnedWorker = Worker;
@@ -702,6 +714,23 @@ export interface GameState {
   hayMissedDays: number;     // 0·7 rolling: how many of last 7 days hay was short
   animalsManuallyFed: boolean; // true if player tapped Feed All this day (no-worker path)
 
+  // Feed ration system
+  savedRations: Record<string, import('../engine/nutrition').FeedRation>;
+
+  // Manure & composting system
+  solidManureKg: number;
+  cropResidueKg: number;
+  compostInventoryKg: number;
+  compostBatches: import('../engine/composting').CompostBatch[];
+  digestateKg: number;
+
+  // Precision agriculture
+  soilLabBuilt: boolean;
+  pendingAnalyses: Array<{ parcelId: string; arrivesDay: number }>;
+
+  // Pollination system
+  colmenaNegligenceStartDay: Record<string, number>;
+
   // Settings
   soundEnabled: boolean;
   hapticEnabled: boolean;
@@ -778,6 +807,7 @@ export interface GameState {
   buyAnimal: (typeId: string, sex: 'male' | 'female') => void;
   addToHenil: () => void;
   feedAnimals: () => void;
+  saveRation: (animalTypeId: string, ration: import('../engine/nutrition').FeedRation) => void;
   sellAnimal: (animalId: string) => void;
   collectAnimalProduction: (animalId: string) => void;
   sellAnimalProduct: (productType: string, units: number) => void;
@@ -808,6 +838,7 @@ export interface GameState {
   buyBuilding: (buildingId: string) => void;
   resolveFieldEvent: (eventId: string, productId: string) => void;
   clearWeeds: (parcelId: string) => void;
+  linkParcelToColmena: (parcelId: string, colmenaId: string | null) => void;
   fertilizeCrop: (parcelId: string, productId: string) => void;
   listItem: (params: {
     category: AuctionCategory;
@@ -1044,6 +1075,8 @@ function generateParcelsFromMap(): LandParcel[] {
         greenhouse: false,
         irrigated: false,
         tilled: false,
+        precisionApplied: false,
+        yieldHistory: [],
       });
     } else if (field.owner === 'forsale') {
       result.push({
@@ -1060,6 +1093,8 @@ function generateParcelsFromMap(): LandParcel[] {
         greenhouse: false,
         irrigated: false,
         tilled: false,
+        precisionApplied: false,
+        yieldHistory: [],
       });
     }
   }
@@ -1090,8 +1125,8 @@ function generateInitialPrices(): MarketPrice[] {
 
 function generateInitialListings(): AuctionListing[] {
   const premiumParcels: LandParcel[] = [
-    { id: 'auction_p0', name: 'Gold Acre',   fertility: 22, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 5,  pricePerHa: 550000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
-    { id: 'auction_p1', name: 'Prime Ridge', fertility: 25, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 2,  pricePerHa: 600000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false },
+    { id: 'auction_p0', name: 'Gold Acre',   fertility: 22, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 5,  pricePerHa: 550000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false, precisionApplied: false, yieldHistory: [] },
+    { id: 'auction_p1', name: 'Prime Ridge', fertility: 25, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 2,  pricePerHa: 600000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false, precisionApplied: false, yieldHistory: [] },
   ];
   return premiumParcels.map((parcel, i) => ({
     id: `lot_init_${i}`,
@@ -1201,6 +1236,15 @@ function makeInitialState() {
     grainMissedDays: 0,
     hayMissedDays: 0,
     animalsManuallyFed: false,
+    savedRations: {},
+    solidManureKg: 0,
+    cropResidueKg: 0,
+    compostInventoryKg: 0,
+    compostBatches: [],
+    digestateKg: 0,
+    soilLabBuilt: false,
+    pendingAnalyses: [],
+    colmenaNegligenceStartDay: {},
     soundEnabled: true,
     hapticEnabled: true,
     musicEnabled: true,
@@ -1318,6 +1362,7 @@ export const useGameStore = create<GameState>()(
         const newFuelPrice = Math.min(1.80, Math.max(0.90, (state.fuelPrice ?? 1.20) + fuelDelta));
         const prevSeason = getSeason(state.day);
         const summary: DaySummaryEvent[] = [];
+        let colmenaNegligenceStartDay = { ...state.colmenaNegligenceStartDay };
 
         // Weather
         const forecast = state.forecast.length > 1 ? state.forecast.slice(1) : generateForecast(season);
@@ -1666,6 +1711,8 @@ export const useGameStore = create<GameState>()(
                   greenhouse: false,
                   irrigated: false,
                   tilled: false,
+                  precisionApplied: false,
+                  yieldHistory: [],
                 } as LandParcel);
               }
               const loseEvent = {
@@ -2569,6 +2616,37 @@ export const useGameStore = create<GameState>()(
               });
             }
           }
+          // Swarming check for neglected colmenas (season change)
+          if (currSeasonApiary !== prevSeasonApiary) {
+            const colmenaIds = state.buildings.filter((b: string) => b.startsWith('bld_colmena'));
+            for (const colmenaId of colmenaIds) {
+              const linkedCount = state.parcels.filter((p: LandParcel) => p.linkedColmenaId === colmenaId).length;
+              if (linkedCount === 0) {
+                if (!colmenaNegligenceStartDay[colmenaId]) {
+                  colmenaNegligenceStartDay[colmenaId] = newDay;
+                } else if (newDay - colmenaNegligenceStartDay[colmenaId] >= 30) {
+                  if (Math.random() < 0.25) {
+                    const beesInColmena = animals.filter((a: OwnedAnimal) => a.typeId === 'abeja' && !a.sick && !diedIds.includes(a.id));
+                    const swarmCount = Math.max(1, Math.round(beesInColmena.length * 0.25));
+                    const toRemove = beesInColmena.slice(0, swarmCount);
+                    for (const bee of toRemove) {
+                      diedIds.push(bee.id);
+                      animals = animals.filter((a: OwnedAnimal) => a.id !== bee.id);
+                    }
+                    summary.push({
+                      id: `swarm_${colmenaId}_${newDay}`,
+                      icon: '🐝',
+                      title: 'Swarm!',
+                      detail: `${swarmCount} bee colonies left due to neglect. Link apiary to fields to prevent future swarms.`,
+                      severity: 'warning' as const,
+                    });
+                  }
+                }
+              } else {
+                delete colmenaNegligenceStartDay[colmenaId];
+              }
+            }
+          }
         }
 
         // Auction: AI bidding + resolve
@@ -2977,6 +3055,7 @@ export const useGameStore = create<GameState>()(
             cropHistory: [],
             owned: false, hasWeeds: false, plantedCrop: null,
             greenhouse: false, irrigated: false, tilled: false,
+            precisionApplied: false, yieldHistory: [],
           };
           updatedListings.push({
             id: `listing_land_${newDay}`,
@@ -3269,6 +3348,8 @@ export const useGameStore = create<GameState>()(
           if (hasAnimalKeeper) {
             const { ANIMAL_TYPES: AT_KEEPER } = require('../data/animalTypes');
             const { collectProduction: collectProd } = require('../engine/animals');
+            const { getHoneyMultiplier } = require('../engine/pollination');
+            const honeyMult = getHoneyMultiplier(newDay, state.todayWeather);
             const graneroBonus = state.buildings.includes('bld_granero') ? 1.2 : 1.0;
             animals = animals.map((a: OwnedAnimal) => {
               if (a.sick) return a;
@@ -3277,7 +3358,20 @@ export const useGameStore = create<GameState>()(
               const { units, nextDay } = collectProd(a, animalType, newDay);
               if (units <= 0) return a;
               const key = animalType.productionType;
-              return { ...a, lastProductionDay: nextDay, _autoCollect: { key, units: Math.round(units * graneroBonus * workerBonuses.animalProductionMult) } };
+              let finalUnits = units * graneroBonus * workerBonuses.animalProductionMult;
+              if (animalType.id === 'abeja') {
+                finalUnits *= honeyMult;
+                if (honeyMult === 0 && getSeason(state.day) !== 'winter' && getSeason(newDay) === 'winter') {
+                  summary.push({
+                    id: `bee_winter_${newDay}`,
+                    icon: '🐝',
+                    title: 'Bees entering winter cluster',
+                    detail: 'No honey production until spring.',
+                    severity: 'info' as const,
+                  });
+                }
+              }
+              return { ...a, lastProductionDay: nextDay, _autoCollect: { key, units: Math.round(finalUnits) } };
             });
             // Flush auto-collected animal products
             const newAnimalInventory = { ...state.animalInventory };
@@ -3332,7 +3426,9 @@ export const useGameStore = create<GameState>()(
               const soilMod = getSoilModifier(p.soilType, p.plantedCrop.cropId);
               const machineYieldWithEngineer = yieldBonusW + workerBonuses.machineYieldBonus; // yieldBonusW = 1.0
               const rawUnits = harvestAmt(p.plantedCrop, cropType, p.soil ?? SOIL_DEFAULTS, climateModifier, p.hasWeeds, machineYieldWithEngineer, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0);
-              const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * irrigationBonus * rotationMod * soilMod * workerBonuses.cropYieldMultiplier), siloCapacity - siloTotal);
+              const { getPollinationMultiplier: getPollMultW } = require('../engine/pollination');
+              const pollMultW = getPollMultW(p, finalParcels, newDay);
+              const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * irrigationBonus * rotationMod * soilMod * workerBonuses.cropYieldMultiplier * pollMultW), siloCapacity - siloTotal);
               siloTotal += units;
               workerNewInventory[p.plantedCrop.cropId] = (workerNewInventory[p.plantedCrop.cropId] ?? 0) + units;
               if (!newHarvestedIds.includes(p.plantedCrop.cropId)) newHarvestedIds.push(p.plantedCrop.cropId);
@@ -3464,13 +3560,17 @@ export const useGameStore = create<GameState>()(
           } else if (job.operation === 'spray') {
             finalParcels = finalParcels.map((p: LandParcel) => {
               if (!job.parcelIds.includes(p.id) || !p.plantedCrop) return p;
-              return {
+              const updated: any = {
                 ...p,
                 plantedCrop: {
                   ...p.plantedCrop,
                   appliedN: Math.max(p.plantedCrop.appliedN ?? 1.0, 1.10),
                 },
               };
+              if (p.linkedColmenaId) {
+                updated.pesticideSprayedDay = state.day;
+              }
+              return updated;
             });
             summary.push({
               id: `tj_${job.id}`,
@@ -5025,6 +5125,7 @@ export const useGameStore = create<GameState>()(
           awardHistory: newAwardHistory,
           productAwardBonuses: newProductAwardBonuses,
           money: state.money + sellingRevenue + showPrizeMoney + deliveryRevenue - deliveryRepairCost - productionBuildingContractorFees - slurryFine - disposalFee + biogasIncome + (moneyAfterDrilling - state.money) + coopMoneyDelta - electricityBillDeduction,
+          colmenaNegligenceStartDay,
         });
       },
 
@@ -5151,7 +5252,9 @@ export const useGameStore = create<GameState>()(
         const soilMod = getSoilModifier(parcel.soilType, crop.cropId);
         const randomEventMod = getHarvestModifier(state.activeEvents ?? [], parcelId, crop.cropId);
         const diseaseMod = parcel.diseased ? 0.80 : 1.0;
-        const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationBonus * soilMod * seedGenes.yield * randomEventMod * workerBonusesManual.cropYieldMultiplier * diseaseMod), siloCapacity - totalInventory);
+        const { getPollinationMultiplier: getPollMultM } = require('../engine/pollination');
+        const pollMultM = getPollMultM(parcel, state.parcels, state.day);
+        const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationBonus * soilMod * seedGenes.yield * randomEventMod * workerBonusesManual.cropYieldMultiplier * diseaseMod * pollMultM), siloCapacity - totalInventory);
         // Update quality map and consume seed batch
         const nextCropQualityMap = { ...state.cropQualityMap };
         if (seedEntry) {
@@ -5321,6 +5424,13 @@ export const useGameStore = create<GameState>()(
         );
         if (hasAnimalWorker) return; // worker handles it automatically
         set({ animalsManuallyFed: true });
+      },
+
+      saveRation: (animalTypeId, ration) => {
+        const state = get();
+        set({
+          savedRations: { ...state.savedRations, [animalTypeId]: ration },
+        });
       },
 
       sellAnimal: (animalId) => {
@@ -6656,9 +6766,34 @@ export const useGameStore = create<GameState>()(
           return p?.category === 'herbicide' && (state.productInventory[id] ?? 0) > 0;
         });
         if (!herbicideId) return;
+        const updatedParcel: any = { ...parcel, hasWeeds: false };
+        if (parcel.linkedColmenaId) {
+          updatedParcel.pesticideSprayedDay = state.day;
+        }
         set({
-          parcels: state.parcels.map(p => p.id === parcelId ? { ...p, hasWeeds: false } : p),
+          parcels: state.parcels.map(p => p.id === parcelId ? updatedParcel : p),
           productInventory: { ...state.productInventory, [herbicideId]: state.productInventory[herbicideId] - 1 },
+        });
+      },
+
+      linkParcelToColmena: (parcelId, colmenaId) => {
+        const state = get();
+        const negligence = { ...state.colmenaNegligenceStartDay };
+        // Clear negligence for the target colmena when linking
+        if (colmenaId) {
+          delete negligence[colmenaId];
+        }
+        // If unlinking from previous colmena, check if that colmena now has zero links
+        const prev = state.parcels.find(p => p.id === parcelId)?.linkedColmenaId;
+        if (prev && prev !== colmenaId) {
+          const remaining = state.parcels.filter(p => p.id !== parcelId && p.linkedColmenaId === prev).length;
+          if (remaining === 0) {
+            negligence[prev] = state.day;
+          }
+        }
+        set({
+          parcels: state.parcels.map(p => p.id === parcelId ? { ...p, linkedColmenaId: colmenaId ?? undefined } : p),
+          colmenaNegligenceStartDay: negligence,
         });
       },
 
@@ -7539,7 +7674,9 @@ export const useGameStore = create<GameState>()(
           const irrigationMod = p.irrigated ? 1.20 : 1.0;
           const soilMod = getSoilModifier(p.soilType, p.plantedCrop.cropId);
           const rawUnits = harvestAmount(p.plantedCrop, cropType, p.soil ?? SOIL_DEFAULTS, climateModifier, p.hasWeeds, yieldBonus, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0) * pestYieldModifier(p.pestState?.severity ?? 0);
-          const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationMod * soilMod), siloCapacity - totalInventory);
+          const { getPollinationMultiplier: getPollMultC } = require('../engine/pollination');
+          const pollMultC = getPollMultC(p, state.parcels, state.day);
+          const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationMod * soilMod * pollMultC), siloCapacity - totalInventory);
           totalInventory += units;
           newInventory[p.plantedCrop.cropId] = (newInventory[p.plantedCrop.cropId] ?? 0) + units;
           if (!newHarvestedCropIds.includes(p.plantedCrop.cropId)) newHarvestedCropIds.push(p.plantedCrop.cropId);

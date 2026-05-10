@@ -58,6 +58,19 @@ ClawdBot (plan with user)
 
 ---
 
+---
+
+## Specced in Obsidian (not yet implemented)
+
+| Feature | Spec | Status |
+|---------|------|--------|
+| Precision Agriculture | `docs/superpowers/specs/2026-05-10-precision-agriculture-design.md` | 📝 Ready to build |
+| Pollination System | `docs/superpowers/specs/2026-05-10-pollination-system-design.md` | 📝 Ready to build |
+| Manure & Composting | `docs/superpowers/specs/2026-05-10-manure-composting-design.md` | 📝 Ready to build |
+| Feed Ration Balancing | `docs/superpowers/specs/2026-05-10-feed-ration-balancing-design.md` | 📝 Ready to build |
+
+---
+
 ## Current Save Key
 
 `granja-tycoon-save-v9` — bump this when any new feature changes the store shape.
