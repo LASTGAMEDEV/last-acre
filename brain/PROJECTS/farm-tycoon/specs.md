@@ -36,21 +36,18 @@
 
 | System | Status | Why |
 |--------|--------|-----|
-| **Encyclopedia** | ❌ Not started | NEXT PRIORITY |
+| **Encyclopedia** | ❌ Not started | Needs spec (Claude's job) |
 | **Save Export** | ❌ Not started | Deferred — not doing for now |
 
 ---
 
 ## 🎯 Current Focus
 
-**ONLY thing to build:** Encyclopedia system
+**Encyclopedia** — the ONLY remaining pre-ship feature
 
-**What's the Encyclopedia?**
-- In-game reference for crops, animals, machinery, pests, diseases
-- Unlocks as player discovers things
-- Educational + practical (helps players make better decisions)
-
-**Next task:** Write the Encyclopedia spec
+**Spec status:** NOT WRITTEN YET
+- Claude writes specs, not DOMINGO
+- When Jose wants to spec it → route to Claude (or Jose specs it)
 
 ---
 
@@ -58,5 +55,7 @@
 
 | Date | Decision |
 |------|----------|
-| 2026-05-10 | Save export deferred — not a priority |
+| 2026-05-10 | Save export deferred |
 | 2026-05-10 | Encyclopedia = only remaining pre-ship feature |
+| 2026-05-10 | DOMINGO does NOT write specs — that's Claude's role |
+
