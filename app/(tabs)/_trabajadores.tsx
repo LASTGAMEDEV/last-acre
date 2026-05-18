@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import type { Worker, WorkerRole, ContractType } from '../../data/workerTypes';
@@ -57,7 +57,7 @@ function WorkerDetail({ worker, onClose }: { worker: Worker; onClose: () => void
 
         <Text style={st.sectionLabel}>Profile</Text>
         <Text style={wd.row}>{cfg?.name} · {tierLabel(worker.tier)} · {worker.experienceYears.toFixed(1)} yrs exp</Text>
-        <Text style={wd.row}>{worker.nationality} · Age {worker.age} · {worker.contractType} · ${worker.wagePerDay}/day</Text>
+        <Text style={wd.row}>{worker.nationality} · Age {worker.age} · {worker.contractType} · €{worker.wagePerDay}/day</Text>
         {worker.personalityRevealed && (
           <Text style={wd.row}>Ethics {worker.workEthic}% · Team {worker.teamPlayer}% · Stress thr. {worker.stressThreshold}%</Text>
         )}
@@ -160,7 +160,7 @@ function StaffTab() {
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
       <View style={st.section}>
-        <Text style={st.stat}>👥 {list.length} staff · ${totalDaily}/day total</Text>
+        <Text style={st.stat}>👥 {list.length} staff · €{totalDaily}/day total</Text>
         <Text style={st.stat}>⭐ Employer reputation: {employerReputation ?? 50}/100</Text>
       </View>
 
@@ -169,7 +169,7 @@ function StaffTab() {
           <Text style={st.sectionLabel}>🎩 Consultant</Text>
           <View style={st.card}>
             <Text style={st.cardName}>🤵 {consultant.name}</Text>
-            <Text style={st.cardSub}>Farm Consultant · ${consultant.hireCostPerDay}/day</Text>
+            <Text style={st.cardSub}>Farm Consultant · €{consultant.hireCostPerDay}/day</Text>
             <Text style={st.cardSub}>Relationship {consultant.relationshipScore}/100 · Autonomy {consultant.autonomyLevel}/100</Text>
           </View>
         </View>
@@ -188,7 +188,7 @@ function StaffTab() {
                     <Text style={st.cardName}>
                       {w.name}{w.isInjured ? ' 🤕' : ''}{w.isOnLeave ? ' 🏖️' : ''}{w.isStudying ? ' 📖' : ''}
                     </Text>
-                    <Text style={st.cardSub}>{cfg?.name} · {tierLabel(w.tier)} · ${w.wagePerDay}/day · {w.contractType}</Text>
+                    <Text style={st.cardSub}>{cfg?.name} · {tierLabel(w.tier)} · €{w.wagePerDay}/day · {w.contractType}</Text>
                   </View>
                 </View>
                 <View style={[st.cardRow, { marginTop: 6 }]}>
@@ -356,7 +356,7 @@ function HireTab() {
               (posting.applicantsGeneratedDay == null || day >= posting.applicantsGeneratedDay);
             return (
               <View key={posting.id} style={st.card}>
-                <Text style={st.cardName}>{cfg?.icon} {cfg?.name} — ${posting.offeredWagePerDay}/day · {posting.contractType}</Text>
+                <Text style={st.cardName}>{cfg?.icon} {cfg?.name} — €{posting.offeredWagePerDay}/day · {posting.contractType}</Text>
                 <Text style={st.cardSub}>Posted day {posting.postedDay}</Text>
                 {!ready
                   ? <Text style={st.cardSub}>⏳ Waiting for applicants…</Text>
@@ -366,7 +366,7 @@ function HireTab() {
                       <View key={applicant.id} style={hr.applicantRow}>
                         <View style={{ flex: 1 }}>
                           <Text style={st.cardName}>{applicant.name}</Text>
-                          <Text style={st.cardSub}>{applicant.nationality} · {applicant.age}yr · {applicant.experienceYears}yr exp · ${applicant.askingWagePerDay}/day</Text>
+                          <Text style={st.cardSub}>{applicant.nationality} · {applicant.age}yr · {applicant.experienceYears}yr exp · €{applicant.askingWagePerDay}/day</Text>
                           {applicant.certificationIds.length > 0 && <Text style={st.cardSub}>Certs: {applicant.certificationIds.join(', ')}</Text>}
                           {applicant.personalityHints.map((h, i) => <Text key={i} style={st.cardSub}>💬 {h}</Text>)}
                         </View>

@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
-import { getSeason } from '../../engine/climate';
 import { C, S, F, R } from '../../constants/theme';
 import { getEFACount } from '../../engine/hedgerows';
 

@@ -29,7 +29,7 @@
 - [x] CSA (Community Supported Agriculture): engine + store + UI
 - [x] TypeScript clean (`npx tsc --noEmit`)
 - [x] ESLint clean (`npx expo lint`) — zero errors (only pre-existing warnings)
-- [ ] Jose approves
+- [x] Jose approves
 - [ ] Pushed to GitHub
 
 ---
@@ -58,7 +58,7 @@ All specs are in `docs/superpowers/specs/`:
 ## ⚠️ Critical — Read Before Writing Any Code
 
 - [[ai-coding-rules]] (also at `docs/ai-coding-rules.md`) — guardrails, must read first
-- Save key is `granja-tycoon-save-v9` — bump to `v10` when adding new required state fields
+- Save key is `granja-tycoon-save-v10` (already bumped by Kimi)
 - Always `??` guard new optional fields — existing saves won't have them
 - Currency is **€** not `$`
 - No inline `require()` — top-level `import` only
@@ -84,7 +84,7 @@ All specs are in `docs/superpowers/specs/`:
 - [x] Claude reviews
 - [x] TypeScript clean
 - [x] ESLint clean
-- [ ] Jose approves
+- [x] Jose approves
 - [ ] Pushed to GitHub
 
 ---

@@ -53,7 +53,7 @@ registration — they are imported directly into their hub screen, not routed to
 All game state and every action live in `store/useGameStore.ts`. It is a single Zustand
 store with `persist` middleware writing to `AsyncStorage`.
 
-**Current save key: `granja-tycoon-save-v9`**
+**Current save key: `granja-tycoon-save-v10`**
 
 Rules for the store:
 - **Bump the save key** any time you add new required fields or change the shape of

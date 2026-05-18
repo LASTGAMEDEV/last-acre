@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { playSound } from '../../engine/sounds';
@@ -102,9 +102,9 @@ function SoilTab({ parcel, onAmendment, onCoverCrop }: {
       </Text>
       <View style={{ flexDirection: 'row', gap: S.sm }}>
         {[
-          { id: 'lime' as const,      label: '🪨 Lime',    hint: 'pH +0.5 · $120' },
-          { id: 'sulfur' as const,    label: '🟡 Sulfur',  hint: 'pH −0.5 · $100' },
-          { id: 'subsoiler' as const, label: '⚙️ Subsoil', hint: 'Compact −18 · $200' },
+          { id: 'lime' as const,      label: '🪨 Lime',    hint: 'pH +0.5 · €120' },
+          { id: 'sulfur' as const,    label: '🟡 Sulfur',  hint: 'pH −0.5 · €100' },
+          { id: 'subsoiler' as const, label: '⚙️ Subsoil', hint: 'Compact −18 · €200' },
         ].map((a) => (
           <TouchableOpacity
             key={a.id}
@@ -205,7 +205,7 @@ function WaterParcelSection({ parcel }: { parcel: LandParcel }) {
             const cost = pipeCost(wellIdx, targetIdx);
             return (
               <TouchableOpacity key={w.id} style={[btnStyle, { marginBottom: 4 }]} onPress={() => connectParcel(w.id, parcel.id)}>
-                <Text style={btnTextStyle}>Connect via pipe · ${cost.toLocaleString()}</Text>
+                <Text style={btnTextStyle}>Connect via pipe · €{cost.toLocaleString()}</Text>
               </TouchableOpacity>
             );
           })}
@@ -286,7 +286,7 @@ function ManagementTab({ parcel, onClose }: { parcel: LandParcel; onClose: () =>
             ) : (
               <View style={{ flexDirection: 'row', gap: 4 }}>
                 {(['hdg_mixed', 'hdg_buffer', 'hdg_pollinator', 'hdg_woodland'] as HedgerowType[]).map(type => {
-                  const cost = Math.round((HEDGEROW_COST[type] ?? 0) * parcel.hectares);
+                  const cost = Math.round(HEDGEROW_COST[type] ?? 0);
                   return (
                     <TouchableOpacity
                       key={type}
@@ -532,7 +532,7 @@ export default function TierrasScreen() {
           </View>
         ) : totalGHSlots > usedGHSlots && !parcel.plantedCrop ? (
           <TouchableOpacity style={styles.ghInstallBtn} onPress={() => installGreenhouse(parcel.id)}>
-            <Text style={styles.smallBtnText}>🏠 Install GH ($2k)</Text>
+            <Text style={styles.smallBtnText}>🏠 Install GH (€2k)</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -541,7 +541,7 @@ export default function TierrasScreen() {
           <Text style={styles.irrigatedBadge}>💧 Irrigated +20% yield</Text>
         ) : money >= 3000 ? (
           <TouchableOpacity style={styles.irrigateBtn} onPress={() => installIrrigation(parcel.id)}>
-            <Text style={styles.smallBtnText}>💧 Irrigate ($3k)</Text>
+            <Text style={styles.smallBtnText}>💧 Irrigate (€3k)</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -553,7 +553,7 @@ export default function TierrasScreen() {
               onPress={() => cureDisease(parcel.id)}
               disabled={money < 150}
             >
-              <Text style={{ color: money >= 150 ? '#ffb74d' : '#555', fontSize: 11, fontWeight: 'bold' }}>Treat $150</Text>
+              <Text style={{ color: money >= 150 ? '#ffb74d' : '#555', fontSize: 11, fontWeight: 'bold' }}>Treat €150</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -722,7 +722,7 @@ export default function TierrasScreen() {
           </View>
           <Text style={styles.fertility}>♦ {parcel.fertility}/25</Text>
         </View>
-        <Text style={styles.priceTag}>${cost.toLocaleString()}</Text>
+        <Text style={styles.priceTag}>€{cost.toLocaleString()}</Text>
         <TouchableOpacity
           style={[styles.buyBtn, money < cost && styles.btnDisabled]}
           onPress={() => buyParcel(parcel.id)}
@@ -853,7 +853,7 @@ export default function TierrasScreen() {
                       disabled={!canAfford}
                     >
                       <Text style={styles.mapActionText}>
-                        {canAfford ? `Buy · $${cost.toLocaleString()}` : `$${cost.toLocaleString()} needed`}
+                        {canAfford ? `Buy · $€{cost.toLocaleString()}` : `$€{cost.toLocaleString()} needed`}
                       </Text>
                     </TouchableOpacity>
                   ) : event ? (

@@ -65,11 +65,15 @@ export function getParcelOrganicYieldMod(parcel: {
   if (status === 'conventional' || status === 'decertified') return 1.0;
   const coverCropIds = new Set(['rye', 'clover', 'mustard', 'buckwheat']);
   const coverCropPresent = parcel.plantedCrop ? coverCropIds.has(parcel.plantedCrop.cropId) : false;
+  // Derive clean years from transition status: transition_1=0, transition_2=1, transition_3=2, organic=3
+  const statusCleanYears: Partial<Record<OrganicStatus, number>> = {
+    transition_1: 0, transition_2: 1, transition_3: 2, organic: 3,
+  };
   const bonus = getOrganicPracticeBonus({
     coverCropPresent,
     organicMatter: parcel.soil?.organicMatter ?? 0,
     microbialLife: (parcel.soil?.microbialLife ?? 0) / 100,
-    noSyntheticFertilizerYears: 0, // TODO: track separately
+    noSyntheticFertilizerYears: statusCleanYears[status] ?? 0,
   });
   return getOrganicYieldMod(status, bonus);
 }

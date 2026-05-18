@@ -8,7 +8,7 @@ import { OwnedAnimal, AnimalGenes, inheritTrait, randomGenes, isAtOptimalWeight 
 import { MarketPrice, NewsEvent } from '../engine/market';
 import { WeatherDay } from '../engine/climate';
 import { Loan, SavingsAccount, TimeDeposit, SaleRecord, LoanRecord,
-         loanTotalOwed, calculateRate, accrueInterest } from '../engine/banking';
+         loanTotalOwed, calculateRate, accrueInterest, timeDepositPayout } from '../engine/banking';
 import {
   Contract,
   Buyer,
@@ -130,7 +130,12 @@ import {
   haySilageQualityBonus,
   computeFatigue,
   isForcedRest,
+  workerProductivityMod,
+  fatigueProductivityMod,
+  wageMultiplier,
+  irrigationElectricityCost,
 } from '../engine/nightOps';
+import type { TimeWindow } from '../engine/nightOps';
 import {
   CSASubscriber,
   CSACommitment,
@@ -1552,8 +1557,20 @@ export const useGameStore = create<GameState>()(
       advanceDay: () => {
         const state = get();
         const newDay = state.day + 1;
-        const workerBonuses = getWorkerBonuses(state.workers ?? []);
         const season = getSeason(newDay);
+        const rawWorkerBonuses = getWorkerBonuses(state.workers ?? []);
+        const nightOpsFieldWorkers = (state.workers ?? []).filter(
+          w => !w.isInjured && !w.isOnLeave && (w.department === 'fields' || w.department === 'machinery')
+        );
+        const nightOpsProductivityMod = nightOpsFieldWorkers.length > 0
+          ? nightOpsFieldWorkers.reduce((sum, w) => {
+              const pref = ((w.shiftPreference === 'any' ? 'day' : w.shiftPreference) ?? 'day') as TimeWindow;
+              return sum + fatigueProductivityMod(w.fatigueLevel ?? 0) * workerProductivityMod(season, pref);
+            }, 0) / nightOpsFieldWorkers.length
+          : 1.0;
+        const workerBonuses = nightOpsProductivityMod < 1.0
+          ? { ...rawWorkerBonuses, cropYieldMultiplier: rawWorkerBonuses.cropYieldMultiplier * nightOpsProductivityMod, animalProductionMult: rawWorkerBonuses.animalProductionMult * nightOpsProductivityMod }
+          : rawWorkerBonuses;
 
         // Fuel price fluctuation (·$0.04/day, clamped $0.90·$1.80)
         const fuelDelta = (Math.random() - 0.5) * 0.08;
@@ -1758,9 +1775,9 @@ export const useGameStore = create<GameState>()(
 
           for (const result of newShowResults) {
             if (result.placement === 1) {
-              summary.push({ id: `show_win_${result.id}`, icon: '🏆', title: `1st place at the County Show! +$${result.prize.toLocaleString()}`, detail: '', severity: 'good' });
+              summary.push({ id: `show_win_${result.id}`, icon: '🏆', title: `1st place at the County Show! +€${result.prize.toLocaleString()}`, detail: '', severity: 'good' });
             } else if (result.placement <= 3) {
-              summary.push({ id: `show_place_${result.id}`, icon: '🎖️', title: `${result.placement === 2 ? '2nd' : '3rd'} place at the County Show! +$${result.prize.toLocaleString()}`, detail: '', severity: 'good' });
+              summary.push({ id: `show_place_${result.id}`, icon: '🎖️', title: `${result.placement === 2 ? '2nd' : '3rd'} place at the County Show! +€${result.prize.toLocaleString()}`, detail: '', severity: 'good' });
             }
           }
         }
@@ -2013,6 +2030,13 @@ export const useGameStore = create<GameState>()(
         let finalWorkers = afterPoachingWorkers;
         if (weeklyPayrollDue) {
           workerPayrollDeducted = calcWeeklyPayroll(afterPoachingWorkers, state.consultant ?? null);
+          const nightPremium = Math.round(
+            afterPoachingWorkers.reduce((sum, w) => {
+              const pref = ((w.shiftPreference === 'any' ? 'day' : w.shiftPreference) ?? 'day') as TimeWindow;
+              return sum + (wageMultiplier(pref) - 1.0) * w.wagePerDay * 7;
+            }, 0)
+          );
+          workerPayrollDeducted += nightPremium;
           finalWorkers = afterPoachingWorkers.map(w => ({
             ...w,
             satisfaction: Math.min(100, w.satisfaction + 1),
@@ -2053,7 +2077,7 @@ export const useGameStore = create<GameState>()(
               id: `req_payrise_${w.id}_${newDay}`,
               workerId: w.id, workerName: w.name, workerIcon: icon,
               type: 'pay_rise',
-              message: `${w.name} is asking for a pay rise from $${w.wagePerDay}/day.`,
+              message: `${w.name} is asking for a pay rise from €${w.wagePerDay}/day.`,
               cost: Math.round(w.wagePerDay * 0.15),
               consequence: 'Satisfaction will drop if denied.',
               urgency: 'routine',
@@ -2172,13 +2196,13 @@ export const useGameStore = create<GameState>()(
         if (maintenanceCost > 0 || insurancePremium > 0 || workerWages > 0) {
           const detail = [
             maintenanceCost > 0 && `${state.machines.length} machine${state.machines.length !== 1 ? 's' : ''} · ${state.buildings.length} building${state.buildings.length !== 1 ? 's' : ''}`,
-            insurancePremium > 0 && `${activePolicies.length} active policy${activePolicies.length !== 1 ? 'ies' : ''} (-$${insurancePremium}/day)`,
-            workerWages > 0 && `${finalWorkers.length} worker${finalWorkers.length !== 1 ? 's' : ''} -$${workerWages}/week`,
+            insurancePremium > 0 && `${activePolicies.length} active policy${activePolicies.length !== 1 ? 'ies' : ''} (-€${insurancePremium}/day)`,
+            workerWages > 0 && `${finalWorkers.length} worker${finalWorkers.length !== 1 ? 's' : ''} -€${workerWages}/week`,
           ].filter(Boolean).join(' · ');
           summary.push({
             id: 'maintenance',
             icon: '🔧',
-            title: `-$${totalFixed.toLocaleString()} fixed costs`,
+            title: `-€${totalFixed.toLocaleString()} fixed costs`,
             detail,
             severity: 'info',
           });
@@ -3436,7 +3460,10 @@ export const useGameStore = create<GameState>()(
 
           // ── CAP Subsidy payment ─────────────────────────────────────────────
           const ownedHa = finalParcels.filter((p: LandParcel) => p.owned).reduce((s, p) => s + p.hectares, 0);
-          const leasedHa = 0; // TODO: implement leased land tracking
+          const leasedHa = (state.activeLeases ?? []).filter(l => l.status === 'active').reduce((sum, l) => {
+            const parcel = finalParcels.find((p: LandParcel) => p.id === l.parcelId);
+            return sum + (parcel?.hectares ?? 0);
+          }, 0);
           const payment = calculateAnnualSubsidy({
             currentDay: newDay,
             ownedHa,
@@ -3643,7 +3670,6 @@ export const useGameStore = create<GameState>()(
         const maturedDeposits = state.timeDeposits.filter(
           d => newDay >= d.startDay + d.termDays
         );
-        const { timeDepositPayout } = require('../engine/banking');
         const depositPayoutTotal = maturedDeposits.reduce(
           (s: number, d: any) => s + timeDepositPayout(d), 0
         );
@@ -3655,8 +3681,8 @@ export const useGameStore = create<GameState>()(
           summary.push({
             id: `deposit_matured_${d.id}`,
             icon: '🏦',
-            title: `Time deposit matured · +$${payout.toLocaleString()}`,
-            detail: `$${d.amount.toLocaleString()} at ${(d.rate * 100).toFixed(0)}% for ${d.termDays}d`,
+            title: `Time deposit matured · +€${payout.toLocaleString()}`,
+            detail: `€${d.amount.toLocaleString()} at ${(d.rate * 100).toFixed(0)}% for ${d.termDays}d`,
             severity: 'good',
           });
         }
@@ -5314,11 +5340,10 @@ export const useGameStore = create<GameState>()(
         const irrigatedHa = (state.parcels ?? [])
           .filter(p => p.owned && p.irrigated)
           .reduce((sum, p) => sum + p.hectares, 0);
-        // Irrigation auto-night bonus: 60% electricity cost if irrigation system exists
         const hasIrrigationSystem = (state.buildings ?? []).some((b: string) =>
           b === 'bld_irrigation_drip' || b === 'bld_irrigation_sprinkler'
         );
-        const irrigationCostMult = hasIrrigationSystem ? 0.60 : 1.0;
+        const irrigationCostMult = hasIrrigationSystem ? irrigationElectricityCost('night') : 1.0;
         const gridWaterCost = (state.gridWaterActive ?? false)
           ? Math.round(irrigatedHa * (state.gridWaterDailyRate ?? 1.20) * irrigationCostMult)
           : 0;
@@ -9395,7 +9420,7 @@ export const useGameStore = create<GameState>()(
         const state = get();
         const parcel = state.parcels.find(p => p.id === parcelId);
         if (!parcel || !parcel.owned) return;
-        const existing = state.hedgerows.find(h => h.parcelId === parcelId && h.edge === edge);
+        const existing = (state.hedgerows ?? []).find(h => h.parcelId === parcelId && h.edge === edge);
         if (existing) return;
         const lengthM = 100; // standard edge length
         const cost = Math.round(HEDGEROW_COST[type] * (lengthM / 100));
@@ -9411,7 +9436,7 @@ export const useGameStore = create<GameState>()(
         };
         set({
           money: state.money - cost,
-          hedgerows: [...state.hedgerows, newHedgerow],
+          hedgerows: [...(state.hedgerows ?? []), newHedgerow],
         });
       },
 
@@ -9532,23 +9557,23 @@ export const useGameStore = create<GameState>()(
         set({
           money: state.money - totalUpfront,
           activeLeases: [...(state.activeLeases ?? []), newLease],
-          availableLeases: state.availableLeases.filter((_, i) => i !== availableLeaseIndex),
+          availableLeases: (state.availableLeases ?? []).filter((_, i) => i !== availableLeaseIndex),
           parcels: [...state.parcels, leasedParcel],
         });
       },
 
       cancelLease: (leaseId) => {
         const state = get();
-        const lease = state.activeLeases.find(l => l.id === leaseId);
+        const lease = (state.activeLeases ?? []).find(l => l.id === leaseId);
         if (!lease || lease.status !== 'active') return;
         // For cash rent: forfeit 1 season
         const penalty = lease.leaseType === 'cash_rent' && lease.cashRentPerSeason ? lease.cashRentPerSeason : 0;
         set({
           money: state.money - penalty,
-          activeLeases: state.activeLeases.map(l =>
+          activeLeases: (state.activeLeases ?? []).map(l =>
             l.id === leaseId ? { ...l, status: 'terminated' as const, autoRenew: false } : l
           ),
-          parcels: state.parcels.map(p =>
+          parcels: (state.parcels ?? []).map(p =>
             p.id === lease.parcelId ? { ...p, owned: false, plantedCrop: null } : p
           ),
         });

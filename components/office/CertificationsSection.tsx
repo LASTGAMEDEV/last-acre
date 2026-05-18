@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Modal } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { ORGANIC_YIELD_MOD, canReapplyAfterDecertification, organicApplicationFee } from '../../engine/organicCert';
@@ -24,7 +24,6 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function CertificationsSection() {
   const { parcels, day, money, startOrganicTransition, fileContaminationAppeal } = useGameStore();
-  const [selectedParcel, setSelectedParcel] = useState<string | null>(null);
 
   const owned = parcels.filter(p => p.owned);
   const organicParcels = owned.filter(p => p.organicStatus && p.organicStatus !== 'conventional');
