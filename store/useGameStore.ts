@@ -46,6 +46,103 @@ import { tickProcessedInventory, getSellMultiplier, canUpgradeTier, getUpgradeCo
 import { MILESTONES, checkNewMilestones, MILESTONE_REWARDS } from '../data/milestones';
 import { sellRevenue, SellPressure, computeSellPressureModifier, sellPressureDuration } from '../engine/market';
 import { getSeason, generateForecast, applyDailyWeather } from '../engine/climate';
+import {
+  StoredBatch,
+  determineMoisture,
+  determineHarvestQuality,
+  deriveInventory,
+  consumeFromBatches,
+  addBatch,
+  weightedQualityMultiplier,
+  advanceStorageQuality,
+  syncBatchesWithInventory,
+  createBatchId,
+} from '../engine/storageQuality';
+import {
+  wetDuration,
+  applyWetTillageCompaction,
+  checkSalinization,
+  applySalinization,
+  checkErosion,
+  applyNaturalRecovery,
+  degradationYieldModifier,
+  isSoilWet,
+  updateBareDayCtr,
+  pruneIrrigationDays,
+} from '../engine/soilDegradation';
+import {
+  TILLAGE_FUEL_MULT,
+  TILLAGE_OM_DELTA,
+  getYieldTransitionMod,
+  getWeedMult,
+  hasMachineryForTillage,
+  fallbackTillage,
+} from '../engine/tillage';
+import {
+  Hedgerow,
+  HedgerowType,
+  HEDGEROW_COST,
+  HEDGEROW_WIDTH,
+  HEDGEROW_MAINTENANCE,
+  isMature,
+  pestControlForParcel,
+  isWindProtected,
+  pollinatorStripCount,
+  hasBufferStrip,
+  annualMaintenanceCost,
+  getEFACount,
+  hedgerowAreaHa,
+} from '../engine/hedgerows';
+import {
+  AESEnrollment,
+  SubsidyPayment,
+  AES_SCHEMES,
+  calculateAnnualSubsidy,
+  calculateAESPayments,
+  checkAESViolation,
+} from '../engine/subsidies';
+import {
+  OrganicStatus,
+  ContaminationAppeal,
+  ORGANIC_YIELD_MOD,
+  organicApplicationFee,
+  getOrganicPracticeBonus,
+  getOrganicYieldMod,
+  isOrganicEnrolled,
+  advanceTransition,
+  canReapplyAfterDecertification,
+  isAppealExpired,
+  createContaminationAppeal,
+  organicPriceMultiplier,
+  getParcelOrganicYieldMod,
+} from '../engine/organicCert';
+import {
+  LeaseAgreement,
+  AvailableLease,
+  TenantImprovement,
+  NPC_LANDOWNERS,
+  calculateCashRent,
+  generateAvailableLeases,
+  isLeasedParcel,
+  getActiveLeaseForParcel,
+} from '../engine/leases';
+import {
+  haySilageQualityBonus,
+  computeFatigue,
+  isForcedRest,
+} from '../engine/nightOps';
+import {
+  CSASubscriber,
+  CSACommitment,
+  CSAWeekLog,
+  evaluateBoxFulfillment,
+  satisfactionDelta,
+  renewalProbability,
+  computeNewSubscribers,
+  seasonRevenue,
+  defaultCommitment,
+  CSA_WEEKS_PER_SEASON,
+} from '../engine/csa';
 import type { WeatherEvent } from '../engine/climate';
 import {
   baseOutbreakChance,
@@ -218,6 +315,25 @@ export interface LandParcel {
   precisionApplied: boolean;
   yieldHistory: import('../engine/precision').YieldEntry[];
   weedDetectedDay?: number;
+  // Soil degradation tracking
+  soilWetUntilDay?: number;      // day after which soil is no longer wet
+  bareDayCtr?: number;           // consecutive days with no crop or cover
+  recentIrrigationDays?: number[]; // rolling 30-day list of days irrigation was applied
+  soilSalinity?: number;         // 0-100 scale
+  topsoilErosion?: number;       // 0-100 scale
+  // Tillage system
+  tillageSystem?: 'conventional' | 'reduced' | 'notill';
+  tillageSystemSince?: number;
+  notillSeasons?: number;
+  residueCoverage?: boolean;
+  weedFlushSeason?: boolean;
+  // Hedgerows
+  waterwayAdjacent?: boolean;
+  // Organic certification
+  organicStatus?: 'conventional' | 'transition_1' | 'transition_2' | 'transition_3' | 'organic' | 'decertified';
+  organicTransitionStartDay?: number;
+  lastDecertifiedDay?: number;
+  pendingContaminationAppeal?: import('../engine/organicCert').ContaminationAppeal;
   compostNPKReleaseRemaining?: {
     nitrogen: number;
     phosphorus: number;
@@ -609,6 +725,20 @@ export interface GameState {
   todayWeather: WeatherDay | null;
 
   inventory: Record<string, number>;
+  inventoryBatches: StoredBatch[];
+  hedgerows: Hedgerow[];
+  cropsGrownThisYear: string[];
+  strawBurnedThisYear: boolean;
+  aesEnrollments: import('../engine/subsidies').AESEnrollment[];
+  subsidyLog: import('../engine/subsidies').SubsidyPayment[];
+  activeLeases: import('../engine/leases').LeaseAgreement[];
+  availableLeases: import('../engine/leases').AvailableLease[];
+  tenantImprovements: import('../engine/leases').TenantImprovement[];
+  csaSubscribers: import('../engine/csa').CSASubscriber[];
+  csaActive: boolean;
+  csaCommitment: import('../engine/csa').CSACommitment;
+  csaSeasonStart?: number;
+  csaWeeklyLog: import('../engine/csa').CSAWeekLog[];
   priceHistory: Record<string, number[]>;
 
   productInventory: Record<string, number>;
@@ -644,6 +774,13 @@ export interface GameState {
   gridWaterActive: boolean;
   gridWaterDailyRate: number;  // $ per irrigated hectare per day
   reputation: number;
+  nearSettlement: boolean;
+  soundBarriers: boolean;
+  activeSchedule?: {
+    harvestWindow: 'twilight' | 'day' | 'night';
+    irrigationWindow: 'twilight' | 'day' | 'night';
+    machineryWindow: 'twilight' | 'day' | 'night';
+  };
   autoSell: Record<string, { enabled: boolean; minPrice: number }>;
   prestige: number;
   workers: Worker[];
@@ -839,7 +976,18 @@ export interface GameState {
   resolveFieldEvent: (eventId: string, productId: string) => void;
   clearWeeds: (parcelId: string) => void;
   linkParcelToColmena: (parcelId: string, colmenaId: string | null) => void;
+  orderSoilAnalysis: (parcelId: string) => void;
+  applyPrecisionInputs: (parcelId: string) => void;
+  startCompostBatch: (manureKg: number, residueKg: number) => void;
+  turnCompostBatch: (batchId: string) => void;
+  waterCompostBatch: (batchId: string) => void;
+  collectCompostBatch: (batchId: string) => void;
+  applyCompost: (parcelId: string, kg: number) => void;
   fertilizeCrop: (parcelId: string, productId: string) => void;
+  applyLime: (parcelId: string, type: 'agricultural' | 'dolomitic') => void;
+  applyGypsum: (parcelId: string) => void;
+  applyLeachingFlush: (parcelId: string) => void;
+  applySubsoiling: (parcelId: string) => void;
   listItem: (params: {
     category: AuctionCategory;
     animalId?: string;
@@ -958,6 +1106,16 @@ export interface GameState {
   treatPest: (parcelId: string, productId: string) => void;
   buyBeneficialInsects: () => void;
   assignCropConsultant: (parcelIds: string[]) => void;
+  setTillageSystem: (parcelId: string, system: 'conventional' | 'reduced' | 'notill') => void;
+  installHedgerow: (parcelId: string, edge: 'north' | 'south' | 'east' | 'west', type: HedgerowType) => void;
+  enrollAES: (schemeId: string, parcelIds: string[]) => void;
+  startOrganicTransition: (parcelId: string) => void;
+  fileContaminationAppeal: (parcelId: string) => void;
+  signLease: (availableLeaseIndex: number, acceptImprovementClause: boolean) => void;
+  cancelLease: (leaseId: string) => void;
+  toggleCSA: () => void;
+  setCSACommitment: (commitment: CSACommitment) => void;
+  setWorkerShiftPreference: (workerId: string, pref: 'twilight' | 'day' | 'night' | 'any') => void;
 
   // Selling Channels
   reputationHistory: { day: number; delta: number; reason: string }[];
@@ -1077,6 +1235,18 @@ function generateParcelsFromMap(): LandParcel[] {
         tilled: false,
         precisionApplied: false,
         yieldHistory: [],
+        soilWetUntilDay: 0,
+        bareDayCtr: 0,
+        recentIrrigationDays: [],
+        soilSalinity: 0,
+        topsoilErosion: 0,
+        tillageSystem: 'conventional',
+        tillageSystemSince: 1,
+        notillSeasons: 0,
+        residueCoverage: false,
+        weedFlushSeason: false,
+        waterwayAdjacent: false,
+        organicStatus: 'conventional',
       });
     } else if (field.owner === 'forsale') {
       result.push({
@@ -1095,6 +1265,18 @@ function generateParcelsFromMap(): LandParcel[] {
         tilled: false,
         precisionApplied: false,
         yieldHistory: [],
+        soilWetUntilDay: 0,
+        bareDayCtr: 0,
+        recentIrrigationDays: [],
+        soilSalinity: 0,
+        topsoilErosion: 0,
+        tillageSystem: 'conventional',
+        tillageSystemSince: 1,
+        notillSeasons: 0,
+        residueCoverage: false,
+        weedFlushSeason: false,
+        waterwayAdjacent: false,
+        organicStatus: 'conventional',
       });
     }
   }
@@ -1125,8 +1307,8 @@ function generateInitialPrices(): MarketPrice[] {
 
 function generateInitialListings(): AuctionListing[] {
   const premiumParcels: LandParcel[] = [
-    { id: 'auction_p0', name: 'Gold Acre',   fertility: 22, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 5,  pricePerHa: 550000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false, precisionApplied: false, yieldHistory: [] },
-    { id: 'auction_p1', name: 'Prime Ridge', fertility: 25, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 2,  pricePerHa: 600000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false, precisionApplied: false, yieldHistory: [] },
+    { id: 'auction_p0', name: 'Gold Acre',   fertility: 22, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 5,  pricePerHa: 550000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false, precisionApplied: false, yieldHistory: [], soilWetUntilDay: 0, bareDayCtr: 0, recentIrrigationDays: [], soilSalinity: 0, topsoilErosion: 0, tillageSystem: 'conventional', tillageSystemSince: 1, notillSeasons: 0, residueCoverage: false, weedFlushSeason: false, waterwayAdjacent: false, organicStatus: 'conventional' },
+    { id: 'auction_p1', name: 'Prime Ridge', fertility: 25, soil: { ...SOIL_DEFAULTS }, cropHistory: [], hectares: 2,  pricePerHa: 600000, owned: false, hasWeeds: false, plantedCrop: null, greenhouse: false, irrigated: false, tilled: false, precisionApplied: false, yieldHistory: [], soilWetUntilDay: 0, bareDayCtr: 0, recentIrrigationDays: [], soilSalinity: 0, topsoilErosion: 0, tillageSystem: 'conventional', tillageSystemSince: 1, notillSeasons: 0, residueCoverage: false, weedFlushSeason: false, waterwayAdjacent: false, organicStatus: 'conventional' },
   ];
   return premiumParcels.map((parcel, i) => ({
     id: `lot_init_${i}`,
@@ -1170,6 +1352,19 @@ function makeInitialState() {
     forecast: generateForecast('spring'),
     todayWeather: null as WeatherDay | null,
     inventory: {} as Record<string, number>,
+    inventoryBatches: [] as StoredBatch[],
+    hedgerows: [] as Hedgerow[],
+    cropsGrownThisYear: [] as string[],
+    strawBurnedThisYear: false,
+    aesEnrollments: [] as AESEnrollment[],
+    subsidyLog: [] as SubsidyPayment[],
+    activeLeases: [] as LeaseAgreement[],
+    availableLeases: [] as AvailableLease[],
+    tenantImprovements: [] as TenantImprovement[],
+    csaSubscribers: [] as CSASubscriber[],
+    csaActive: false,
+    csaCommitment: defaultCommitment(),
+    csaWeeklyLog: [] as CSAWeekLog[],
     priceHistory: Object.fromEntries(generateInitialPrices().map(p => [p.cropId, [p.price]])) as Record<string, number[]>,
     productInventory: {} as Record<string, number>,
     buildings: [] as string[],
@@ -1204,6 +1399,9 @@ function makeInitialState() {
     gridWaterActive: false,
     gridWaterDailyRate: 1.20,
     reputation: 50,
+    nearSettlement: true,
+    soundBarriers: false,
+    activeSchedule: undefined,
     autoSell: {} as Record<string, { enabled: boolean; minPrice: number }>,
     prestige: 0,
     workers: [] as Worker[],
@@ -1363,6 +1561,7 @@ export const useGameStore = create<GameState>()(
         const prevSeason = getSeason(state.day);
         const summary: DaySummaryEvent[] = [];
         let colmenaNegligenceStartDay = { ...state.colmenaNegligenceStartDay };
+        let newCropResidueKg = state.cropResidueKg ?? 0;
 
         // Weather
         const forecast = state.forecast.length > 1 ? state.forecast.slice(1) : generateForecast(season);
@@ -1893,6 +2092,40 @@ export const useGameStore = create<GameState>()(
           }
         }
 
+        // ── Night ops: fatigue & heat ────────────────────────────────────────
+        finalWorkers = finalWorkers.map(w => {
+          const pref = (w.shiftPreference === 'any' ? 'day' : w.shiftPreference) ?? (w.nightShift ? 'night' : 'day');
+          const { fatigue, consecutiveNights } = computeFatigue(
+            w.fatigueLevel ?? 0,
+            pref,
+            w.consecutiveNightShifts ?? 0,
+          );
+          // Summer heat warning
+          if (season === 'summer' && pref === 'day' && (w.department === 'fields' || w.department === 'machinery')) {
+            if (newDay % 7 === 0) {
+              summary.push({
+                id: `heat_warning_${w.id}_${newDay}`,
+                icon: '☀️',
+                title: `${w.name} affected by summer heat`,
+                detail: 'Outdoor workers are 30% less productive during day shifts in summer. Consider twilight scheduling.',
+                severity: 'info' as const,
+              });
+            }
+          }
+          // Forced rest
+          if (isForcedRest(consecutiveNights, fatigue)) {
+            summary.push({
+              id: `forced_rest_${w.id}_${newDay}`,
+              icon: '😴',
+              title: `${w.name} on mandatory rest`,
+              detail: fatigue >= 1.0 ? 'Worker called in sick due to exhaustion.' : 'Mandatory 2-day rest after 5 consecutive night shifts.',
+              severity: 'warning' as const,
+            });
+            return { ...w, fatigueLevel: Math.max(0, fatigue - 0.15), consecutiveNightShifts: 0, isOnLeave: true, leaveReturnDay: newDay + 2 };
+          }
+          return { ...w, fatigueLevel: fatigue, consecutiveNightShifts: consecutiveNights };
+        });
+
         // Strike check
         const avgSatisfaction = finalWorkers.length > 0
           ? finalWorkers.reduce((s, w) => s + w.satisfaction, 0) / finalWorkers.length
@@ -2050,9 +2283,16 @@ export const useGameStore = create<GameState>()(
         // Sales log trim
         const salesLog = state.salesLog.filter(s => s.day >= newDay - 90);
 
-        // Weed spread
+        // Weed spread (with 2-day early warning for precision ag)
         let parcels = fallowParcels.map(p => {
-          if (p.owned && !p.plantedCrop && !p.hasWeeds && Math.random() < 0.05) {
+          if (p.owned && !p.plantedCrop && !p.hasWeeds && !p.weedDetectedDay) {
+            const weedChance = 0.05 * getWeedMult(p.tillageSystem ?? 'conventional', p.notillSeasons ?? 0, p.weedFlushSeason ?? false);
+            if (Math.random() < weedChance) {
+              return { ...p, weedDetectedDay: newDay };
+            }
+          }
+          // If weed was detected 2+ days ago, flip hasWeeds
+          if (p.weedDetectedDay && newDay - p.weedDetectedDay >= 2 && !p.hasWeeds) {
             return { ...p, hasWeeds: true };
           }
           return p;
@@ -2192,13 +2432,15 @@ export const useGameStore = create<GameState>()(
 
           // 1. Chance of new outbreak on clean parcel
           if (!pestState) {
-            const chance = baseOutbreakChance(
+            let chance = baseOutbreakChance(
               cropType,
               season,
               resolvedWeather?.event ?? 'sunny',
               p.cropHistory ?? [],
               state.beneficialInsectsActive,
             );
+            // Hedgerow pest control
+            chance *= (1 - pestControlForParcel(p.id, state.hedgerows ?? [], newDay));
             if (Math.random() < chance) {
               const pestType = pickPestType(cropType, season);
               pestState = { type: pestType, severity: 0.5 };
@@ -3153,6 +3395,250 @@ export const useGameStore = create<GameState>()(
         // Apply auction money / inventory / asset deltas (merged into advanceDay final set)
         moneyDelta += auctionMoneyDelta;
         let finalParcels = [...parcels, ...parcelAdditions, ...auctionParcelAdditions];
+
+        // ── No-till season counter at season change ─────────────────────────
+        if (season !== prevSeason) {
+          finalParcels = finalParcels.map((p: LandParcel) => {
+            if (!p.owned || p.tillageSystem !== 'notill') return p;
+            return { ...p, notillSeasons: (p.notillSeasons ?? 0) + 1 };
+          });
+        }
+
+        // ── Hedgerow maturity & maintenance ─────────────────────────────────
+        let updatedHedgerows = (state.hedgerows ?? []).map(h => ({
+          ...h,
+          mature: isMature(h, newDay),
+        }));
+        let updatedAESEnrollments = state.aesEnrollments ?? [];
+        let newCropsGrownThisYear = state.cropsGrownThisYear ?? [];
+        let newStrawBurnedThisYear = state.strawBurnedThisYear ?? false;
+        let newSubsidyLog = state.subsidyLog ?? [];
+        // Annual maintenance in spring
+        if (season === 'spring' && prevSeason === 'winter') {
+          const maintenanceCost = annualMaintenanceCost(updatedHedgerows);
+          if (maintenanceCost > 0) {
+            if (state.money + moneyDelta >= maintenanceCost) {
+              moneyDelta -= maintenanceCost;
+              // Clear neglected state if paid
+              updatedHedgerows = updatedHedgerows.map(h => ({ ...h, neglected: false }));
+            } else {
+              // Mark all as neglected
+              updatedHedgerows = updatedHedgerows.map(h => ({ ...h, neglected: true }));
+              summary.push({
+                id: `hedgerow_neglect_${newDay}`,
+                icon: '🌿',
+                title: 'Hedgerows neglected',
+                detail: 'Insufficient funds for annual maintenance. Effects halved until paid.',
+                severity: 'warning' as const,
+              });
+            }
+          }
+
+          // ── CAP Subsidy payment ─────────────────────────────────────────────
+          const ownedHa = finalParcels.filter((p: LandParcel) => p.owned).reduce((s, p) => s + p.hectares, 0);
+          const leasedHa = 0; // TODO: implement leased land tracking
+          const payment = calculateAnnualSubsidy({
+            currentDay: newDay,
+            ownedHa,
+            leasedHa,
+            cropsGrownThisYear: state.cropsGrownThisYear ?? [],
+            hedgerows: updatedHedgerows,
+            strawBurnedThisYear: state.strawBurnedThisYear ?? false,
+            aesEnrollments: state.aesEnrollments ?? [],
+          });
+          moneyDelta += payment.total;
+          newSubsidyLog = [...newSubsidyLog, payment];
+          summary.push({
+            id: `cap_payment_${newDay}`,
+            icon: '💶',
+            title: `CAP annual payment: €${payment.total.toLocaleString()}`,
+            detail: `Basic: €${payment.basic.toLocaleString()} · Greening: €${payment.greening.toLocaleString()} · Young Farmer: €${payment.youngFarmer.toLocaleString()} · AES: €${payment.aes.toLocaleString()}`,
+            severity: 'info' as const,
+          });
+          if (!payment.greeningQualified && payment.greening === 0) {
+            summary.push({
+              id: `cap_greening_missed_${newDay}`,
+              icon: '⚠️',
+              title: 'Greening payment withheld',
+              detail: `Missing: ${payment.greeningFailReasons.join(', ')}`,
+              severity: 'warning' as const,
+            });
+          }
+          // Check AES violations
+          updatedAESEnrollments = (state.aesEnrollments ?? []).map((en: AESEnrollment) => {
+            if (en.status !== 'active') return en;
+            const violated = checkAESViolation(en, finalParcels, newDay);
+            if (violated) {
+              const scheme = AES_SCHEMES.find(s => s.id === en.schemeId);
+              const repayment = Math.round(en.totalPaidSoFar * 1.20);
+              moneyDelta -= repayment;
+              summary.push({
+                id: `aes_violation_${en.id}_${newDay}`,
+                icon: '⚠️',
+                title: `AES violation: ${scheme?.name ?? en.schemeId}`,
+                detail: `Repaying €${repayment.toLocaleString()} (prior payments + 20% penalty). Scheme terminated.`,
+                severity: 'danger' as const,
+              });
+              return { ...en, status: 'violated' as const };
+            }
+            // Add this year's payment to totalPaidSoFar for active schemes
+            const scheme = AES_SCHEMES.find(s => s.id === en.schemeId);
+            const annualPayment = scheme ? Math.round(scheme.paymentPerHa * en.enrolledHa) : 0;
+            return { ...en, totalPaidSoFar: en.totalPaidSoFar + annualPayment };
+          });
+          // ── Organic certification: Spring inspection ────────────────────────
+          finalParcels = finalParcels.map((p: LandParcel) => {
+            if (!p.owned || !p.organicStatus || p.organicStatus === 'conventional' || p.organicStatus === 'decertified') return p;
+            // Check appeal expiry
+            if (p.pendingContaminationAppeal && isAppealExpired(p.pendingContaminationAppeal, newDay)) {
+              summary.push({
+                id: `organic_appeal_missed_${p.id}_${newDay}`,
+                icon: '🚫',
+                title: `${p.name} decertified`,
+                detail: 'Contamination appeal window expired. Organic certification lost for 3 years.',
+                severity: 'danger' as const,
+              });
+              return {
+                ...p,
+                organicStatus: 'decertified' as OrganicStatus,
+                lastDecertifiedDay: newDay,
+                pendingContaminationAppeal: undefined,
+              };
+            }
+            // Advance transition if no pending appeal
+            const newStatus = advanceTransition(p.organicStatus);
+            if (newStatus !== p.organicStatus) {
+              summary.push({
+                id: `organic_advance_${p.id}_${newDay}`,
+                icon: newStatus === 'organic' ? '🌿' : '🔄',
+                title: `${p.name}: ${newStatus === 'organic' ? 'Certified Organic!' : 'Transition advanced'}`,
+                detail: newStatus === 'organic' ? 'Full organic certification achieved. Premium prices unlocked.' : `Now in ${newStatus.replace('_', ' ')}.`,
+                severity: 'info' as const,
+              });
+            }
+            return { ...p, organicStatus: newStatus, pendingContaminationAppeal: undefined };
+          });
+
+          // Reset annual trackers
+          newCropsGrownThisYear = [];
+          newStrawBurnedThisYear = false;
+        }
+
+        // ── CSA Season start (Spring/Summer/Autumn day 1) ───────────────────
+        let updatedCSASubscribers = state.csaSubscribers ?? [];
+        let updatedCSAWeeklyLog = state.csaWeeklyLog ?? [];
+        const isCSASeasonStart = (season === 'spring' || season === 'summer' || season === 'autumn') && prevSeason !== season;
+        if (isCSASeasonStart && state.csaActive) {
+          // Season end: renewals + new subscribers
+          if (state.csaSeasonStart && updatedCSASubscribers.length > 0) {
+            const hasOrganic = finalParcels.some((p: LandParcel) => p.organicStatus === 'organic');
+            const avgSat = updatedCSASubscribers.length > 0
+              ? updatedCSASubscribers.reduce((s, sub) => s + sub.satisfaction, 0) / updatedCSASubscribers.length
+              : 0;
+            // Renewals
+            const renewed = updatedCSASubscribers.filter(sub => Math.random() < renewalProbability(sub.satisfaction));
+            const newSubsCount = computeNewSubscribers(avgSat, state.reputation ?? 50, hasOrganic, renewed.length, state.nearSettlement);
+            const newSubs: CSASubscriber[] = Array.from({ length: newSubsCount }).map((_, i) => ({
+              id: `csa_sub_${newDay}_${i}`,
+              name: `Subscriber ${renewed.length + i + 1}`,
+              boxSize: (['small', 'medium', 'large'] as const)[Math.floor(Math.random() * 3)],
+              pricePerSeason: Math.round(105 * state.csaCommitment.priceModifier),
+              satisfaction: 60,
+              seasonsSubscribed: 0,
+              joinedDay: newDay,
+            }));
+            updatedCSASubscribers = [...renewed.map(s => ({ ...s, seasonsSubscribed: s.seasonsSubscribed + 1, satisfaction: Math.min(100, s.satisfaction + 5) })), ...newSubs];
+            updatedCSAWeeklyLog = [];
+          }
+          // Upfront payment
+          if (updatedCSASubscribers.length > 0) {
+            const revenue = seasonRevenue(updatedCSASubscribers, state.csaCommitment.priceModifier);
+            moneyDelta += revenue;
+            summary.push({
+              id: `csa_season_start_${newDay}`,
+              icon: '💶',
+              title: `CSA season started: €${revenue.toLocaleString()}`,
+              detail: `${updatedCSASubscribers.length} subscribers · Upfront payment received`,
+              severity: 'info' as const,
+            });
+          }
+          // Set commitment from subscribers
+          const smallCount = updatedCSASubscribers.filter(s => s.boxSize === 'small').length;
+          const mediumCount = updatedCSASubscribers.filter(s => s.boxSize === 'medium').length;
+          const largeCount = updatedCSASubscribers.filter(s => s.boxSize === 'large').length;
+          updatedCSASubscribers = updatedCSASubscribers;
+        }
+
+        // ── CSA Weekly fulfillment ──────────────────────────────────────────
+        if (state.csaActive && state.csaSeasonStart && updatedCSASubscribers.length > 0) {
+          const weekNumber = Math.floor((newDay - state.csaSeasonStart) / 7) + 1;
+          if (weekNumber >= 1 && weekNumber <= CSA_WEEKS_PER_SEASON && newDay % 7 === 0) {
+            const inventory = state.inventory ?? {};
+            const { fillRate, varietyMet } = evaluateBoxFulfillment(inventory, state.csaCommitment);
+            const delta = satisfactionDelta(fillRate, varietyMet);
+            updatedCSASubscribers = updatedCSASubscribers.map(sub => ({
+              ...sub,
+              satisfaction: Math.max(0, Math.min(100, sub.satisfaction + delta)),
+            }));
+            // Mid-season cancellation
+            updatedCSASubscribers = updatedCSASubscribers.filter(sub => {
+              if (sub.satisfaction >= 20) return true;
+              summary.push({
+                id: `csa_cancel_${sub.id}_${newDay}`,
+                icon: '❌',
+                title: `CSA subscriber cancelled`,
+                detail: `${sub.name} left due to poor service.`,
+                severity: 'warning' as const,
+              });
+              return false;
+            });
+            updatedCSAWeeklyLog = [...updatedCSAWeeklyLog, {
+              weekNumber,
+              fillRate,
+              varietyMet,
+              bonusItemAdded: false,
+              avgSatisfactionChange: delta,
+            }];
+          }
+        }
+
+        // ── Lease expiry & renewal ──────────────────────────────────────────
+        let updatedLeases = (state.activeLeases ?? []).map((l: LeaseAgreement) => {
+          if (l.status !== 'active') return l;
+          // Expired
+          if (newDay >= l.endDay) {
+            if (l.autoRenew && l.leaseType === 'cash_rent' && l.cashRentPerSeason) {
+              const canPay = state.money + moneyDelta >= l.cashRentPerSeason;
+              if (canPay) {
+                moneyDelta -= l.cashRentPerSeason;
+                return { ...l, endDay: l.endDay + 90 };
+              }
+            }
+            // Terminate: lock parcel
+            finalParcels = finalParcels.map((p: LandParcel) =>
+              p.id === l.parcelId ? { ...p, owned: false, plantedCrop: null } : p
+            );
+            return { ...l, status: 'expired' as const };
+          }
+          // 30-day warning
+          if (newDay === l.endDay - 30) {
+            summary.push({
+              id: `lease_warning_${l.id}_${newDay}`,
+              icon: '📋',
+              title: `Lease on ${l.npcName} expires in 30 days`,
+              detail: 'Renew or harvest remaining crops before expiry.',
+              severity: 'info' as const,
+            });
+          }
+          return l;
+        });
+
+        // ── Spring lease offer refresh ──────────────────────────────────────
+        let updatedAvailableLeases = state.availableLeases ?? [];
+        if (season === 'spring' && prevSeason === 'winter') {
+          updatedAvailableLeases = generateAvailableLeases(newDay, state.reputation ?? 50);
+        }
+
         // Time deposit maturity payouts
         const maturedDeposits = state.timeDeposits.filter(
           d => newDay >= d.startDay + d.termDays
@@ -3325,6 +3811,64 @@ export const useGameStore = create<GameState>()(
           });
         }
 
+        // ── Ration analysis (computed before production so modifiers apply today) ──
+        const { analyzeRation: analyzeRationAdv, generateDefaultRation: genDefaultRationAdv, getRationProductionModifier: getRationProdModAdv, FEED_NUTRITION: FEED_NUTRITION_ADV } = require('../engine/nutrition');
+        const { ANIMAL_TYPES: AT_RATION } = require('../data/animalTypes');
+        const hasAnimalWorkerGlobal = (state.workers ?? []).some(
+          (w: Worker) => w.role === 'livestock_hand' || w.role === 'veterinarian'
+        );
+        const hasFeedMillGlobal = (state.buildings ?? []).some((bid: string) =>
+          bid === 'bld_feed_mill_s' || bid === 'bld_feed_mill_m' || bid === 'bld_feed_mill_l'
+        );
+        const feedMillMultGlobal = hasFeedMillGlobal ? 0.65 : 1.0;
+        const animalsFedGlobal = hasAnimalWorkerGlobal || state.animalsManuallyFed;
+        const rationTierMap: Record<string, import('../engine/nutrition').RationAnalysis['tier']> = {};
+        if (animalsFedGlobal) {
+          const animalsByType: Record<string, OwnedAnimal[]> = {};
+          for (const a of animals) {
+            if (!animalsByType[a.typeId]) animalsByType[a.typeId] = [];
+            animalsByType[a.typeId].push(a);
+          }
+          for (const typeId of Object.keys(animalsByType)) {
+            const animalType = AT_RATION.find((t: any) => t.id === typeId);
+            if (!animalType || !animalType.feedKgPerDay) continue;
+            const count = animalsByType[typeId].length;
+            const ration = state.savedRations[typeId] ?? genDefaultRationAdv(animalType);
+            // Check inventory for shortage
+            let shortage = false;
+            const totalKg = animalType.feedKgPerDay * count * feedMillMultGlobal;
+            for (const ing of ration.ingredients) {
+              if (ing.pct <= 0) continue;
+              const needed = totalKg * (ing.pct / 100);
+              const info = FEED_NUTRITION_ADV[ing.ingredientId];
+              if (!info) continue;
+              if (ing.ingredientId === 'hay') {
+                if ((state.animalInventory['hay'] ?? 0) < needed) shortage = true;
+              } else if (ing.ingredientId === 'silage') {
+                if ((state.silageLevel ?? 0) < needed) shortage = true;
+              } else if (ing.ingredientId === 'protein_meal' || ing.ingredientId === 'mineral_premix') {
+                if ((state.animalInventory[ing.ingredientId] ?? 0) < needed) shortage = true;
+              } else {
+                if ((state.inventory[ing.ingredientId] ?? 0) < needed) shortage = true;
+              }
+            }
+            if (ration.mineralPremixKgPerAnimalPerDay > 0) {
+              if ((state.animalInventory['mineral_premix'] ?? 0) < ration.mineralPremixKgPerAnimalPerDay * count) shortage = true;
+            }
+            // Pasture
+            const hasOwnedParcels = state.parcels.some((p: LandParcel) => p.owned && !p.plantedCrop);
+            const hasIrrigation = state.parcels.some((p: LandParcel) => p.owned && p.irrigated && !p.plantedCrop);
+            let pastureKg = 0;
+            if (animalType.enclosureType === 'corral' || animalType.enclosureType === 'caballeriza') {
+              pastureKg = hasOwnedParcels ? (hasIrrigation ? 2.0 : 1.0) : 0;
+            }
+            const seasonPastureMult = season === 'winter' ? 0.15 : season === 'summer' ? 1.2 : 1.0;
+            pastureKg *= seasonPastureMult;
+            const analysis = analyzeRationAdv(ration, animalType, { ...state.inventory, ...state.animalInventory, silage: state.silageLevel ?? 0 }, pastureKg);
+            rationTierMap[typeId] = shortage ? 'deficient' : analysis.tier;
+          }
+        }
+
         // Worker auto-actions
         let vetTreatmentCost = 0;
         const activeWorkers = finalWorkers;
@@ -3358,7 +3902,8 @@ export const useGameStore = create<GameState>()(
               const { units, nextDay } = collectProd(a, animalType, newDay);
               if (units <= 0) return a;
               const key = animalType.productionType;
-              let finalUnits = units * graneroBonus * workerBonuses.animalProductionMult;
+              const rationMod = getRationProdModAdv(rationTierMap[a.typeId] ?? 'optimal');
+              let finalUnits = units * graneroBonus * workerBonuses.animalProductionMult * rationMod;
               if (animalType.id === 'abeja') {
                 finalUnits *= honeyMult;
                 if (honeyMult === 0 && getSeason(state.day) !== 'winter' && getSeason(newDay) === 'winter') {
@@ -3392,6 +3937,7 @@ export const useGameStore = create<GameState>()(
             let siloTotal = Object.values(autoSellFinalInventory).reduce((a: number, b) => a + (b as number), 0);
             const workerNewInventory = { ...autoSellFinalInventory };
             const newHarvestedIds = [...state.harvestedCropIds];
+            const workerCropsGrownThisYear = [...(state.cropsGrownThisYear ?? [])];
             finalParcels = finalParcels.map(p => {
               if (!p.plantedCrop || !p.owned || siloTotal >= siloCapacity) return p;
               const cropType = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
@@ -3425,18 +3971,28 @@ export const useGameStore = create<GameState>()(
               const rotationMod = p.lastCropId && p.lastCropId !== p.plantedCrop.cropId ? 1.15 : 1.0;
               const soilMod = getSoilModifier(p.soilType, p.plantedCrop.cropId);
               const machineYieldWithEngineer = yieldBonusW + workerBonuses.machineYieldBonus; // yieldBonusW = 1.0
-              const rawUnits = harvestAmt(p.plantedCrop, cropType, p.soil ?? SOIL_DEFAULTS, climateModifier, p.hasWeeds, machineYieldWithEngineer, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0);
+              const rawUnits = harvestAmt(p.plantedCrop, cropType, p.soil ?? SOIL_DEFAULTS, climateModifier, p.hasWeeds, machineYieldWithEngineer, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0, degradationYieldModifier(p), getYieldTransitionMod(p.tillageSystem ?? 'conventional', p.notillSeasons ?? 0), getParcelOrganicYieldMod(p));
               const { getPollinationMultiplier: getPollMultW } = require('../engine/pollination');
-              const pollMultW = getPollMultW(p, finalParcels, newDay);
-              const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * irrigationBonus * rotationMod * soilMod * workerBonuses.cropYieldMultiplier * pollMultW), siloCapacity - siloTotal);
+              const { getResiduePct } = require('../engine/composting');
+              const pollMultW = getPollMultW(p, finalParcels, newDay, state.hedgerows ?? []);
+              const precisionMod = p.precisionApplied ? 1.05 : 1.0;
+              const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * irrigationBonus * rotationMod * soilMod * workerBonuses.cropYieldMultiplier * pollMultW * precisionMod), siloCapacity - siloTotal);
               siloTotal += units;
               workerNewInventory[p.plantedCrop.cropId] = (workerNewInventory[p.plantedCrop.cropId] ?? 0) + units;
               if (!newHarvestedIds.includes(p.plantedCrop.cropId)) newHarvestedIds.push(p.plantedCrop.cropId);
+              if (!workerCropsGrownThisYear.includes(p.plantedCrop.cropId)) workerCropsGrownThisYear.push(p.plantedCrop.cropId);
               const newFertility = Math.max(1, p.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonuses.fertilityDrainMult));
-              return { ...p, plantedCrop: null, lastCropId: p.plantedCrop.cropId, fertility: newFertility, cropHistory: [...(p.cropHistory ?? []).slice(-3), p.plantedCrop.cropId] };
+              // Crop residue
+              const residuePct = getResiduePct(p.plantedCrop.cropId);
+              newCropResidueKg = Math.min(10000, newCropResidueKg + units * residuePct);
+              // Yield history
+              const seasonLabel = `${season.charAt(0).toUpperCase() + season.slice(1)} Y${Math.ceil(newDay / 360)}`;
+              const newYieldHistory = [...(p.yieldHistory ?? []), { season: seasonLabel, cropId: p.plantedCrop.cropId, kgPerHa: p.hectares > 0 ? units / p.hectares : 0, day: newDay }].slice(-8);
+              return { ...p, plantedCrop: null, lastCropId: p.plantedCrop.cropId, fertility: newFertility, cropHistory: [...(p.cropHistory ?? []).slice(-3), p.plantedCrop.cropId], precisionApplied: false, yieldHistory: newYieldHistory };
             });
             (autoSellFinalInventory as any).__workerInventory = workerNewInventory;
             (autoSellFinalInventory as any).__harvestedIds = newHarvestedIds;
+            (autoSellFinalInventory as any).__cropsGrownThisYear = workerCropsGrownThisYear;
           }
 
           // Processing min-worker headcount check
@@ -3517,6 +4073,7 @@ export const useGameStore = create<GameState>()(
         }
         // Extract worker inventory overrides
         const workerHarvestedIds: string[] | undefined = (autoSellFinalInventory as any).__harvestedIds;
+        const workerCropsGrown: string[] | undefined = (autoSellFinalInventory as any).__cropsGrownThisYear;
         const workerInventoryOverride: Record<string, number> | undefined = (autoSellFinalInventory as any).__workerInventory;
         const workerAnimalInventory: Record<string, number> | undefined = (animals as any).__newAnimalInventory;
         const inventoryForSet = workerInventoryOverride ?? autoSellFinalInventory;
@@ -3526,6 +4083,10 @@ export const useGameStore = create<GameState>()(
         let newHayMissed = state.hayMissedDays ?? 0;
         let newSilageLevel = state.silageLevel ?? 0;
         const harvestedCropIdsForSet = workerHarvestedIds ?? state.harvestedCropIds;
+        // Spring reset takes priority over worker harvest accumulation
+        const cropsGrownThisYearForSet = (season === 'spring' && prevSeason === 'winter')
+          ? (workerCropsGrown ?? [])
+          : (workerCropsGrown ?? state.cropsGrownThisYear ?? []);
 
         // ── Fuel tracking for job day ────────────────────────────────────────
         let currentFuel = state.fuel ?? 200;
@@ -3536,16 +4097,26 @@ export const useGameStore = create<GameState>()(
         const completedTractorJobIds: string[] = [];
         for (const job of (state.tractorJobs ?? [])) {
           if (job.completesDay > newDay) continue;
-          // Fuel check
+          // Fuel check (with tillage multiplier)
           const tractorOwned = (state.machines ?? []).find((m: OwnedMachine) => m.id === job.tractorId);
           const tractorMachineType = MACHINE_TYPES.find((mt: MachineType) => mt.id === (tractorOwned?.typeId ?? ''));
-          const fuelNeeded = tractorMachineType?.fuelPerDay ?? 0;
+          const firstParcel = finalParcels.find((p: LandParcel) => job.parcelIds.includes(p.id));
+          const fuelMult = TILLAGE_FUEL_MULT[firstParcel?.tillageSystem ?? 'conventional'];
+          const fuelNeeded = Math.round((tractorMachineType?.fuelPerDay ?? 0) * fuelMult);
           if (fuelNeeded > 0 && currentFuel < fuelNeeded) {
             fuelPausedNames.push(tractorMachineType?.name ?? 'Tractor');
             continue;
           }
           currentFuel -= fuelNeeded;
           completedTractorJobIds.push(job.id);
+          // Wet-tillage compaction check
+          finalParcels = finalParcels.map((p: LandParcel) => {
+            if (!job.parcelIds.includes(p.id)) return p;
+            if (isSoilWet(p, newDay)) {
+              return applyWetTillageCompaction(p);
+            }
+            return p;
+          });
           if (job.operation === 'till') {
             finalParcels = finalParcels.map((p: LandParcel) =>
               job.parcelIds.includes(p.id) ? { ...p, tilled: true } : p
@@ -3668,15 +4239,18 @@ export const useGameStore = create<GameState>()(
             const waterScale = (cropType.waterNeed ?? 3) / 5;
             const climateModifier = 1.0 + (baseClimate - 1.0) * waterScale;
             const units = Math.min(
-              Math.round(harvestAmount(parcel.plantedCrop!, cropType, parcel.soil ?? SOIL_DEFAULTS, climateModifier, parcel.hasWeeds, 1.0, parcel.plantedCrop!.frostDamage ?? 0, parcel.plantedCrop!.droughtStress ?? 0) * pestYieldModifier(parcel.pestState?.severity ?? 0)),
+              Math.round(harvestAmount(parcel.plantedCrop!, cropType, parcel.soil ?? SOIL_DEFAULTS, climateModifier, parcel.hasWeeds, 1.0, parcel.plantedCrop!.frostDamage ?? 0, parcel.plantedCrop!.droughtStress ?? 0, degradationYieldModifier(parcel), getYieldTransitionMod(parcel.tillageSystem ?? 'conventional', parcel.notillSeasons ?? 0), getParcelOrganicYieldMod(parcel)) * pestYieldModifier(parcel.pestState?.severity ?? 0)),
               siloCapForHarvest - currentTotal,
             );
             const newFertility = Math.max(1, parcel.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonuses.fertilityDrainMult));
-            finalParcels = finalParcels.map((p: LandParcel) =>
-              p.id === pid
-                ? { ...p, plantedCrop: null, lastCropId: parcel.plantedCrop!.cropId, fertility: newFertility, tilled: false, cropHistory: [...(parcel.cropHistory ?? []).slice(-3), parcel.plantedCrop!.cropId] }
-                : p
-            );
+            finalParcels = finalParcels.map((p: LandParcel) => {
+              if (p.id !== pid) return p;
+              let updated: LandParcel = { ...p, plantedCrop: null, lastCropId: parcel.plantedCrop!.cropId, fertility: newFertility, tilled: false, cropHistory: [...(parcel.cropHistory ?? []).slice(-3), parcel.plantedCrop!.cropId] };
+              if (isSoilWet(updated, newDay)) {
+                updated = applyWetTillageCompaction(updated);
+              }
+              return updated;
+            });
             harvestInventory = {
               ...harvestInventory,
               [parcel.plantedCrop!.cropId]: (harvestInventory[parcel.plantedCrop!.cropId] ?? 0) + units,
@@ -3835,6 +4409,82 @@ export const useGameStore = create<GameState>()(
         });
         finalParcels = parcelsWithSoil;
 
+        // ── Soil degradation tick ────────────────────────────────────────────
+        finalParcels = finalParcels.map(p => {
+          if (!p.owned) return p;
+          let updated = { ...p };
+
+          // 1. Wet soil flag
+          if (todayWeather && (todayWeather.event === 'rain' || todayWeather.event === 'heavy_rain')) {
+            const wetDays = wetDuration(todayWeather.event, todayWeather.streakDay ?? 1);
+            updated.soilWetUntilDay = Math.max(updated.soilWetUntilDay ?? 0, newDay + wetDays);
+          }
+
+          // 2. Natural compaction recovery
+          updated.soil = {
+            ...updated.soil,
+            compaction: Math.max(0, updated.soil.compaction - 1),
+          };
+
+          // 3. Bare field tracking
+          updated = updateBareDayCtr(updated);
+
+          // 4. Erosion check
+          const windProtected = isWindProtected(updated.id, state.hedgerows ?? [], newDay);
+          updated = checkErosion(updated, todayWeather?.event ?? 'sunny', windProtected);
+
+          // 4b. Runoff fine: heavy rain + waterway + fertilizer + no buffer
+          if (todayWeather?.event === 'heavy_rain' && updated.waterwayAdjacent && !hasBufferStrip(updated.id, state.hedgerows ?? [])) {
+            const fertilizedRecently = (updated as any).fertilizerAppliedDay && newDay - (updated as any).fertilizerAppliedDay <= 3;
+            if (fertilizedRecently) {
+              moneyDelta -= 500;
+              summary.push({
+                id: `runoff_fine_${updated.id}_${newDay}`,
+                icon: '💧',
+                title: `Environmental fine on ${updated.name}`,
+                detail: 'Fertilizer runoff into waterway — €500, −3 reputation. Install a buffer strip to comply.',
+                severity: 'warning' as const,
+              });
+            }
+          }
+
+          // 5. Irrigation tracking & salinization
+          const isRainDay = todayWeather?.event === 'rain' || todayWeather?.event === 'heavy_rain';
+          if (updated.irrigated && !isRainDay) {
+            updated = pruneIrrigationDays(updated, newDay, true);
+          } else if (isRainDay) {
+            updated = pruneIrrigationDays(updated, newDay, false);
+            updated.recentIrrigationDays = []; // rain leaches salts
+          }
+          const season = getSeason(newDay);
+          const isDrought = todayWeather?.event === 'drought';
+          if (checkSalinization(updated, newDay, season, isDrought)) {
+            updated = applySalinization(updated);
+          }
+
+          // 6. Tillage OM drift
+          const hasCropOrResidue = updated.plantedCrop !== null || updated.residueCoverage;
+          if (hasCropOrResidue) {
+            const omDelta = TILLAGE_OM_DELTA[updated.tillageSystem ?? 'conventional'];
+            updated.soil = {
+              ...updated.soil,
+              organicMatter: Math.max(0, Math.min(10, updated.soil.organicMatter + omDelta)),
+            };
+          }
+
+          // 7. Residue coverage protects from bare-day erosion
+          if (updated.residueCoverage) {
+            updated.bareDayCtr = 0;
+          }
+          // Reduced tillage: bareDayCtr accumulates at 50% speed
+          if ((updated.tillageSystem ?? 'conventional') === 'reduced' && !updated.residueCoverage && updated.plantedCrop === null) {
+            updated.bareDayCtr = Math.max(0, (updated.bareDayCtr ?? 0) - 1); // compensate for the +1 in updateBareDayCtr
+            updated.bareDayCtr = Math.floor((updated.bareDayCtr ?? 0) * 0.5);
+          }
+
+          return updated;
+        });
+
         // ── Price alert triggers ─────────────────────────────────────────────
         let priceAlerts = [...(state.priceAlerts ?? [])];
         let alertSellIncome = 0;
@@ -3888,7 +4538,9 @@ export const useGameStore = create<GameState>()(
         // Reputation: passive gain every 30 days, penalties for failures/defaults
         let reputation = state.reputation ?? 50;
         if (newDay % 30 === 0) reputation = Math.min(100, reputation + 1);
-        reputation = Math.max(0, Math.min(100, reputation - newFailures.length * 10 - newDefaults.length * 8));
+        // Count runoff fines for reputation penalty
+        const runoffFineCount = summary.filter(s => s.id.startsWith('runoff_fine_')).length;
+        reputation = Math.max(0, Math.min(100, reputation - newFailures.length * 10 - newDefaults.length * 8 - runoffFineCount * 3));
 
         const declinedTemplates = newDay % 180 === 0 ? [] : state.declinedTemplates;
 
@@ -3900,112 +4552,124 @@ export const useGameStore = create<GameState>()(
           pestHayLoss = Math.floor(currentHay * 0.015);
         }
 
-        // ── Feed deduction ────────────────────────────────────────────────────
+        // ── Feed deduction (ration-based) ────────────────────────────────────
         {
-          const { computeFeedNeeded, GRAIN_CROP_IDS: GRAIN_IDS } = require('../engine/animals');
           const { ANIMAL_TYPES: AT_FEED } = require('../data/animalTypes');
+          const { analyzeRation: analyzeRationFeed, generateDefaultRation: genDefaultRationFeed, getRationSickChanceModifier: getRationSickModFeed, FEED_NUTRITION: FEED_NUTRITION_FEED } = require('../engine/nutrition');
           const hasAnimalWorker = (state.workers ?? []).some(
             (w: Worker) => w.role === 'livestock_hand' || w.role === 'veterinarian'
           );
-          const { grainKg: _rawGrainKg, hayKg, pigGrainKg: _rawPigGrainKg } = computeFeedNeeded(animals, AT_FEED, newDay);
-          const hasFeedMill = (state.buildings ?? []).some(bid =>
+          const hasFeedMill = (state.buildings ?? []).some((bid: string) =>
             bid === 'bld_feed_mill_s' || bid === 'bld_feed_mill_m' || bid === 'bld_feed_mill_l'
           );
-          const feedMillMult = hasFeedMill ? 0.65 : 1.0; // 35% reduction when milling on-farm
-          const grainKg = Math.round(_rawGrainKg * feedMillMult * 10) / 10;
-          const pigGrainKg = Math.round(_rawPigGrainKg * feedMillMult * 10) / 10;
+          const feedMillMult = hasFeedMill ? 0.65 : 1.0;
           const shouldFeed = hasAnimalWorker || state.animalsManuallyFed;
 
-          if (shouldFeed && (grainKg > 0 || hayKg > 0)) {
-            // ── Grain deduction ──
-            if (grainKg > 0) {
-              const grainAvail = GRAIN_IDS.reduce(
-                (s: number, id: string) => s + (harvestInventory[id] ?? 0), 0
-              );
-              if (grainAvail >= grainKg) {
-                let remaining = grainKg;
-                for (const id of GRAIN_IDS) {
-                  if (remaining <= 0) break;
-                  const avail = harvestInventory[id] ?? 0;
-                  const take = Math.min(avail, remaining);
-                  harvestInventory = { ...harvestInventory, [id]: avail - take };
-                  remaining -= take;
-                }
-                newGrainMissed = Math.max(0, newGrainMissed - 1);
-              } else {
-                // Consume all available grain first
-                for (const id of GRAIN_IDS) {
-                  if ((harvestInventory[id] ?? 0) > 0) {
-                    harvestInventory = { ...harvestInventory, [id]: 0 };
-                  }
-                }
-                const shortfall = grainKg - grainAvail;
-                if (shortfall <= pigGrainKg) {
-                  // Pigs can cover their portion from any non-grain, non-grass crops
-                  let pigRemaining = shortfall;
-                  const fallbackIds = Object.keys(harvestInventory).filter(
-                    (id: string) => !GRAIN_IDS.includes(id) && id !== 'grass' && (harvestInventory[id] ?? 0) > 0
-                  );
-                  for (const id of fallbackIds) {
-                    if (pigRemaining <= 0) break;
-                    const avail = harvestInventory[id] ?? 0;
-                    const take = Math.min(avail, pigRemaining);
-                    harvestInventory = { ...harvestInventory, [id]: avail - take };
-                    pigRemaining -= take;
-                  }
-                  if (pigRemaining <= 0) {
-                    newGrainMissed = Math.max(0, newGrainMissed - 1);
+          if (shouldFeed) {
+            const animalsByType: Record<string, OwnedAnimal[]> = {};
+            for (const a of animals) {
+              if (!animalsByType[a.typeId]) animalsByType[a.typeId] = [];
+              animalsByType[a.typeId].push(a);
+            }
+            let anyDeficient = false;
+            let deficiencyMsg = '';
+
+            for (const typeId of Object.keys(animalsByType)) {
+              const animalType = AT_FEED.find((t: any) => t.id === typeId);
+              if (!animalType || !animalType.feedKgPerDay) continue;
+              const count = animalsByType[typeId].length;
+              const ration = state.savedRations[typeId] ?? genDefaultRationFeed(animalType);
+              const totalKg = animalType.feedKgPerDay * count * feedMillMult;
+
+              // Deduct ingredients
+              let shortage = false;
+              for (const ing of ration.ingredients) {
+                if (ing.pct <= 0) continue;
+                const needed = totalKg * (ing.pct / 100);
+                if (ing.ingredientId === 'hay') {
+                  const hayAvail = Math.max(0, (animalInventory['hay'] ?? 0) - pestHayLoss);
+                  if (hayAvail >= needed) {
+                    animalInventory = { ...animalInventory, hay: Math.round((hayAvail - needed) * 10) / 10 };
                   } else {
-                    newGrainMissed = Math.min(7, newGrainMissed + 1);
+                    const shortfall = needed - hayAvail;
+                    animalInventory = { ...animalInventory, hay: 0 };
+                    const silageForFeed = Math.min(newSilageLevel, shortfall);
+                    newSilageLevel = Math.max(0, newSilageLevel - silageForFeed);
+                    if (hayAvail + silageForFeed < needed) shortage = true;
+                  }
+                } else if (ing.ingredientId === 'silage') {
+                  if (newSilageLevel >= needed) {
+                    newSilageLevel = Math.max(0, newSilageLevel - needed);
+                  } else {
+                    shortage = true;
+                  }
+                } else if (ing.ingredientId === 'protein_meal' || ing.ingredientId === 'mineral_premix') {
+                  const avail = animalInventory[ing.ingredientId] ?? 0;
+                  if (avail >= needed) {
+                    animalInventory = { ...animalInventory, [ing.ingredientId]: avail - needed };
+                  } else {
+                    shortage = true;
                   }
                 } else {
-                  newGrainMissed = Math.min(7, newGrainMissed + 1);
+                  const avail = harvestInventory[ing.ingredientId] ?? 0;
+                  if (avail >= needed) {
+                    harvestInventory = { ...harvestInventory, [ing.ingredientId]: avail - needed };
+                  } else {
+                    harvestInventory = { ...harvestInventory, [ing.ingredientId]: 0 };
+                    shortage = true;
+                  }
                 }
               }
-            } else {
-              newGrainMissed = Math.max(0, newGrainMissed - 1);
+              if (ration.mineralPremixKgPerAnimalPerDay > 0) {
+                const neededMineral = ration.mineralPremixKgPerAnimalPerDay * count;
+                const avail = animalInventory['mineral_premix'] ?? 0;
+                if (avail >= neededMineral) {
+                  animalInventory = { ...animalInventory, mineral_premix: avail - neededMineral };
+                } else {
+                  shortage = true;
+                }
+              }
+
+              // Pasture auto-detect
+              const hasOwnedParcels = state.parcels.some((p: LandParcel) => p.owned && !p.plantedCrop);
+              const hasIrrigation = state.parcels.some((p: LandParcel) => p.owned && p.irrigated && !p.plantedCrop);
+              let pastureKg = 0;
+              if (animalType.enclosureType === 'corral' || animalType.enclosureType === 'caballeriza') {
+                pastureKg = hasOwnedParcels ? (hasIrrigation ? 2.0 : 1.0) : 0;
+              }
+              const seasonPastureMult = season === 'winter' ? 0.15 : season === 'summer' ? 1.2 : 1.0;
+              pastureKg *= seasonPastureMult;
+
+              const analysis = analyzeRationFeed(ration, animalType, { ...harvestInventory, ...animalInventory, silage: newSilageLevel }, pastureKg);
+              const tier = shortage ? 'deficient' : analysis.tier;
+              const sickMod = getRationSickModFeed(tier);
+
+              // Apply sick chance modifier
+              animals = animals.map((a: OwnedAnimal) => {
+                if (a.typeId !== typeId || a.sick) return a;
+                const baseChance = animalType.sicknessChance ?? 0.002;
+                if (Math.random() < baseChance * sickMod) return { ...a, sick: true, sicknessDay: newDay };
+                return a;
+              });
+
+              if (tier === 'deficient' && !anyDeficient) {
+                anyDeficient = true;
+                deficiencyMsg = `${animalType.name}s are malnourished — ${analysis.issues[0] ?? 'insufficient feed'}. Production reduced 35%.`;
+              }
             }
 
-            // ── Hay deduction ──
-            if (hayKg > 0) {
-              const hayAvail = Math.max(0, (animalInventory['hay'] ?? 0) - pestHayLoss);
-              if (hayAvail >= hayKg) {
-                animalInventory = { ...animalInventory, hay: Math.round((hayAvail - hayKg) * 10) / 10 };
-                newHayMissed = Math.max(0, newHayMissed - 1);
-              } else {
-                // Try silage as a fallback for the shortfall
-                const hayShortfall = hayKg - hayAvail;
-                const silageForFeed = Math.min(newSilageLevel, hayShortfall);
-                const totalFed = hayAvail + silageForFeed;
-                animalInventory = { ...animalInventory, hay: 0 };
-                newSilageLevel = Math.max(0, newSilageLevel - silageForFeed);
-                if (totalFed >= hayKg) {
-                  // Silage fully covered the shortfall
-                  newHayMissed = Math.max(0, newHayMissed - 1);
-                  summary.push({
-                    id: 'feed_silage_used',
-                    icon: '🌿',
-                    title: 'Silage used as hay substitute',
-                    detail: `${Math.round(silageForFeed)} kg silage fed to ruminants`,
-                    severity: 'info' as const,
-                  });
-                } else {
-                  // Even silage couldn't cover it
-                  newHayMissed = Math.min(7, newHayMissed + 1);
-                  summary.push({
-                    id: 'feed_hay_empty',
-                    icon: '🌾',
-                    title: 'Hay and silage stock depleted',
-                    detail: 'Ruminants are underfed · grow grass and fill the Henil or Silage Pit',
-                    severity: 'warning' as const,
-                  });
-                }
-              }
-            } else {
-              newHayMissed = Math.max(0, newHayMissed - 1);
+            if (anyDeficient && newDay % 7 === 0) {
+              summary.push({
+                id: `feed_deficient_${newDay}`,
+                icon: '⚠️',
+                title: deficiencyMsg,
+                detail: 'Check the Nutrition tab to design a better ration.',
+                severity: 'warning',
+              });
             }
-          } else if (grainKg > 0 || hayKg > 0) {
-            // No worker and player didn't manually feed
+            newGrainMissed = 0;
+            newHayMissed = 0;
+          } else {
             newGrainMissed = Math.min(7, newGrainMissed + 1);
             newHayMissed = Math.min(7, newHayMissed + 1);
             if (!hasAnimalWorker) {
@@ -4017,6 +4681,13 @@ export const useGameStore = create<GameState>()(
                 severity: 'warning',
               });
             }
+            animals = animals.map((a: OwnedAnimal) => {
+              if (a.sick) return a;
+              const animalType = AT_FEED.find((t: any) => t.id === a.typeId);
+              const baseChance = animalType?.sicknessChance ?? 0.002;
+              if (Math.random() < baseChance * 2.5) return { ...a, sick: true, sicknessDay: newDay };
+              return a;
+            });
           }
         }
 
@@ -4255,6 +4926,145 @@ export const useGameStore = create<GameState>()(
             }
           }
         }
+
+        // ── Solid manure accumulation ───────────────────────────────────────────
+        const { SOLID_MANURE_KG_PER_DAY } = require('../engine/composting');
+        let newSolidManureKg = state.solidManureKg ?? 0;
+        const hasManureStore = (state.buildings ?? []).some((bid: string) => bid.startsWith('bld_manure_store'));
+        const newSolidManureCapacity = (state.buildings ?? []).reduce((cap: number, bid: string) => {
+          if (bid === 'bld_manure_store_s') return cap + 2000;
+          if (bid === 'bld_manure_store_m') return cap + 8000;
+          if (bid === 'bld_manure_store_l') return cap + 25000;
+          return cap;
+        }, 0);
+        const dailySolidManure = animals.reduce((total: number, a: OwnedAnimal) => {
+          return total + (SOLID_MANURE_KG_PER_DAY[a.typeId] ?? 0);
+        }, 0);
+        const solidManureProducers = animals.filter((a: OwnedAnimal) => SOLID_MANURE_KG_PER_DAY[a.typeId] ?? 0 > 0).length;
+        if (dailySolidManure > 0) {
+          if (hasManureStore) {
+            newSolidManureKg = Math.min(newSolidManureCapacity, newSolidManureKg + dailySolidManure);
+            if (newSolidManureKg >= newSolidManureCapacity && newSolidManureCapacity > 0 && solidManureProducers > 20) {
+              const fine = Math.round(300 + Math.random() * 500);
+              summary.push({
+                id: `manure_overflow_${newDay}`,
+                icon: '⚠️',
+                title: 'Manure store full · overflow fine',
+                detail: `$${fine} fine. Build a larger Manure Store or start composting.`,
+                severity: 'warning',
+              });
+            }
+          } else if (solidManureProducers > 20 && Math.random() < 0.03) {
+            summary.push({
+              id: `manure_fine_${newDay}`,
+              icon: '⚠️',
+              title: 'Environmental fine · no manure storage',
+              detail: '$400 fine. Build a Manure Store to avoid these.',
+              severity: 'warning',
+            });
+          }
+        }
+
+        // ── Digestate from biogas plant ────────────────────────────────────────
+        let newDigestateKg = state.digestateKg ?? 0;
+        const hasBiogasPlant = (state.buildings ?? []).includes('bld_biogas_upgrader');
+        if (hasBiogasPlant) {
+          newDigestateKg += dailySlurryProduced * 0.85;
+        }
+
+        // ── Compost batch processing ───────────────────────────────────────────
+        let newCompostBatches = state.compostBatches.map((batch: import('../engine/composting').CompostBatch) => {
+          if (batch.status !== 'active') return batch;
+          let moistureLevel = batch.moistureLevel;
+          let moistureEvents = batch.moistureEvents;
+          // Natural moisture drift
+          const isCovered = (state.buildings ?? []).some((bid: string) => bid === 'bld_compost_bay_covered');
+          const drift = isCovered ? (Math.random() - 0.5) * 10 : (Math.random() - 0.5) * 20;
+          moistureLevel = Math.max(0, Math.min(100, moistureLevel + drift));
+          // Rain raises moisture for open bays
+          if (!isCovered && (todayWeather?.event === 'rain' || todayWeather?.event === 'heavy_rain')) {
+            moistureLevel = Math.min(100, moistureLevel + 5);
+          }
+          if (moistureLevel < 35 || moistureLevel > 75) {
+            moistureEvents += 1;
+          }
+          // Check maturation
+          const { computeMaturationDay } = require('../engine/composting');
+          const matDay = computeMaturationDay(batch.startDay, batch.turnings, moistureEvents);
+          const status = newDay >= matDay ? 'ready' as const : 'active' as const;
+          return { ...batch, moistureLevel, moistureEvents, maturationDay: matDay, status };
+        });
+        // Ready batch notifications
+        const newlyReady = newCompostBatches.filter((b: import('../engine/composting').CompostBatch) => b.status === 'ready' && state.compostBatches.find((ob: any) => ob.id === b.id)?.status === 'active');
+        for (const rb of newlyReady) {
+          const { computeCompostQuality, getCompostGrade } = require('../engine/composting');
+          const quality = computeCompostQuality(rb);
+          const grade = getCompostGrade(quality);
+          summary.push({
+            id: `compost_ready_${rb.id}`,
+            icon: '🍂',
+            title: `Compost batch ready — ${grade.grade} quality`,
+            detail: `${Math.round((rb.manureKg + rb.residueKg) * 0.40)} kg of compost available to collect.`,
+            severity: 'good',
+          });
+        }
+
+        // ── Precision Agriculture: resolve pending analyses ─────────────────────
+        let newPendingAnalyses = [...state.pendingAnalyses];
+        let precisionParcels = finalParcels;
+        const resolvedAnalyses = newPendingAnalyses.filter((pa: any) => pa.arrivesDay <= newDay);
+        newPendingAnalyses = newPendingAnalyses.filter((pa: any) => pa.arrivesDay > newDay);
+        if (resolvedAnalyses.length > 0) {
+          const { generateSoilAnalysis } = require('../engine/precision');
+          for (const pa of resolvedAnalyses) {
+            const parcel = precisionParcels.find((p: LandParcel) => p.id === pa.parcelId);
+            if (parcel) {
+              const analysis = generateSoilAnalysis(parcel);
+              analysis.analyzedDay = newDay;
+              precisionParcels = precisionParcels.map((p: LandParcel) =>
+                p.id === pa.parcelId ? { ...p, soilAnalysis: analysis } : p
+              );
+              summary.push({
+                id: `soil_analysis_${pa.parcelId}_${newDay}`,
+                icon: '🧪',
+                title: `Soil report ready for ${parcel.name}`,
+                detail: `Score: ${analysis.score}/100 — ${analysis.recommendation}`,
+                severity: analysis.score >= 80 ? 'good' : analysis.score >= 50 ? 'warning' : 'danger',
+              });
+            }
+          }
+        }
+        finalParcels = precisionParcels;
+
+        // ── Compost NPK slow release ───────────────────────────────────────────
+        let compostNPKParcels = finalParcels;
+        for (const p of compostNPKParcels) {
+          if (p.compostNPKReleaseRemaining && p.compostNPKReleaseRemaining.daysLeft > 0) {
+            const release = p.compostNPKReleaseRemaining;
+            const dayReleaseN = release.nitrogen / release.daysLeft;
+            const dayReleaseP = release.phosphorus / release.daysLeft;
+            const dayReleaseK = release.potassium / release.daysLeft;
+            const newSoil = {
+              ...p.soil,
+              nitrogen: Math.min(100, p.soil.nitrogen + dayReleaseN),
+              phosphorus: Math.min(100, p.soil.phosphorus + dayReleaseP),
+              potassium: Math.min(100, p.soil.potassium + dayReleaseK),
+            };
+            compostNPKParcels = compostNPKParcels.map((lp: LandParcel) =>
+              lp.id === p.id
+                ? {
+                    ...lp,
+                    soil: newSoil,
+                    compostNPKReleaseRemaining: {
+                      ...release,
+                      daysLeft: release.daysLeft - 1,
+                    },
+                  }
+                : lp
+            );
+          }
+        }
+        finalParcels = compostNPKParcels;
 
         // ── Weigh Crate: flag optimal slaughter weight ────────────────────────────
         const hasWeighCrate = (state.buildings ?? []).includes('bld_weigh_crate') &&
@@ -4504,7 +5314,14 @@ export const useGameStore = create<GameState>()(
         const irrigatedHa = (state.parcels ?? [])
           .filter(p => p.owned && p.irrigated)
           .reduce((sum, p) => sum + p.hectares, 0);
-        const gridWaterCost = (state.gridWaterActive ?? false) ? irrigatedHa * (state.gridWaterDailyRate ?? 12) : 0;
+        // Irrigation auto-night bonus: 60% electricity cost if irrigation system exists
+        const hasIrrigationSystem = (state.buildings ?? []).some((b: string) =>
+          b === 'bld_irrigation_drip' || b === 'bld_irrigation_sprinkler'
+        );
+        const irrigationCostMult = hasIrrigationSystem ? 0.60 : 1.0;
+        const gridWaterCost = (state.gridWaterActive ?? false)
+          ? Math.round(irrigatedHa * (state.gridWaterDailyRate ?? 1.20) * irrigationCostMult)
+          : 0;
         if (gridWaterCost > 0) moneyAfterDrilling -= gridWaterCost;
 
         const autoSellSalesEntries = autoSellLog.map(s => ({ day: newDay, amount: Math.round(s.revenue), category: 'crops' as const }));
@@ -5052,11 +5869,53 @@ export const useGameStore = create<GameState>()(
           declinedTemplates,
           completedMilestones,
           futures,
-          inventory: Object.fromEntries(
-            Object.keys({ ...harvestInventory, ...auctionInventoryDelta }).map(k => [
-              k, Math.max(0, (harvestInventory[k] ?? 0) + (auctionInventoryDelta[k] ?? 0)),
-            ])
-          ),
+          inventoryBatches: (() => {
+            const newInventory = Object.fromEntries(
+              Object.keys({ ...harvestInventory, ...auctionInventoryDelta }).map(k => [
+                k, Math.max(0, (harvestInventory[k] ?? 0) + (auctionInventoryDelta[k] ?? 0)),
+              ])
+            );
+            const syncedBatches = syncBatchesWithInventory(
+              state.inventoryBatches ?? [],
+              state.inventory,
+              newInventory,
+              newDay,
+              state.todayWeather,
+            );
+            const hasColdStorage = state.buildings.includes('bld_cold_storage');
+            const { batches: decayedBatches, disposalCost: storageDisposalCost, notifications: storageNotifications } = advanceStorageQuality(syncedBatches, newDay, season, hasColdStorage);
+            disposalFee += storageDisposalCost;
+            for (const msg of storageNotifications) {
+              summary.push({ id: `storage_${msg.slice(0, 20)}_${newDay}`, icon: '⚠️', title: msg, severity: 'warning' });
+            }
+            return decayedBatches;
+          })(),
+          inventory: deriveInventory((() => {
+            const newInventory = Object.fromEntries(
+              Object.keys({ ...harvestInventory, ...auctionInventoryDelta }).map(k => [
+                k, Math.max(0, (harvestInventory[k] ?? 0) + (auctionInventoryDelta[k] ?? 0)),
+              ])
+            );
+            const syncedBatches = syncBatchesWithInventory(
+              state.inventoryBatches ?? [],
+              state.inventory,
+              newInventory,
+              newDay,
+              state.todayWeather,
+            );
+            const hasColdStorage = state.buildings.includes('bld_cold_storage');
+            const { batches: decayedBatches } = advanceStorageQuality(syncedBatches, newDay, season, hasColdStorage);
+            return decayedBatches;
+          })()),
+          hedgerows: updatedHedgerows,
+          strawBurnedThisYear: newStrawBurnedThisYear,
+          aesEnrollments: updatedAESEnrollments,
+          subsidyLog: newSubsidyLog,
+          activeLeases: updatedLeases,
+          availableLeases: updatedAvailableLeases,
+          csaSubscribers: updatedCSASubscribers,
+          csaSeasonStart: isCSASeasonStart ? newDay : state.csaSeasonStart,
+          csaWeeklyLog: updatedCSAWeeklyLog,
           animalInventory,
           grainMissedDays: newGrainMissed,
           hayMissedDays: newHayMissed,
@@ -5070,6 +5929,7 @@ export const useGameStore = create<GameState>()(
           animalsManuallyFed: false,
           henilQueue: updatedHenilQueue,
           harvestedCropIds: harvestedCropIdsForSet,
+          cropsGrownThisYear: cropsGrownThisYearForSet,
           bankrupt: isBankrupt || state.bankrupt,
           sellPressures,
           processedInventory: processedInventoryForSet,
@@ -5125,6 +5985,12 @@ export const useGameStore = create<GameState>()(
           awardHistory: newAwardHistory,
           productAwardBonuses: newProductAwardBonuses,
           money: state.money + sellingRevenue + showPrizeMoney + deliveryRevenue - deliveryRepairCost - productionBuildingContractorFees - slurryFine - disposalFee + biogasIncome + (moneyAfterDrilling - state.money) + coopMoneyDelta - electricityBillDeduction,
+          solidManureKg: newSolidManureKg,
+          cropResidueKg: newCropResidueKg,
+          compostInventoryKg: state.compostInventoryKg,
+          compostBatches: newCompostBatches,
+          digestateKg: newDigestateKg,
+          pendingAnalyses: newPendingAnalyses,
           colmenaNegligenceStartDay,
         });
       },
@@ -5178,10 +6044,19 @@ export const useGameStore = create<GameState>()(
         })();
         const seedCost = cropType.seedCost * hectares * coopSeedDiscount;
         if (state.money < seedCost) return;
+        // Machinery check for tillage system
+        let effectiveTillage = parcel.tillageSystem ?? 'conventional';
+        if (!hasMachineryForTillage(state.machines, effectiveTillage)) {
+          effectiveTillage = fallbackTillage(state.machines, effectiveTillage);
+        }
         const plantedCrop: PlantedCrop = { cropId, parcelId, plantedDay: state.day, hectares };
         set({
           money: state.money - seedCost,
-          parcels: state.parcels.map(p => p.id === parcelId ? { ...p, plantedCrop } : p),
+          parcels: state.parcels.map(p =>
+            p.id === parcelId
+              ? { ...p, plantedCrop, residueCoverage: false, tillageSystem: effectiveTillage, tillageSystemSince: p.tillageSystem !== effectiveTillage ? state.day : p.tillageSystemSince }
+              : p
+          ),
           firstMissionStep: state.firstMissionStep === 0 ? 1 : state.firstMissionStep,
         });
       },
@@ -5238,7 +6113,7 @@ export const useGameStore = create<GameState>()(
         const droughtScale = rawClimateDelta < 0 ? 1.0 / seedGenes.drought : 1.0;
         const climateModifier = 1.0 + rawClimateDelta * droughtScale;
         const { harvestAmount } = require('../engine/crops');
-        const rawUnits = harvestAmount(crop, cropType, parcel.soil ?? SOIL_DEFAULTS, climateModifier, parcel.hasWeeds, 1.0, crop.frostDamage ?? 0, crop.droughtStress ?? 0) * pestYieldModifier(parcel.pestState?.severity ?? 0);
+        const rawUnits = harvestAmount(crop, cropType, parcel.soil ?? SOIL_DEFAULTS, climateModifier, parcel.hasWeeds, 1.0, crop.frostDamage ?? 0, crop.droughtStress ?? 0, degradationYieldModifier(parcel), getYieldTransitionMod(parcel.tillageSystem ?? 'conventional', parcel.notillSeasons ?? 0), getParcelOrganicYieldMod(parcel)) * pestYieldModifier(parcel.pestState?.severity ?? 0);
         // Field event penalty: −25% yield per unresolved disease/pest event
         const unresolvedEvents = state.fieldEvents.filter(e => e.parcelId === parcelId && !e.resolved).length;
         const fieldEventMod = Math.pow(0.75, unresolvedEvents);
@@ -5253,8 +6128,9 @@ export const useGameStore = create<GameState>()(
         const randomEventMod = getHarvestModifier(state.activeEvents ?? [], parcelId, crop.cropId);
         const diseaseMod = parcel.diseased ? 0.80 : 1.0;
         const { getPollinationMultiplier: getPollMultM } = require('../engine/pollination');
-        const pollMultM = getPollMultM(parcel, state.parcels, state.day);
-        const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationBonus * soilMod * seedGenes.yield * randomEventMod * workerBonusesManual.cropYieldMultiplier * diseaseMod * pollMultM), siloCapacity - totalInventory);
+        const pollMultM = getPollMultM(parcel, state.parcels, state.day, state.hedgerows ?? []);
+        const precisionModM = parcel.precisionApplied ? 1.05 : 1.0;
+        const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationBonus * soilMod * seedGenes.yield * randomEventMod * workerBonusesManual.cropYieldMultiplier * diseaseMod * pollMultM * precisionModM), siloCapacity - totalInventory);
         // Update quality map and consume seed batch
         const nextCropQualityMap = { ...state.cropQualityMap };
         if (seedEntry) {
@@ -5288,13 +6164,52 @@ export const useGameStore = create<GameState>()(
             };
           }
         }
+        const { getResiduePct: getResiduePctM } = require('../engine/composting');
+        const residuePctM = getResiduePctM(crop.cropId);
+        const newResidueKgM = Math.min(10000, (state.cropResidueKg ?? 0) + units * residuePctM);
+        const seasonLabelM = `${getSeason(state.day).charAt(0).toUpperCase() + getSeason(state.day).slice(1)} Y${Math.ceil(state.day / 360)}`;
+        const newYieldHistoryM = [...(parcel.yieldHistory ?? []), { season: seasonLabelM, cropId: crop.cropId, kgPerHa: parcel.hectares > 0 ? units / parcel.hectares : 0, day: state.day }].slice(-8);
+        // Storage quality batch
+        const moisture = determineMoisture(state.todayWeather?.event ?? 'sunny');
+        const heatWaveActive = state.seasonalEvent?.type === 'heat_wave' && state.day <= (state.seasonalEvent?.endsDay ?? 0);
+        let quality = determineHarvestQuality(crop.cropId, crop.plantedDay, cropType.growthDays, state.day, moisture, false, parcel.diseased ?? false, heatWaveActive);
+        // Hay/silage twilight quality bonus
+        if (haySilageQualityBonus(crop.cropId, (state.activeSchedule?.harvestWindow ?? 'day'))) {
+          quality = 'premium';
+        }
+        const newBatch: StoredBatch = {
+          id: createBatchId(),
+          cropId: crop.cropId,
+          quantity: units,
+          quality,
+          harvestDay: state.day,
+          moisture,
+          infested: false,
+          organic: parcel.organicStatus === 'organic',
+        };
+        const newInventoryBatches = addBatch(state.inventoryBatches ?? [], newBatch);
+        const residueCoverage = (parcel.tillageSystem ?? 'conventional') === 'notill';
+        // Sharecrop deduction
+        let sharecropCost = 0;
+        const lease = getActiveLeaseForParcel(parcelId, state.activeLeases ?? []);
+        if (lease && lease.leaseType === 'sharecrop' && lease.landOwnerSharePct) {
+          const cropPrice = state.prices.find(p => p.cropId === crop.cropId)?.price ?? 0;
+          const harvestValue = units * cropPrice;
+          sharecropCost = Math.round(harvestValue * lease.landOwnerSharePct);
+        }
         set({
+          money: state.money - sharecropCost,
           parcels: state.parcels.map(p => p.id === parcelId
-            ? { ...p, plantedCrop: null, lastCropId: crop.cropId, fertility: newFertility, soil: soilAfterHarvest, seedEntryId: undefined, diseased: false, diseasedDay: undefined, cropHistory: [...(parcel.cropHistory ?? []).slice(-3), crop.cropId] }
+            ? { ...p, plantedCrop: null, lastCropId: crop.cropId, fertility: newFertility, soil: soilAfterHarvest, seedEntryId: undefined, diseased: false, diseasedDay: undefined, cropHistory: [...(parcel.cropHistory ?? []).slice(-3), crop.cropId], precisionApplied: false, yieldHistory: newYieldHistoryM, residueCoverage }
             : p
           ),
           inventory: { ...state.inventory, [crop.cropId]: (state.inventory[crop.cropId] ?? 0) + units },
+          inventoryBatches: newInventoryBatches,
+          cropResidueKg: newResidueKgM,
           harvestedCropIds,
+          cropsGrownThisYear: (state.cropsGrownThisYear ?? []).includes(crop.cropId)
+            ? state.cropsGrownThisYear
+            : [...(state.cropsGrownThisYear ?? []), crop.cropId],
           cropQualityMap: nextCropQualityMap,
           seedVault: nextSeedVaultAfterHarvest,
           coopMemberships: newCoopMemberships,
@@ -5316,6 +6231,14 @@ export const useGameStore = create<GameState>()(
         const toSell = Math.min(units, inStock);
         if (toSell <= 0) return;
 
+        // Consume from batches (best quality first)
+        const { remainingBatches, consumedBatches } = consumeFromBatches(
+          state.inventoryBatches ?? [],
+          cropId,
+          toSell,
+        );
+        const qualityMult = weightedQualityMultiplier(consumedBatches);
+
         // Regional market
         const activeMarketId = marketId ?? state.selectedMarket ?? 'local';
         const region = MARKET_REGIONS.find(r => r.id === activeMarketId) ?? MARKET_REGIONS[0];
@@ -5326,7 +6249,7 @@ export const useGameStore = create<GameState>()(
         const secaderoBonus  = hasSecadero(state.buildings) ? 1.05 : 1.0;
         const coopBonus      = 1.0;
         const prestigeBonus  = 1 + 0.05 * (state.prestige ?? 0);
-        const grossRevenue   = sellRevenue(toSell, effectivePrice) * secaderoBonus * coopBonus * prestigeBonus;
+        const grossRevenue   = sellRevenue(toSell, effectivePrice) * secaderoBonus * coopBonus * prestigeBonus * qualityMult;
         const revenue        = Math.max(0, Math.round(grossRevenue - transportCost));
 
         // Sell pressure: large sales depress price for several days
@@ -5341,6 +6264,7 @@ export const useGameStore = create<GameState>()(
         set({
           money: state.money + revenue,
           inventory: { ...state.inventory, [cropId]: inStock - toSell },
+          inventoryBatches: remainingBatches,
           salesLog: [...state.salesLog, { day: state.day, amount: revenue, category: 'crops' }],
           totalRevenue: state.totalRevenue + revenue,
           sellPressures: newPressures,
@@ -5403,6 +6327,7 @@ export const useGameStore = create<GameState>()(
         const grassAvailable = state.inventory['grass'] ?? 0;
         if (grassAvailable <= 0) return;
         const batchKg = Math.min(grassAvailable, 700); // 700 kg batch cap
+        const { remainingBatches } = consumeFromBatches(state.inventoryBatches ?? [], 'grass', batchKg);
         const batch: HenilBatch = {
           batchId: `henil_${Date.now()}`,
           wetGrassKg: batchKg,
@@ -5412,6 +6337,7 @@ export const useGameStore = create<GameState>()(
         set({
           henilQueue: [...(state.henilQueue ?? []), batch],
           inventory: { ...state.inventory, grass: grassAvailable - batchKg },
+          inventoryBatches: remainingBatches,
         });
       },
 
@@ -6306,6 +7232,8 @@ export const useGameStore = create<GameState>()(
           const actual = Math.min(amountDelivered, available);
           if (actual <= 0) return {};
 
+          const { remainingBatches } = consumeFromBatches(s.inventoryBatches ?? [], contract.cropId, actual);
+
           const cropType = CROP_TYPES.find((ct) => ct.id === contract.cropId);
           const basePrice = cropType?.basePrice ?? 1;
 
@@ -6315,6 +7243,7 @@ export const useGameStore = create<GameState>()(
           return {
             money: s.money + revenue,
             inventory: { ...s.inventory, [contract.cropId]: Math.max(0, available - actual) },
+            inventoryBatches: remainingBatches,
             recurringContracts: s.recurringContracts.map((c) =>
               c.id === contractId ? updatedContract : c,
             ),
@@ -6391,6 +7320,10 @@ export const useGameStore = create<GameState>()(
             };
           } else if (productId === 'drainage_tile') {
             newSoil.drainage = Math.min(100, (current.drainage ?? 65) + 15);
+          }
+          // Acidification: extra pH drop if already below 6.0
+          if (newSoil.pH < 6.0 && productId !== 'drainage_tile') {
+            newSoil.pH = Math.max(4.0, newSoil.pH - 0.15);
           }
           const updatedPlantedCrop = parcel.plantedCrop
             ? { ...parcel.plantedCrop, ...cropUpdate }
@@ -6533,7 +7466,19 @@ export const useGameStore = create<GameState>()(
         set({
           parcels: state.parcels.map(p => {
             if (!idleIds.has(p.id)) return p;
-            return { ...p, plantedCrop: { cropId, parcelId: p.id, plantedDay: plantDay, hectares: p.hectares }, tilled: false };
+            const effectiveTillage = (() => {
+              const preferred = p.tillageSystem ?? 'conventional';
+              if (hasMachineryForTillage(state.machines ?? [], preferred)) return preferred;
+              return fallbackTillage(state.machines ?? [], preferred);
+            })();
+            return {
+              ...p,
+              plantedCrop: { cropId, parcelId: p.id, plantedDay: plantDay, hectares: p.hectares },
+              tilled: false,
+              residueCoverage: false,
+              tillageSystem: effectiveTillage,
+              tillageSystemSince: p.tillageSystem !== effectiveTillage ? plantDay : p.tillageSystemSince,
+            };
           }),
           money: state.money - totalCost,
         });
@@ -6569,6 +7514,7 @@ export const useGameStore = create<GameState>()(
         if (inStock < quantity || quantity <= 0) return;
         // Reserve inventory immediately
         const newInventory = { ...state.inventory, [cropId]: inStock - quantity };
+        const { remainingBatches } = consumeFromBatches(state.inventoryBatches ?? [], cropId, quantity);
         const order: MarketOrder = {
           id: `order_${Date.now()}`,
           cropId,
@@ -6578,7 +7524,7 @@ export const useGameStore = create<GameState>()(
           expiresDay: state.day + termDays,
           status: 'active',
         };
-        set({ inventory: newInventory, marketOrders: [...(state.marketOrders ?? []), order] });
+        set({ inventory: newInventory, inventoryBatches: remainingBatches, marketOrders: [...(state.marketOrders ?? []), order] });
       },
 
       cancelMarketOrder: (orderId) => {
@@ -6587,10 +7533,19 @@ export const useGameStore = create<GameState>()(
         if (!order) return;
         // Return reserved inventory
         const newInventory = { ...state.inventory, [order.cropId]: (state.inventory[order.cropId] ?? 0) + order.quantity };
+        const returnedBatch: StoredBatch = {
+          id: createBatchId(),
+          cropId: order.cropId,
+          quantity: order.quantity,
+          quality: 'standard',
+          harvestDay: state.day,
+          moisture: 'dry',
+          infested: false,
+        };
         const updatedOrders = (state.marketOrders ?? []).map(o =>
           o.id === orderId ? { ...o, status: 'cancelled' as const } : o
         );
-        set({ inventory: newInventory, marketOrders: updatedOrders });
+        set({ inventory: newInventory, inventoryBatches: addBatch(state.inventoryBatches ?? [], returnedBatch), marketOrders: updatedOrders });
       },
 
       setSelectedMarket: (marketId) => {
@@ -6608,6 +7563,7 @@ export const useGameStore = create<GameState>()(
         const inStock = state.inventory[contract.cropId] ?? 0;
         const toDeliver = Math.min(amount, inStock, contract.amount - contract.delivered);
         if (toDeliver <= 0) return;
+        const { remainingBatches } = consumeFromBatches(state.inventoryBatches ?? [], contract.cropId, toDeliver);
         // Administrative Office building: +5% contract delivery revenue
         const contractBonus = hasOficinaBuilding(state.buildings) ? 1.05 : 1.0;
         const coopBonus = 1.0;
@@ -6617,6 +7573,7 @@ export const useGameStore = create<GameState>()(
         const completed = newDelivered >= contract.amount;
         set({
           inventory: { ...state.inventory, [contract.cropId]: inStock - toDeliver },
+          inventoryBatches: remainingBatches,
           money: state.money + revenue,
           salesLog: [...state.salesLog, { day: state.day, amount: revenue, category: 'contracts' }],
           totalRevenue: state.totalRevenue + revenue,
@@ -6717,8 +7674,10 @@ export const useGameStore = create<GameState>()(
         const space = (state.silageCapacity ?? 0) - (state.silageLevel ?? 0);
         const toFill = Math.min(kgGrass, grassAvail, space);
         if (toFill <= 0) return;
+        const { remainingBatches } = consumeFromBatches(state.inventoryBatches ?? [], 'grass', toFill);
         set({
           inventory: { ...state.inventory, grass: Math.max(0, grassAvail - toFill) },
+          inventoryBatches: remainingBatches,
           silageLevel: (state.silageLevel ?? 0) + toFill,
         });
       },
@@ -6766,6 +7725,18 @@ export const useGameStore = create<GameState>()(
           return p?.category === 'herbicide' && (state.productInventory[id] ?? 0) > 0;
         });
         if (!herbicideId) return;
+        // Organic violation check
+        if (isOrganicEnrolled(parcel.organicStatus ?? 'conventional')) {
+          set({
+            parcels: state.parcels.map(p =>
+              p.id === parcelId
+                ? { ...p, hasWeeds: false, organicStatus: 'decertified' as OrganicStatus, lastDecertifiedDay: state.day, pendingContaminationAppeal: undefined }
+                : p
+            ),
+            productInventory: { ...state.productInventory, [herbicideId]: state.productInventory[herbicideId] - 1 },
+          });
+          return;
+        }
         const updatedParcel: any = { ...parcel, hasWeeds: false };
         if (parcel.linkedColmenaId) {
           updatedParcel.pesticideSprayedDay = state.day;
@@ -6797,6 +7768,177 @@ export const useGameStore = create<GameState>()(
         });
       },
 
+      orderSoilAnalysis: (parcelId) => {
+        const state = get();
+        if (state.reputation < 65) return;
+        const parcel = state.parcels.find(p => p.id === parcelId);
+        if (!parcel || !parcel.owned) return;
+        const delay = state.soilLabBuilt ? 1 : 3;
+        const cost = state.soilLabBuilt ? 150 : Math.min(800, Math.round(200 + parcel.hectares * 60));
+        if (state.money < cost) return;
+        set({
+          money: state.money - cost,
+          pendingAnalyses: [...state.pendingAnalyses, { parcelId, arrivesDay: state.day + delay }],
+        });
+      },
+
+      applyPrecisionInputs: (parcelId) => {
+        const state = get();
+        const parcel = state.parcels.find(p => p.id === parcelId);
+        if (!parcel || !parcel.owned || !parcel.soilAnalysis) return;
+        const analysis = parcel.soilAnalysis;
+        const { PRODUCT_TYPES } = require('../data/productTypes');
+        const nProd = PRODUCT_TYPES.find((p: any) => p.id === 'fertilizer_n');
+        const pProd = PRODUCT_TYPES.find((p: any) => p.id === 'fertilizer_p');
+        const kProd = PRODUCT_TYPES.find((p: any) => p.id === 'fertilizer_k');
+        const limeProd = PRODUCT_TYPES.find((p: any) => p.id === 'lime');
+        const needs: Record<string, { product: any; deficit: number; kgPerHa: number }> = {};
+        if (analysis.deficitN > 2 && nProd) needs.n = { product: nProd, deficit: analysis.deficitN, kgPerHa: analysis.deficitN };
+        if (analysis.deficitP > 2 && pProd) needs.p = { product: pProd, deficit: analysis.deficitP, kgPerHa: analysis.deficitP };
+        if (analysis.deficitK > 2 && kProd) needs.k = { product: kProd, deficit: analysis.deficitK, kgPerHa: analysis.deficitK };
+        if (analysis.deficitPh > 0.2 && limeProd) needs.lime = { product: limeProd, deficit: analysis.deficitPh, kgPerHa: 100 };
+        const newProductInventory = { ...state.productInventory };
+        const newSoil = { ...parcel.soil };
+        let canApply = true;
+        for (const key of Object.keys(needs)) {
+          const need = needs[key];
+          const reqUnits = Math.ceil(need.kgPerHa * parcel.hectares / 50);
+          const inStock = newProductInventory[need.product.id] ?? 0;
+          if (inStock < reqUnits) { canApply = false; break; }
+          newProductInventory[need.product.id] = inStock - reqUnits;
+          if (key === 'n') newSoil.nitrogen = Math.min(100, newSoil.nitrogen + need.deficit);
+          if (key === 'p') newSoil.phosphorus = Math.min(100, newSoil.phosphorus + need.deficit);
+          if (key === 'k') newSoil.potassium = Math.min(100, newSoil.potassium + need.deficit);
+          if (key === 'lime') newSoil.pH = Math.min(8.5, newSoil.pH + 0.4);
+        }
+        if (!canApply) return;
+        set({
+          parcels: state.parcels.map(p => p.id === parcelId ? { ...p, soil: newSoil, precisionApplied: true, soilAnalysis: { ...analysis, analyzedDay: state.day } } : p),
+          productInventory: newProductInventory,
+        });
+      },
+
+      startCompostBatch: (manureKg, residueKg) => {
+        const state = get();
+        if (manureKg <= 0 || residueKg <= 0) return;
+        if (manureKg > state.solidManureKg || residueKg > state.cropResidueKg) return;
+        const batchCapacity = (state.buildings ?? []).reduce((sum, bId) => {
+          if (bId.startsWith('bld_compost_bay')) {
+            const bt = BUILDING_TYPES.find(b => b.id === bId);
+            return sum + (bt?.capacity ?? 0);
+          }
+          return sum;
+        }, 0);
+        const activeCount = state.compostBatches.filter(b => b.status === 'active' || b.status === 'ready').length;
+        if (activeCount >= batchCapacity) return;
+        const { computeCNRatio, computeMaturationDay, MANURE_CN_RATIOS } = require('../engine/composting');
+        const animals = state.animals;
+        let totalManureKg = 0;
+        let weightedCN = 0;
+        for (const typeId of Object.keys(MANURE_CN_RATIOS)) {
+          const count = animals.filter((a: any) => a.typeId === typeId).length;
+          const dailyKg = (require('../engine/composting').SOLID_MANURE_KG_PER_DAY[typeId] ?? 0) * count;
+          if (dailyKg > 0) {
+            weightedCN += dailyKg * MANURE_CN_RATIOS[typeId];
+            totalManureKg += dailyKg;
+          }
+        }
+        const avgManureCN = totalManureKg > 0 ? weightedCN / totalManureKg : 18;
+        const cnRatio = computeCNRatio(manureKg, residueKg, avgManureCN);
+        const batch = {
+          id: `compost_${Date.now()}`,
+          startDay: state.day,
+          manureKg,
+          residueKg,
+          cnRatio,
+          moistureLevel: 55,
+          turnings: 0,
+          lastTurnedDay: state.day,
+          maturationDay: computeMaturationDay(state.day, 0, 0),
+          moistureEvents: 0,
+          status: 'active' as const,
+        };
+        set({
+          solidManureKg: Math.max(0, state.solidManureKg - manureKg),
+          cropResidueKg: Math.max(0, state.cropResidueKg - residueKg),
+          compostBatches: [...state.compostBatches, batch],
+        });
+      },
+
+      turnCompostBatch: (batchId) => {
+        const state = get();
+        const batch = state.compostBatches.find(b => b.id === batchId);
+        if (!batch || batch.status !== 'active') return;
+        if (state.day - batch.lastTurnedDay < 7) return;
+        const { computeMaturationDay } = require('../engine/composting');
+        const newTurnings = Math.min(5, batch.turnings + 1);
+        set({
+          compostBatches: state.compostBatches.map(b =>
+            b.id === batchId
+              ? { ...b, turnings: newTurnings, lastTurnedDay: state.day, maturationDay: computeMaturationDay(b.startDay, newTurnings, b.moistureEvents) }
+              : b
+          ),
+        });
+      },
+
+      waterCompostBatch: (batchId) => {
+        const state = get();
+        const batch = state.compostBatches.find(b => b.id === batchId);
+        if (!batch || batch.status !== 'active') return;
+        set({
+          compostBatches: state.compostBatches.map(b =>
+            b.id === batchId ? { ...b, moistureLevel: Math.min(100, b.moistureLevel + 15) } : b
+          ),
+        });
+      },
+
+      collectCompostBatch: (batchId) => {
+        const state = get();
+        const batch = state.compostBatches.find(b => b.id === batchId);
+        if (!batch || batch.status !== 'ready') return;
+        const outputKg = Math.round((batch.manureKg + batch.residueKg) * 0.40);
+        set({
+          compostInventoryKg: state.compostInventoryKg + outputKg,
+          compostBatches: state.compostBatches.filter(b => b.id !== batchId),
+        });
+      },
+
+      applyCompost: (parcelId, kg) => {
+        const state = get();
+        const parcel = state.parcels.find(p => p.id === parcelId);
+        if (!parcel || !parcel.owned || kg <= 0 || kg > state.compostInventoryKg) return;
+        const { getCompostGrade, computeCompostQuality } = require('../engine/composting');
+        const quality = computeCompostQuality({ ...state.compostBatches.find((b: any) => b.status === 'ready') } as any);
+        const grade = getCompostGrade(quality);
+        const nAdd = (grade.nPer1000kg * kg) / 1000;
+        const pAdd = (grade.pPer1000kg * kg) / 1000;
+        const kAdd = (grade.kPer1000kg * kg) / 1000;
+        const oldSoil = parcel.soil ?? { nitrogen: 50, phosphorus: 30, potassium: 30, pH: 6.0, organicMatter: 2, compaction: 0, microbialLife: 50, drainage: 50 };
+        set({
+          compostInventoryKg: Math.max(0, state.compostInventoryKg - kg),
+          parcels: state.parcels.map(p =>
+            p.id === parcelId
+              ? {
+                  ...p,
+                  soil: {
+                    ...oldSoil,
+                    nitrogen: Math.min(100, oldSoil.nitrogen + nAdd * 0.5),
+                    phosphorus: Math.min(100, oldSoil.phosphorus + pAdd * 0.5),
+                    potassium: Math.min(100, oldSoil.potassium + kAdd * 0.5),
+                    organicMatter: Math.min(10, oldSoil.organicMatter + grade.organicMatter),
+                  },
+                  compostNPKReleaseRemaining: {
+                    nitrogen: nAdd * 0.5,
+                    phosphorus: pAdd * 0.5,
+                    potassium: kAdd * 0.5,
+                    daysLeft: 30,
+                  },
+                }
+              : p
+          ),
+        });
+      },
+
       fertilizeCrop: (parcelId, productId) => {
         const state = get();
         const parcel = state.parcels.find(p => p.id === parcelId);
@@ -6806,19 +7948,105 @@ export const useGameStore = create<GameState>()(
         if (!product || product.category !== 'fertilizer_solid' && product.category !== 'fertilizer_liquid') return;
         const inStock = state.productInventory[productId] ?? 0;
         if (inStock <= 0) return;
+        // Organic violation check for synthetic NPK
+        if (isOrganicEnrolled(parcel.organicStatus ?? 'conventional')) {
+          set({
+            parcels: state.parcels.map(p =>
+              p.id === parcelId
+                ? { ...p, organicStatus: 'decertified' as OrganicStatus, lastDecertifiedDay: state.day, pendingContaminationAppeal: undefined }
+                : p
+            ),
+            productInventory: { ...state.productInventory, [productId]: inStock - 1 },
+          });
+          return;
+        }
         const bonus = product.fertilizerBonus ?? 1.3;
         set({
-          parcels: state.parcels.map(p =>
-            p.id === parcelId ? {
+          parcels: state.parcels.map(p => {
+            if (p.id !== parcelId) return p;
+            const newSoil = { ...p.soil };
+            // Acidification: extra pH drop if already below 6.0
+            if (newSoil.pH < 6.0) {
+              newSoil.pH = Math.max(4.0, newSoil.pH - 0.15);
+            }
+            return {
               ...p,
+              soil: newSoil,
               fertility: Math.min(25, p.fertility + 2),
               plantedCrop: {
                 ...p.plantedCrop!,
                 appliedN: Math.max(p.plantedCrop!.appliedN ?? 1.0, bonus),
               },
-            } : p
-          ),
+            };
+          }),
           productInventory: { ...state.productInventory, [productId]: inStock - 1 },
+        });
+      },
+
+      applyLime: (parcelId, type) => {
+        const state = get();
+        const parcel = state.parcels.find(p => p.id === parcelId);
+        if (!parcel || !parcel.owned) return;
+        const costPerHa = type === 'agricultural' ? 120 : 180;
+        const cost = costPerHa * parcel.hectares;
+        if (state.money < cost) return;
+        const newSoil = { ...parcel.soil };
+        newSoil.pH = Math.min(8.5, newSoil.pH + 0.3);
+        if (type === 'dolomitic') {
+          newSoil.organicMatter = Math.min(10, newSoil.organicMatter + 0.05);
+        }
+        set({
+          money: state.money - cost,
+          parcels: state.parcels.map(p => p.id === parcelId ? { ...p, soil: newSoil } : p),
+        });
+      },
+
+      applyGypsum: (parcelId) => {
+        const state = get();
+        const parcel = state.parcels.find(p => p.id === parcelId);
+        if (!parcel || !parcel.owned) return;
+        const cost = 150 * parcel.hectares;
+        if (state.money < cost) return;
+        set({
+          money: state.money - cost,
+          parcels: state.parcels.map(p =>
+            p.id === parcelId ? { ...p, soilSalinity: Math.max(0, (p.soilSalinity ?? 0) - 50) } : p,
+          ),
+        });
+      },
+
+      applyLeachingFlush: (parcelId) => {
+        const state = get();
+        const parcel = state.parcels.find(p => p.id === parcelId);
+        if (!parcel || !parcel.owned) return;
+        const cost = 80 * parcel.hectares;
+        if (state.money < cost) return;
+        set({
+          money: state.money - cost,
+          parcels: state.parcels.map(p =>
+            p.id === parcelId ? { ...p, soilSalinity: Math.max(0, (p.soilSalinity ?? 0) - 30) } : p,
+          ),
+        });
+      },
+
+      applySubsoiling: (parcelId) => {
+        const state = get();
+        const parcel = state.parcels.find(p => p.id === parcelId);
+        if (!parcel || !parcel.owned) return;
+        const cost = 200 * parcel.hectares;
+        if (state.money < cost) return;
+        set({
+          money: state.money - cost,
+          parcels: state.parcels.map(p => {
+            if (p.id !== parcelId) return p;
+            return {
+              ...p,
+              soil: {
+                ...p.soil,
+                compaction: Math.max(0, p.soil.compaction - 40),
+              },
+            };
+          }),
         });
       },
 
@@ -6880,9 +8108,11 @@ export const useGameStore = create<GameState>()(
           if (inStock < cropQuantity) return;
           listing.cropId = cropId;
           listing.cropQuantity = cropQuantity;
+          const { remainingBatches } = consumeFromBatches(state.inventoryBatches ?? [], cropId, cropQuantity);
           set({
             listings: [...(state.listings ?? []), listing],
             inventory: { ...state.inventory, [cropId]: inStock - cropQuantity },
+            inventoryBatches: remainingBatches,
           });
         } else if (category === 'machinery') {
           if (!machineId) return;
@@ -6929,11 +8159,21 @@ export const useGameStore = create<GameState>()(
           };
           inventoryPatch = { animals: [...state.animals, returnedAnimal] };
         } else if (listing.category === 'crop' && listing.cropId && listing.cropQuantity) {
+          const returnedBatch: StoredBatch = {
+            id: createBatchId(),
+            cropId: listing.cropId,
+            quantity: listing.cropQuantity,
+            quality: 'standard',
+            harvestDay: state.day,
+            moisture: 'dry',
+            infested: false,
+          };
           inventoryPatch = {
             inventory: {
               ...state.inventory,
               [listing.cropId]: (state.inventory[listing.cropId] ?? 0) + listing.cropQuantity,
             },
+            inventoryBatches: addBatch(state.inventoryBatches ?? [], returnedBatch),
           };
         } else if (listing.category === 'machinery' && listing.machineId && listing.machineTypeId) {
           const restoredMachine: OwnedMachine = {
@@ -7043,11 +8283,14 @@ export const useGameStore = create<GameState>()(
         const newInventory = { ...state.inventory };
         const newAnimalInventory = { ...state.animalInventory };
         let newProcessedInventory = [...(state.processedInventory ?? [])] as ProcessedItem[];
+        let newInventoryBatches = [...(state.inventoryBatches ?? [])];
 
         for (const input of recipe.inputs) {
           const needed = input.quantity * actualBatches;
           if (input.source === 'crop') {
             newInventory[input.itemId] = (newInventory[input.itemId] ?? 0) - needed;
+            const { remainingBatches } = consumeFromBatches(newInventoryBatches, input.itemId, needed);
+            newInventoryBatches = remainingBatches;
           } else if (input.source === 'animal') {
             newAnimalInventory[input.itemId] = (newAnimalInventory[input.itemId] ?? 0) - needed;
           } else if (input.source === 'processed') {
@@ -7075,6 +8318,7 @@ export const useGameStore = create<GameState>()(
 
         set({
           inventory: newInventory,
+          inventoryBatches: newInventoryBatches,
           animalInventory: newAnimalInventory,
           processedInventory: newProcessedInventory,
           activeBatches: [...(state.activeBatches ?? []), batch],
@@ -7658,7 +8902,10 @@ export const useGameStore = create<GameState>()(
         const { harvestAmount } = require('../engine/crops');
         let totalInventory = Object.values(state.inventory).reduce((a: number, b) => a + (b as number), 0);
         let newInventory = { ...state.inventory };
+        let newBatches = [...(state.inventoryBatches ?? [])];
         const newHarvestedCropIds = [...state.harvestedCropIds];
+        const heatWaveActive = state.seasonalEvent?.type === 'heat_wave' && state.day <= (state.seasonalEvent?.endsDay ?? 0);
+        const moisture = determineMoisture(state.todayWeather?.event ?? 'sunny');
         const newParcels = state.parcels.map(p => {
           if (!p.plantedCrop || !p.owned || totalInventory >= siloCapacity) return p;
           const cropType = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
@@ -7673,17 +8920,30 @@ export const useGameStore = create<GameState>()(
           const rotationMod = p.lastCropId && p.lastCropId !== p.plantedCrop.cropId ? 1.15 : 1.0;
           const irrigationMod = p.irrigated ? 1.20 : 1.0;
           const soilMod = getSoilModifier(p.soilType, p.plantedCrop.cropId);
-          const rawUnits = harvestAmount(p.plantedCrop, cropType, p.soil ?? SOIL_DEFAULTS, climateModifier, p.hasWeeds, yieldBonus, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0) * pestYieldModifier(p.pestState?.severity ?? 0);
+          const rawUnits = harvestAmount(p.plantedCrop, cropType, p.soil ?? SOIL_DEFAULTS, climateModifier, p.hasWeeds, yieldBonus, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0, degradationYieldModifier(p), getYieldTransitionMod(p.tillageSystem ?? 'conventional', p.notillSeasons ?? 0), getParcelOrganicYieldMod(p)) * pestYieldModifier(p.pestState?.severity ?? 0);
           const { getPollinationMultiplier: getPollMultC } = require('../engine/pollination');
-          const pollMultC = getPollMultC(p, state.parcels, state.day);
+          const pollMultC = getPollMultC(p, state.parcels, state.day, state.hedgerows ?? []);
           const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationMod * soilMod * pollMultC), siloCapacity - totalInventory);
           totalInventory += units;
           newInventory[p.plantedCrop.cropId] = (newInventory[p.plantedCrop.cropId] ?? 0) + units;
           if (!newHarvestedCropIds.includes(p.plantedCrop.cropId)) newHarvestedCropIds.push(p.plantedCrop.cropId);
           const newFertility = Math.max(1, p.fertility - Math.round((cropType.fertilityDrain ?? 0) * workerBonusesAll.fertilityDrainMult));
-          return { ...p, plantedCrop: null, lastCropId: p.plantedCrop.cropId, fertility: newFertility, cropHistory: [...(p.cropHistory ?? []).slice(-3), p.plantedCrop.cropId] };
+          // Create batch
+          const quality = determineHarvestQuality(p.plantedCrop.cropId, p.plantedCrop.plantedDay, cropType.growthDays, state.day, moisture, false, p.diseased ?? false, heatWaveActive);
+          newBatches = addBatch(newBatches, {
+            id: createBatchId(),
+            cropId: p.plantedCrop.cropId,
+            quantity: units,
+            quality,
+            harvestDay: state.day,
+            moisture,
+            infested: false,
+            organic: p.organicStatus === 'organic',
+          });
+          const residueCoverageT = (p.tillageSystem ?? 'conventional') === 'notill';
+          return { ...p, plantedCrop: null, lastCropId: p.plantedCrop.cropId, fertility: newFertility, cropHistory: [...(p.cropHistory ?? []).slice(-3), p.plantedCrop.cropId], residueCoverage: residueCoverageT };
         });
-        set({ parcels: newParcels, inventory: newInventory, harvestedCropIds: newHarvestedCropIds });
+        set({ parcels: newParcels, inventory: newInventory, inventoryBatches: newBatches, harvestedCropIds: newHarvestedCropIds });
       },
 
       setAutoSell: (cropId, settings) => {
@@ -8074,6 +9334,19 @@ export const useGameStore = create<GameState>()(
         const treatable = TREATMENT_MAP[product.category] ?? [];
         if (!treatable.includes(parcel.pestState.type)) return;
 
+        // Organic violation check
+        if (isOrganicEnrolled(parcel.organicStatus ?? 'conventional')) {
+          set({
+            parcels: state.parcels.map(p =>
+              p.id === parcelId
+                ? { ...p, pestState: undefined, organicStatus: 'decertified' as OrganicStatus, lastDecertifiedDay: state.day, pendingContaminationAppeal: undefined }
+                : p
+            ),
+            productInventory: { ...state.productInventory, [productId]: inStock - 1 },
+          });
+          return;
+        }
+
         set({
           parcels: state.parcels.map(p =>
             p.id === parcelId ? { ...p, pestState: undefined } : p
@@ -8100,6 +9373,202 @@ export const useGameStore = create<GameState>()(
           .reduce((s, p) => s + p.hectares, 0);
         if (totalHa > 20) return;
         set({ cropConsultantParcelIds: parcelIds });
+      },
+
+      setTillageSystem: (parcelId, system) => {
+        const state = get();
+        const parcel = state.parcels.find(p => p.id === parcelId);
+        if (!parcel || !parcel.owned) return;
+        const COST = 500;
+        if (state.money < COST) return;
+        set({
+          money: state.money - COST,
+          parcels: state.parcels.map(p =>
+            p.id === parcelId
+              ? { ...p, tillageSystem: system, tillageSystemSince: state.day, notillSeasons: 0 }
+              : p
+          ),
+        });
+      },
+
+      installHedgerow: (parcelId, edge, type) => {
+        const state = get();
+        const parcel = state.parcels.find(p => p.id === parcelId);
+        if (!parcel || !parcel.owned) return;
+        const existing = state.hedgerows.find(h => h.parcelId === parcelId && h.edge === edge);
+        if (existing) return;
+        const lengthM = 100; // standard edge length
+        const cost = Math.round(HEDGEROW_COST[type] * (lengthM / 100));
+        if (state.money < cost) return;
+        const newHedgerow: Hedgerow = {
+          id: `hdg_${parcelId}_${edge}_${state.day}`,
+          type,
+          parcelId,
+          edge,
+          lengthM,
+          plantedDay: state.day,
+          mature: false,
+        };
+        set({
+          money: state.money - cost,
+          hedgerows: [...state.hedgerows, newHedgerow],
+        });
+      },
+
+      enrollAES: (schemeId, parcelIds) => {
+        const state = get();
+        const scheme = AES_SCHEMES.find(s => s.id === schemeId);
+        if (!scheme) return;
+        const enrolledHa = state.parcels
+          .filter(p => parcelIds.includes(p.id) && p.owned)
+          .reduce((s, p) => s + p.hectares, 0);
+        if (enrolledHa <= 0) return;
+        const newEnrollment: AESEnrollment = {
+          id: `aes_${schemeId}_${state.day}`,
+          schemeId,
+          enrolledDay: state.day,
+          enrolledParcels: parcelIds,
+          enrolledHa,
+          endDay: state.day + 1825,
+          totalPaidSoFar: 0,
+          status: 'active',
+        };
+        set({
+          aesEnrollments: [...(state.aesEnrollments ?? []), newEnrollment],
+        });
+      },
+
+      startOrganicTransition: (parcelId) => {
+        const state = get();
+        const parcel = state.parcels.find(p => p.id === parcelId);
+        if (!parcel || !parcel.owned) return;
+        if (parcel.organicStatus && parcel.organicStatus !== 'conventional') return;
+        if (!canReapplyAfterDecertification(parcel.lastDecertifiedDay, state.day)) return;
+        const fee = organicApplicationFee(parcel.hectares);
+        if (state.money < fee) return;
+        set({
+          money: state.money - fee,
+          parcels: state.parcels.map(p =>
+            p.id === parcelId
+              ? { ...p, organicStatus: 'transition_1' as OrganicStatus, organicTransitionStartDay: state.day }
+              : p
+          ),
+        });
+      },
+
+      fileContaminationAppeal: (parcelId) => {
+        const state = get();
+        const parcel = state.parcels.find(p => p.id === parcelId);
+        if (!parcel?.pendingContaminationAppeal) return;
+        if (parcel.pendingContaminationAppeal.filed) return;
+        if (state.day > parcel.pendingContaminationAppeal.appealDeadlineDay) return;
+        set({
+          parcels: state.parcels.map(p =>
+            p.id === parcelId
+              ? { ...p, pendingContaminationAppeal: { ...p.pendingContaminationAppeal!, filed: true } }
+              : p
+          ),
+        });
+      },
+
+      signLease: (availableLeaseIndex, acceptImprovementClause) => {
+        const state = get();
+        const offer = state.availableLeases[availableLeaseIndex];
+        if (!offer) return;
+        const npc = NPC_LANDOWNERS.find(n => n.id === offer.npcId);
+        if (!npc) return;
+        const hectares = 2 + Math.floor(Math.random() * 4);
+        const seasons = offer.leaseType === 'short_term' ? 1 : 4;
+        const cashRent = offer.leaseType === 'sharecrop' ? undefined : calculateCashRent(hectares, offer.leaseType === 'short_term');
+        const totalUpfront = cashRent ?? 0;
+        if (state.money < totalUpfront) return;
+        const leaseId = `lease_${offer.parcelId}_${state.day}`;
+        const newLease: LeaseAgreement = {
+          id: leaseId,
+          parcelId: offer.parcelId,
+          npcId: offer.npcId,
+          npcName: offer.npcName,
+          leaseType: offer.leaseType,
+          startDay: state.day,
+          endDay: state.day + seasons * 90,
+          cashRentPerSeason: cashRent,
+          landOwnerSharePct: offer.landOwnerSharePct,
+          autoRenew: offer.leaseType !== 'short_term',
+          improvementClause: acceptImprovementClause && offer.improvementClauseAvailable
+            ? { guaranteedCompensationPct: 0.70, additionalRentPct: 0.10 }
+            : undefined,
+          status: 'active',
+        };
+        // Create a parcel for the leased land
+        const leasedParcel: LandParcel = {
+          id: offer.parcelId,
+          name: `${npc.name} ${offer.leaseType === 'sharecrop' ? 'Share' : 'Lease'}`,
+          fertility: 15 + Math.floor(Math.random() * 10),
+          soil: { ...SOIL_DEFAULTS },
+          cropHistory: [],
+          hectares,
+          pricePerHa: 0,
+          owned: true, // player can use it
+          hasWeeds: false,
+          plantedCrop: null,
+          greenhouse: false,
+          irrigated: false,
+          tilled: false,
+          precisionApplied: false,
+          yieldHistory: [],
+          soilWetUntilDay: 0,
+          bareDayCtr: 0,
+          recentIrrigationDays: [],
+          soilSalinity: 0,
+          topsoilErosion: 0,
+          tillageSystem: 'conventional',
+          tillageSystemSince: 1,
+          notillSeasons: 0,
+          residueCoverage: false,
+          weedFlushSeason: false,
+          waterwayAdjacent: false,
+          organicStatus: 'conventional',
+        };
+        set({
+          money: state.money - totalUpfront,
+          activeLeases: [...(state.activeLeases ?? []), newLease],
+          availableLeases: state.availableLeases.filter((_, i) => i !== availableLeaseIndex),
+          parcels: [...state.parcels, leasedParcel],
+        });
+      },
+
+      cancelLease: (leaseId) => {
+        const state = get();
+        const lease = state.activeLeases.find(l => l.id === leaseId);
+        if (!lease || lease.status !== 'active') return;
+        // For cash rent: forfeit 1 season
+        const penalty = lease.leaseType === 'cash_rent' && lease.cashRentPerSeason ? lease.cashRentPerSeason : 0;
+        set({
+          money: state.money - penalty,
+          activeLeases: state.activeLeases.map(l =>
+            l.id === leaseId ? { ...l, status: 'terminated' as const, autoRenew: false } : l
+          ),
+          parcels: state.parcels.map(p =>
+            p.id === lease.parcelId ? { ...p, owned: false, plantedCrop: null } : p
+          ),
+        });
+      },
+
+      toggleCSA: () => {
+        const state = get();
+        set({ csaActive: !state.csaActive });
+      },
+
+      setCSACommitment: (commitment) => {
+        set({ csaCommitment: commitment });
+      },
+
+      setWorkerShiftPreference: (workerId, pref) => {
+        set((state) => ({
+          workers: (state.workers ?? []).map((w) =>
+            w.id === workerId ? { ...w, shiftPreference: pref } : w
+          ),
+        }));
       },
 
       // -- Selling Channels actions -------------------------------------------
@@ -8384,7 +9853,7 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'granja-tycoon-save-v9',
+      name: 'granja-tycoon-save-v10',
       version: 7,
       migrate: (persistedState: any, version: number) => {
         if (version < 7) {
@@ -8431,7 +9900,7 @@ export const useGameStore = create<GameState>()(
           buyAnimal, sellAnimal, collectAnimalProduction, sellAnimalProduct, breedAnimal, cullAnimal, treatAnimal,
           buyMachine, requestLoan, repayLoan, depositSavings, withdrawSavings,
           acceptContract, declineContract, deliverCrop, buyProduct, buyBuilding,
-          resolveFieldEvent, clearWeeds, fertilizeCrop, listItem, withdrawListing, placeBid, clearDaySummary,
+          resolveFieldEvent, clearWeeds, fertilizeCrop, applyLime, applyGypsum, applyLeachingFlush, applySubsoiling, listItem, withdrawListing, placeBid, clearDaySummary,
           buyInsurance, cancelInsurance,
           processProduct, sellProcessed,
           buyProcessingBuilding, upgradeProcessingBuilding,
@@ -8459,7 +9928,7 @@ export const useGameStore = create<GameState>()(
           upgradeGridTier, buySolarPanels, buyWindTurbines, buildBiogasPlant, buildBiomassCHP,
           loadBiomassStraw, buildHeatPipeNetwork, buyBatteryBanks, buyGenerator, refuelGenerator,
           toggleGenerator, serviceEquipment, addSurgeProtector,
-          treatPest, buyBeneficialInsects, assignCropConsultant,
+          treatPest, buyBeneficialInsects, assignCropConsultant, setTillageSystem, installHedgerow, enrollAES, startOrganicTransition, fileContaminationAppeal, signLease, cancelLease, toggleCSA, setCSACommitment, setWorkerShiftPreference,
           buyFarmShopUpgrade, setShopHours, assignShopWorker, unassignShopWorker,
           toggleOnlineShop, setOnlineAllocation, toggleFarmCafe,
           assignCafeWorker, unassignCafeWorker, enterAgriculturalShow,
@@ -8497,6 +9966,19 @@ export const useGameStore = create<GameState>()(
                                   (b.includes('bld_hatchery_m') ? 150 : 0) +
                                   (b.includes('bld_hatchery_l') ? 400 : 0);
         state.incubationQueue  = state.incubationQueue ?? [];
+        state.inventoryBatches = state.inventoryBatches ?? [];
+        state.hedgerows = state.hedgerows ?? [];
+        state.cropsGrownThisYear = state.cropsGrownThisYear ?? [];
+        state.strawBurnedThisYear = state.strawBurnedThisYear ?? false;
+        state.aesEnrollments = state.aesEnrollments ?? [];
+        state.subsidyLog = state.subsidyLog ?? [];
+        state.activeLeases = state.activeLeases ?? [];
+        state.availableLeases = state.availableLeases ?? [];
+        state.tenantImprovements = state.tenantImprovements ?? [];
+        state.csaSubscribers = state.csaSubscribers ?? [];
+        state.csaActive = state.csaActive ?? false;
+        state.csaCommitment = state.csaCommitment ?? defaultCommitment();
+        state.csaWeeklyLog = state.csaWeeklyLog ?? [];
         state.parcels = state.parcels.map((p) => ({
           ...p,
           soil: {
@@ -8511,6 +9993,20 @@ export const useGameStore = create<GameState>()(
             drainage:     (p.soil?.drainage   ?? SOIL_DEFAULTS.drainage),
           },
           cropHistory: p.cropHistory ?? [],
+          // Soil degradation & tillage defaults
+          soilSalinity: p.soilSalinity ?? 0,
+          topsoilErosion: p.topsoilErosion ?? 0,
+          soilWetUntilDay: p.soilWetUntilDay ?? 0,
+          bareDayCtr: p.bareDayCtr ?? 0,
+          recentIrrigationDays: p.recentIrrigationDays ?? [],
+          tillageSystem: p.tillageSystem ?? 'conventional',
+          tillageSystemSince: p.tillageSystemSince ?? 1,
+          notillSeasons: p.notillSeasons ?? 0,
+          residueCoverage: p.residueCoverage ?? false,
+          waterwayAdjacent: p.waterwayAdjacent ?? false,
+          organicStatus: p.organicStatus ?? 'conventional',
+          organicTransitionStartDay: p.organicTransitionStartDay ?? undefined,
+          lastDecertifiedDay: p.lastDecertifiedDay ?? undefined,
         }));
       },
     }

@@ -1,6 +1,7 @@
 import { LandParcel } from '../store/useGameStore';
 import { CROP_TYPES } from '../data/cropTypes';
 import { getSeason } from './climate';
+import { pollinatorStripCount } from './hedgerows';
 
 /** Compute hive health (0.2–1.0) for a given colmena based on linked parcel spray status. */
 export function computeHiveHealth(
@@ -24,12 +25,17 @@ export function getPollinationMultiplier(
   parcel: LandParcel,
   parcels: LandParcel[],
   currentDay: number,
+  hedgerows: import('./hedgerows').Hedgerow[] = [],
 ): number {
   if (!parcel.linkedColmenaId || !parcel.plantedCrop) return 1.0;
   const cropType = CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId);
   if (!cropType || cropType.pollinationBonus <= 0) return 1.0;
 
-  const health = computeHiveHealth(parcel.linkedColmenaId, parcels, currentDay);
+  let health = computeHiveHealth(parcel.linkedColmenaId, parcels, currentDay);
+  // Pollinator strip boost: +10% per mature strip, capped at 1.0
+  const stripCount = pollinatorStripCount(parcel.id, hedgerows, currentDay);
+  health = Math.min(1.0, health + stripCount * 0.10);
+
   return 1.0 + cropType.pollinationBonus * health;
 }
 

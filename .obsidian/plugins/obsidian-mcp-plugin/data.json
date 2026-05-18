@@ -1,0 +1,55 @@
+{
+  "promptsFolder": "prompts",
+  "vaultDescription": "This vault contains personal notes on various topics including work projects, research, and daily journals. It's organized with folders for each major area and uses tags for cross-referencing.",
+  "verboseLogging": false,
+  "server": {
+    "enabled": true,
+    "port": 27125,
+    "host": "127.0.0.1",
+    "httpsEnabled": false,
+    "crypto": {
+      "cert": "-----BEGIN CERTIFICATE-----\r\nMIIDyDCCArCgAwIBAgIBATANBgkqhkiG9w0BAQsFADBeMRwwGgYDVQQDExNPYnNp\r\nZGlhbiBNQ1AgUGx1Z2luMRwwGgYDVQQKExNPYnNpZGlhbiBNQ1AgUGx1Z2luMSAw\r\nHgYDVQQLExdTZWxmLVNpZ25lZCBDZXJ0aWZpY2F0ZTAeFw0yNjA1MTAwNDI2MTJa\r\nFw0yNzA1MTAwNDI2MTJaMF4xHDAaBgNVBAMTE09ic2lkaWFuIE1DUCBQbHVnaW4x\r\nHDAaBgNVBAoTE09ic2lkaWFuIE1DUCBQbHVnaW4xIDAeBgNVBAsTF1NlbGYtU2ln\r\nbmVkIENlcnRpZmljYXRlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA\r\nlScly/MaD9xCn75RGUUzt8FxAavi08J4Pm2E7s3xenJabSUPwplYCovK3wWGjBnb\r\nIv7c2pQCdrIrEK0UVp7QRaJZhdRXIl2f4npvwE2vsfU+pu93arR1Xg138OMIQbWw\r\nnK1BZd4ArnpFdbAl3gmdteWR2b4OpeVJsYXWtaeHWtLMiOI2TEFdi9Wa2QRjBaqA\r\nuO3BSs5cpoPtKBKQfhtnhinsDqcV/F43LuDi91r7gIX6VR5geh8pQ+X9acUuSkxR\r\nCvdnLhlPKasmXB6QjqnfYFlw5EWsUu76zMiFJ8QXHfZQdCugSTHBaJzn9WRDvzpl\r\n1g3RwBs3+PbZ9p22EemDWwIDAQABo4GQMIGNMA8GA1UdEwEB/wQFMAMBAf8wDgYD\r\nVR0PAQH/BAQDAgLEMDsGA1UdJQQ0MDIGCCsGAQUFBwMBBggrBgEFBQcDAgYIKwYB\r\nBQUHAwMGCCsGAQUFBwMEBggrBgEFBQcDCDARBglghkgBhvhCAQEEBAMCAPcwGgYD\r\nVR0RBBMwEYcEfwAAAYIJbG9jYWxob3N0MA0GCSqGSIb3DQEBCwUAA4IBAQAWKOZt\r\n6tpuIOT4YfrxdmM99N9i5W68M51pFAfu1evhFKxeB6EsA153zDMb2pKZtDiMtTLp\r\n9UwMfgrW/nTY+0Sc4yqVZKghec2pXkR1W2KCqBPuXul9IPMFYz7T69Rdv+wZyjsZ\r\nkX0PS4e4kP0YUwOgK5UxRezT/F+CRYRljoUEs62GIOuU9bExb5lmSNm1bm7W7jmI\r\no+NlwbZuSjKy3pT4vmweIxXmbIna6nlGzmSTjLE9ZPRkcasYvn+Fetg4dzBgH3fI\r\nnJRQ+uLk/XuBu0Zk8BqaZxMW/Sx22qyBf1NHlCLxagqpnUvuJMUiGCPXBrUjDDfU\r\n+B9dL/QKEMSdKQWx\r\n-----END CERTIFICATE-----\r\n",
+      "privateKey": "-----BEGIN RSA PRIVATE KEY-----\r\nMIIEogIBAAKCAQEAlScly/MaD9xCn75RGUUzt8FxAavi08J4Pm2E7s3xenJabSUP\r\nwplYCovK3wWGjBnbIv7c2pQCdrIrEK0UVp7QRaJZhdRXIl2f4npvwE2vsfU+pu93\r\narR1Xg138OMIQbWwnK1BZd4ArnpFdbAl3gmdteWR2b4OpeVJsYXWtaeHWtLMiOI2\r\nTEFdi9Wa2QRjBaqAuO3BSs5cpoPtKBKQfhtnhinsDqcV/F43LuDi91r7gIX6VR5g\r\neh8pQ+X9acUuSkxRCvdnLhlPKasmXB6QjqnfYFlw5EWsUu76zMiFJ8QXHfZQdCug\r\nSTHBaJzn9WRDvzpl1g3RwBs3+PbZ9p22EemDWwIDAQABAoIBABFQkhqzBfuBXlqd\r\nBV0ho3dZhXzkL1jV4o+ctynhzn6gd87j1oiItKfEwrBRO+VXuxC89XaKaB7PYCB3\r\ndzz3AsaSqkHW/KaIp97qx75TRmoqRjOq6PoCKP3aImpccMDwDqihlE33D60xlI6s\r\n/DhidWSAWgYlAh5QF9X764j7AcORN6NE7XNVTJkgbV/7rUydwFmv68GJB6QZ0ycL\r\nJZZMA9U6pwf/brhsZdRBiohlc5WnUyr4b1UnHKQy6/J29QyaOVyQpGfxA9KPH5tA\r\nOQQS+6WHukwYcPnn9Gi4rjtrMXnt1W5SiTRJK6hImNbx7sczN9iB0yIwFSZ58DUZ\r\nkeYV+IECgYEA0Vvi1mLcSQOzCjoH/7YXciYJ8+IhRUhw2yaDzcutzK4mTGbB/r5D\r\nFyGghF/iKFQBdaiYicLIFOd/KHXS99q1M29v+5ZhDj892VvaMffHi1Dg3jZmaTe+\r\nvOtzjVdOvQ/ElA1djXT5IfOFHOq5wnxJZ6tFdiKs6m8sfperb2IxnnkCgYEAtmGa\r\n8UQE+0fmDCpkHh56qaV0cZDkxisl8FP8tBy0VIsTobheABjaTyNYoyuG9UGvj6Is\r\nHvC644at5Kdl+xggvYweIlpuXmgKKnb8WiNEUrJ8ndtF7BQofey8X1CLh6U7t698\r\ny0OWCKlxIGPxpdVQUX2jFkxL3mk/xKgbOgvJK3MCgYAvkp2c8aH0xW5tqHog1RPG\r\n0HX6gSvmPmvGoJ3aqam4lOoG+mKirEE6hF2hNtiBKXWbctAWnbgxZ9kxLHTf9Uav\r\nhWcA2E79mclIFuMh75fcRGiUle/3gL9K1oXPXEN8GpUkv1S+zBHAcUGSLJRBaVSU\r\nxgpmqcJ5EwIdUgGWsc1soQKBgBCa/G+BIO78Ed8DsQ/o+IQfs2VvqtS8Mv0ZuIVx\r\no52a+BOeZLifiqjv7+8TVHtaGrD6NAgxJOL4bTbHYwqknL6FVm0MTMY9tMc/BCT0\r\n1xCsfZolz8z53OHyPwhynfGgwroruTIMmkl5m/o1/1d4/5Ib3VB3a+T5MjwmjiwP\r\nzKYvAoGAOWmBmBF39WNRvJOGN/JfoDF4rsMx7oPjxhANFhY++281UEztYSnqaAcr\r\nI6wW5sb+YIh6NiOkTLrVQxASPRoR/WmD26oW19J7AZkbeUfagLYZHGo+t14d5D4G\r\nA5M2XVEDedJahqrm+Geose1/0f41GFvcJD4VFMuCz4NS9zcDAVs=\r\n-----END RSA PRIVATE KEY-----\r\n",
+      "publicKey": "-----BEGIN PUBLIC KEY-----\r\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlScly/MaD9xCn75RGUUz\r\nt8FxAavi08J4Pm2E7s3xenJabSUPwplYCovK3wWGjBnbIv7c2pQCdrIrEK0UVp7Q\r\nRaJZhdRXIl2f4npvwE2vsfU+pu93arR1Xg138OMIQbWwnK1BZd4ArnpFdbAl3gmd\r\nteWR2b4OpeVJsYXWtaeHWtLMiOI2TEFdi9Wa2QRjBaqAuO3BSs5cpoPtKBKQfhtn\r\nhinsDqcV/F43LuDi91r7gIX6VR5geh8pQ+X9acUuSkxRCvdnLhlPKasmXB6Qjqnf\r\nYFlw5EWsUu76zMiFJ8QXHfZQdCugSTHBaJzn9WRDvzpl1g3RwBs3+PbZ9p22EemD\r\nWwIDAQAB\r\n-----END PUBLIC KEY-----\r\n"
+    },
+    "subjectAltNames": "",
+    "tokens": [
+      {
+        "id": "56f56788-4e2e-4d15-b291-14094c45c5db",
+        "name": "kimi",
+        "token": "tdew4qauHC1y__ocAOTw786Wfb7enWnOYAc3L8hdCy8",
+        "createdAt": 1778387123835,
+        "enabledTools": {
+          "file_access": true,
+          "update_content": true,
+          "search": true,
+          "dataview_query": true,
+          "quickadd": true
+        },
+        "directoryPermissions": {
+          "rules": [],
+          "rootPermission": true
+        },
+        "lastUsed": 1778388997603
+      },
+      {
+        "id": "2ab57b5f-1260-44ea-bb9a-6b40b452e771",
+        "name": "claude",
+        "token": "2GqWuVH9J3_qaWPT0X5mVZGHNpEYtMC7t1ivygb8a4k",
+        "createdAt": 1778387219690,
+        "enabledTools": {
+          "file_access": true,
+          "update_content": true,
+          "search": true,
+          "dataview_query": true,
+          "quickadd": true
+        },
+        "directoryPermissions": {
+          "rules": [],
+          "rootPermission": true
+        },
+        "lastUsed": 1778389208482
+      }
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+﻿import { Tabs } from 'expo-router';
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
@@ -67,6 +67,17 @@ export default function TabLayout() {
         <Tabs.Screen name="ops"    options={{ title: 'Ops',    tabBarLabel: '⚙️ Ops' }} />
         <Tabs.Screen name="market" options={{ title: 'Market', tabBarLabel: '📈 Market' }} />
         <Tabs.Screen name="office" options={{ title: 'Office', tabBarLabel: '🏦 Office', tabBarBadge: officeBadge }} />
+        {/* Sub-tab screens — hidden from tab bar, imported directly into hub screens */}
+        <Tabs.Screen name="_agua"         options={{ href: null }} />
+        <Tabs.Screen name="_animales"     options={{ href: null }} />
+        <Tabs.Screen name="_calendario"   options={{ href: null }} />
+        <Tabs.Screen name="_clima"        options={{ href: null }} />
+        <Tabs.Screen name="_maquinaria"   options={{ href: null }} />
+        <Tabs.Screen name="_procesado"    options={{ href: null }} />
+        <Tabs.Screen name="_subasta"      options={{ href: null }} />
+        <Tabs.Screen name="_tienda"       options={{ href: null }} />
+        <Tabs.Screen name="_tierras"      options={{ href: null }} />
+        <Tabs.Screen name="_trabajadores" options={{ href: null }} />
       </Tabs>
 
       <DaySummaryModal />

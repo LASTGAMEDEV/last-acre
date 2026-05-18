@@ -80,6 +80,9 @@ export interface Worker {
   isOnLeave: boolean;
   leaveReturnDay?: number;
   nightShift: boolean;
+  shiftPreference?: 'twilight' | 'day' | 'night' | 'any';
+  fatigueLevel?: number;
+  consecutiveNightShifts?: number;
   lastPerformanceReviewDay?: number;
 }
 

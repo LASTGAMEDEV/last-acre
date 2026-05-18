@@ -1,4 +1,4 @@
-# AI Coding Rules — granja-tycoon
+﻿# AI Coding Rules — granja-tycoon
 
 Paste this at the start of any AI coding session (Kimi, Copilot, etc.) so you
 understand the project, the workflow, and the sharp edges.
@@ -191,6 +191,26 @@ To keep them in sync:
 
 ## What NOT to Do
 
+- Do not rewrite or restructure dvanceDay() — only append new blocks to it.
+  It is 6000+ lines containing years of bugfixes. Adding a new system means adding
+  a new clearly-labelled block at the appropriate point. Never touch existing blocks.
+- When adding new store actions, add them to the partialize exclusion list too.
+  Actions not excluded from partialize get serialized as {} in AsyncStorage,
+  hydration overwrites them, and every button that calls them silently stops working.
+- New fields added to LandParcel, Animal, Building, or any other interface that
+  is stored in saves MUST be optional (ield?: Type) or have ?? defaultValue guards
+  everywhere they are read. Existing saves will not have the field — it will be
+  undefined until the player's save migrates, causing crashes on old saves.
+- Engine files in engine/ must not import from store/, components/, or
+  pp/. They are pure functions only. If you need game state in an engine function,
+  pass it as a parameter. Importing the store into an engine file creates circular
+  dependencies and breaks the architecture.
+- Do not leave console.log, console.warn, or console.error in committed code.
+- Do not use s any or // @ts-ignore to silence TypeScript errors. Fix the
+  actual type. These suppress real bugs that surface as silent failures at runtime.
+- Do not create new standalone screen files in pp/ for features that belong inside
+  an existing tab. New UI goes in components/ as a component, then gets imported
+  into the relevant hub screen (arm.tsx, ops.tsx, market.tsx, office.tsx).
 - Do not add a 5th top-level tab without discussing it first.
 - Do not rename save-critical ID strings (enclosure types, insurance types, building IDs).
 - Do not remove or bypass `partialize` from the Zustand persist config.
@@ -201,3 +221,12 @@ To keep them in sync:
 - Do not add comments that describe WHAT the code does. Only add comments for WHY
   (a non-obvious constraint, workaround, or invariant).
 - Do not commit with TypeScript errors or ESLint errors.
+- Do not display prices or costs with `$`. This game is set in Spain — all monetary
+  values must use `€`. Found in: NutritionTab (cost/animal), PrecisionTab (soil lab hint).
+- Do not add a new _*.tsx file to pp/(tabs)/ without also adding a matching
+  <Tabs.Screen name="_yourscreen" options={{ href: null }} /> entry in
+  pp/(tabs)/_layout.tsx. Without it, Expo Router auto-registers the file as a
+  visible tab — breaking the tab bar. This happened when Kimi added _agua.tsx,
+  _animales.tsx, etc. and skipped the layout entry, producing 10+ ghost tabs.
+- Do not leave unused imports in components. ESLint catches these as warnings. Run
+  `npx expo lint` before handing off. Found in: CompostScreen (`Alert` imported but never used).

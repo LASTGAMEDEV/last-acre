@@ -17,6 +17,8 @@ import { PEST_CONFIG } from '../../engine/pests';
 import ContractorModal from '../../components/ContractorModal';
 import { getContractorCost, ContractorOperation } from '../../engine/machinery';
 import HelpSheet from '../../components/HelpSheet';
+import { HedgerowType, HEDGEROW_COST } from '../../engine/hedgerows';
+import { TILLAGE_FUEL_MULT } from '../../engine/tillage';
 
 const MAP_COLS = 8;
 
@@ -223,6 +225,95 @@ function WaterParcelSection({ parcel }: { parcel: LandParcel }) {
   );
 }
 
+function ManagementTab({ parcel, onClose }: { parcel: LandParcel; onClose: () => void }) {
+  const { money, activeLeases, setTillageSystem, installHedgerow, hedgerows } = useGameStore();
+  const edges: ('north' | 'south' | 'east' | 'west')[] = ['north', 'south', 'east', 'west'];
+  const edgeLabels: Record<string, string> = { north: '⬆️ North', south: '⬇️ South', east: '➡️ East', west: '⬅️ West' };
+  const lease = (activeLeases ?? []).find(l => l.parcelId === parcel.id && l.status === 'active');
+
+  return (
+    <ScrollView style={{ padding: S.md }} showsVerticalScrollIndicator={false}>
+      {/* Lease warning */}
+      {lease && (
+        <View style={{ backgroundColor: '#2a1a00', borderRadius: 8, padding: 10, marginBottom: 12 }}>
+          <Text style={{ color: '#ffa726', fontSize: 12, fontWeight: 'bold' }}>📝 Leased from {lease.npcName}</Text>
+          <Text style={{ color: '#888', fontSize: 11 }}>
+            {lease.leaseType === 'sharecrop'
+              ? `${Math.round((lease.landOwnerSharePct ?? 0.35) * 100)}% harvest share`
+              : `€${lease.cashRentPerSeason?.toLocaleString()}/season`}
+          </Text>
+        </View>
+      )}
+
+      {/* Tillage system */}
+      <Text style={{ color: C.textMuted, fontSize: 11, fontWeight: '600', marginBottom: 6 }}>Tillage System</Text>
+      <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
+        {(['conventional', 'reduced', 'notill'] as const).map(sys => (
+          <TouchableOpacity
+            key={sys}
+            style={{
+              flex: 1,
+              backgroundColor: parcel.tillageSystem === sys ? '#1565c0' : C.bgCard,
+              borderRadius: R.md,
+              padding: S.sm,
+              alignItems: 'center',
+            }}
+            onPress={() => setTillageSystem(parcel.id, sys)}
+          >
+            <Text style={{ color: parcel.tillageSystem === sys ? '#fff' : C.text, fontSize: 11, fontWeight: 'bold' }}>
+              {sys === 'conventional' ? '🔧 Conv' : sys === 'reduced' ? '⚙️ Reduced' : '🚜 No-till'}
+            </Text>
+            <Text style={{ color: parcel.tillageSystem === sys ? '#bbdefb' : '#888', fontSize: 9 }}>
+              Fuel {Math.round((TILLAGE_FUEL_MULT[sys] ?? 1) * 100)}%
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Hedgerows */}
+      <Text style={{ color: C.textMuted, fontSize: 11, fontWeight: '600', marginBottom: 6 }}>Hedgerows</Text>
+      {edges.map(edge => {
+        const existing = (hedgerows ?? []).find(h => h.parcelId === parcel.id && h.edge === edge);
+        return (
+          <View key={edge} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.bgCard, borderRadius: 8, padding: 10, marginBottom: 6 }}>
+            <Text style={{ color: C.text, fontSize: 12 }}>{edgeLabels[edge]}</Text>
+            {existing ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ color: '#4caf50', fontSize: 11 }}>
+                  🌳 {existing.type.replace('hdg_', '')} · {existing.mature ? 'Mature' : 'Growing'}
+                </Text>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 4 }}>
+                {(['hdg_mixed', 'hdg_buffer', 'hdg_pollinator', 'hdg_woodland'] as HedgerowType[]).map(type => {
+                  const cost = Math.round((HEDGEROW_COST[type] ?? 0) * parcel.hectares);
+                  return (
+                    <TouchableOpacity
+                      key={type}
+                      style={{
+                        backgroundColor: money >= cost ? '#1b3a1b' : '#2a2a2a',
+                        borderRadius: R.sm,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                      }}
+                      disabled={money < cost}
+                      onPress={() => { installHedgerow(parcel.id, edge, type); onClose(); }}
+                    >
+                      <Text style={{ color: money >= cost ? '#81c784' : '#555', fontSize: 10 }}>
+                        {type.replace('_', ' ')} €{cost.toLocaleString()}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
 export default function TierrasScreen() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
@@ -258,7 +349,7 @@ export default function TierrasScreen() {
   const currentSeason: PlantingSeason = getSeason(day);
   const [mapView, setMapView] = useState(false);
   const [mapSelected, setMapSelected] = useState<LandParcel | null>(null);
-  const [activeParcelTab, setActiveParcelTab] = useState<'info' | 'soil' | 'water'>('info');
+  const [activeParcelTab, setActiveParcelTab] = useState<'info' | 'soil' | 'water' | 'mgmt'>('info');
   type FieldFilter = 'all' | 'empty' | 'growing' | 'ready' | 'events';
   const [fieldFilter, setFieldFilter] = useState<FieldFilter>('all');
 
@@ -370,6 +461,11 @@ export default function TierrasScreen() {
             {statusIcon ? (
               <Text style={{ fontSize: CELL_SIZE * 0.28, position: 'absolute', top: 1, right: 2 }}>{statusIcon}</Text>
             ) : null}
+            {parcel.linkedColmenaId ? (
+              <Text style={{ fontSize: CELL_SIZE * 0.22, position: 'absolute', bottom: 1, right: 2 }}>
+                🐝{parcel.pesticideSprayedDay ? '⚠️' : ''}
+              </Text>
+            ) : null}
             {ready && !statusIcon ? (
               <Text style={{ fontSize: CELL_SIZE * 0.22, color: '#a5d6a7', fontWeight: 'bold' }}>✓</Text>
             ) : null}
@@ -407,6 +503,23 @@ export default function TierrasScreen() {
               <Text style={styles.soilBadge}>{SOIL_ICONS[parcel.soilType]} {parcel.soilType}</Text>
             )}
           </View>
+        </View>
+
+        {/* Organic / lease / tillage badges */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 4 }}>
+          {parcel.organicStatus && parcel.organicStatus !== 'conventional' && (
+            <Text style={[styles.badge, { color: parcel.organicStatus === 'organic' ? '#4caf50' : '#ffa726' }]}>
+              {parcel.organicStatus === 'organic' ? '🌿 Organic' : `🔄 ${parcel.organicStatus.replace('_', ' ')}`}
+            </Text>
+          )}
+          {parcel.tillageSystem && parcel.tillageSystem !== 'conventional' && (
+            <Text style={[styles.badge, { color: '#64b5f6' }]}>
+              {parcel.tillageSystem === 'notill' ? '🚜 No-till' : '⚙️ Reduced'}
+            </Text>
+          )}
+          {parcel.waterwayAdjacent && (
+            <Text style={[styles.badge, { color: '#4fc3f7' }]}>💧 Waterway</Text>
+          )}
         </View>
 
         {/* Greenhouse badge / toggle */}
@@ -1177,6 +1290,7 @@ export default function TierrasScreen() {
                       { id: 'info' as const, label: '📋 Info' },
                       { id: 'soil' as const, label: '🌱 Soil' },
                       { id: 'water' as const, label: '💧 Water' },
+                      { id: 'mgmt' as const, label: '⚙️ Mgmt' },
                     ]).map(tab => (
                       <TouchableOpacity
                         key={tab.id}
@@ -1332,6 +1446,11 @@ export default function TierrasScreen() {
                 {activeParcelTab === 'water' && mapSelected.owned && (
                   <WaterParcelSection parcel={mapSelected} />
                 )}
+
+                {/* Management tab content */}
+                {activeParcelTab === 'mgmt' && mapSelected.owned && (
+                  <ManagementTab parcel={mapSelected} onClose={() => setMapSelected(null)} />
+                )}
               </>
             )}
           </View>
@@ -1369,6 +1488,7 @@ const styles = StyleSheet.create({
   cardTitle: { color: C.text, fontWeight: 'bold', fontSize: 15 },
   fertility: { color: '#aaa', fontSize: F.size.sm },
   soilBadge: { color: C.textMuted, fontSize: F.size.xs, marginTop: 2 },
+  badge: { fontSize: 10, fontWeight: '600', backgroundColor: '#1a1a2e', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 },
   cropTag: { color: '#81c784', fontSize: F.size.sm, marginTop: 2 },
   emptyTag: { color: '#555', fontSize: F.size.sm, marginTop: 2 },
   frostWarning: {

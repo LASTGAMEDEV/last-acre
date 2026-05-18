@@ -1,4 +1,6 @@
 import { CropType } from '../data/cropTypes';
+import { degradationYieldModifier } from './soilDegradation';
+import type { LandParcel } from '../store/useGameStore';
 
 export type SoilType = 'loamy' | 'sandy' | 'clay' | 'chalky';
 
@@ -40,6 +42,9 @@ export function harvestAmount(
   machineYieldBonus: number,  // 1.0 = no machine, 1.1+ = from owned machines
   frostDamage = 0,
   droughtStress = 0,
+  degradationMod = 1.0,       // soil degradation multiplier
+  tillageYieldMod = 1.0,      // tillage transition penalty/bonus
+  organicYieldMod = 1.0,      // organic certification modifier
 ): number {
   const soilMod     = computeSoilYieldModifier(soil);
   const fertilizerMod = (crop.appliedN ?? 1.0) * (crop.appliedP ?? 1.0) * (crop.appliedK ?? 1.0);
@@ -56,7 +61,10 @@ export function harvestAmount(
     climateModifier *
     machineYieldBonus *
     frostMod *
-    droughtMod
+    droughtMod *
+    degradationMod *
+    tillageYieldMod *
+    organicYieldMod
   );
 }
 

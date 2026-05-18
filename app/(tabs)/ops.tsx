@@ -5,15 +5,17 @@ import TrabajadoresScreen from './_trabajadores';
 import ProcesadoScreen from './_procesado';
 import ElectricitySection from '../../components/ops/ElectricitySection';
 import SeedLabScreen from '../../components/ops/SeedLabScreen';
+import CompostScreen from '../../components/ops/CompostScreen';
 import SubTabBar from '../../components/SubTabBar';
 import { C } from '../../constants/theme';
 
-type OpsTab = 'machinery' | 'workers' | 'processing' | 'power' | 'seedlab';
+type OpsTab = 'machinery' | 'workers' | 'processing' | 'compost' | 'power' | 'seedlab';
 
 const TABS: { id: OpsTab; label: string }[] = [
   { id: 'machinery',  label: '🚜 Machinery' },
   { id: 'workers',    label: '👷 Workers' },
   { id: 'processing', label: '🏭 Processing' },
+  { id: 'compost',    label: '🍂 Compost' },
   { id: 'power',      label: '⚡ Power' },
   { id: 'seedlab',    label: '🌱 Seed Lab' },
 ];
@@ -27,6 +29,7 @@ export default function OpsScreen() {
       {tab === 'machinery'  && <MaquinariaScreen />}
       {tab === 'workers'    && <TrabajadoresScreen />}
       {tab === 'processing' && <ProcesadoScreen />}
+      {tab === 'compost'    && <CompostScreen />}
       {tab === 'power'      && <ElectricitySection />}
       {tab === 'seedlab'    && <SeedLabScreen />}
     </View>

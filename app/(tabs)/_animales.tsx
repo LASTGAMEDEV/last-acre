@@ -11,6 +11,9 @@ import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
 import { sellValue, isMature, canBreed, TRAIT_ICONS, TRAIT_DESC, AnimalGenes, OwnedAnimal, getLactationState, lactationDaysRemaining, dryDaysRemaining, LACTATION_PARAMS, getSeasonMultiplier, GRAIN_CROP_IDS, getBreedDisplayName } from '../../engine/animals';
+import ApiaryManagementCard from '../../components/animals/ApiaryManagementCard';
+import NutritionTab from '../../components/animals/NutritionTab';
+import { computeHiveHealth, getLinkedParcelCount, getColmenaCapacity } from '../../engine/pollination';
 import { BREED_TYPES } from '../../data/breedTypes';
 import { ENCLOSURE_BUILDINGS } from '../../constants/enclosures';
 import HelpSheet from '../../components/HelpSheet';
@@ -157,7 +160,7 @@ function getEnclosureCapacity(buildings: string[], enclosureType: string): numbe
 
 export default function AnimalesScreen() {
   const {
-    money, animals, animalInventory, day, buildings, activeFair,
+    money, animals, animalInventory, day, buildings, activeFair, parcels,
     cullAnimal, sellAnimal, collectAnimalProduction, sellAnimalProduct, breedAnimal,
     treatAnimal, collectAllProduction,
     breedingPairs, setBreedingPair, clearBreedingPair,
@@ -167,6 +170,7 @@ export default function AnimalesScreen() {
     trailers, deliveryJobs,
     productionBuildings, animalWelfareScores, milkGrades,
     designateAsSire, removeFromSirePen, sirePenAnimalIds,
+    linkParcelToColmena,
   } = useGameStore();
   const fairMult = activeFair ? (1 - activeFair.discount) : 1.0;
   const hasAnimalWorker = (workers ?? []).some(
@@ -181,7 +185,7 @@ export default function AnimalesScreen() {
   );
   const [expandedAnimalId, setExpandedAnimalId] = useState<string | null>(null);
   const [showModalVisible, setShowModalVisible] = useState(false);
-  type AnimalTab = 'herd' | 'results';
+  type AnimalTab = 'herd' | 'nutrition' | 'results';
   const [animalTab, setAnimalTab] = useState<AnimalTab>('herd');
   const [liveDispatchVisible, setLiveDispatchVisible] = useState(false);
   const [liveDispatchCargo, setLiveDispatchCargo] = useState<DeliveryCargo[]>([]);
@@ -226,12 +230,30 @@ export default function AnimalesScreen() {
 
       <SubTabBar
         tabs={[
-          { id: 'herd',    label: 'My Herd' },
-          { id: 'results', label: `Show Results${(showResults ?? []).length ? ` (${(showResults ?? []).length})` : ''}` },
+          { id: 'herd',     label: 'My Herd' },
+          { id: 'nutrition', label: '🥗 Nutrition' },
+          { id: 'results',  label: `Show Results${(showResults ?? []).length ? ` (${(showResults ?? []).length})` : ''}` },
         ]}
         active={animalTab}
         onSelect={id => setAnimalTab(id as AnimalTab)}
       />
+
+      {animalTab === 'nutrition' && <NutritionTab />}
+
+      {animalTab === 'results' && (
+        <ScrollView>
+          {(showResults ?? []).length === 0 && (
+            <Text style={{ color: C.textMuted, textAlign: 'center', marginTop: 40 }}>No show results yet.</Text>
+          )}
+          {(showResults ?? []).map((r: any) => (
+            <View key={r.id} style={{ backgroundColor: C.bgCard, borderRadius: R.md, padding: S.lg, margin: S.md }}>
+              <Text style={{ color: C.text, fontWeight: F.weight.bold }}>{r.seasonLabel}</Text>
+              <Text style={{ color: C.textMuted }}>Placement: #{r.placement} · Score: {r.playerScore}</Text>
+              {r.prize > 0 && <Text style={{ color: '#4caf50' }}>+${r.prize.toLocaleString()} prize</Text>}
+            </View>
+          ))}
+        </ScrollView>
+      )}
 
       {animalTab === 'herd' && <>
       {/* Farm Fair banner */}
@@ -314,6 +336,43 @@ export default function AnimalesScreen() {
           </View>
         </View>
       )}
+
+      {/* Apiary Management */}
+      {(() => {
+        const colmenaBuildings = buildings.filter(b => b.startsWith('bld_colmena'));
+        if (colmenaBuildings.length === 0) return null;
+        return (
+          <View style={{ backgroundColor: C.bgCard, borderRadius: 10, marginHorizontal: 8, marginBottom: 8, padding: 12 }}>
+            <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 14, marginBottom: 8 }}>🐝 Apiary Management</Text>
+            {colmenaBuildings.map(colmenaId => {
+              const bt = BUILDING_TYPES.find(b => b.id === colmenaId);
+              const linkedCount = getLinkedParcelCount(colmenaId, parcels);
+              const capacity = getColmenaCapacity(colmenaId);
+              const health = computeHiveHealth(colmenaId, parcels, day);
+              const healthPct = Math.round(health * 100);
+              const healthColor = healthPct >= 80 ? '#4caf50' : healthPct >= 50 ? '#ff9800' : '#ef5350';
+              const linkedNames = parcels.filter(p => p.linkedColmenaId === colmenaId).map(p => p.name);
+              return (
+                <View key={colmenaId} style={{ marginBottom: 8, padding: 8, backgroundColor: '#1a2a1a', borderRadius: 8 }}>
+                  <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 12 }}>{bt?.name ?? colmenaId}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                    <View style={{ flex: 1, height: 4, backgroundColor: '#333', borderRadius: 2 }}>
+                      <View style={{ width: `${healthPct}%` as any, height: 4, borderRadius: 2, backgroundColor: healthColor }} />
+                    </View>
+                    <Text style={{ color: healthColor, fontSize: 11, marginLeft: 6 }}>Health {healthPct}%</Text>
+                  </View>
+                  <Text style={{ color: '#aaa', fontSize: 10, marginTop: 4 }}>
+                    Linked: {linkedCount}/{capacity} {linkedNames.length > 0 ? `(${linkedNames.join(', ')})` : '(none)'}
+                  </Text>
+                  {linkedCount === 0 && (
+                    <Text style={{ color: '#ff9800', fontSize: 10, marginTop: 2 }}>⚠️ Unlinked — risk of swarming</Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        );
+      })()}
 
       {/* Batch collect */}
       {animals.some(a => {
@@ -691,33 +750,8 @@ export default function AnimalesScreen() {
       </View>
       </>}
 
-      {animalTab === 'results' && (
-        <ScrollView style={{ flex: 1 }}>
-          {(showResults ?? []).length === 0 ? (
-            <Text style={showStyles.emptyResults}>No show results yet. Enter the next County Show!</Text>
-          ) : (
-            [...(showResults ?? [])].reverse().map(result => {
-              const placementLabel = result.placement === 1 ? '🥇 1st' : result.placement === 2 ? '🥈 2nd' : result.placement === 3 ? '🥉 3rd' : 'No placement';
-              const placementColor = result.placement === 1 ? '#ffd700' : result.placement === 2 ? '#c0c0c0' : result.placement === 3 ? '#cd7f32' : '#555';
-              const animalType = ANIMAL_TYPES.find(t => t.id === result.animalTypeId);
-              return (
-                <View key={result.id} style={showStyles.resultCard}>
-                  <View style={showStyles.resultHeader}>
-                    <Text style={showStyles.resultSeason}>{result.seasonLabel}</Text>
-                    <Text style={[showStyles.resultPlacement, { color: placementColor }]}>{placementLabel}</Text>
-                  </View>
-                  <Text style={showStyles.resultAnimal}>{animalType?.name ?? result.animalTypeId}</Text>
-                  <Text style={showStyles.resultScore}>Your score: {result.playerScore.toFixed(3)}</Text>
-                  <Text style={showStyles.resultNpc}>NPC scores: {result.npcScores.map(s => s.toFixed(2)).join(' · ')}</Text>
-                  {result.prize > 0 && (
-                    <Text style={showStyles.resultPrize}>Prize: +${result.prize.toLocaleString()}</Text>
-                  )}
-                </View>
-              );
-            })
-          )}
-        </ScrollView>
-      )}
+      {/* Apiary Management */}
+      {animalTab === 'herd' && <ApiaryManagementCard />}
 
       <AnimalShowModal visible={showModalVisible} onClose={() => setShowModalVisible(false)} />
       <DispatchModal

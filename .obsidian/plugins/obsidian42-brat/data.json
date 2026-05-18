@@ -1,0 +1,24 @@
+{
+  "pluginList": [
+    "rygwdn/obsidian-mcp-plugin"
+  ],
+  "pluginSubListFrozenVersion": [
+    {
+      "repo": "rygwdn/obsidian-mcp-plugin",
+      "version": "latest"
+    }
+  ],
+  "themesList": [],
+  "updateAtStartup": true,
+  "updateThemesAtStartup": true,
+  "enableAfterInstall": true,
+  "loggingEnabled": true,
+  "loggingPath": "BRAT-log",
+  "loggingVerboseEnabled": true,
+  "debuggingMode": true,
+  "notificationsEnabled": true,
+  "globalTokenName": "obsidian-github",
+  "personalAccessToken": "",
+  "selectLatestPluginVersionByDefault": true,
+  "allowIncompatiblePlugins": false
+}

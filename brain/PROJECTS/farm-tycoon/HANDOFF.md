@@ -1,9 +1,6 @@
 
 # HANDOFF — Where We Left Off
 
-> **Read this FIRST — before MEMORY.md, before specs
-# HANDOFF — Where We Left Off
-
 > **Read this FIRST — before MEMORY.md, before specs.**
 > It tells you what's happening RIGHT NOW, not 3 days ago.
 > Every agent MUST update this before ending their session.
@@ -12,63 +9,56 @@
 
 ## ⚡ Right Now
 
-**Working on:** Implementing 4 approved specs (Pollination, Feed Ration, Manure/Composting, Precision Ag)
-**Last agent:** Kimi
-**Last updated:** 2026-05-10
+**Working on:** All 9 Batch 2 specs fully implemented (engine + store + UI)
+**Last agent:** Kimi Code
+**Last updated:** 2026-05-11
+**Coding rules:** `docs/ai-coding-rules.md` — read before writing any component code
 
 ---
 
 ## ✅ Just Finished
 
-### Pollination System — CORE IMPLEMENTED (~80%)
-- `pollinationBonus` added to all 29 crops in `data/cropTypes.ts`
-- `linkedColmenaId` and `pesticideSprayedDay` added to `LandParcel`
-- `colmenaNegligenceStartDay` added to `GameState`
-- `engine/pollination.ts` created with `computeHiveHealth`, `getPollinationMultiplier`, `getHoneyMultiplier`
-- `linkParcelToColmena` store action added
-- `clearWeeds` and spray tractor job now set `pesticideSprayedDay` on linked parcels
-- Harvest logic modified in 3 locations to apply pollination bonus
-- Honey auto-collect now applies seasonal + weather multipliers
-- Swarming check on season change (25% chance if neglected 30+ days)
-- TypeScript clean, ESLint clean
+### 🌱 Batch 2 — ALL 9 SPECS FULLY IMPLEMENTED
 
-### Feed Ration Balancing — DATA LAYER DONE (~40%)
-- `NutritionProfile` interface added to `data/animalTypes.ts`
-- All 12 animal species have nutrition profiles
-- `engine/nutrition.ts` created with `analyzeRation`, tier modifiers, default ration generator
-- `savedRations` added to `GameState`
-- `saveRation` action added to store
-- Feed deduction rewrite NOT done (old grain/hay system still active)
-- UI NOT implemented
+| # | Spec | Engine | Store | UI |
+|---|------|--------|-------|-----|
+| 7 | Storage Quality Decay | `engine/storageQuality.ts` | `inventoryBatches`, FIFO sell | batch-based inventory |
+| 1 | Soil Degradation | `engine/soilDegradation.ts` | `advanceDay` tick | soil stats bars |
+| 2 | Tillage System | `engine/tillage.ts` | fuel multiplier, OM drift | selector in parcel Mgmt tab |
+| 3 | Hedgerows | `engine/hedgerows.ts` | maturity, maintenance | edge installer, badges |
+| 4 | CAP Subsidies | `engine/subsidies.ts` | spring payment trigger | Subsidies tab with greening tracker |
+| 5 | Organic Certification | `engine/organicCert.ts` | transition advancement | Organic tab — enroll, appeal |
+| 6 | Land Leasing | `engine/leases.ts` | sign/cancel, sharecrop | Land tab — active/available leases |
+| 8 | Night Operations | `engine/nightOps.ts` | fatigue, noise ordinance | worker fatigue bars, shift toggle |
+| 9 | CSA | `engine/csa.ts` | weekly fulfillment | CSA tab — toggle, presets, subscribers |
 
-### Manure & Composting — DATA LAYER DONE (~35%)
-- `engine/composting.ts` created with `CompostBatch`, quality calculation, residue tables
-- Global state fields added: `solidManureKg`, `cropResidueKg`, `compostInventoryKg`, `compostBatches`, `digestateKg`
-- `compostNPKReleaseRemaining` added to `Parcel`
-- advanceDay accumulation logic NOT implemented
-- Store actions (startCompostBatch, turn, water, collect) NOT implemented
-- UI NOT implemented
+**Key integration points:**
+- `harvestCrop` creates `StoredBatch` with organic tag
+- `advanceDay` runs all 9 ticks in order: storage → soil → tillage → hedgerows → subsidies → organic → leases → noise → CSA
+- Save bumped to `granja-tycoon-save-v10` with `??` fallbacks for all new fields
+- Worker type extended: `shiftPreference`, `fatigueLevel`, `consecutiveNightShifts`
+- `setWorkerShiftPreference` store action added
 
-### Precision Agriculture — DATA LAYER DONE (~35%)
-- `engine/precision.ts` created with `SoilAnalysis`, `YieldEntry`, score calculation, trend analysis
-- LandParcel fields added: `soilAnalysis`, `precisionApplied`, `yieldHistory`, `weedDetectedDay`
-- Global state fields added: `soilLabBuilt`, `pendingAnalyses`
-- `advanceDay` logic for analyses/yield history/weed early warning NOT implemented
-- `orderSoilAnalysis` action NOT implemented
-- UI NOT implemented
+**New UI components:**
+- `components/office/SubsidiesSection.tsx`
+- `components/office/CertificationsSection.tsx`
+- `components/office/LandManagementSection.tsx`
+- `components/office/CSASection.tsx`
+- `app/(tabs)/_tierras.tsx` — added Management tab (tillage + hedgerow), parcel badges
+- `app/(tabs)/_trabajadores.tsx` — fatigue bar, shift preference toggle, night warnings
+- `app/(tabs)/office.tsx` — 4 new sub-tabs
 
 ---
 
 ## 🔄 In Progress
 
-- Implementing deep `advanceDay()` integration for remaining 3 specs
-- UI components for all 4 specs
+- Nothing — all 9 specs are complete and TypeScript/ESLint clean
 
 ---
 
 ## 🚧 Blockers
 
-- None — work can continue
+- None
 
 ---
 
@@ -76,32 +66,52 @@
 
 | Check | Status |
 |-------|--------|
-| Last commit | `6a43eec` — SYNC-PROTOCOL immediate push rule |
-| TypeScript | ✅ Clean (`npx tsc --noEmit`) |
-| ESLint | ✅ Clean (warnings only, pre-existing) |
-| Save key | `granja-tycoon-save-v9` — no bump needed, all new fields have safe defaults |
-| Shipped features | 34 |
-| Specs pending impl. | 4 (core logic partially done for all) |
+| TypeScript | ✅ Clean (`npx tsc --noEmit --skipLibCheck`) |
+| ESLint | ✅ Clean (only pre-existing warnings in unrelated files) |
+| Save key | `granja-tycoon-save-v10` |
+| Shipped features | 47 (9 new) |
+| Specs pending impl. | 0 |
 
 ---
 
 ## 🎯 Next Agent: Do This
 
-1. Continue implementing deep `advanceDay()` integrations:
-   - **Feed Ration:** Rewrite feed deduction block to use `savedRations`, apply production/sick modifiers
-   - **Manure:** Accumulate solid manure from animals, crop residue from harvests, digestate from biogas
-   - **Precision Ag:** Resolve pending analyses, auto-record yield history, set `weedDetectedDay` 2 days before weeds
-2. Build UI components:
-   - **Pollination:** Apiary Management card in Animals screen, bee icon on parcel cards
-   - **Feed Ration:** Nutrition sub-tab in Animals screen with ration designer
-   - **Manure:** Compost sub-tab in Ops → Processing with batch cards
-   - **Precision Ag:** Precision sub-tab in Fields with soil reports and yield map
-3. Run `npx tsc --noEmit && npx expo lint` before committing
+1. **If Jose requests changes** to any spec, modify the relevant engine/store/UI files
+2. **If new specs are approved**, follow the same pattern: engine → store actions → advanceDay → UI
+3. Run `npx tsc --noEmit --skipLibCheck && npx expo lint` before committing
 4. Update this file before stopping
+5. **Never** run `git commit`/`git push` without explicit user confirmation
 
 ---
 
 ## 📝 Handoff Log (most recent first)
+
+### Kimi — 2026-05-11 (Batch 2 implementation)
+- Implemented all 9 Batch 2 specs from engine through UI
+- New engine files: `storageQuality.ts`, `soilDegradation.ts`, `tillage.ts`, `hedgerows.ts`, `subsidies.ts`, `organicCert.ts`, `leases.ts`, `nightOps.ts`, `csa.ts`
+- Store: `inventoryBatches`, soil degradation fields, tillage fields, hedgerows, CAP subsidies, organic status, active leases, CSA subscribers, worker shift/fatigue
+- `advanceDay` fully wired for all 9 systems
+- Office screen: 4 new tabs (Subsidies, Organic, Land, CSA)
+- Fields screen: Management tab with tillage selector + hedgerow edge installer, parcel badges
+- Workers screen: fatigue bars, shift preference toggle, night shift warnings
+- TypeScript and ESLint clean
+
+### Kimi — 2026-05-11 (Batch 1 completion)
+- Fully implemented all 4 pending specs from data layer through UI
+- Pollination: ApiaryManagementCard + manage links
+- Feed Ration: complete advanceDay rewrite + NutritionTab with ration designer
+- Manure/Composting: all store actions + CompostScreen with batch management
+- Precision Ag: pending analysis resolution + PrecisionTab with soil reports
+- Added 7 new buildings to `data/buildingTypes.ts`
+- TypeScript and ESLint clean
+
+### Claude — 2026-05-11
+- Wrote 9 new design specs collaboratively with Jose (all approved before writing)
+- All specs in `docs/superpowers/specs/2026-05-11-*.md`
+- Specs cover: soil degradation, tillage systems, hedgerows, CAP subsidies, organic certification, land leasing, storage quality decay, night operations, CSA
+- Key realism improvements: no-till weed pressure declines over seasons; grain/perishable decay separated; night ops reframed for Spanish climate
+- Obsidian backlog and handoff updated
+- Still pending from Kimi: advanceDay integrations + UI for Feed Ration, Manure, Precision Ag
 
 ### Kimi — 2026-05-10
 - Implemented data layer and core engine files for all 4 pending specs
@@ -109,82 +119,6 @@
 - Feed Ration, Manure, and Precision Ag have foundation laid but need deep integration and UI
 - TypeScript and ESLint clean
 - Next: advanceDay integrations and UI components
-
-### Claude — 2026-05-10 (session 2)
-- Wrote 4 new design specs (all user-approved before writing):
-  1. `docs/superpowers/specs/2026-05-10-precision-agriculture-design.md`
-  2. `docs/superpowers/specs/2026-05-10-pollination-system-design.md`
-  3. `docs/superpowers/specs/2026-05-10-manure-composting-design.md`
-  4. `docs/superpowers/specs/2026-05-10-feed-ration-balancing-design.md`
-- All specs are status: "Approved by user — ready for implementation"
-- Next: Jose to review specs and pick which to implement first
-- Suggested order: Pollination (smallest) → Manure → Feed Ration → Precision Ag
-
-### Jose — 2026-05-10
-- Set up brain structure in Obsidian
-- Created SYNC-PROTOCOL with immediate-push rule
-- Added INBOX, HANDOFF, and session templates
-*
-> It tells you what's happening RIGHT NOW, not 3 days ago.
-> Every agent MUST update this before ending their session.
-
----
-
-## ⚡ Right Now
-
-**Working on:** _(nothing — waiting for Jose to set next task)_
-**Last agent:** Jose
-**Last updated:** 2026-05-10
-
----
-
-## ✅ Just Finished
-
-- Obsidian brain structure fully set up (2026-05-10)
-- All brain folders and files created and pushed to GitHub
-- 34 features shipped and logged in specs.md
-- 13 specs written, awaiting implementation
-
----
-
-## 🔄 In Progress
-
-_(nothing active)_
-
----
-
-## 🚧 Blockers — Needs Jose
-
-- Set the next task in `current-task.md`
-- Populate `backlog.md` with known bugs
-- Populate `decisions.md` with past decisions worth remembering
-
----
-
-## 📋 Code State
-
-| Check | Status |
-|-------|--------|
-| Last commit | `6a43eec` — SYNC-PROTOCOL immediate push rule |
-| TypeScript | Unknown — run `npx tsc --noEmit` |
-| ESLint | Unknown — run `npx expo lint` |
-| Save key | `granja-tycoon-save-v9` |
-| Shipped features | 34 |
-| Specs pending impl. | 13 |
-
----
-
-## 🎯 Next Agent: Do This
-
-1. Check `brain/INBOX.md` for anything left there
-2. Run `git pull origin main` + reload Obsidian
-3. Read this file + `current-task.md`
-4. Do your work
-5. **Update this file before you stop** — even if work isn't done
-
----
-
-## 📝 Handoff Log (most recent first)
 
 ### Claude — 2026-05-10 (session 2)
 - Wrote 4 new design specs (all user-approved before writing):

@@ -1,0 +1,749 @@
+.mcp-warning {
+	background-color: var(--background-modifier-error, rgba(var(--color-red-rgb), 0.1));
+	padding: var(--size-4-2);
+	margin-bottom: var(--size-4-4);
+	border-radius: var(--radius-s);
+}
+
+.mcp-warning-text {
+	color: var(--text-error);
+	font-weight: var(--font-weight-bold);
+}
+
+.mcp-error-text {
+	color: var(--text-error);
+	font-weight: var(--font-weight-bold);
+}
+
+.mcp-success-text {
+	color: var(--color-green);
+	font-weight: var(--font-weight-bold);
+}
+
+.mcp-copyable-row {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+}
+
+.mcp-copyable-row .mcp-copyable-inline-label {
+	flex-shrink: 0;
+	min-width: 6.25em;
+}
+
+.mcp-copyable-row .mcp-copyable-code {
+	flex-grow: 1;
+}
+
+.mcp-copyable-label {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: var(--size-4-1);
+	font-weight: var(--font-weight-semibold);
+}
+
+.mcp-copy-button {
+	font-size: var(--font-ui-smaller);
+	padding: var(--size-4-1) var(--size-4-1);
+	position: absolute;
+	top: var(--size-4-1);
+	right: var(--size-4-1);
+}
+
+.mcp-copyable-code {
+	background-color: var(--background-primary);
+	padding: var(--size-4-2);
+	border-radius: var(--radius-s);
+	border: var(--border-width) solid var(--background-modifier-border);
+	margin: 0;
+	overflow-y: hidden;
+	overflow-x: auto;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.5;
+	white-space: pre-wrap;
+	position: relative;
+}
+
+.mcp-info-box {
+	background-color: var(--background-secondary);
+	border-left: 3px solid var(--interactive-accent);
+	padding: var(--size-4-2) var(--size-4-4);
+	margin: var(--size-4-4) 0;
+	border-radius: var(--radius-s);
+}
+
+.mcp-info-box pre {
+	padding: var(--size-4-2);
+	overflow-x: auto;
+	margin: var(--size-4-2) 0;
+}
+
+.mcp-collapsible-summary {
+	cursor: pointer;
+	color: var(--text-muted);
+}
+
+.mcp-collapsible-summary:hover {
+	color: var(--text-normal);
+	text-decoration: underline;
+}
+
+.mcp-directory-rules-list {
+	margin: 1rem 0;
+	border: var(--border-width) solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+}
+
+.mcp-directory-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem;
+	border-bottom: var(--border-width) solid var(--background-modifier-border);
+	min-height: var(--size-4-10);
+}
+
+.mcp-directory-row:last-child {
+	border-bottom: none;
+}
+
+.mcp-directory-row.dragging > * {
+	opacity: 0.5;
+}
+
+.mcp-drag-handle {
+	cursor: grab;
+	color: var(--text-muted);
+	flex-shrink: 0;
+}
+
+.mcp-directory-path {
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+	flex-grow: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.mcp-empty-rules-message {
+	font-style: italic;
+	color: var(--text-muted);
+}
+
+.mcp-add-directory-container {
+	margin: 1rem 0;
+	text-align: center;
+}
+
+.mcp-examples-container {
+	margin-top: 1rem;
+	padding-top: 0.75rem;
+	border-top: var(--border-width) solid var(--background-modifier-border);
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+}
+
+.mcp-examples-heading {
+	margin: 0 0 0.5rem 0;
+	grid-column: 1 / -1;
+}
+
+.mcp-compact-examples .mcp-allowed-heading,
+.mcp-compact-examples .mcp-blocked-heading {
+	margin: 0;
+}
+
+.mcp-allowed-files,
+.mcp-blocked-files {
+	flex: 1;
+}
+
+.mcp-allowed-heading {
+	color: var(--color-green);
+}
+
+.mcp-blocked-heading {
+	color: var(--color-red);
+}
+
+.mcp-file-list {
+	margin: 0.25rem 0 0.25rem 0.25rem;
+	padding: 0;
+}
+
+.mcp-file-list li {
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+.mcp-file-path-truncate {
+	display: inline-block;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.mcp-toggle-button.mcp-allowed {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.mcp-toggle-button.mcp-blocked {
+	background-color: var(--text-error);
+	color: var(--text-inverse);
+}
+
+.mcp-directory-rules-title {
+	margin-top: 1.5rem;
+	margin-bottom: 0.75rem;
+}
+
+/* Directory tree modal styles */
+.mcp-directory-modal-header {
+	padding-bottom: 1rem;
+	border-bottom: var(--border-width) solid var(--background-modifier-border);
+	margin-bottom: 1rem;
+}
+
+.mcp-directory-modal-header h2 {
+	margin: 0 0 0.5rem 0;
+}
+
+.mcp-directory-breadcrumbs {
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+	margin-bottom: 1rem;
+	padding: 0.5rem;
+	background-color: var(--background-secondary);
+	border-radius: var(--radius-s);
+}
+
+.mcp-breadcrumb-link {
+	color: var(--text-accent);
+	cursor: pointer;
+}
+
+.mcp-breadcrumb-link:hover {
+	text-decoration: underline;
+}
+
+.mcp-breadcrumb-current {
+	font-weight: var(--font-bold, bold);
+	color: var(--text-normal);
+}
+
+.mcp-folder-list {
+	max-height: 20rem;
+	overflow-y: auto;
+	margin-bottom: 1rem;
+	border: var(--border-width) solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+}
+
+.mcp-folder-item {
+	display: flex;
+	align-items: center;
+	padding: 0.5rem;
+	border-bottom: var(--border-width) solid var(--background-modifier-border);
+	gap: 0.5rem;
+}
+
+.mcp-folder-name {
+	flex-grow: 1;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+}
+
+.mcp-empty-folders-message {
+	padding: 1rem;
+	font-style: italic;
+	color: var(--text-muted);
+	text-align: center;
+}
+
+.mcp-directory-modal-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: var(--border-width) solid var(--background-modifier-border);
+}
+
+/* Auth Token Styles */
+.mcp-token-header-section {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1rem;
+}
+
+.mcp-token-header-section h2 {
+	margin: 0;
+}
+
+.mcp-token-list {
+	margin-top: 10px;
+}
+
+.mcp-token-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 12px;
+	margin-bottom: 6px;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+	transition: background-color 0.2s ease;
+}
+
+.mcp-token-row:hover {
+	background: var(--background-modifier-hover);
+}
+
+.mcp-token-selected {
+	border-color: var(--interactive-accent);
+	background: var(--background-modifier-border);
+}
+
+.mcp-token-name {
+	flex-shrink: 0;
+	min-width: 150px;
+}
+
+.mcp-token-key {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.mcp-token-key code {
+	font-family: var(--font-monospace);
+	font-size: 0.85em;
+	color: var(--text-muted);
+}
+
+.mcp-token-copy-btn {
+	padding: 2px 6px !important;
+	font-size: 0.9em;
+}
+
+.mcp-token-features {
+	display: flex;
+	gap: 8px;
+	flex-grow: 1;
+	justify-content: center;
+	align-items: center;
+	padding: 0 12px;
+	border-left: 1px solid var(--background-modifier-border);
+	border-right: 1px solid var(--background-modifier-border);
+}
+
+.mcp-token-feature-icon {
+	font-size: 1.2em;
+	cursor: help;
+}
+
+.mcp-token-row-actions {
+	display: flex;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.mcp-icon-button {
+	padding: 4px 8px !important;
+	font-size: 1em;
+}
+
+.mcp-token-config-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1rem;
+}
+
+.mcp-token-config-header h3 {
+	margin: 0;
+}
+
+.mcp-token-config-timestamp {
+	font-size: 0.85em;
+	color: var(--text-muted);
+}
+
+.mcp-token-example-section {
+	margin-bottom: 1.5rem;
+	padding: 1rem;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.mcp-token-example-section h4 {
+	margin-top: 0;
+	margin-bottom: 0.5rem;
+}
+
+.mcp-token-copy-container {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 1rem;
+	margin-bottom: 1rem;
+}
+
+.mcp-token-display-value {
+	font-family: var(--font-monospace);
+	font-size: 0.85em;
+	background: var(--background-primary);
+	padding: 4px 8px;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	word-break: break-all;
+	flex-grow: 1;
+}
+
+.mcp-example-content {
+	margin-top: 0.5rem;
+}
+
+.mcp-button-danger {
+	background-color: var(--background-modifier-error);
+	color: var(--text-error);
+}
+
+.mcp-button-danger:hover {
+	background-color: var(--background-modifier-error-hover);
+}
+
+.mcp-token-display {
+	margin: 16px 0;
+	padding: 12px;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.mcp-token-value {
+	display: block;
+	padding: 8px;
+	margin-bottom: 8px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	font-family: var(--font-monospace);
+	word-break: break-all;
+}
+
+.mcp-checkbox-label {
+	display: inline-flex;
+	align-items: center;
+	cursor: pointer;
+	margin-right: 16px;
+}
+
+.mcp-checkbox-label input[type="checkbox"] {
+	margin-right: 6px;
+}
+
+/* Tab Styles */
+.mcp-tab-nav {
+	display: flex;
+	gap: 8px;
+	border-bottom: 2px solid var(--background-modifier-border);
+	margin-bottom: 24px;
+}
+
+.mcp-tab-button {
+	padding: 12px 24px;
+	background: none;
+	border: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: var(--font-ui-medium);
+	font-weight: var(--font-weight-medium);
+	border-bottom: 2px solid transparent;
+	margin-bottom: -2px;
+	transition: all 0.2s ease;
+}
+
+.mcp-tab-button:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.mcp-tab-button-active {
+	color: var(--interactive-accent);
+	border-bottom-color: var(--interactive-accent);
+	font-weight: var(--font-weight-bold);
+}
+
+.mcp-tab-content {
+	padding: 0;
+}
+
+/* Modal Tab Styles */
+.mcp-modal-tab-content {
+	padding: 16px 0;
+	min-height: 200px;
+}
+
+.mcp-configure-token-modal {
+	min-width: 500px;
+}
+
+.mcp-simple-rules-list {
+	margin: 12px 0;
+	padding: 8px;
+	background: var(--background-secondary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.mcp-simple-rule-item {
+	padding: 6px;
+	margin: 4px 0;
+	font-size: 0.9em;
+}
+
+.mcp-simple-rule-item code {
+	font-family: var(--font-monospace);
+	background: var(--background-primary);
+	padding: 2px 6px;
+	border-radius: 3px;
+}
+
+/* Token Configuration Section */
+.mcp-token-config-section {
+	margin-top: 20px;
+	padding: 16px;
+	border-radius: 8px;
+	display: none;
+}
+
+.mcp-token-config-visible {
+	display: block;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.mcp-token-config-buttons {
+	display: flex;
+	gap: 12px;
+	margin-top: 20px;
+	padding-top: 16px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.mcp-button-primary {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.mcp-button-primary:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
+.mcp-button-container {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.mcp-button-secondary {
+	background-color: var(--background-secondary);
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.mcp-button-secondary:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.mcp-cert-instructions {
+	line-height: 1.5;
+}
+
+.mcp-cert-instructions code {
+	font-family: var(--font-monospace);
+	background: var(--background-primary);
+	padding: 2px 4px;
+	border-radius: 3px;
+}
+
+/* Debug Tab Styles */
+.mcp-debug-empty {
+	padding: 2rem;
+	text-align: center;
+	color: var(--text-muted);
+}
+
+.mcp-debug-connections {
+	/* Container for all connections */
+}
+
+.mcp-debug-connection {
+	margin-bottom: 1.5rem;
+	padding: 1rem;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background-color: var(--background-primary);
+}
+
+.mcp-debug-connection-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.75rem;
+}
+
+.mcp-debug-connection-id {
+	font-family: monospace;
+	font-size: 0.9em;
+	color: var(--text-muted);
+}
+
+.mcp-debug-connection-header .mcp-debug-status-badge {
+	margin-right: 0.5rem;
+	font-weight: bold;
+}
+
+.mcp-debug-connection-header .mcp-debug-timestamp {
+	font-size: 0.9em;
+	color: var(--text-muted);
+}
+
+.mcp-debug-connection-details {
+	margin-bottom: 0.75rem;
+	font-size: 0.9em;
+}
+
+.mcp-debug-label {
+	font-weight: var(--font-weight-semibold);
+}
+
+.mcp-debug-value {
+	font-family: var(--font-monospace);
+}
+
+.mcp-debug-actions-header {
+	margin-top: 0.75rem;
+	margin-bottom: 0.5rem;
+	font-weight: bold;
+}
+
+.mcp-debug-actions {
+	max-height: 300px;
+	overflow-y: auto;
+	font-size: 0.85em;
+	font-family: monospace;
+}
+
+.mcp-debug-action {
+	padding: 0.25rem 0.5rem;
+	margin-bottom: 0.25rem;
+	border-left: 3px solid var(--color-green);
+	background-color: var(--background-secondary);
+}
+
+.mcp-debug-action.is-error {
+	border-left-color: var(--color-red);
+}
+
+.mcp-debug-action.is-warning {
+	border-left-color: var(--color-yellow);
+}
+
+.mcp-debug-action-line {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.mcp-debug-action-line > div:first-child {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	overflow: hidden;
+}
+
+.mcp-debug-params-inline {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.mcp-debug-params-inline code {
+	font-size: 0.85em;
+	color: var(--text-muted);
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	display: inline-block;
+}
+
+.mcp-debug-action-type {
+	margin-right: 0.5rem;
+	font-size: 0.75em;
+	padding: 0.1rem 0.3rem;
+	border-radius: 3px;
+	background-color: var(--background-modifier-border);
+}
+
+.mcp-debug-action-time {
+	font-size: 0.8em;
+	color: var(--text-muted);
+}
+
+.mcp-debug-action-meta {
+	margin-top: 0.25rem;
+	padding-left: 1rem;
+	font-size: 0.8em;
+	color: var(--text-muted);
+	display: flex;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.mcp-debug-meta-item {
+	font-family: var(--font-monospace);
+}
+
+.mcp-debug-action-error {
+	margin-top: 0.25rem;
+	padding-left: 1rem;
+	color: var(--color-red);
+	font-size: 0.9em;
+}
+
+.mcp-debug-action-more {
+	padding: 0.5rem;
+	text-align: center;
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+.mcp-debug-no-actions {
+	margin-top: 0.75rem;
+	font-style: italic;
+	color: var(--text-muted);
+}
+
+.mcp-debug-refresh-button {
+	margin-bottom: 1rem;
+}
+
+.mcp-debug-description {
+	margin-bottom: 1rem;
+}

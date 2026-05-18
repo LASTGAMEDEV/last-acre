@@ -5,6 +5,7 @@ import type { Worker, WorkerRole, ContractType } from '../../data/workerTypes';
 import { WORKER_ROLE_CONFIG } from '../../data/workerTypes';
 import { C, S, F, R } from '../../constants/theme';
 import SubTabBar from '../../components/SubTabBar';
+import { WINDOW_LABELS, TimeWindow } from '../../engine/nightOps';
 
 type Tab = 'staff' | 'requests' | 'hire';
 
@@ -12,6 +13,13 @@ function satColor(sat: number) {
   if (sat >= 70) return '#66bb6a';
   if (sat >= 40) return '#ffa726';
   return '#ef5350';
+}
+
+function fatigueColor(val: number): string {
+  if (val <= 30) return '#4caf50';
+  if (val <= 60) return '#ffa726';
+  if (val <= 80) return '#ef5350';
+  return '#b71c1c';
 }
 
 function tierLabel(tier: number) {
@@ -35,7 +43,7 @@ const sb = StyleSheet.create({
 // ── Worker detail modal ───────────────────────────────────────────────────────
 
 function WorkerDetail({ worker, onClose }: { worker: Worker; onClose: () => void }) {
-  const { fireWorker, chooseBranch, startCertStudy } = useGameStore();
+  const { fireWorker, chooseBranch, startCertStudy, setWorkerShiftPreference } = useGameStore();
   const cfg = WORKER_ROLE_CONFIG[worker.role];
   const passedCertIds = worker.certifications.filter(c => c.passed).map(c => c.id);
 
@@ -55,6 +63,34 @@ function WorkerDetail({ worker, onClose }: { worker: Worker; onClose: () => void
         )}
         {worker.isInjured && <Text style={wd.warn}>🤕 Injured — recovering until day {worker.injuryRecoveryDay}</Text>}
         {worker.isOnLeave && <Text style={wd.warn}>🏖️ On leave until day {worker.leaveReturnDay}</Text>}
+
+        {/* Shift preference */}
+        <Text style={st.sectionLabel}>Shift Preference</Text>
+        <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: S.md, marginBottom: 4 }}>
+          {(['day', 'twilight', 'night', 'any'] as const).map(pref => (
+            <TouchableOpacity
+              key={pref}
+              style={[wd.shiftChip, worker.shiftPreference === pref && wd.shiftChipActive]}
+              onPress={() => setWorkerShiftPreference(worker.id, pref)}
+            >
+              <Text style={[wd.shiftChipText, worker.shiftPreference === pref && { color: '#fff' }]}>
+                {pref === 'day' ? '☀️' : pref === 'night' ? '🌙' : pref === 'twilight' ? '🌅' : '⚡'} {pref}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Fatigue */}
+        <Text style={st.sectionLabel}>Fatigue</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, marginBottom: 4 }}>
+          <View style={{ flex: 1, height: 8, backgroundColor: '#222', borderRadius: 4, overflow: 'hidden', marginRight: 6 }}>
+            <View style={{ width: `${Math.min(100, (worker.fatigueLevel ?? 0))}%`, height: '100%', borderRadius: 4, backgroundColor: fatigueColor(worker.fatigueLevel ?? 0) }} />
+          </View>
+          <Text style={{ color: '#888', fontSize: 10, minWidth: 28, textAlign: 'right' }}>{Math.round(worker.fatigueLevel ?? 0)}%</Text>
+        </View>
+        {(worker.consecutiveNightShifts ?? 0) > 0 && (
+          <Text style={wd.warn}>🌙 {worker.consecutiveNightShifts} consecutive night shifts</Text>
+        )}
 
         <Text style={st.sectionLabel}>Satisfaction</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, marginBottom: 4 }}>
@@ -106,6 +142,9 @@ const wd = StyleSheet.create({
   nodeText: { color: C.text, fontSize: 13 },
   smallBtn: { marginTop: 4, backgroundColor: '#1565c0', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start' },
   smallBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  shiftChip: { backgroundColor: '#1e2a3a', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6, flex: 1, alignItems: 'center' },
+  shiftChipActive: { backgroundColor: '#1565c0' },
+  shiftChipText: { color: C.text, fontSize: 11 },
   fireBtn: { backgroundColor: '#b71c1c', borderRadius: R.lg, padding: S.md, margin: S.md, alignItems: 'center' },
   fireBtnText: { color: '#fff', fontWeight: 'bold', fontSize: F.size.md },
 });
@@ -154,6 +193,19 @@ function StaffTab() {
                 </View>
                 <View style={[st.cardRow, { marginTop: 6 }]}>
                   <SatBar value={w.satisfaction} />
+                </View>
+                <View style={[st.cardRow, { marginTop: 4, gap: 6 }]}>
+                  <Text style={{ color: '#888', fontSize: 10 }}>
+                    {w.shiftPreference === 'night' ? '🌙 Night' : w.shiftPreference === 'twilight' ? '🌅 Twilight' : w.shiftPreference === 'any' ? '⚡ Any' : '☀️ Day'}
+                  </Text>
+                  <Text style={{ color: fatigueColor(w.fatigueLevel ?? 0), fontSize: 10 }}>
+                    😴 {Math.round(w.fatigueLevel ?? 0)}% fatigue
+                  </Text>
+                  {(w.consecutiveNightShifts ?? 0) >= 3 && (
+                    <Text style={{ color: '#ef5350', fontSize: 10 }}>
+                      ⚠️ {w.consecutiveNightShifts} nights
+                    </Text>
+                  )}
                 </View>
               </TouchableOpacity>
             );

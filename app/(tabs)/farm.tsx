@@ -6,15 +6,17 @@ import AguaScreen from './_agua';
 import CalendarioScreen from './_calendario';
 import ClimaScreen from './_clima';
 import HenilAndBuildingsSection from '../../components/farm/HenilAndBuildingsSection';
+import PrecisionTab from '../../components/farm/PrecisionTab';
 import SubTabBar from '../../components/SubTabBar';
 import { C } from '../../constants/theme';
 
-type FarmTab = 'fields' | 'animals' | 'henil' | 'water' | 'calendar' | 'weather';
+type FarmTab = 'fields' | 'animals' | 'henil' | 'precision' | 'water' | 'calendar' | 'weather';
 
 const TABS: { id: FarmTab; label: string }[] = [
   { id: 'fields',    label: '🌾 Fields' },
   { id: 'animals',   label: '🐄 Animals' },
   { id: 'henil',     label: '🌿 Henil' },
+  { id: 'precision', label: '🎯 Precision' },
   { id: 'water',     label: '💧 Water' },
   { id: 'calendar',  label: '📅 Calendar' },
   { id: 'weather',   label: '🌤️ Weather' },
@@ -29,6 +31,7 @@ export default function FarmScreen() {
       {tab === 'fields'    && <TierrasScreen />}
       {tab === 'animals'   && <AnimalesScreen />}
       {tab === 'henil'     && <HenilAndBuildingsSection />}
+      {tab === 'precision' && <PrecisionTab />}
       {tab === 'water'     && <AguaScreen />}
       {tab === 'calendar'  && <CalendarioScreen />}
       {tab === 'weather'   && <ClimaScreen />}
