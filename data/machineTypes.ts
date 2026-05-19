@@ -10,6 +10,7 @@ export interface MachineType {
   capacityKg?: number;         // trucks (0 = needs trailer) and trailers
   compatibleTrailerSizes?: ('small' | 'medium' | 'large')[];  // trucks only
   compatibleTruckTypeIds?: string[];  // trailers: which truck ids can tow this
+  unlockId?: string;           // historical unlock gate
 }
 
 export const MACHINE_TYPES: MachineType[] = [
@@ -17,6 +18,7 @@ export const MACHINE_TYPES: MachineType[] = [
   { id: 'tractor-small',  name: 'Small Tractor',  cost: 45000,  size: 'small',  category: 'tractor',    maintenancePerDay: 12, fuelPerDay: 8 },
   { id: 'tractor-medium', name: 'Medium Tractor', cost: 120000, size: 'medium', category: 'tractor',    maintenancePerDay: 28, fuelPerDay: 18 },
   { id: 'tractor-large',  name: 'Large Tractor',  cost: 280000, size: 'large',  category: 'tractor',    maintenancePerDay: 55, fuelPerDay: 40 },
+  { id: 'tractor_4wd_t1', name: '4WD Tractor',    cost: 180000, size: 'medium', category: 'tractor',    maintenancePerDay: 38, fuelPerDay: 24, unlockId: 'tractor_4wd_t1' },
   // ── Combine Harvesters ───────────────────────────────────────────────────
   { id: 'combine-small',  name: 'Small Combine',  cost: 250000, size: 'small',  category: 'harvester',  maintenancePerDay: 45, fuelPerDay: 15, haPerDay: 4 },
   { id: 'combine-medium', name: 'Medium Combine', cost: 420000, size: 'medium', category: 'harvester',  maintenancePerDay: 75, fuelPerDay: 30, haPerDay: 10 },

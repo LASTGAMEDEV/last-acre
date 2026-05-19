@@ -8,6 +8,7 @@ import { PRODUCT_TYPES, CATEGORY_LABELS, ProductCategory } from '../../data/prod
 import { BUILDING_TYPES, BUILDING_CATEGORY_LABELS, BuildingCategory, PRODUCTION_EQUIPMENT } from '../../data/buildingTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { ATTACHMENT_TYPES } from '../../data/attachmentTypes';
+import { isHistoricallyUnlocked } from '../../engine/timeline';
 
 type ShopTab = 'seeds' | 'products' | 'buildings' | 'machinery';
 
@@ -85,11 +86,12 @@ function SeedsTab() {
 // ── Products Tab ────────────────────────────────────────────────────────────
 function ProductsTab() {
   const { money, productInventory, buyProduct } = useGameStore();
+  const timeline = useGameStore(s => s.timeline);
 
   return (
     <ScrollView style={[styles.list, { flex: 1 }]} contentContainerStyle={{ paddingBottom: 20 }}>
       {PRODUCT_CATEGORY_ORDER.map(cat => {
-        const items = PRODUCT_TYPES.filter(p => p.category === cat);
+        const items = PRODUCT_TYPES.filter(p => p.category === cat && (!p.unlockId || isHistoricallyUnlocked(timeline, p.unlockId)));
         return (
           <View key={cat} style={styles.categorySection}>
             <Text style={styles.categoryTitle}>{CATEGORY_LABELS[cat]}</Text>
@@ -130,6 +132,7 @@ function ProductsTab() {
 // ── Buildings Tab ───────────────────────────────────────────────────────────
 function BuildingsTab() {
   const { money, buildings, buyBuilding, purchaseProductionBuilding, productionBuildings, installEquipment } = useGameStore();
+  const timeline = useGameStore(s => s.timeline);
 
   const ownedProductionSpecies = new Set(
     (productionBuildings ?? []).map(pb => pb.animalTypeId)
@@ -149,7 +152,7 @@ function BuildingsTab() {
   return (
     <ScrollView style={[styles.list, { flex: 1 }]} contentContainerStyle={{ paddingBottom: 20 }}>
       {BUILDING_CATEGORY_ORDER.map(cat => {
-        const items = BUILDING_TYPES.filter(b => b.category === cat);
+        const items = BUILDING_TYPES.filter(b => b.category === cat && (!b.unlockId || isHistoricallyUnlocked(timeline, b.unlockId)));
         return (
           <View key={cat} style={styles.categorySection}>
             <Text style={styles.categoryTitle}>{BUILDING_CATEGORY_LABELS[cat]}</Text>
@@ -251,13 +254,14 @@ function BuildingsTab() {
 // ── Machinery Tab ────────────────────────────────────────────────────────────
 function MachineryTab() {
   const { money, machines, attachments, trailers, buyMachine, buyAttachment, buyTrailer } = useGameStore();
+  const timeline = useGameStore(s => s.timeline);
   const [section, setSection] = useState<'tractors' | 'combines' | 'trucks' | 'attachments'>('tractors');
 
-  const tractors    = MACHINE_TYPES.filter(m => m.category === 'tractor');
-  const combines    = MACHINE_TYPES.filter(m => m.category === 'harvester');
-  const trucks      = MACHINE_TYPES.filter(m => m.category === 'truck');
-  const trailerTypes = MACHINE_TYPES.filter(m => m.category === 'trailer');
-  const irrigTypes  = MACHINE_TYPES.filter(m => m.category === 'irrigation');
+  const tractors    = MACHINE_TYPES.filter(m => m.category === 'tractor' && (!m.unlockId || isHistoricallyUnlocked(timeline, m.unlockId)));
+  const combines    = MACHINE_TYPES.filter(m => m.category === 'harvester' && (!m.unlockId || isHistoricallyUnlocked(timeline, m.unlockId)));
+  const trucks      = MACHINE_TYPES.filter(m => m.category === 'truck' && (!m.unlockId || isHistoricallyUnlocked(timeline, m.unlockId)));
+  const trailerTypes = MACHINE_TYPES.filter(m => m.category === 'trailer' && (!m.unlockId || isHistoricallyUnlocked(timeline, m.unlockId)));
+  const irrigTypes  = MACHINE_TYPES.filter(m => m.category === 'irrigation' && (!m.unlockId || isHistoricallyUnlocked(timeline, m.unlockId)));
 
   const ownedCount = (typeId: string) =>
     [...(machines ?? []), ...(trailers ?? [])].filter(m => m.typeId === typeId).length;

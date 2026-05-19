@@ -15,10 +15,20 @@ import EventBanner from '../../components/EventBanner';
 import MilestonePopup from '../../components/MilestonePopup';
 import FirstMission from '../../components/FirstMission';
 import CustomTabBar from '../../components/CustomTabBar';
+import NewspaperModal from '../../components/NewspaperModal';
+import HistoricalToast from '../../components/HistoricalToast';
+import { clearPendingDisplayEvent } from '../../engine/timeline';
 
 export default function TabLayout() {
   const { day, parcels, loans, contracts, seasonGoals, musicEnabled, soundEnabled } = useGameStore();
+  const timeline = useGameStore(s => s.timeline);
+  const setTimeline = useGameStore(s => s.setTimeline);
   const season = getSeason(day);
+  const pendingEvent = timeline.pendingDisplayEvent;
+
+  function handleDismissEvent() {
+    setTimeline(clearPendingDisplayEvent(timeline));
+  }
 
   // Start/stop season music when season or music settings change
   useEffect(() => {
@@ -84,6 +94,22 @@ export default function TabLayout() {
       <TutorialModal />
       <YearEndModal />
       <BankruptModal />
+
+      {/* Historical event UI — major events use modal, minor use toast */}
+      {pendingEvent?.tier === 'major' && (
+        <NewspaperModal
+          event={pendingEvent}
+          currentDay={day}
+          onDismiss={handleDismissEvent}
+        />
+      )}
+      {pendingEvent?.tier === 'minor' && (
+        <HistoricalToast
+          event={pendingEvent}
+          currentDay={day}
+          onDismiss={handleDismissEvent}
+        />
+      )}
     </View>
   );
 }

@@ -173,6 +173,10 @@ import { GameEventType } from '../data/randomEvents';
 import { rollEvent, calcRepairCost, calcRepairDays, getHarvestModifier } from '../engine/events';
 import { NPCFarmRuntime, initNpcFarms, npcSellVolume, npcAuctionBid } from '../engine/competitors';
 import { tickAllPrices, updateNpcProductionMultipliers, ActiveShock } from '../engine/priceEngine';
+import { advanceTimeline, clearPendingDisplayEvent, getTimelineMultiplier, INITIAL_TIMELINE_STATE, TimelineState } from '../engine/timeline';
+import { HISTORICAL_EVENTS } from '../data/historicalEvents';
+import { getHistoricalBaseline } from '../data/historicalPrices';
+import { gameDayToCalendarYear } from '../engine/calendarUtils';
 import { ATTACHMENT_TYPES, AttachmentType } from '../data/attachmentTypes';
 import { ContractorOperation, calcJobDays, canAssignJob, getTransportCapacityKg } from '../engine/machinery';
 import { MapField, MapOwner } from '../types/worldMap';
@@ -798,6 +802,7 @@ export interface GameState {
   sellPressures: { cropId: string; modifier: number; expiresDay: number }[];
   breedingPairs: Record<string, string>; // femaleId → preferred maleId
   activeEvents: GameEvent[];
+  timeline: TimelineState;
   machineRepairs: MachineRepair[];
   attachments: OwnedAttachment[];
   trailers: OwnedTrailer[];
@@ -936,6 +941,7 @@ export interface GameState {
   withdrawAnimalShow: (animalId: string) => void;
   advanceDay: () => void;
   advanceDays: (n: number) => void;
+  setTimeline: (tl: TimelineState) => void;
   assignHydrogeologist: (parcelId: string) => void;
   startDrilling: (wellId: string, spotId: string, targetFlowRate: number) => void;
   installPump: (wellId: string, pumpTier: 1 | 2 | 3) => void;
@@ -1422,6 +1428,7 @@ function makeInitialState() {
     hybridJobs: [] as HybridJob[],
     cropQualityMap: {} as Record<string, number>,
     activeEvents: [] as GameEvent[],
+    timeline: INITIAL_TIMELINE_STATE,
     machineRepairs: [] as MachineRepair[],
     npcFarms: initNpcFarms(),
     rivalNews: [] as RivalNewsItem[],
@@ -1557,6 +1564,11 @@ export const useGameStore = create<GameState>()(
       advanceDay: () => {
         const state = get();
         const newDay = state.day + 1;
+
+        // ── Historical Timeline ───────────────────────────────────────────────
+        const newTimeline = advanceTimeline(state.timeline, newDay, HISTORICAL_EVENTS);
+        const calYear = gameDayToCalendarYear(newDay);
+
         const season = getSeason(newDay);
         const rawWorkerBonuses = getWorkerBonuses(state.workers ?? []);
         const nightOpsFieldWorkers = (state.workers ?? []).filter(
@@ -1574,7 +1586,9 @@ export const useGameStore = create<GameState>()(
 
         // Fuel price fluctuation (·$0.04/day, clamped $0.90·$1.80)
         const fuelDelta = (Math.random() - 0.5) * 0.08;
-        const newFuelPrice = Math.min(1.80, Math.max(0.90, (state.fuelPrice ?? 1.20) + fuelDelta));
+        const baseFuelPrice = Math.min(1.80, Math.max(0.90, (state.fuelPrice ?? 1.20) + fuelDelta));
+        const fuelCostMult = getTimelineMultiplier(newTimeline, 'fuel_cost');
+        const newFuelPrice = baseFuelPrice * fuelCostMult;
         const prevSeason = getSeason(state.day);
         const summary: DaySummaryEvent[] = [];
         let colmenaNegligenceStartDay = { ...state.colmenaNegligenceStartDay };
@@ -1632,6 +1646,8 @@ export const useGameStore = create<GameState>()(
           day: newDay,
           forecast: state.forecast,
           npcProductionMultipliers: state.npcProductionMultipliers ?? {},
+          calendarYear: calYear,
+          timelineMultipliers: newTimeline.effectMultipliers,
         });
         let prices = priceTickResult.prices;
         const newPriceMomentum = priceTickResult.momentum;
@@ -3439,112 +3455,117 @@ export const useGameStore = create<GameState>()(
         let newSubsidyLog = state.subsidyLog ?? [];
         // Annual maintenance in spring
         if (season === 'spring' && prevSeason === 'winter') {
-          const maintenanceCost = annualMaintenanceCost(updatedHedgerows);
-          if (maintenanceCost > 0) {
-            if (state.money + moneyDelta >= maintenanceCost) {
-              moneyDelta -= maintenanceCost;
-              // Clear neglected state if paid
-              updatedHedgerows = updatedHedgerows.map(h => ({ ...h, neglected: false }));
-            } else {
-              // Mark all as neglected
-              updatedHedgerows = updatedHedgerows.map(h => ({ ...h, neglected: true }));
+          if (calYear >= 1992) {
+            const maintenanceCost = annualMaintenanceCost(updatedHedgerows);
+            if (maintenanceCost > 0) {
+              if (state.money + moneyDelta >= maintenanceCost) {
+                moneyDelta -= maintenanceCost;
+                // Clear neglected state if paid
+                updatedHedgerows = updatedHedgerows.map(h => ({ ...h, neglected: false }));
+              } else {
+                // Mark all as neglected
+                updatedHedgerows = updatedHedgerows.map(h => ({ ...h, neglected: true }));
+                summary.push({
+                  id: `hedgerow_neglect_${newDay}`,
+                  icon: '🌿',
+                  title: 'Hedgerows neglected',
+                  detail: 'Insufficient funds for annual maintenance. Effects halved until paid.',
+                  severity: 'warning' as const,
+                });
+              }
+            }
+
+            // ── CAP Subsidy payment ─────────────────────────────────────────────
+            const ownedHa = finalParcels.filter((p: LandParcel) => p.owned).reduce((s, p) => s + p.hectares, 0);
+            const leasedHa = (state.activeLeases ?? []).filter(l => l.status === 'active').reduce((sum, l) => {
+              const parcel = finalParcels.find((p: LandParcel) => p.id === l.parcelId);
+              return sum + (parcel?.hectares ?? 0);
+            }, 0);
+            const payment = calculateAnnualSubsidy({
+              currentDay: newDay,
+              ownedHa,
+              leasedHa,
+              cropsGrownThisYear: state.cropsGrownThisYear ?? [],
+              hedgerows: updatedHedgerows,
+              strawBurnedThisYear: state.strawBurnedThisYear ?? false,
+              aesEnrollments: state.aesEnrollments ?? [],
+            });
+            moneyDelta += payment.total;
+            newSubsidyLog = [...newSubsidyLog, payment];
+            summary.push({
+              id: `cap_payment_${newDay}`,
+              icon: '💶',
+              title: `CAP annual payment: €${payment.total.toLocaleString()}`,
+              detail: `Basic: €${payment.basic.toLocaleString()} · Greening: €${payment.greening.toLocaleString()} · Young Farmer: €${payment.youngFarmer.toLocaleString()} · AES: €${payment.aes.toLocaleString()}`,
+              severity: 'info' as const,
+            });
+            if (!payment.greeningQualified && payment.greening === 0) {
               summary.push({
-                id: `hedgerow_neglect_${newDay}`,
-                icon: '🌿',
-                title: 'Hedgerows neglected',
-                detail: 'Insufficient funds for annual maintenance. Effects halved until paid.',
+                id: `cap_greening_missed_${newDay}`,
+                icon: '⚠️',
+                title: 'Greening payment withheld',
+                detail: `Missing: ${payment.greeningFailReasons.join(', ')}`,
                 severity: 'warning' as const,
               });
             }
-          }
-
-          // ── CAP Subsidy payment ─────────────────────────────────────────────
-          const ownedHa = finalParcels.filter((p: LandParcel) => p.owned).reduce((s, p) => s + p.hectares, 0);
-          const leasedHa = (state.activeLeases ?? []).filter(l => l.status === 'active').reduce((sum, l) => {
-            const parcel = finalParcels.find((p: LandParcel) => p.id === l.parcelId);
-            return sum + (parcel?.hectares ?? 0);
-          }, 0);
-          const payment = calculateAnnualSubsidy({
-            currentDay: newDay,
-            ownedHa,
-            leasedHa,
-            cropsGrownThisYear: state.cropsGrownThisYear ?? [],
-            hedgerows: updatedHedgerows,
-            strawBurnedThisYear: state.strawBurnedThisYear ?? false,
-            aesEnrollments: state.aesEnrollments ?? [],
-          });
-          moneyDelta += payment.total;
-          newSubsidyLog = [...newSubsidyLog, payment];
-          summary.push({
-            id: `cap_payment_${newDay}`,
-            icon: '💶',
-            title: `CAP annual payment: €${payment.total.toLocaleString()}`,
-            detail: `Basic: €${payment.basic.toLocaleString()} · Greening: €${payment.greening.toLocaleString()} · Young Farmer: €${payment.youngFarmer.toLocaleString()} · AES: €${payment.aes.toLocaleString()}`,
-            severity: 'info' as const,
-          });
-          if (!payment.greeningQualified && payment.greening === 0) {
-            summary.push({
-              id: `cap_greening_missed_${newDay}`,
-              icon: '⚠️',
-              title: 'Greening payment withheld',
-              detail: `Missing: ${payment.greeningFailReasons.join(', ')}`,
-              severity: 'warning' as const,
+            // Check AES violations
+            updatedAESEnrollments = (state.aesEnrollments ?? []).map((en: AESEnrollment) => {
+              if (en.status !== 'active') return en;
+              const violated = checkAESViolation(en, finalParcels, newDay);
+              if (violated) {
+                const scheme = AES_SCHEMES.find(s => s.id === en.schemeId);
+                const repayment = Math.round(en.totalPaidSoFar * 1.20);
+                moneyDelta -= repayment;
+                summary.push({
+                  id: `aes_violation_${en.id}_${newDay}`,
+                  icon: '⚠️',
+                  title: `AES violation: ${scheme?.name ?? en.schemeId}`,
+                  detail: `Repaying €${repayment.toLocaleString()} (prior payments + 20% penalty). Scheme terminated.`,
+                  severity: 'danger' as const,
+                });
+                return { ...en, status: 'violated' as const };
+              }
+              // Add this year's payment to totalPaidSoFar for active schemes
+              const scheme = AES_SCHEMES.find(s => s.id === en.schemeId);
+              const annualPayment = scheme ? Math.round(scheme.paymentPerHa * en.enrolledHa) : 0;
+              return { ...en, totalPaidSoFar: en.totalPaidSoFar + annualPayment };
             });
           }
-          // Check AES violations
-          updatedAESEnrollments = (state.aesEnrollments ?? []).map((en: AESEnrollment) => {
-            if (en.status !== 'active') return en;
-            const violated = checkAESViolation(en, finalParcels, newDay);
-            if (violated) {
-              const scheme = AES_SCHEMES.find(s => s.id === en.schemeId);
-              const repayment = Math.round(en.totalPaidSoFar * 1.20);
-              moneyDelta -= repayment;
-              summary.push({
-                id: `aes_violation_${en.id}_${newDay}`,
-                icon: '⚠️',
-                title: `AES violation: ${scheme?.name ?? en.schemeId}`,
-                detail: `Repaying €${repayment.toLocaleString()} (prior payments + 20% penalty). Scheme terminated.`,
-                severity: 'danger' as const,
-              });
-              return { ...en, status: 'violated' as const };
-            }
-            // Add this year's payment to totalPaidSoFar for active schemes
-            const scheme = AES_SCHEMES.find(s => s.id === en.schemeId);
-            const annualPayment = scheme ? Math.round(scheme.paymentPerHa * en.enrolledHa) : 0;
-            return { ...en, totalPaidSoFar: en.totalPaidSoFar + annualPayment };
-          });
-          // ── Organic certification: Spring inspection ────────────────────────
-          finalParcels = finalParcels.map((p: LandParcel) => {
-            if (!p.owned || !p.organicStatus || p.organicStatus === 'conventional' || p.organicStatus === 'decertified') return p;
-            // Check appeal expiry
-            if (p.pendingContaminationAppeal && isAppealExpired(p.pendingContaminationAppeal, newDay)) {
-              summary.push({
-                id: `organic_appeal_missed_${p.id}_${newDay}`,
-                icon: '🚫',
-                title: `${p.name} decertified`,
-                detail: 'Contamination appeal window expired. Organic certification lost for 3 years.',
-                severity: 'danger' as const,
-              });
-              return {
-                ...p,
-                organicStatus: 'decertified' as OrganicStatus,
-                lastDecertifiedDay: newDay,
-                pendingContaminationAppeal: undefined,
-              };
-            }
-            // Advance transition if no pending appeal
-            const newStatus = advanceTransition(p.organicStatus);
-            if (newStatus !== p.organicStatus) {
-              summary.push({
-                id: `organic_advance_${p.id}_${newDay}`,
-                icon: newStatus === 'organic' ? '🌿' : '🔄',
-                title: `${p.name}: ${newStatus === 'organic' ? 'Certified Organic!' : 'Transition advanced'}`,
-                detail: newStatus === 'organic' ? 'Full organic certification achieved. Premium prices unlocked.' : `Now in ${newStatus.replace('_', ' ')}.`,
-                severity: 'info' as const,
-              });
-            }
-            return { ...p, organicStatus: newStatus, pendingContaminationAppeal: undefined };
-          });
+
+          if (calYear >= 1990) {
+            // ── Organic certification: Spring inspection ────────────────────────
+            finalParcels = finalParcels.map((p: LandParcel) => {
+              if (!p.owned || !p.organicStatus || p.organicStatus === 'conventional' || p.organicStatus === 'decertified') return p;
+              // Check appeal expiry
+              if (p.pendingContaminationAppeal && isAppealExpired(p.pendingContaminationAppeal, newDay)) {
+                summary.push({
+                  id: `organic_appeal_missed_${p.id}_${newDay}`,
+                  icon: '🚫',
+                  title: `${p.name} decertified`,
+                  detail: 'Contamination appeal window expired. Organic certification lost for 3 years.',
+                  severity: 'danger' as const,
+                });
+                return {
+                  ...p,
+                  organicStatus: 'decertified' as OrganicStatus,
+                  lastDecertifiedDay: newDay,
+                  pendingContaminationAppeal: undefined,
+                };
+              }
+              // Advance transition if no pending appeal
+              const newStatus = advanceTransition(p.organicStatus);
+              if (newStatus !== p.organicStatus) {
+                summary.push({
+                  id: `organic_advance_${p.id}_${newDay}`,
+                  icon: newStatus === 'organic' ? '🌿' : '🔄',
+                  title: `${p.name}: ${newStatus === 'organic' ? 'Certified Organic!' : 'Transition advanced'}`,
+                  detail: newStatus === 'organic' ? 'Full organic certification achieved. Premium prices unlocked.' : `Now in ${newStatus.replace('_', ' ')}.`,
+                  severity: 'info' as const,
+                });
+              }
+              return { ...p, organicStatus: newStatus, pendingContaminationAppeal: undefined };
+            });
+          }
 
           // Reset annual trackers
           newCropsGrownThisYear = [];
@@ -3555,7 +3576,7 @@ export const useGameStore = create<GameState>()(
         let updatedCSASubscribers = state.csaSubscribers ?? [];
         let updatedCSAWeeklyLog = state.csaWeeklyLog ?? [];
         const isCSASeasonStart = (season === 'spring' || season === 'summer' || season === 'autumn') && prevSeason !== season;
-        if (isCSASeasonStart && state.csaActive) {
+        if (isCSASeasonStart && state.csaActive && calYear >= 1984) {
           // Season end: renewals + new subscribers
           if (state.csaSeasonStart && updatedCSASubscribers.length > 0) {
             const hasOrganic = finalParcels.some((p: LandParcel) => p.organicStatus === 'organic');
@@ -3597,7 +3618,7 @@ export const useGameStore = create<GameState>()(
         }
 
         // ── CSA Weekly fulfillment ──────────────────────────────────────────
-        if (state.csaActive && state.csaSeasonStart && updatedCSASubscribers.length > 0) {
+        if (state.csaActive && state.csaSeasonStart && updatedCSASubscribers.length > 0 && calYear >= 1984) {
           const weekNumber = Math.floor((newDay - state.csaSeasonStart) / 7) + 1;
           if (weekNumber >= 1 && weekNumber <= CSA_WEEKS_PER_SEASON && newDay % 7 === 0) {
             const inventory = state.inventory ?? {};
@@ -5850,6 +5871,7 @@ export const useGameStore = create<GameState>()(
 
         set({
           day: newDay,
+          timeline: newTimeline,
           wells: updatedWells,
           aquiferLevel: newAquifer,
           showWindowOpen,
@@ -6030,6 +6052,10 @@ export const useGameStore = create<GameState>()(
             set({ daySummary: null });
           }
         }
+      },
+
+      setTimeline: (tl: TimelineState) => {
+        set({ timeline: tl });
       },
 
       buyParcel: (parcelId) => {
@@ -9878,7 +9904,7 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'granja-tycoon-save-v10',
+      name: 'granja-tycoon-save-v11',
       version: 7,
       migrate: (persistedState: any, version: number) => {
         if (version < 7) {

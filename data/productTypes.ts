@@ -9,6 +9,7 @@ export interface ProductType {
   packCost: number;    // total $ for one pack
   effectLabel: string; // shown in UI
   fertilizerBonus?: number; // harvest yield multiplier (fertilizers only)
+  unlockId?: string;   // historical unlock gate
 }
 
 export const PRODUCT_TYPES: ProductType[] = [
@@ -104,6 +105,16 @@ export const PRODUCT_TYPES: ProductType[] = [
     packCost: 950,
     effectLabel: 'Removes all + prevents 90 days',
   },
+  {
+    id: 'herbicide_glyphosate_t1',
+    name: 'Glyphosate Herbicide',
+    category: 'herbicide',
+    cost: 140,
+    packSize: 5,
+    packCost: 640,
+    effectLabel: 'Broad-spectrum weed elimination · no-till compatible',
+    unlockId: 'herbicide_glyphosate_t1',
+  },
 
   // ── Fungicides ─────────────────────────────────────────────────
   {
@@ -123,6 +134,18 @@ export const PRODUCT_TYPES: ProductType[] = [
     packSize: 5,
     packCost: 730,
     effectLabel: 'Cures + protects 45 days against fungi',
+  },
+
+  // ── Growth treatments ──────────────────────────────────────────
+  {
+    id: 'bst_treatment',
+    name: 'Bovine Growth Hormone',
+    category: 'fertilizer_liquid',
+    cost: 200,
+    packSize: 5,
+    packCost: 900,
+    effectLabel: '+15% dairy yield · animal welfare concern',
+    unlockId: 'bst_treatment',
   },
 
   // ── Insecticides ───────────────────────────────────────────────

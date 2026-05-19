@@ -13,6 +13,7 @@ export interface BuildingType {
   dailyCapacity?: number;
   buildingTier?: 'small' | 'medium' | 'large';
   equipmentSlotCount?: number;
+  unlockId?: string;        // historical unlock gate
 }
 
 export interface EquipmentItem {

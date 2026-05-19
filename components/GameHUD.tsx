@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useGameStore } from '../store/useGameStore';
 import { getSeason, WeatherEvent } from '../engine/climate';
+import { gameDayToCalendarYear } from '../engine/calendarUtils';
 import { SEASON_THEME, C, S, F, R, MIN_TOUCH } from '../constants/theme';
 import { MACHINE_TYPES } from '../data/machineTypes';
 import { BUILDING_TYPES } from '../data/buildingTypes';
@@ -39,6 +40,7 @@ export default function GameHUD() {
   } = useGameStore();
 
   const season = getSeason(day);
+  const calYear = gameDayToCalendarYear(day);
   const theme = SEASON_THEME[season];
 
   const daysIntoSeason = (day % (SEASON_DAYS * 4)) % SEASON_DAYS;
@@ -102,6 +104,9 @@ export default function GameHUD() {
               <Text style={[styles.pillText, { color: weather.textColor }]}>{weather.icon} {todayWeather!.event.replace('_', ' ')}</Text>
             </View>
           )}
+          <View style={styles.yearBadge}>
+            <Text style={styles.yearText}>{calYear}</Text>
+          </View>
           <Text style={styles.dayNum}>Day {day}</Text>
         </View>
 
@@ -205,6 +210,18 @@ const styles = StyleSheet.create({
     color: C.textDim,
     fontSize: 9,
     fontWeight: F.weight.bold,
+  },
+  yearBadge: {
+    backgroundColor: '#2d4a2d',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  yearText: {
+    color: '#f39c12',
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 2,
   },
   dayNum: {
     color: C.text,

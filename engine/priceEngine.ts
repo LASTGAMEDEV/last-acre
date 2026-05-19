@@ -11,6 +11,7 @@ import {
   getVolatilityProfile,
 } from '../data/prices';
 import { getRegionMultiplier } from '../data/priceRegions';
+import { getHistoricalBaseline } from '../data/historicalPrices';
 
 export interface PriceShock {
   commodityId: string | null; // null = all commodities
@@ -31,6 +32,8 @@ export interface PriceTickInput {
   day: number;
   forecast: WeatherDay[];
   npcProductionMultipliers: Record<string, number>;
+  calendarYear: number;
+  timelineMultipliers: Record<string, number>;
 }
 
 export interface PriceTickOutput {
@@ -149,7 +152,7 @@ function getCycleMultiplier(commodityId: string, day: number): number {
 
 // Main tick — call once per advanceDay
 export function tickAllPrices(input: PriceTickInput): PriceTickOutput {
-  const { prices, momentum, priceHistory15d, activeShocks, day, forecast, npcProductionMultipliers } = input;
+  const { prices, momentum, priceHistory15d, activeShocks, day, forecast, npcProductionMultipliers, calendarYear, timelineMultipliers } = input;
 
   // Addition #4: Inflation drift — 2.5% per in-game year
   const inflationIndex = Math.pow(1.025, day / 365);
@@ -165,8 +168,11 @@ export function tickAllPrices(input: PriceTickInput): PriceTickOutput {
 
   // Apply layers 1–5 + additions #3, #4, #5
   let newPrices = prices.map(p => {
-    const rawBaseline = COMMODITY_BASELINES[p.cropId] ?? p.basePrice;
-    const inflatedBaseline = rawBaseline * inflationIndex * getRegionMultiplier(p.cropId);
+    const historicalBase = getHistoricalBaseline(p.cropId, calendarYear);
+    const rawBaseline = (historicalBase > 0 ? historicalBase : COMMODITY_BASELINES[p.cropId]) ?? p.basePrice;
+    const timelineTarget = `${p.cropId}_price`;
+    const timelineMult = timelineMultipliers[timelineTarget] ?? timelineMultipliers['all_crop_prices'] ?? 1;
+    const inflatedBaseline = rawBaseline * timelineMult * inflationIndex * getRegionMultiplier(p.cropId);
     const cycleMultiplier = getCycleMultiplier(p.cropId, day);
     const effectiveBaseline = inflatedBaseline * cycleMultiplier;
 
