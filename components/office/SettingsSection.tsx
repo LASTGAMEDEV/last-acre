@@ -24,7 +24,7 @@ function SettingsSection() {
 
   async function exportSave() {
     try {
-      const raw = await AsyncStorage.getItem('granja-tycoon-save-v9');
+      const raw = await AsyncStorage.getItem('granja-tycoon-save-v11');
       if (!raw) {
         Alert.alert('Export Failed', 'No save data found.');
         return;
@@ -82,7 +82,7 @@ function SettingsSection() {
                 Alert.alert('Import Failed', 'Save file is missing required fields (day, money).');
                 return;
               }
-              await AsyncStorage.setItem('granja-tycoon-save-v9', raw);
+              await AsyncStorage.setItem('granja-tycoon-save-v11', raw);
               Alert.alert('Import Successful', 'Save imported. Please restart the app to load your save.');
             } catch (e) {
               Alert.alert('Import Failed', String(e));

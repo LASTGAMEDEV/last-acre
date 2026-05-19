@@ -24,11 +24,13 @@ Run from `granja-tycoon/`. Never commit with TypeScript errors.
 
 ## Navigation Architecture — READ THIS CAREFULLY
 
-There are exactly **4 top-level tabs** + a center Advance Day button. Do not add new ones.
+There are exactly **5 top-level tabs** + a center Advance Day button. Do not add new ones.
 
 ```
-Farm  |  Ops  |  ▶ Advance Day  |  Market  |  Office
+Farm  |  Ops  |  ▶ Advance Day  |  Market  |  Office  |  Legado
 ```
+
+The **Legado** tab was added in Phase 2 of the Living History System. It hosts the dynasty/family sub-tabs (Carácter, Árbol, and eventually Familia + Crónica in Phase 3).
 
 Each top-level tab (`farm.tsx`, `ops.tsx`, `market.tsx`, `office.tsx`) is a **hub
 screen** that hosts scrollable sub-tabs via `<SubTabBar>`.
@@ -53,7 +55,7 @@ registration — they are imported directly into their hub screen, not routed to
 All game state and every action live in `store/useGameStore.ts`. It is a single Zustand
 store with `persist` middleware writing to `AsyncStorage`.
 
-**Current save key: `granja-tycoon-save-v10`**
+**Current save key: `granja-tycoon-save-v12`**
 
 Rules for the store:
 - **Bump the save key** any time you add new required fields or change the shape of
@@ -230,3 +232,13 @@ To keep them in sync:
   _animales.tsx, etc. and skipped the layout entry, producing 10+ ghost tabs.
 - Do not leave unused imports in components. ESLint catches these as warnings. Run
   `npx expo lint` before handing off. Found in: CompostScreen (`Alert` imported but never used).
+- Do not use `as any` to satisfy React Native `width`/`height` percentage strings. RN accepts
+  `'50%'` directly as `DimensionValue` — just write the string literal. `as any` hides real
+  type errors nearby.
+- When adding a new block to `advanceDay()`, open it with a comment header like
+  `// === DYNASTY ENGINE ===` so the block is identifiable in a 10000-line file. Never
+  mix your new code into an existing block — it will be unreviewable and may silently
+  break the existing system.
+- `components/legado/` is the home for all dynasty/family UI sub-components. Do not put
+  dynasty components in `components/office/` or directly in `components/`. Phase 3 will
+  add Familia, Crónica, and LifeEventCard here.
