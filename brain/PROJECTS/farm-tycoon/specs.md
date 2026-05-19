@@ -9,13 +9,13 @@
 
 ## Current Save Key
 
-`granja-tycoon-save-v11` — bump when any feature changes the store shape.
+`granja-tycoon-save-v12` — bump when any feature changes the store shape.
 
 ---
 
 ## Implemented in Code (34)
 
-Workers · Futures trading · Animal genetics · Machinery overhaul · Random events & NPC farms · World map · Animal shows · Commodity exchange · Encyclopedia search · Fuel system · Onboarding rework · Price alerts UI · Profit preview & help buttons · Regional market · Save export/import · Auction house · Polish (haptics/chart/rivals) · Realistic animal production · Animal production buildings · Transportation · Climate depth & recurring contracts · Compound realism stack · Design system · NPK/drainage/soil rework · Pest & disease cycles · Water system · Co-op mechanics · Animal breeds · Realistic price engine · Electricity system · Processing system · Selling channels · UI rework (navigation) · **Living History System — Phase 1 (timeline engine, 1970–1985 events, shop gating, HUD year)**
+Workers · Futures trading · Animal genetics · Machinery overhaul · Random events & NPC farms · World map · Animal shows · Commodity exchange · Encyclopedia search · Fuel system · Onboarding rework · Price alerts UI · Profit preview & help buttons · Regional market · Save export/import · Auction house · Polish (haptics/chart/rivals) · Realistic animal production · Animal production buildings · Transportation · Climate depth & recurring contracts · Compound realism stack · Design system · NPK/drainage/soil rework · Pest & disease cycles · Water system · Co-op mechanics · Animal breeds · Realistic price engine · Electricity system · Processing system · Selling channels · UI rework (navigation) · **Living History System — Phase 1 (timeline engine, 1970–1985 events, shop gating, HUD year)** · **Phase 2 plan written — awaiting Kimi implementation**
 
 ---
 

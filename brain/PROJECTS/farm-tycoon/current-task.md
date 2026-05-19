@@ -8,37 +8,31 @@
 
 ## 🎯 Mission
 
-**Feature:** Living History System — Phase 1: Timeline Engine
+**Feature:** Living History System — Phase 2: Dynasty Engine
 **Assigned to:** Kimi (implements) → Claude (reviews)
 **Started:** 2026-05-19
-✅ **IMPLEMENTED — Claude reviews next**
+🔵 **PLAN READY — Kimi to implement**
 
 ---
 
-## 📋 What "Done" Looks Like (Phase 1)
+## 📋 What "Done" Looks Like (Phase 2)
 
-- [x] `engine/calendarUtils.ts` — isoDateToGameDay, gameDayToCalendarYear, gameDayToDisplayDate
-- [x] `data/historicalEvents.ts` — HistoricalEvent types + 16 events 1970–1985
-- [x] `data/historicalPrices.ts` — year-indexed real price table 1970–2026 (scaled to game's price scale)
-- [x] `engine/timeline.ts` — advanceTimeline, getTimelineMultiplier, isHistoricallyUnlocked
-- [x] `store/useGameStore.ts` — TimelineState slice added, advanceDay wired
-- [x] Engine gating — organicCert (≥1990), CAP subsidies (≥1992), CSA (≥1984), hedgerow EFA (≥1992)
-- [x] `engine/priceEngine.ts` — uses historical baselines + timeline multipliers
-- [x] Fuel price multiplier applied in advanceDay via `getTimelineMultiplier`
-- [x] `components/NewspaperModal.tsx` — full-screen modal for major events
-- [x] `components/HistoricalToast.tsx` — sliding banner for minor events
-- [x] `components/GameHUD.tsx` — calendar year shown prominently
-- [x] `app/(tabs)/_layout.tsx` — modal + toast mounted, dismiss wired
-- [x] Shop items gated by `isHistoricallyUnlocked()` in `_tienda.tsx`
-- [x] `data/productTypes.ts` — unlockId field + glyphosate + BST treatment
-- [x] `data/machineTypes.ts` — unlockId field + 4WD tractor
-- [x] `data/buildingTypes.ts` — unlockId field for future gates
-- [x] TypeScript clean (`npx tsc --noEmit` → 0 errors)
-- [x] ESLint clean in new files (no errors, only pre-existing warnings)
-- [x] Save key bumped to `granja-tycoon-save-v11`
-- [x] Pushed to GitHub (2 commits)
+- [ ] `engine/dynasty.ts` — types, initial state, annual aging, health decline, handoff detection, skill gain
+- [ ] `data/farmerNames.ts` — pool of first/last name pairs
+- [ ] `engine/legacyScore.ts` — annual legacy delta + handoff contribution
+- [ ] `engine/inheritance.ts` — buildNextFarmer, buildAncestorRecord
+- [ ] `store/useGameStore.ts` — DynastyState slice added, performHandoff + earnKnowledge + triggerVoluntaryHandoff actions, advanceDay wired, save key bumped to v12
+- [ ] `components/office/SettingsSection.tsx` — save key updated v11 → v12
+- [ ] `components/GameHUD.tsx` — farmer name chip + age + health bar in Row 1, tap navigates to Legado tab
+- [ ] `components/HandoffModal.tsx` — full-screen modal on pendingHandoff, wired in app/_layout.tsx
+- [ ] `components/legado/CaracterSection.tsx` — farmer profile, skills grid, knowledge bank, voluntary handoff button
+- [ ] `components/legado/ArbolSection.tsx` — ancestors family tree
+- [ ] `app/(tabs)/legado.tsx` — new Legado tab with Carácter + Árbol sub-tabs
+- [ ] `app/(tabs)/_layout.tsx` — Legado tab registered as 5th visible tab
+- [ ] TypeScript clean (`npx tsc --noEmit` → 0 errors)
+- [ ] ESLint clean in new files
+- [ ] Pushed to GitHub
 - [ ] Claude reviews against spec
-- [ ] Jose approves
 
 ---
 
@@ -47,50 +41,47 @@
 | File | Purpose |
 |------|---------|
 | `docs/superpowers/specs/2026-05-19-living-history-system-design.md` | Full system design — all 3 phases |
-| `docs/superpowers/plans/2026-05-19-phase1-timeline-engine.md` | **Kimi's task list — Phase 1 only** |
+| `docs/superpowers/plans/2026-05-19-phase2-dynasty-engine.md` | **Kimi's task list — Phase 2 only** |
 | `brain/PROJECTS/farm-tycoon/living-history-phases.md` | Phase 2 and 3 approach notes |
 
 ---
 
-## ⚠️ Critical Notes for Claude's Review
+## ⚠️ Critical Notes for Kimi
 
-- [[ai-coding-rules]] (also at `docs/ai-coding-rules.md`)
-- `engine/` directory (singular, not `engines/`)
-- `getYear(day)` in `engine/cooperatives.ts` returns game year (1-based); calendar year = 1969 + getYear(day)
-- 360-day game years, 30-day months — all date conversions use this approximation
-- Do NOT touch `components/EventBanner.tsx` — it handles existing game events (weather/pests). New HistoricalToast is a separate component
-- `activeEvents: GameEvent[]` in store (~line 800) = existing game events. `timeline.activeHistoricalEvents` = new. Do not confuse them.
-- **Historical price scaling:** The plan's price table used a different scale than the game's actual `COMMODITY_BASELINES`. Kimi recomputed all values proportionally so 1970 matches the game's baselines (wheat 0.25, corn 0.19, etc.) and subsequent years follow the plan's relative trends.
-- **Event targets adapted:** The plan used `beef_price`, `pork_price`, `lamb_price` — the game only has `meat` as a commodity. These were mapped to `meat` in the historical price table. `loan_rate` and `land_value` effects exist in events but are NOT yet wired to any engine (the plan didn't specify wiring them in Phase 1).
-- **Shop unlock items added:** Glyphosate (`herbicide_glyphosate_t1`), 4WD Tractor (`tractor_4wd_t1`), and BST (`bst_treatment`) were added to the data files with `unlockId` matching the `UnlockGate` entries in `historicalEvents.ts`.
-- **Hedgerow gating:** Only the annual maintenance + CAP subsidy block is gated (≥1992). Daily maturity updates run regardless since they're just boolean flips.
-- **CSA gating:** Both season-start and weekly fulfillment are gated (≥1984).
-- Save key bumped to `granja-tycoon-save-v11`
+- [[ai-coding-rules]] (also at `docs/ai-coding-rules.md`) — **read before starting**
+- Save key bumps from `granja-tycoon-save-v11` → `granja-tycoon-save-v12`. Also update `SettingsSection.tsx` (both the export and import AsyncStorage key calls).
+- `engine/` files are pure functions only — no store imports. DynastyState gets passed as a parameter.
+- `INITIAL_DYNASTY_STATE` calls `createInitialFarmer(1970)` at module load, which picks a random name from the pool. This is intentional.
+- When inserting the dynasty block into `advanceDay()`, add a `// === DYNASTY ENGINE ===` header comment and do NOT touch any surrounding blocks.
+- New UI components go in `components/legado/` (create the directory). Do NOT put them in `components/office/`.
+- `legado.tsx` is a top-level tab (no underscore prefix) — but DO register it with a `<Tabs.Screen name="legado" .../>` entry in `_layout.tsx` like the other 4 main tabs.
+- The plan's `inheritance.ts` imports `LAST_NAMES` from `'../data/farmerNames'` at the top — use that import directly. Do NOT use `require()`.
+- The `as any` cast on `width: '50%'` style — just use `'50%'` as a string directly; RN accepts `DimensionValue` strings without casting.
+- Dynasty skill effects on gameplay (mentor +15%, knowledge bonuses affecting loan rates etc.) are NOT wired in Phase 2. Define and display them, but don't hook them into the game engines yet — that's Phase 3.
+
+---
+
+## ✅ Phase 1 Status (Complete)
+
+Phase 1 (Timeline Engine) was implemented by Kimi and reviewed. Known non-blocking issues:
+- Only 16 historical events (1970–1985) out of planned ~40 — Phase 2/3 data work
+- `fertiliser_cost`, `loan_rate`, `land_value` effects stored but not consumed — Phase 3
+- Save key is v11
 
 ---
 
 ## 🔗 Phase Roadmap
 
-Phase 1 → Phase 2 → Phase 3. See `living-history-phases.md` for full detail.
+Phase 1 ✅ → **Phase 2 (NOW)** → Phase 3. See `living-history-phases.md` for full detail.
 
 ---
 
 ## 📓 Session Notes
 
-### 2026-05-19 — Full redesign session
+### 2026-05-19 — Design session
 - Brainstormed and designed the entire Living History System with Jose
-- All major decisions made (see decisions.md)
-- Design spec written and approved
-- Phase 1 plan written (14 tasks)
-- Spec + plan committed and pushed to GitHub
-- Kimi will implement Phase 1; Claude reviews afterward
-
-
-### 2026-05-19 — Implementation session (Kimi)
-- All plan tasks implemented
-- 2 commits on `main`:
-  - `0b7ecd0` — feat(timeline): add calendar utils, historical events DB, price table, timeline engine, NewspaperModal, HistoricalToast
-  - `b356bc5` — feat(timeline): wire timeline engine into store, priceEngine, HUD, layout, and shop gating
-- TypeScript compiles clean (`npx tsc --noEmit` → 0 errors)
-- ESLint clean in new files (only pre-existing warnings in legacy files)
-- Ready for Claude's code review against the spec
+- Phase 1 plan written and Kimi implemented it
+- Claude reviewed Phase 1, found 3 non-blocking issues (see Phase 1 Status above)
+- Phase 2 plan written by Claude (`2026-05-19-phase2-dynasty-engine.md`)
+- AI coding rules updated: save key v12, 5th Legado tab, advanceDay block headers, DimensionValue rule, components/legado/ directory
+- All pushed to GitHub (commit 6f889a2)
