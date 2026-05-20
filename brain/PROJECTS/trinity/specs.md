@@ -43,7 +43,7 @@ trinity/
 
 | Command | What it does |
 |---------|-------------|
-| `trinity start [dir]` | Create tmux session, scaffold workspace, launch all agents |
+| `trinity start [dir] [--web]` | Create tmux session, scaffold workspace, launch all agents (and web UI) |
 | `trinity stop` | Kill tmux session |
 | `trinity attach` | Attach to live session (Ctrl+B D to detach) |
 | `trinity broadcast "msg"` | Send same message to all agent panes |
@@ -57,6 +57,13 @@ trinity/
 | `trinity config [key] [val]` | Read/set config |
 | `trinity reset` | Clear .trinity/ workspace |
 | `trinity web [--port N]` | Start web UI on localhost:3777 |
+
+**Flags:**
+| Flag | Applies to | Meaning |
+|------|-----------|---------|
+| `--agents a,b` | start, broadcast, sync | Select which agents participate |
+| `--web` | start | Auto-launch web dashboard in background |
+| `--port N` | start --web, web | Dashboard port (default 3777) |
 
 ---
 
@@ -147,3 +154,4 @@ trinity/
 | Web UI last-sync timestamp | ✅ | Added 2026-05-20 |
 | Web UI textarea composer | ✅ | Added 2026-05-20 |
 | Config persist project_dir | ❌ | Known issue — changing dirs between commands breaks workspace path |
+| Auto-start web from `trinity start --web` | ✅ | Added 2026-05-20 — detached subprocess + PID tracking |

@@ -5,6 +5,23 @@
 
 ---
 
+### Kimi — 2026-05-20 (latest)
+
+- **Did:**
+  - Added `--web` flag to `trinity start` — auto-launches web dashboard as detached background process
+  - Added `_start_web_server()` / `_stop_web_server()` helpers with PID tracking in `~/.trinity/web.pid`
+  - Added `--port` flag (default 3777) usable by both `trinity start --web` and `trinity web`
+  - `trinity stop` now kills both tmux session AND background web server
+  - Updated `print_help()` to show new flags
+  - All committed and pushed to `master` (`f2fd550`)
+
+- **Left off:** Session + web UI can now be started/stopped together from one terminal
+- **Next agent should:** Test `trinity start --web`, verify dashboard opens at `localhost:3777` without needing a second terminal
+
+- **Blockers:** None
+
+---
+
 ### Claude — 2026-05-20
 
 - **Did:**

@@ -60,3 +60,16 @@
 **Why:** Simpler to implement and debug. For a localhost tool, 2s polling has negligible overhead.
 
 **Trade-off:** Not real-time. If agent responds in <2s, update appears slightly delayed. Acceptable.
+
+
+---
+
+## D7 — `--web` flag launches dashboard as detached subprocess (2026-05-20)
+
+**Decision:** `trinity start --web` spawns the Flask server via `subprocess.Popen(start_new_session=True)`, not a thread.
+
+**Why:** `cmd_start()` ends with `os.execvp("tmux", ...)` which replaces the Python process. A thread would die. A detached subprocess survives the exec because it's in a new process group with its own parent (init).
+
+**PID tracking:** `~/.trinity/web.pid` stores the PID so `trinity stop` can `os.kill(pid, 15)` it.
+
+**Trade-off:** Slightly more complex than a thread, but the only way to keep the server alive after tmux attach replaces the parent process.

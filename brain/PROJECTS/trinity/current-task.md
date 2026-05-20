@@ -9,7 +9,7 @@
 
 **Status:** ✅ Completed — waiting for Jose to assign next task
 
-**Completed:** Core broadcast→capture pipeline fixed and web UI improved (2026-05-20)
+**Completed:** `trinity start --web` auto-launches dashboard + `trinity stop` kills both (2026-05-20)
 
 ---
 
@@ -17,7 +17,8 @@
 
 1. Kimi implemented `capture.py`, `write_agent_output`, `/api/sync`, auto-poller, `trinity sync` CLI
 2. Claude fixed scrollback capture (`-S -` flag) and improved web UI
-3. All pushed to `master`
+3. Kimi added `trinity start --web` flag + `--port` + background web server lifecycle
+4. All pushed to `master`
 
 ---
 

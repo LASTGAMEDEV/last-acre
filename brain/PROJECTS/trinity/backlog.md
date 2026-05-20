@@ -29,6 +29,7 @@
 ### I1 — `trinity web` should start `trinity start` if no session running
 - Right now: if you open web UI without starting the session, everything shows "Session Stopped"
 - Improvement: auto-start session on `trinity web`, or prompt user
+- **Partially resolved:** `trinity start --web` now handles the common case (one command starts both)
 
 ### I2 — Output.md should show only the *latest response*, not full session history
 - Right now: `capture_pane -S -` captures everything since the tmux session started
