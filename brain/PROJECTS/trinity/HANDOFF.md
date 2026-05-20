@@ -22,7 +22,27 @@
 
 ---
 
-### Claude — 2026-05-20
+### Claude — 2026-05-20 (session 2)
+
+- **Did:**
+  - Built full project persistence system
+  - New `trinity/projects.py` — global registry at `~/.trinity/projects.json`
+  - `config.py` — now falls back to active project path instead of `os.getcwd()` (fixes the "cd breaks workspace" bug)
+  - `capture.py` — poller resolves workspace from active project each tick (live switching)
+  - `main.py` — `trinity projects`, `trinity switch`, `trinity project rm` commands; auto-registers project on `trinity start`; fixed `_stop_web_server` Windows crash (`os.kill` → `taskkill`)
+  - `server.py` — dynamic `_get_workspace()` per request; `/api/projects` + `/api/projects/switch` endpoints; no server restart needed to switch projects
+  - Web UI — project switcher dropdown in topbar: lists all projects, active/running indicators, click to switch live
+  - All pushed to `master`
+
+- **Left off:** Repo is clean. All 8 files changed in one commit (`f6dcb7c`).
+
+- **Next agent should:** Pick from `backlog.md` — B2 (idle detection reset), I2 (delta capture), or I4 (mobile hamburger) are good next targets
+
+- **Blockers:** None
+
+---
+
+### Claude — 2026-05-20 (session 1)
 
 - **Did:**
   - Audited full repo after Kimi's session

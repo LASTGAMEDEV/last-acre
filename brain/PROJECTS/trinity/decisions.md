@@ -73,3 +73,21 @@
 **PID tracking:** `~/.trinity/web.pid` stores the PID so `trinity stop` can `os.kill(pid, 15)` it.
 
 **Trade-off:** Slightly more complex than a thread, but the only way to keep the server alive after tmux attach replaces the parent process.
+
+---
+
+## D7 — Project registry is global (`~/.trinity/`), not per-project (2026-05-20)
+
+**Decision:** `projects.json` lives in `~/.trinity/` alongside user config, not inside any project's `.trinity/`.
+
+**Why:** The registry needs to be readable from *any* directory. A per-project file would defeat the purpose.
+
+---
+
+## D8 — Web UI project switching without server restart (2026-05-20)
+
+**Decision:** `/api/projects/switch` changes the active project in the registry. The Flask app resolves workspace via `_get_workspace()` on each request, so the switch is instant.
+
+**Why:** Restarting Flask from inside itself is messy (exec tricks, PID files, race conditions). Per-request resolution adds negligible overhead for a localhost tool.
+
+**Trade-off:** Agent cache (TTL=10s) is busted on switch. Poller re-reads active project each tick automatically.

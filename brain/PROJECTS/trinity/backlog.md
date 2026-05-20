@@ -7,10 +7,8 @@
 
 ## 🔴 Bugs
 
-### B1 — Workspace path mismatch when changing directories
-- **Problem:** `Config` uses `os.getcwd()` at instantiation. If user `cd`s between `trinity start` and `trinity broadcast`, the workspace is in the wrong place.
-- **Fix:** Persist `project_dir` in `.trinity/config.json` on `trinity start`, read it back in subsequent commands
-- **Effort:** Small — ~20 lines in `config.py` + `main.py`
+### ~~B1 — Workspace path mismatch when changing directories~~ ✅ FIXED 2026-05-20
+- `projects.py` registry + `Config` fallback to active project path resolves this completely
 
 ### B2 — Poller idle-detection doesn't reset on rapid re-broadcast
 - **Problem:** `_idle_counts` in `PaneCapture` counts consecutive unchanged polls. If user broadcasts twice quickly, the idle clock from the first broadcast might roll into the second and mark "done" prematurely.

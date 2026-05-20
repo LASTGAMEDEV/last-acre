@@ -49,6 +49,9 @@ trinity/
 | `trinity broadcast "msg"` | Send same message to all agent panes |
 | `trinity send agent "msg"` | Send to a specific agent |
 | `trinity sync` | Capture all panes NOW → write output.md ✅ |
+| `trinity projects` | List all saved projects with status & age |
+| `trinity switch <name/num>` | Set active project (all commands target it) |
+| `trinity project rm <name>` | Remove project from registry |
 | `trinity orchestrate "task"` | Adaptive: coordinator decomposes → routes subtasks |
 | `trinity workflow plan.json` | Execute predefined step-by-step plan |
 | `trinity synthesize [--method]` | Merge agent outputs (concat/diff/vote) |
@@ -143,6 +146,11 @@ trinity/
 | Full scrollback capture | ✅ | Fixed 2026-05-20 — added `-S -` to tmux capture-pane |
 | Auto-poll (5s) | ✅ | `PaneCapture.start_auto_poll()` started in `create_app()` |
 | `trinity sync` CLI | ✅ | |
+| Project registry (`~/.trinity/projects.json`) | ✅ | Added 2026-05-20 |
+| `trinity projects` / `switch` / `project rm` | ✅ | Added 2026-05-20 |
+| Auto-register project on `trinity start` | ✅ | Added 2026-05-20 |
+| Live project switching in web UI | ✅ | Added 2026-05-20 — no restart needed |
+| Config falls back to active project (fixes cd bug) | ✅ | Fixed 2026-05-20 |
 | `/api/sync` endpoint | ✅ | |
 | Adaptive orchestration | ✅ | |
 | Workflow mode | ✅ | |

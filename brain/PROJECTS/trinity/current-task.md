@@ -1,4 +1,3 @@
-
 # TRINITY — current-task.md
 
 > What are we working on RIGHT NOW? One task at a time.
@@ -9,22 +8,26 @@
 
 **Status:** ✅ Completed — waiting for Jose to assign next task
 
-**Completed:** `trinity start --web` auto-launches dashboard + `trinity stop` kills both (2026-05-20)
+**Completed:** Project persistence + switcher (2026-05-20)
 
 ---
 
 ## What Was Done This Session
 
-1. Kimi implemented `capture.py`, `write_agent_output`, `/api/sync`, auto-poller, `trinity sync` CLI
-2. Claude fixed scrollback capture (`-S -` flag) and improved web UI
-3. Kimi added `trinity start --web` flag + `--port` + background web server lifecycle
-4. All pushed to `master`
+1. `projects.py` — global registry at `~/.trinity/projects.json`
+2. `config.py` — falls back to active project (fixes cd-between-commands bug)
+3. `capture.py` — poller tracks active project dynamically
+4. `main.py` — `trinity projects`, `trinity switch`, `trinity project rm`; auto-register on start; Windows-safe stop
+5. `server.py` — dynamic workspace per request, `/api/projects`, `/api/projects/switch`
+6. Web UI — project switcher dropdown in topbar, live switching, no restart needed
+7. All pushed to `master` (commit `f6dcb7c`)
 
 ---
 
 ## Up Next (pick from backlog.md)
 
 Suggested priorities:
-1. **B1** — Fix workspace path mismatch (small, high impact for multi-dir users)
-2. **I2** — Per-response delta capture (write only the latest response to output.md, not full session history)
-3. **I1** — Auto-start session from `trinity web` if none running
+1. **B2** — Fix idle detection reset on rapid re-broadcast
+2. **I2** — Per-response delta capture (write only the latest response to output.md)
+3. **I4** — Mobile hamburger button for sidebar
+4. **I3** — Smarter “done” detection (prompt-pattern based, not 30s timer)
