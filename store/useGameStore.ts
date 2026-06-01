@@ -174,6 +174,16 @@ import { rollEvent, calcRepairCost, calcRepairDays, getHarvestModifier } from '.
 import { NPCFarmRuntime, initNpcFarms, npcSellVolume, npcAuctionBid } from '../engine/competitors';
 import { tickAllPrices, updateNpcProductionMultipliers, ActiveShock } from '../engine/priceEngine';
 import { advanceTimeline, clearPendingDisplayEvent, getTimelineMultiplier, INITIAL_TIMELINE_STATE, TimelineState } from '../engine/timeline';
+import {
+  DynastyState,
+  INITIAL_DYNASTY_STATE,
+  KNOWLEDGE_CATALOGUE,
+  KnowledgeEntry,
+  advanceDynastyYear,
+  farmerAge,
+} from '../engine/dynasty';
+import { buildAncestorRecord, buildNextFarmer } from '../engine/inheritance';
+import { annualLegacyDelta, handoffLegacyContribution } from '../engine/legacyScore';
 import { HISTORICAL_EVENTS } from '../data/historicalEvents';
 import { getHistoricalBaseline } from '../data/historicalPrices';
 import { gameDayToCalendarYear } from '../engine/calendarUtils';
@@ -803,6 +813,8 @@ export interface GameState {
   breedingPairs: Record<string, string>; // femaleId → preferred maleId
   activeEvents: GameEvent[];
   timeline: TimelineState;
+  dynasty: DynastyState;
+  dynastyAuctionWins: number;
   machineRepairs: MachineRepair[];
   attachments: OwnedAttachment[];
   trailers: OwnedTrailer[];
@@ -942,6 +954,9 @@ export interface GameState {
   advanceDay: () => void;
   advanceDays: (n: number) => void;
   setTimeline: (tl: TimelineState) => void;
+  performHandoff: () => void;
+  earnKnowledge: (id: string) => void;
+  triggerVoluntaryHandoff: () => void;
   assignHydrogeologist: (parcelId: string) => void;
   startDrilling: (wellId: string, spotId: string, targetFlowRate: number) => void;
   installPump: (wellId: string, pumpTier: 1 | 2 | 3) => void;
@@ -1429,6 +1444,8 @@ function makeInitialState() {
     cropQualityMap: {} as Record<string, number>,
     activeEvents: [] as GameEvent[],
     timeline: INITIAL_TIMELINE_STATE,
+    dynasty: INITIAL_DYNASTY_STATE,
+    dynastyAuctionWins: 0,
     machineRepairs: [] as MachineRepair[],
     npcFarms: initNpcFarms(),
     rivalNews: [] as RivalNewsItem[],
@@ -1568,6 +1585,60 @@ export const useGameStore = create<GameState>()(
         // ── Historical Timeline ───────────────────────────────────────────────
         const newTimeline = advanceTimeline(state.timeline, newDay, HISTORICAL_EVENTS);
         const calYear = gameDayToCalendarYear(newDay);
+        const prevCalYear = gameDayToCalendarYear(state.day);
+        const isNewYear = calYear > prevCalYear;
+
+        let newDynasty = state.dynasty ?? INITIAL_DYNASTY_STATE;
+        if (isNewYear) {
+          const ownedHectares = state.parcels
+            .filter(p => p.owned)
+            .reduce((sum, parcel) => sum + parcel.hectares, 0);
+          const hasDebt = state.loans.some(loan => !loan.paid && !loan.defaulted);
+          const { dynasty: advanced, triggerHandoff, handoffCause } = advanceDynastyYear(
+            newDynasty,
+            calYear,
+            {
+              hasPlantedCrops: state.parcels.some(p => p.owned && p.plantedCrop !== null),
+              hasAnimals: state.animals.length > 0,
+              hasMachines: state.machines.length > 0,
+              hasLoans: hasDebt,
+            }
+          );
+
+          newDynasty = {
+            ...advanced,
+            legacyScore: advanced.legacyScore + annualLegacyDelta({
+              ownedHectares,
+              hasDebt,
+              knowledgeBankSize: advanced.knowledgeBank.length,
+            }),
+            pendingHandoff: triggerHandoff ? true : advanced.pendingHandoff,
+            pendingHandoffCause: triggerHandoff ? handoffCause : advanced.pendingHandoffCause,
+          };
+
+          const alreadyEarned = (id: string) => newDynasty.knowledgeBank.some(entry => entry.id === id);
+          const idsToEarn: string[] = [];
+          if (!alreadyEarned('land-builder') && ownedHectares >= 100) idsToEarn.push('land-builder');
+          if (!alreadyEarned('organic-mastery') && state.parcels.some(p => p.owned && p.organicStatus === 'organic')) {
+            idsToEarn.push('organic-mastery');
+          }
+          if (!alreadyEarned('auction-eye') && (state.dynastyAuctionWins ?? 0) >= 5) idsToEarn.push('auction-eye');
+
+          if (idsToEarn.length > 0) {
+            const newEntries: KnowledgeEntry[] = idsToEarn
+              .map(id => KNOWLEDGE_CATALOGUE.find(entry => entry.id === id))
+              .filter((entry): entry is KnowledgeEntry => entry !== undefined);
+
+            newDynasty = {
+              ...newDynasty,
+              currentFarmer: {
+                ...newDynasty.currentFarmer,
+                unlockedKnowledge: [...newDynasty.currentFarmer.unlockedKnowledge, ...idsToEarn],
+              },
+              knowledgeBank: [...newDynasty.knowledgeBank, ...newEntries],
+            };
+          }
+        }
 
         const season = getSeason(newDay);
         const rawWorkerBonuses = getWorkerBonuses(state.workers ?? []);
@@ -3136,6 +3207,7 @@ export const useGameStore = create<GameState>()(
         const auctionAnimalAdditions: OwnedAnimal[] = [];
         const auctionInventoryDelta: Record<string, number> = {};
         const auctionMachineAdditions: OwnedMachine[] = [];
+        let dynastyAuctionWinsDelta = 0;
 
         // Animal event: resolve on nextAnimalAuctionDay
         const isAnimalEventDay = newDay >= state.nextAnimalAuctionDay;
@@ -3221,6 +3293,7 @@ export const useGameStore = create<GameState>()(
           const playerSold = reserveMet && listing.sellerId === 'player' && listing.currentBid > listing.startingBid;
 
           if (playerWon) {
+            dynastyAuctionWinsDelta += 1;
             auctionMoneyDelta -= listing.playerBid!;
             if (listing.category === 'land' && listing.parcel) {
               auctionParcelAdditions.push({ ...listing.parcel, owned: true });
@@ -5872,6 +5945,7 @@ export const useGameStore = create<GameState>()(
         set({
           day: newDay,
           timeline: newTimeline,
+          dynasty: newDynasty,
           wells: updatedWells,
           aquiferLevel: newAquifer,
           showWindowOpen,
@@ -5901,6 +5975,7 @@ export const useGameStore = create<GameState>()(
           newsEvents,
           activeFair,
           listings: trimmedListings,
+          dynastyAuctionWins: (state.dynastyAuctionWins ?? 0) + dynastyAuctionWinsDelta,
           nextAnimalAuctionDay,
           animals: [...animals, ...auctionAnimalAdditions],
           machines: [...(state.machines ?? []), ...auctionMachineAdditions],
@@ -6056,6 +6131,82 @@ export const useGameStore = create<GameState>()(
 
       setTimeline: (tl: TimelineState) => {
         set({ timeline: tl });
+      },
+
+      performHandoff: () => {
+        const state = get();
+        const dynasty = state.dynasty ?? INITIAL_DYNASTY_STATE;
+        if (!dynasty.pendingHandoff || !dynasty.pendingHandoffCause) return;
+
+        const calYear = gameDayToCalendarYear(state.day);
+        const ownedHectares = state.parcels
+          .filter(p => p.owned)
+          .reduce((sum, parcel) => sum + parcel.hectares, 0);
+        const hasDebt = state.loans.some(loan => !loan.paid && !loan.defaulted);
+        const startYear = dynasty.ancestors.length === 0
+          ? 1970
+          : dynasty.ancestors[dynasty.ancestors.length - 1].endYear;
+
+        const legacyContribution = handoffLegacyContribution(
+          dynasty.currentFarmer,
+          startYear,
+          calYear,
+          { ownedHectares, hasDebt }
+        );
+        const ancestor = buildAncestorRecord(
+          dynasty.currentFarmer,
+          dynasty.pendingHandoffCause,
+          startYear,
+          calYear,
+          legacyContribution,
+          state.timeline.firedEventIds.slice(-10)
+        );
+        const newFarmer = buildNextFarmer(calYear, dynasty.knowledgeBank, dynasty.currentFarmer);
+        const cause = dynasty.pendingHandoffCause;
+        const shouldMentor = cause !== 'death' && farmerAge(dynasty.currentFarmer, calYear) < 72;
+        const mentorExpiryYears = 3 + Math.floor(Math.random() * 3);
+
+        set({
+          dynasty: {
+            ...dynasty,
+            legacyScore: dynasty.legacyScore + legacyContribution,
+            currentFarmer: newFarmer,
+            ancestors: [...dynasty.ancestors, ancestor],
+            pendingHandoff: false,
+            pendingHandoffCause: null,
+            mentorFarmer: shouldMentor ? { ...dynasty.currentFarmer, isRetired: true } : null,
+            mentorExpiresYear: shouldMentor ? calYear + mentorExpiryYears : null,
+          },
+        });
+      },
+
+      earnKnowledge: (id: string) => {
+        const state = get();
+        const dynasty = state.dynasty ?? INITIAL_DYNASTY_STATE;
+        if (dynasty.knowledgeBank.some(entry => entry.id === id)) return;
+        const entry = KNOWLEDGE_CATALOGUE.find(item => item.id === id);
+        if (!entry) return;
+
+        set({
+          dynasty: {
+            ...dynasty,
+            currentFarmer: {
+              ...dynasty.currentFarmer,
+              unlockedKnowledge: [...dynasty.currentFarmer.unlockedKnowledge, id],
+            },
+            knowledgeBank: [...dynasty.knowledgeBank, entry],
+          },
+        });
+      },
+
+      triggerVoluntaryHandoff: () => {
+        set(state => ({
+          dynasty: {
+            ...(state.dynasty ?? INITIAL_DYNASTY_STATE),
+            pendingHandoff: true,
+            pendingHandoffCause: 'voluntary_handoff',
+          },
+        }));
       },
 
       buyParcel: (parcelId) => {
@@ -9904,36 +10055,9 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'granja-tycoon-save-v11',
-      version: 7,
-      migrate: (persistedState: any, version: number) => {
-        if (version < 7) {
-          const old = persistedState as any;
-          const oldCoop = old.cooperative ?? null;
-          let coopMemberships: Partial<Record<CoopId, CoopMembership>> = {};
-          if (oldCoop?.member === true) {
-            coopMemberships.grain = {
-              shares: 10,
-              sharePrice: 80,
-              joinDay: oldCoop.joinDay ?? 1,
-              pendingRedemption: null,
-              offenceHistory: [],
-              seasonDelivered: 0,
-              seasonObligation: 0,
-              suspendedUntilSeason: null,
-            };
-          }
-          return {
-            ...old,
-            cooperative: null,
-            coopMemberships,
-            coopStates: {
-              grain: makeInitialCoopState('grain'),
-              horticulture: makeInitialCoopState('horticulture'),
-              livestock: makeInitialCoopState('livestock'),
-            },
-          };
-        }
+      name: 'granja-tycoon-save-v12',
+      version: 8,
+      migrate: (persistedState: any) => {
         return persistedState;
       },
       storage: createJSONStorage(() => {
@@ -9983,6 +10107,7 @@ export const useGameStore = create<GameState>()(
           buyFarmShopUpgrade, setShopHours, assignShopWorker, unassignShopWorker,
           toggleOnlineShop, setOnlineAllocation, toggleFarmCafe,
           assignCafeWorker, unassignCafeWorker, enterAgriculturalShow,
+          performHandoff, earnKnowledge, triggerVoluntaryHandoff,
           ...dataState
         } = state;
         return {
@@ -10003,6 +10128,8 @@ export const useGameStore = create<GameState>()(
         state.sickBayCapacity      = (b.includes('bld_isolation_sick_bay_s') ? 5 : 0) +
                                       (b.includes('bld_isolation_sick_bay_m') ? 15 : 0);
         state.sirePenAnimalIds     = state.sirePenAnimalIds ?? [];
+        state.dynasty              = state.dynasty ?? INITIAL_DYNASTY_STATE;
+        state.dynastyAuctionWins   = state.dynastyAuctionWins ?? 0;
         state.slurryCapacity       = (b.includes('bld_slurry_tank_s') ? 5000 : 0) +
                                       (b.includes('bld_slurry_tank_m') ? 15000 : 0) +
                                       (b.includes('bld_slurry_tank_l') ? 40000 : 0);

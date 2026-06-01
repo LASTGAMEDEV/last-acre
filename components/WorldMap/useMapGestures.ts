@@ -1,5 +1,5 @@
 import { useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
-import { Gesture } from 'react-native-gesture-handler';
+import { Gesture, PanGestureEventPayload, PinchGestureEventPayload, TapGestureEventPayload } from 'react-native-gesture-handler';
 import { CANVAS_W, CANVAS_H } from './MapCanvas';
 
 export const MIN_ZOOM = 0.4;
@@ -80,7 +80,7 @@ export function useMapGestures({ screenW, screenH, initialX = 0, initialY = 0, i
       savedX.value = translateX.value;
       savedY.value = translateY.value;
     })
-    .onUpdate((e) => {
+    .onUpdate((e: PanGestureEventPayload) => {
       const nx = savedX.value + e.translationX;
       const ny = savedY.value + e.translationY;
       const clamped = clampTranslate(nx, ny, scale.value, screenW, screenH);
@@ -97,7 +97,7 @@ export function useMapGestures({ screenW, screenH, initialX = 0, initialY = 0, i
       savedX.value     = translateX.value;
       savedY.value     = translateY.value;
     })
-    .onUpdate((e) => {
+    .onUpdate((e: PinchGestureEventPayload) => {
       const newScale = clamp(savedScale.value * e.scale, MIN_ZOOM, MAX_ZOOM);
       const r  = newScale / savedScale.value;
       const fx = e.focalX;
@@ -117,7 +117,7 @@ export function useMapGestures({ screenW, screenH, initialX = 0, initialY = 0, i
 
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
-    .onEnd((e) => {
+    .onEnd((e: TapGestureEventPayload) => {
       if (scale.value < 0.9) {
         // Zoom in to tapped point
         const targetScale = 1.2;

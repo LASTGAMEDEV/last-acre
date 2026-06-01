@@ -1,10 +1,12 @@
 // components/GameHUD.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useGameStore } from '../store/useGameStore';
 import { getSeason, WeatherEvent } from '../engine/climate';
 import { gameDayToCalendarYear } from '../engine/calendarUtils';
-import { SEASON_THEME, C, S, F, R, MIN_TOUCH } from '../constants/theme';
+import { farmerAge } from '../engine/dynasty';
+import { SEASON_THEME, C, S, F, R } from '../constants/theme';
 import { MACHINE_TYPES } from '../data/machineTypes';
 import { BUILDING_TYPES } from '../data/buildingTypes';
 import type { CoopId } from '../engine/cooperativeTypes';
@@ -31,16 +33,21 @@ const EVENT_ICONS: Record<string, string> = { heat_wave: '🌡️', flood: '🌊
 const EVENT_NAMES: Record<string, string> = { heat_wave: 'Heat Wave', flood: 'Flood', frost: 'Frost' };
 
 export default function GameHUD() {
+  const router = useRouter();
   const {
     money, day, savings, loans, contracts, seasonalEvent,
     farmName, workers, machines, buildings,
-    advanceDays,
     todayWeather, recurringContracts, buyers,
     coopMemberships,
+    dynasty,
   } = useGameStore();
 
   const season = getSeason(day);
   const calYear = gameDayToCalendarYear(day);
+  const farmer = dynasty.currentFarmer;
+  const age = farmerAge(farmer, calYear);
+  const healthPct = Math.max(0, Math.min(100, farmer.health));
+  const healthColor = healthPct >= 60 ? '#4caf50' : healthPct >= 30 ? '#ff9800' : '#ef5350';
   const theme = SEASON_THEME[season];
 
   const daysIntoSeason = (day % (SEASON_DAYS * 4)) % SEASON_DAYS;
@@ -106,6 +113,12 @@ export default function GameHUD() {
           )}
           <View style={styles.yearBadge}>
             <Text style={styles.yearText}>{calYear}</Text>
+          </View>
+          <TouchableOpacity style={hudStyles.farmerChip} onPress={() => router.push('/(tabs)/legado')}>
+            <Text style={hudStyles.farmerName}>{farmer.firstName} · {age}y</Text>
+          </TouchableOpacity>
+          <View style={hudStyles.healthBarTrack}>
+            <View style={[hudStyles.healthBarFill, { width: `${healthPct}%`, backgroundColor: healthColor }]} />
           </View>
           <Text style={styles.dayNum}>Day {day}</Text>
         </View>
@@ -275,4 +288,8 @@ const styles = StyleSheet.create({
 const hudStyles = StyleSheet.create({
   coopBadge: { backgroundColor: '#1565c0', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2, marginLeft: 4 },
   coopBadgeText: { color: '#ffffff', fontSize: 10, fontWeight: 'bold' },
+  farmerChip: { backgroundColor: '#1a2a1a', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  farmerName: { color: '#a5d6a7', fontSize: 9, fontWeight: 'bold' },
+  healthBarTrack: { width: 36, height: 5, backgroundColor: '#222', borderRadius: 3, overflow: 'hidden' },
+  healthBarFill: { height: '100%', borderRadius: 3 },
 });

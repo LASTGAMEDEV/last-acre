@@ -24,13 +24,13 @@ Run from `granja-tycoon/`. Never commit with TypeScript errors.
 
 ## Navigation Architecture — READ THIS CAREFULLY
 
-There are exactly **5 top-level tabs** + a center Advance Day button. Do not add new ones.
+There are exactly **5 top-level tabs** + a center Advance Day button. Do not add new ones without discussing the navigation change first.
 
 ```
 Farm  |  Ops  |  ▶ Advance Day  |  Market  |  Office  |  Legado
 ```
 
-The **Legado** tab was added in Phase 2 of the Living History System. It hosts the dynasty/family sub-tabs (Carácter, Árbol, and eventually Familia + Crónica in Phase 3).
+The **Legado** tab hosts the dynasty/family sub-tabs: Caracter and Arbol now, with Familia and Cronica planned later.
 
 Each top-level tab (`farm.tsx`, `ops.tsx`, `market.tsx`, `office.tsx`) is a **hub
 screen** that hosts scrollable sub-tabs via `<SubTabBar>`.
@@ -213,7 +213,7 @@ To keep them in sync:
 - Do not create new standalone screen files in pp/ for features that belong inside
   an existing tab. New UI goes in components/ as a component, then gets imported
   into the relevant hub screen (arm.tsx, ops.tsx, market.tsx, office.tsx).
-- Do not add a 5th top-level tab without discussing it first.
+- Do not add another top-level tab without discussing it first.
 - Do not rename save-critical ID strings (enclosure types, insurance types, building IDs).
 - Do not remove or bypass `partialize` from the Zustand persist config.
 - Do not modify `metro.config.js` without understanding the web compatibility reason.

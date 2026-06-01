@@ -77,6 +77,7 @@ export default function TabLayout() {
         <Tabs.Screen name="ops"    options={{ title: 'Ops',    tabBarLabel: '⚙️ Ops' }} />
         <Tabs.Screen name="market" options={{ title: 'Market', tabBarLabel: '📈 Market' }} />
         <Tabs.Screen name="office" options={{ title: 'Office', tabBarLabel: '🏦 Office', tabBarBadge: officeBadge }} />
+        <Tabs.Screen name="legado" options={{ title: 'Legado', tabBarLabel: 'Legado' }} />
         {/* Sub-tab screens — hidden from tab bar, imported directly into hub screens */}
         <Tabs.Screen name="_agua"         options={{ href: null }} />
         <Tabs.Screen name="_animales"     options={{ href: null }} />

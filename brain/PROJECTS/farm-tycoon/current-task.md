@@ -17,20 +17,20 @@
 
 ## 📋 What "Done" Looks Like (Phase 2)
 
-- [ ] `engine/dynasty.ts` — types, initial state, annual aging, health decline, handoff detection, skill gain
-- [ ] `data/farmerNames.ts` — pool of first/last name pairs
-- [ ] `engine/legacyScore.ts` — annual legacy delta + handoff contribution
-- [ ] `engine/inheritance.ts` — buildNextFarmer, buildAncestorRecord
-- [ ] `store/useGameStore.ts` — DynastyState slice added, performHandoff + earnKnowledge + triggerVoluntaryHandoff actions, advanceDay wired, save key bumped to v12
-- [ ] `components/office/SettingsSection.tsx` — save key updated v11 → v12
-- [ ] `components/GameHUD.tsx` — farmer name chip + age + health bar in Row 1, tap navigates to Legado tab
-- [ ] `components/HandoffModal.tsx` — full-screen modal on pendingHandoff, wired in app/_layout.tsx
-- [ ] `components/legado/CaracterSection.tsx` — farmer profile, skills grid, knowledge bank, voluntary handoff button
-- [ ] `components/legado/ArbolSection.tsx` — ancestors family tree
-- [ ] `app/(tabs)/legado.tsx` — new Legado tab with Carácter + Árbol sub-tabs
-- [ ] `app/(tabs)/_layout.tsx` — Legado tab registered as 5th visible tab
-- [ ] TypeScript clean (`npx tsc --noEmit` → 0 errors)
-- [ ] ESLint clean in new files
+- [x] `engine/dynasty.ts` — types, initial state, annual aging, health decline, handoff detection, skill gain
+- [x] `data/farmerNames.ts` — pool of first/last name pairs
+- [x] `engine/legacyScore.ts` — annual legacy delta + handoff contribution
+- [x] `engine/inheritance.ts` — buildNextFarmer, buildAncestorRecord
+- [x] `store/useGameStore.ts` — DynastyState slice added, performHandoff + earnKnowledge + triggerVoluntaryHandoff actions, advanceDay wired, save key bumped to v12
+- [x] `components/office/SettingsSection.tsx` — save key updated v11 → v12
+- [x] `components/GameHUD.tsx` — farmer name chip + age + health bar in Row 1, tap navigates to Legado tab
+- [x] `components/HandoffModal.tsx` — full-screen modal on pendingHandoff, wired in app/_layout.tsx
+- [x] `components/legado/CaracterSection.tsx` — farmer profile, skills grid, knowledge bank, voluntary handoff button
+- [x] `components/legado/ArbolSection.tsx` — ancestors family tree
+- [x] `app/(tabs)/legado.tsx` — new Legado tab with Caracter + Arbol sub-tabs
+- [x] `app/(tabs)/_layout.tsx` — Legado tab registered as 5th visible tab
+- [x] TypeScript clean (`npx tsc --noEmit` → 0 errors)
+- [x] ESLint clean in new files
 - [ ] Pushed to GitHub
 - [ ] Claude reviews against spec
 
@@ -66,13 +66,13 @@
 Phase 1 (Timeline Engine) was implemented by Kimi and reviewed. Known non-blocking issues:
 - Only 16 historical events (1970–1985) out of planned ~40 — Phase 2/3 data work
 - `fertiliser_cost`, `loan_rate`, `land_value` effects stored but not consumed — Phase 3
-- Save key is v11
+- Save key is v12
 
 ---
 
 ## 🔗 Phase Roadmap
 
-Phase 1 ✅ → **Phase 2 (NOW)** → Phase 3. See `living-history-phases.md` for full detail.
+Phase 1 ✅ → Phase 2 ✅ → **Phase 3 (NEXT)**. See `living-history-phases.md` for full detail.
 
 ---
 

@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import HandoffModal from '../components/HandoffModal';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -21,6 +22,7 @@ export default function RootLayout() {
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           <Stack.Screen name="world-map" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
         </Stack>
+        <HandoffModal />
         <StatusBar style="auto" />
       </ThemeProvider>
     </GestureHandlerRootView>

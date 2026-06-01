@@ -1,50 +1,53 @@
-# Welcome to your Expo app 👋
+# Last Acre
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Last Acre is a realistic farming simulation game built mobile-first with Expo, React Native, Expo Router, TypeScript, and Zustand.
 
-## Get started
+The current prototype is a synchronous, tick-based farming game: one press of **Advance Day** runs the daily simulation for crops, livestock, workers, market prices, contracts, weather, processing, electricity, soil, pests, storage quality, cooperatives, and historical events.
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run Locally
 
 ```bash
-npm run reset-project
+npm install
+npm run start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Useful scripts:
 
-## Learn more
+```bash
+npm run android
+npm run ios
+npm run web
+npm run lint
+npx tsc --noEmit
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Project Shape
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- `app/(tabs)/` — Expo Router screens. The visible tabs are Farm, Ops, Market, Office, and Legado.
+- `components/` — reusable UI sections, modals, HUD, world map, and tab content.
+- `store/useGameStore.ts` — central Zustand game state and actions.
+- `engine/` — pure simulation helpers and game formulas.
+- `data/` — static crops, products, buildings, machinery, prices, events, and NPC data.
+- `types/` — shared TypeScript types and local package declaration shims.
+- `docs/` — feature specs, implementation plans, and AI coding rules.
 
-## Join the community
+## Verification
 
-Join our community of developers creating universal apps.
+Before handing off code, run:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+npx tsc --noEmit
+npm run lint
+```
+
+There is currently no automated test suite.
+
+## Persistence
+
+Game saves use the current storage key:
+
+```text
+granja-tycoon-save-v12
+```
+
+Do not rename persisted IDs or remove the Zustand `partialize` block without a deliberate save migration.
