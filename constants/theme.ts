@@ -16,6 +16,7 @@ export const F = {
     xs:    10,
     sm:    12,
     md:    13,
+    body:  14,
     lg:    14,
     xl:    16,
     xxl:   18,
@@ -33,9 +34,9 @@ export const F = {
 export const R = {
   xs:   4,
   sm:   6,
-  md:   8,
-  lg:   12,
-  xl:   16,
+  md:   10,
+  lg:   14,
+  xl:   20,
   pill: 999,
 } as const;
 
@@ -48,84 +49,88 @@ export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
 
 export const SEASON_THEME: Record<Season, {
   icon: string;
-  accent: string;       // primary season color
-  accentSoft: string;   // tinted background panels
-  tabBar: string;       // tab bar background
-  badge: string;        // season badge bg
+  accent: string;
+  accentSoft: string;
+  tabBar: string;
+  badge: string;
   badgeText: string;
 }> = {
   spring: {
     icon: '🌸',
-    accent:     '#4caf50',
-    accentSoft: '#0d1f0d',
-    tabBar:     '#0a1a0a',
-    badge:      '#1b3a1b',
-    badgeText:  '#81c784',
+    accent:     '#22c55e',
+    accentSoft: '#0a1f0d',
+    tabBar:     '#060e0a',
+    badge:      '#0f2a14',
+    badgeText:  '#86efac',
   },
   summer: {
     icon: '☀️',
-    accent:     '#c8860a',
-    accentSoft: '#1f1600',
-    tabBar:     '#1a1200',
-    badge:      '#3a2800',
-    badgeText:  '#ffd54f',
+    accent:     '#f59e0b',
+    accentSoft: '#1a1200',
+    tabBar:     '#0e0a00',
+    badge:      '#2a1a00',
+    badgeText:  '#fcd34d',
   },
   autumn: {
     icon: '🍂',
-    accent:     '#e64a19',
-    accentSoft: '#1f0d00',
-    tabBar:     '#1a0d00',
-    badge:      '#3a1500',
-    badgeText:  '#ffab91',
+    accent:     '#f97316',
+    accentSoft: '#1a0c00',
+    tabBar:     '#0e0600',
+    badge:      '#2a0f00',
+    badgeText:  '#fdba74',
   },
   winter: {
     icon: '❄️',
-    accent:     '#42a5f5',
+    accent:     '#3b82f6',
     accentSoft: '#001525',
-    tabBar:     '#001020',
-    badge:      '#001f35',
-    badgeText:  '#90caf9',
+    tabBar:     '#00060e',
+    badge:      '#001a2e',
+    badgeText:  '#93c5fd',
   },
 };
 
 // ── Shared palette ───────────────────────────────────────────────────────────
 
 export const C = {
-  // Backgrounds
-  bg:        '#0d1a0d',
-  bgCard:    '#142014',
-  bgDeep:    '#0a1a0a',
-  bgInput:   '#0a1a0a',
+  // ── Backgrounds ──────────────────────────────────────────────
+  bg:          '#0a0e1a',
+  bgCard:      '#111827',
+  bgDeep:      '#060a14',
+  bgInput:     '#0f1729',
+  bgElevated:  '#1e293b',
+  surface:     '#162032',
 
-  // Text
-  text:      '#c8e6c9',
-  textDim:   '#81c784',
-  textMuted: '#6a9a6a',
-  textFaint: '#4a6e4a',
+  // ── Text ─────────────────────────────────────────────────────
+  text:        '#f1f5f9',
+  textDim:     '#94a3b8',
+  textMuted:   '#64748b',
+  textFaint:   '#475569',
 
-  // Legacy aliases (backwards compat — migrate to text/textDim/textMuted/textFaint)
-  gold:      '#c8e6c9',   // → C.text
-  goldDim:   '#81c784',   // → C.textDim
-  white:     '#ffffff',
-  muted:     '#6a9a6a',   // → C.textMuted
-  faint:     '#4a6e4a',   // → C.textFaint
-  dim:       '#81c784',   // → C.textDim
+  // ── Legacy aliases ───────────────────────────────────────────
+  gold:        '#f1f5f9',
+  goldDim:     '#94a3b8',
+  white:       '#ffffff',
+  muted:       '#64748b',
+  faint:       '#475569',
+  dim:         '#94a3b8',
 
-  // Semantic
-  green:     '#4caf50',
-  greenDark: '#2e7d32',
-  greenSoft: '#81c784',
-  red:       '#ef5350',
-  redDark:   '#b71c1c',
-  amber:     '#ffa726',
-  blue:      '#2196f3',
-  purple:    '#9c27b0',
-  orange:    '#ff9800',
-  gray:      '#9e9e9e',
+  // ── Semantic ─────────────────────────────────────────────────
+  green:       '#22c55e',
+  greenDark:   '#15803d',
+  greenSoft:   '#86efac',
+  amber:       '#f59e0b',
+  amberDark:   '#b45309',
+  amberSoft:   '#fcd34d',
+  red:         '#ef4444',
+  redDark:     '#991b1b',
+  blue:        '#3b82f6',
+  purple:      '#a855f7',
+  orange:      '#f97316',
+  gray:        '#9e9e9e',
 
-  // Dividers
-  divider:   '#1b3a1b',
-  border:    '#1b3a1b',
+  // ── Borders ──────────────────────────────────────────────────
+  border:      '#1e293b',
+  divider:     '#1e293b',
 };
 
 // ── Tier colors ──────────────────────────────────────────────────────────────
