@@ -17,7 +17,7 @@ export const F = {
     sm:    12,
     md:    13,
     body:  14,
-    lg:    14,
+    lg:    15,
     xl:    16,
     xxl:   18,
     title: 22,
@@ -129,8 +129,9 @@ export const C = {
   gray:        '#9e9e9e',
 
   // ── Borders ──────────────────────────────────────────────────
-  border:      '#1e293b',
-  divider:     '#1e293b',
+  border:      '#2d4060',
+  divider:     '#2d4060',
+  // border and divider are intentionally identical — both kept for backwards compat
 };
 
 // ── Tier colors ──────────────────────────────────────────────────────────────
