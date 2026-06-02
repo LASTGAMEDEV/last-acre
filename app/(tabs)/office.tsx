@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import DashboardSection from '../../components/office/DashboardSection';
 import BankingSection from '../../components/office/BankingSection';
 import InsuranceSection from '../../components/office/InsuranceSection';
@@ -14,7 +14,7 @@ import CSASection from '../../components/office/CSASection';
 import Encyclopedia from '../../components/Encyclopedia';
 import SettingsSection from '../../components/office/SettingsSection';
 import SubTabBar from '../../components/SubTabBar';
-import { C } from '../../constants/theme';
+import { C, F, R, S } from '../../constants/theme';
 
 type OfficeTab = 'dashboard' | 'banking' | 'insurance' | 'coop' | 'rivals' | 'reputation' | 'achievements' | 'subsidies' | 'certifications' | 'land' | 'csa' | 'guide' | 'settings';
 
@@ -39,6 +39,9 @@ export default function OfficeScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider }}>
+        <Text style={{ color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy }}>Office</Text>
+      </View>
       <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as OfficeTab)} />
       {tab === 'dashboard'       && <DashboardSection />}
       {tab === 'banking'         && <BankingSection />}
