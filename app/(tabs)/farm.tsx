@@ -8,6 +8,7 @@ import ClimaScreen from './_clima';
 import HenilAndBuildingsSection from '../../components/farm/HenilAndBuildingsSection';
 import PrecisionTab from '../../components/farm/PrecisionTab';
 import SubTabBar from '../../components/SubTabBar';
+import DayOneChecklist from '../../components/tutorial/DayOneChecklist';
 import { C } from '../../constants/theme';
 
 type FarmTab = 'fields' | 'animals' | 'henil' | 'precision' | 'water' | 'calendar' | 'weather';
@@ -27,6 +28,7 @@ export default function FarmScreen() {
 
   return (
     <View style={styles.container}>
+      <DayOneChecklist />
       <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as FarmTab)} />
       {tab === 'fields'    && <TierrasScreen />}
       {tab === 'animals'   && <AnimalesScreen />}
