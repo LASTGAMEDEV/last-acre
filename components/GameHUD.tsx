@@ -14,15 +14,26 @@ import type { CoopId } from '../engine/cooperativeTypes';
 const WARN_DAYS = 7;
 const SEASON_DAYS = 90;
 
+// Weather-specific colours (not in global theme palette)
+const WEATHER_COLORS = {
+  sunnyBg:    '#2a1a00',
+  rainBg:     '#001225',
+  hailBg:     '#0f0f2a',
+  blueText:   '#93c5fd',
+  blueLight:  '#60a5fa',
+  icyText:    '#bae6fd',
+  warnBg:     '#2a0f00',
+} as const;
+
 const WEATHER_DISPLAY: Record<WeatherEvent, { icon: string; pillBg: string; textColor: string }> = {
   perfect:    { icon: '✨', pillBg: C.bgElevated, textColor: C.greenSoft },
-  sunny:      { icon: '☀️', pillBg: '#2a1a00',    textColor: '#fcd34d' },
+  sunny:      { icon: '☀️', pillBg: WEATHER_COLORS.sunnyBg,  textColor: C.amberSoft },
   cloudy:     { icon: '⛅', pillBg: C.bgCard,     textColor: C.textDim },
-  rain:       { icon: '🌧️', pillBg: '#001225',   textColor: '#93c5fd' },
-  heavy_rain: { icon: '⛈️', pillBg: '#001225',   textColor: '#60a5fa' },
+  rain:       { icon: '🌧️', pillBg: WEATHER_COLORS.rainBg,  textColor: WEATHER_COLORS.blueText },
+  heavy_rain: { icon: '⛈️', pillBg: WEATHER_COLORS.rainBg,  textColor: WEATHER_COLORS.blueLight },
   drought:    { icon: '🌵', pillBg: '#2a0f00',   textColor: C.amberSoft },
-  frost:      { icon: '❄️', pillBg: '#001225',   textColor: '#bae6fd' },
-  hail:       { icon: '🌨️', pillBg: '#0f0f2a',  textColor: '#93c5fd' },
+  frost:      { icon: '❄️', pillBg: WEATHER_COLORS.rainBg,  textColor: WEATHER_COLORS.icyText },
+  hail:       { icon: '🌨️', pillBg: WEATHER_COLORS.hailBg,  textColor: WEATHER_COLORS.blueText },
   wind:       { icon: '💨', pillBg: C.bgCard,    textColor: C.textDim },
   fog:        { icon: '🌫️', pillBg: C.bgCard,   textColor: C.textMuted },
 };
@@ -273,7 +284,7 @@ const styles = StyleSheet.create({
   },
 
   warnStrip: {
-    backgroundColor: '#2a0f00',
+    backgroundColor: WEATHER_COLORS.warnBg,
     paddingHorizontal: S.md,
     paddingVertical: S.xs,
     gap: 2,
