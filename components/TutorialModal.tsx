@@ -157,8 +157,8 @@ const vis = StyleSheet.create({
   machRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.bgDeep, borderRadius: 8, padding: 8 },
   machIcon:   { fontSize: 22 },
   machName:   { color: C.textDim, fontSize: 12, fontWeight: 'bold' },
-  machBadge:  { backgroundColor: '#0f2044', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  machEffect: { color: '#64b5f6', fontSize: 11, fontWeight: 'bold' },
+  machBadge:  { backgroundColor: C.bgElevated, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  machEffect: { color: C.blue, fontSize: 11, fontWeight: 'bold' },
 });
 
 // ── Steps data ─────────────────────────────────────────────────────────────────
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     marginBottom: S.md,
   },
   tipBox: {
-    backgroundColor: '#0f1a0a',
+    backgroundColor: C.bgDeep,
     borderRadius: R.md,
     padding: S.md,
     borderLeftWidth: 3,
