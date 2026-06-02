@@ -10,13 +10,25 @@ interface CardProps {
   children: React.ReactNode;
 }
 
+// Semantic variant colours (not in global theme — card-specific)
+const CARD_COLORS = {
+  dangerBg:    '#1a0808',
+  dangerBorder:'#5a1a1a',
+  successBg:   '#081a0a',
+  successBorder:'#1a5a1a',
+  warningBg:   '#1a1200',
+  warningBorder:'#5a3a00',
+  infoBg:      '#080f1a',
+  infoBorder:  '#1a3a5a',
+} as const;
+
 const VARIANT_STYLES: Record<CardVariant, { bg: string; border: string }> = {
-  default:  { bg: C.bgCard,    border: C.border },
-  elevated: { bg: C.bgElevated, border: 'transparent' },
-  danger:   { bg: '#1a0808',   border: '#5a1a1a' },
-  success:  { bg: '#081a0a',   border: '#1a5a1a' },
-  warning:  { bg: '#1a1200',   border: '#5a3a00' },
-  info:     { bg: '#080f1a',   border: '#1a3a5a' },
+  default:  { bg: C.bgCard,           border: C.border },
+  elevated: { bg: C.bgElevated,       border: 'transparent' },
+  danger:   { bg: CARD_COLORS.dangerBg,  border: CARD_COLORS.dangerBorder },
+  success:  { bg: CARD_COLORS.successBg, border: CARD_COLORS.successBorder },
+  warning:  { bg: CARD_COLORS.warningBg, border: CARD_COLORS.warningBorder },
+  info:     { bg: CARD_COLORS.infoBg,    border: CARD_COLORS.infoBorder },
 };
 
 export default function Card({ variant = 'default', style, children }: CardProps) {
