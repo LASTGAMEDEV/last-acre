@@ -15,20 +15,20 @@ const WARN_DAYS = 7;
 const SEASON_DAYS = 90;
 
 const WEATHER_DISPLAY: Record<WeatherEvent, { icon: string; pillBg: string; textColor: string }> = {
-  perfect:    { icon: '✨', pillBg: '#1b3a1b', textColor: '#81c784' },
-  sunny:      { icon: '☀️', pillBg: '#3a2800', textColor: '#ffd54f' },
-  cloudy:     { icon: '⛅', pillBg: '#1b2e2e', textColor: '#90caf9' },
-  rain:       { icon: '🌧️', pillBg: '#001a3a', textColor: '#90caf9' },
-  heavy_rain: { icon: '⛈️', pillBg: '#001a3a', textColor: '#64b5f6' },
-  drought:    { icon: '🌵', pillBg: '#3a1500', textColor: '#ffb74d' },
-  frost:      { icon: '❄️', pillBg: '#001a3a', textColor: '#b3e5fc' },
-  hail:       { icon: '🌨️', pillBg: '#1a1a3a', textColor: '#90caf9' },
-  wind:       { icon: '💨', pillBg: '#1b2e1b', textColor: '#c8e6c9' },
-  fog:        { icon: '🌫️', pillBg: '#1a1a1a', textColor: '#aaaaaa' },
+  perfect:    { icon: '✨', pillBg: C.bgElevated, textColor: C.greenSoft },
+  sunny:      { icon: '☀️', pillBg: '#2a1a00',    textColor: '#fcd34d' },
+  cloudy:     { icon: '⛅', pillBg: C.bgCard,     textColor: C.textDim },
+  rain:       { icon: '🌧️', pillBg: '#001225',   textColor: '#93c5fd' },
+  heavy_rain: { icon: '⛈️', pillBg: '#001225',   textColor: '#60a5fa' },
+  drought:    { icon: '🌵', pillBg: '#2a0f00',   textColor: C.amberSoft },
+  frost:      { icon: '❄️', pillBg: '#001225',   textColor: '#bae6fd' },
+  hail:       { icon: '🌨️', pillBg: '#0f0f2a',  textColor: '#93c5fd' },
+  wind:       { icon: '💨', pillBg: C.bgCard,    textColor: C.textDim },
+  fog:        { icon: '🌫️', pillBg: C.bgCard,   textColor: C.textMuted },
 };
 
-const EVENT_COLORS: Record<string, string> = { heat_wave: '#5a1a00', flood: '#001a3a', frost: '#001a3a' };
-const EVENT_TEXT_COLORS: Record<string, string> = { heat_wave: '#ffb74d', flood: '#64b5f6', frost: '#b3e5fc' };
+const EVENT_COLORS: Record<string, string> = { heat_wave: '#2a0f00', flood: '#001225', frost: '#001225' };
+const EVENT_TEXT_COLORS: Record<string, string> = { heat_wave: C.amberSoft, flood: '#93c5fd', frost: '#bae6fd' };
 const EVENT_ICONS: Record<string, string> = { heat_wave: '🌡️', flood: '🌊', frost: '❄️' };
 const EVENT_NAMES: Record<string, string> = { heat_wave: 'Heat Wave', flood: 'Flood', frost: 'Frost' };
 
@@ -47,7 +47,7 @@ export default function GameHUD() {
   const farmer = dynasty.currentFarmer;
   const age = farmerAge(farmer, calYear);
   const healthPct = Math.max(0, Math.min(100, farmer.health));
-  const healthColor = healthPct >= 60 ? '#4caf50' : healthPct >= 30 ? '#ff9800' : '#ef5350';
+  const healthColor = healthPct >= 60 ? C.green : healthPct >= 30 ? C.amber : C.red;
   const theme = SEASON_THEME[season];
 
   const daysIntoSeason = (day % (SEASON_DAYS * 4)) % SEASON_DAYS;
@@ -225,13 +225,13 @@ const styles = StyleSheet.create({
     fontWeight: F.weight.bold,
   },
   yearBadge: {
-    backgroundColor: '#2d4a2d',
+    backgroundColor: C.bgElevated,
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   yearText: {
-    color: '#f39c12',
+    color: C.amber,
     fontSize: 18,
     fontWeight: 'bold',
     letterSpacing: 2,
@@ -273,23 +273,23 @@ const styles = StyleSheet.create({
   },
 
   warnStrip: {
-    backgroundColor: '#3a1a00',
+    backgroundColor: '#2a0f00',
     paddingHorizontal: S.md,
     paddingVertical: S.xs,
     gap: 2,
   },
   warnText: {
-    color: '#ffb74d',
+    color: C.amber,
     fontSize: F.size.xs,
     fontWeight: F.weight.bold,
   },
 });
 
 const hudStyles = StyleSheet.create({
-  coopBadge: { backgroundColor: '#1565c0', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2, marginLeft: 4 },
-  coopBadgeText: { color: '#ffffff', fontSize: 10, fontWeight: 'bold' },
-  farmerChip: { backgroundColor: '#1a2a1a', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
-  farmerName: { color: '#a5d6a7', fontSize: 9, fontWeight: 'bold' },
-  healthBarTrack: { width: 36, height: 5, backgroundColor: '#222', borderRadius: 3, overflow: 'hidden' },
+  coopBadge: { backgroundColor: C.blue, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2, marginLeft: 4 },
+  coopBadgeText: { color: C.text, fontSize: 10, fontWeight: 'bold' },
+  farmerChip: { backgroundColor: C.bgElevated, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  farmerName: { color: C.greenSoft, fontSize: 9, fontWeight: 'bold' },
+  healthBarTrack: { width: 36, height: 5, backgroundColor: C.bgDeep, borderRadius: 3, overflow: 'hidden' },
   healthBarFill: { height: '100%', borderRadius: 3 },
 });
