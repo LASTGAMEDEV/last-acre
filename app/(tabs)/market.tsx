@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import SubastaScreen from './_subasta';
 import ShopSection from '../../components/market/ShopSection';
 import MarketPricesSection from '../../components/market/MarketPricesSection';
@@ -7,7 +7,7 @@ import EconomyStatsSection from '../../components/market/EconomyStatsSection';
 import SellingChannelsSection from '../../components/market/SellingChannelsSection';
 import ContractsSection from '../../components/market/ContractsSection';
 import SubTabBar from '../../components/SubTabBar';
-import { C } from '../../constants/theme';
+import { C, F, S } from '../../constants/theme';
 
 type MarketTab = 'prices' | 'economy' | 'auction' | 'shop' | 'contracts' | 'selling';
 
@@ -25,6 +25,9 @@ export default function MarketScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider }}>
+        <Text style={{ color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy }}>Market</Text>
+      </View>
       <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as MarketTab)} />
       {tab === 'prices'    && <MarketPricesSection />}
       {tab === 'economy'   && <EconomyStatsSection />}
