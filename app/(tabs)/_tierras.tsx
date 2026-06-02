@@ -299,7 +299,7 @@ function ManagementTab({ parcel, onClose }: { parcel: LandParcel; onClose: () =>
                       disabled={money < cost}
                       onPress={() => { installHedgerow(parcel.id, edge, type); onClose(); }}
                     >
-                      <Text style={{ color: money >= cost ? '#81c784' : '#555', fontSize: 10 }}>
+                      <Text style={{ color: money >= cost ? C.green : C.textFaint, fontSize: 10 }}>
                         {type.replace('_', ' ')} €{cost.toLocaleString()}
                       </Text>
                     </TouchableOpacity>
