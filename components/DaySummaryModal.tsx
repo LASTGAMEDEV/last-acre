@@ -3,23 +3,24 @@ import {
   Animated, View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Dimensions,
 } from 'react-native';
+import { C } from '../constants/theme';
 import { useGameStore, DaySummaryEvent } from '../store/useGameStore';
 
 const SEVERITY_COLORS: Record<DaySummaryEvent['severity'], string> = {
   info:    '#1e3a5f',
-  good:    '#1b3a1b',
+  good:    C.bgElevated,
   warning: '#3a2e10',
   danger:  '#3a1515',
 };
 const SEVERITY_BORDER: Record<DaySummaryEvent['severity'], string> = {
   info:    '#2a5080',
-  good:    '#2e7d32',
+  good:    C.greenDark,
   warning: '#c8860a',
   danger:  '#c62828',
 };
 const SEVERITY_TEXT: Record<DaySummaryEvent['severity'], string> = {
   info:    '#90caf9',
-  good:    '#a5d6a7',
+  good:    C.greenSoft,
   warning: '#ffe082',
   danger:  '#ef9a9a',
 };

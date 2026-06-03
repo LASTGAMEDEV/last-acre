@@ -5,7 +5,7 @@ import { PUMP_SPECS, wellFlowRate } from '../../engine/water';
 import { C, S, F, R } from '../../constants/theme';
 
 function AquiferBar({ level }: { level: number }) {
-  const color = level >= 50 ? '#4caf50' : level >= 20 ? '#ff9800' : '#f44336';
+  const color = level >= 50 ? C.green : level >= 20 ? C.amber : C.red;
   return (
     <View style={{ marginVertical: S.sm }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -16,7 +16,7 @@ function AquiferBar({ level }: { level: number }) {
         <View style={{ width: `${level}%` as any, height: '100%', backgroundColor: color, borderRadius: R.md }} />
       </View>
       {level < 20 && (
-        <Text style={{ color: '#f44336', fontSize: F.size.sm, marginTop: 4 }}>
+        <Text style={{ color: C.red, fontSize: F.size.sm, marginTop: 4 }}>
           ⚠️ Critically low — enable grid water to protect irrigation
         </Text>
       )}
@@ -77,8 +77,10 @@ export default function AguaScreen() {
 
   return (
     <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+      <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider }}>
+        <Text style={{ color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy }}>Water</Text>
+      </View>
       <View style={{ padding: S.md, paddingTop: S.lg }}>
-        <Text style={{ color: C.text, fontWeight: 'bold', fontSize: F.size.xl, marginBottom: S.sm }}>💧 Water</Text>
 
         {/* Aquifer */}
         <View style={[st.card, { marginBottom: S.md }]}>

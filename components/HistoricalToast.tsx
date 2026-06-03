@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, View, Text, StyleSheet } from 'react-native';
 import { HistoricalEvent } from '../data/historicalEvents';
 import { gameDayToDisplayDate } from '../engine/calendarUtils';
+import { C } from '../constants/theme';
 
 type Props = {
   event: HistoricalEvent | null;
@@ -75,9 +76,9 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#1a2a1a',
+    backgroundColor: C.bgCard,
     borderBottomWidth: 2,
-    borderBottomColor: '#4a7c59',
+    borderBottomColor: C.greenDark,
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
@@ -87,7 +88,7 @@ const styles = StyleSheet.create({
   },
   icon: { fontSize: 22 },
   textBlock: { flex: 1 },
-  date: { fontSize: 9, color: '#7cb87e', letterSpacing: 1 },
+  date: { fontSize: 9, color: C.greenSoft, letterSpacing: 1 },
   headline: { fontSize: 13, color: '#fff', fontWeight: 'bold' },
   effect: { fontSize: 10, color: '#f39c12', marginTop: 2 },
 });

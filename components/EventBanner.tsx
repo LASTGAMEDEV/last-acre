@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore, GameEvent } from '../store/useGameStore';
 import { MachineRepair } from '../store/useGameStore';
+import { C } from '../constants/theme';
 
 function severityColor(type: string): string {
   if (['weather_frost','weather_heatwave','weather_hailstorm','pest_outbreak','animal_illness','equipment_failure'].includes(type))
     return '#ef5350';
   if (['market_surge','windfall_subsidy','windfall_soil','windfall_harvest'].includes(type))
-    return '#66bb6a';
+    return C.green;
   return '#ffb74d';
 }
 

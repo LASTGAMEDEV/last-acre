@@ -3,11 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 
 import { CROP_TYPES, CropType, CropTier } from '../data/cropTypes';
 import { BUILDING_TYPES, BUILDING_CATEGORY_LABELS, BuildingCategory } from '../data/buildingTypes';
 import { ANIMAL_TYPES } from '../data/animalTypes';
+import { C } from '../constants/theme';
 
 // ── Tier config ────────────────────────────────────────────────────────────────
 const TIER_COLORS: Record<CropTier, string> = {
   D: '#78909c',
-  C: '#66bb6a',
+  C: C.green,
   B: '#42a5f5',
   A: '#ab47bc',
   S: '#ffd700',
@@ -113,7 +114,7 @@ function CropsSection() {
                 </View>
                 <View style={enc.detailRow}>
                   <Text style={enc.detailLabel}>Fertility Drain</Text>
-                  <Text style={[enc.detailValue, { color: crop.fertilityDrain === 0 ? '#66bb6a' : crop.fertilityDrain >= 2 ? '#ef9a9a' : '#ccc' }]}>
+                  <Text style={[enc.detailValue, { color: crop.fertilityDrain === 0 ? C.green : crop.fertilityDrain >= 2 ? '#ef9a9a' : '#ccc' }]}>
                     {crop.fertilityDrain === 0 ? '✅ Restores soil' : `-${crop.fertilityDrain} pts`}
                   </Text>
                 </View>
@@ -394,7 +395,7 @@ const enc = StyleSheet.create({
   // Building card
   bldHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   bldName:          { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold', flex: 1 },
-  bldCost:          { color: '#66bb6a', fontSize: 12, fontWeight: 'bold' },
+  bldCost:          { color: C.green, fontSize: 12, fontWeight: 'bold' },
   bldMeta:          { marginBottom: 3 },
   bldMaint:         { color: '#888', fontSize: 10 },
   bldEffect:        { color: '#ccc', fontSize: 11, lineHeight: 15 },
@@ -402,7 +403,7 @@ const enc = StyleSheet.create({
   // Animal card
   animalHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   animalName:       { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' },
-  animalCost:       { color: '#66bb6a', fontSize: 12, fontWeight: 'bold' },
+  animalCost:       { color: C.green, fontSize: 12, fontWeight: 'bold' },
 
   // Mechanics
   mechCard:         { backgroundColor: '#16213e', borderRadius: 10, padding: 12, gap: 6 },

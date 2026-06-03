@@ -2,6 +2,7 @@ import React from 'react';
 import { G, Path, Text } from 'react-native-svg';
 import { MapField as MapFieldType } from '../../types/worldMap';
 import { LandParcel } from '../../store/useGameStore';
+import { C } from '../../constants/theme';
 
 interface Props {
   field: MapFieldType;
@@ -30,8 +31,8 @@ function getStroke(field: MapFieldType, parcel?: LandParcel): string {
   if (field.owner === 'unowned')  return '#1a1810';
   if (field.owner === 'rivalA')   return '#6a1818';
   if (field.owner === 'rivalB')   return '#281858';
-  if (!parcel?.plantedCrop)       return '#264818';
-  return '#286020';
+  if (!parcel?.plantedCrop)       return C.bg;
+  return C.greenDark;
 }
 
 function getStrokeDash(field: MapFieldType, parcel?: LandParcel): string | undefined {
@@ -61,7 +62,7 @@ export default function MapFieldComponent({ field, parcel, isSelected, zoom, onP
           x={field.labelX}
           y={field.labelY}
           fontSize={11 / zoom}
-          fill={field.owner === 'player' ? '#4a8a38' : field.owner === 'forsale' ? '#906010' : '#3a3030'}
+          fill={field.owner === 'player' ? C.greenDark : field.owner === 'forsale' ? '#906010' : '#3a3030'}
           textAnchor="middle"
           fontWeight="600"
         >

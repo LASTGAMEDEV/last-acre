@@ -5,6 +5,7 @@ import { MapField } from '../../types/worldMap';
 import { LandParcel } from '../../store/useGameStore';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { NPC_FARM_GROUP, RIVAL_GROUP_NAME } from '../../data/npcFarmGroups';
+import { C } from '../../constants/theme';
 
 interface NPCFarmLike {
   id: string;
@@ -183,14 +184,14 @@ const styles = StyleSheet.create({
   row:      { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   lbl:      { color: '#505050', fontSize: 11 },
   val:      { color: '#aaa', fontSize: 11 },
-  green:    { color: '#62a838' },
+  green:    { color: C.green },
   amber:    { color: '#c8a830' },
   red:      { color: '#b84040' },
   divider:  { borderTopWidth: 1, borderTopColor: '#121c28', marginVertical: 8 },
   btn:      { paddingVertical: 9, paddingHorizontal: 12, borderRadius: 6, marginTop: 4, alignItems: 'center' },
   btnText:  { fontSize: 12, fontWeight: '700', color: '#e8d5a3' },
   btnBuy:   { backgroundColor: '#1a1200', borderWidth: 1, borderColor: '#6a4400' },
-  btnManage:{ backgroundColor: '#0e2014', borderWidth: 1, borderColor: '#225020' },
+  btnManage:{ backgroundColor: C.bgDeep, borderWidth: 1, borderColor: C.greenDark },
   btnScout: { backgroundColor: '#120c22', borderWidth: 1, borderColor: '#301860' },
   btnProfile: { backgroundColor: '#0d1c30', borderWidth: 1, borderColor: '#1e4070' },
   btnDisabled: { backgroundColor: '#181818', borderWidth: 1, borderColor: '#2a2a2a' },

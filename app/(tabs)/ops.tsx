@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import MaquinariaScreen from './_maquinaria';
 import TrabajadoresScreen from './_trabajadores';
 import ProcesadoScreen from './_procesado';
@@ -7,7 +7,7 @@ import ElectricitySection from '../../components/ops/ElectricitySection';
 import SeedLabScreen from '../../components/ops/SeedLabScreen';
 import CompostScreen from '../../components/ops/CompostScreen';
 import SubTabBar from '../../components/SubTabBar';
-import { C } from '../../constants/theme';
+import { C, F, R, S } from '../../constants/theme';
 
 type OpsTab = 'machinery' | 'workers' | 'processing' | 'compost' | 'power' | 'seedlab';
 
@@ -25,6 +25,9 @@ export default function OpsScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider }}>
+        <Text style={{ color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy }}>Operations</Text>
+      </View>
       <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as OpsTab)} />
       {tab === 'machinery'  && <MaquinariaScreen />}
       {tab === 'workers'    && <TrabajadoresScreen />}

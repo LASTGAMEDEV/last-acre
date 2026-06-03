@@ -21,7 +21,7 @@ import HelpSheet from '../../components/HelpSheet';
 import DispatchModal from '../../components/DispatchModal';
 
 const TIER_COLORS: Record<CropTier, string> = {
-  D: '#9e9e9e', C: '#4caf50', B: '#2196f3', A: '#9c27b0', S: '#ff9800',
+  D: '#9e9e9e', C: C.green, B: '#2196f3', A: '#9c27b0', S: '#ff9800',
 };
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -76,11 +76,11 @@ function PriceChart({ history, basePrice }: { history: number[]; basePrice: numb
           -{history.length - 1 - idx}d
         </SvgText>
       ))}
-      <Polyline points={points} fill="none" stroke={up ? '#4caf50' : '#ef5350'} strokeWidth={2} />
+      <Polyline points={points} fill="none" stroke={up ? C.green : '#ef5350'} strokeWidth={2} />
       {history.length >= MA_WINDOW && (
         <Polyline points={maPointsStr} fill="none" stroke="#ffd54f" strokeWidth={1.5} strokeDasharray="5,3" opacity={0.8} />
       )}
-      <Circle cx={lastX} cy={lastY} r={4} fill={up ? '#4caf50' : '#ef5350'} stroke={C.white} strokeWidth={1} />
+      <Circle cx={lastX} cy={lastY} r={4} fill={up ? C.green : '#ef5350'} stroke={C.white} strokeWidth={1} />
     </Svg>
   );
 }
@@ -149,7 +149,7 @@ export default function MarketPricesSection() {
     if (isPeakSeason && current < selected.basePrice * 0.95)
       return { label: '🔴 Harvest glut', color: '#ef5350', advice: 'Peak season — prices are low. Hold if possible.' };
     if (!isPeakSeason && current > selected.basePrice * 1.05)
-      return { label: '🟢 Off-season premium', color: '#66bb6a', advice: 'Good time to sell — above seasonal average.' };
+      return { label: '🟢 Off-season premium', color: C.green, advice: 'Good time to sell — above seasonal average.' };
     return { label: '🟡 Fair price', color: '#ffa726', advice: `Peak season: ${selected.peakSeason} (expect lower prices then).` };
   })();
 
@@ -224,7 +224,7 @@ export default function MarketPricesSection() {
               ? hist[hist.length - 1] - hist[hist.length - 4 < 0 ? 0 : hist.length - 4]
               : 0;
             const trendIcon = recentTrend > 0.5 ? '↗' : recentTrend < -0.5 ? '↘' : '→';
-            const trendColor = recentTrend > 0.5 ? '#66bb6a' : recentTrend < -0.5 ? '#ef5350' : C.textMuted;
+            const trendColor = recentTrend > 0.5 ? C.green : recentTrend < -0.5 ? '#ef5350' : C.textMuted;
             return (
               <TouchableOpacity
                 key={crop.id}
@@ -450,10 +450,10 @@ export default function MarketPricesSection() {
                 const totalVal = stockedCrops.reduce((sum, { qty, price }) => sum + sellRevenue(qty, price), 0);
                 return (
                   <TouchableOpacity
-                    style={{ backgroundColor: '#1b4a1b', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 }}
+                    style={{ backgroundColor: C.bgCard, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 }}
                     onPress={() => stockedCrops.forEach(({ crop, qty }) => sellCrop(crop.id, qty))}
                   >
-                    <Text style={{ color: '#4caf50', fontSize: 11, fontWeight: 'bold' }}>
+                    <Text style={{ color: C.green, fontSize: 11, fontWeight: 'bold' }}>
                       Sell All · ${Math.round(totalVal).toLocaleString()}
                     </Text>
                   </TouchableOpacity>
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
   ticker: { maxHeight: 44, marginBottom: S.xs },
   tickerContent: { paddingHorizontal: 10, gap: 8, alignItems: 'center' },
   tickerItem: { flexDirection: 'row', alignItems: 'center', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6, gap: 6 },
-  tickerBull: { backgroundColor: '#1b3a1b' },
+  tickerBull: { backgroundColor: C.bgElevated },
   tickerBear: { backgroundColor: '#3a1b1b' },
   tickerText: { color: C.text, fontSize: 11, maxWidth: 200 },
   tickerDays: { color: C.textMuted, fontSize: F.size.xs },
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
   chartPlaceholder: { height: CHART_H, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a1628', borderRadius: R.xs },
   chartEmpty: { color: '#555', fontSize: F.size.sm },
 
-  up: { color: '#81c784' },
+  up: { color: C.green },
   down: { color: '#ef9a9a' },
 
   statsBar: { flexDirection: 'row', backgroundColor: C.bgCard, borderRadius: R.md, marginTop: 6, padding: 10 },
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
   sellPanel: { marginTop: S.sm, backgroundColor: C.bgCard, borderRadius: 10, padding: 10 },
   sellStock: { color: C.textMuted, fontSize: F.size.sm, marginBottom: 6 },
   sellStockNum: { color: C.text, fontWeight: 'bold' },
-  sellBtn: { backgroundColor: '#2e7d32', borderRadius: R.md, padding: 9, alignItems: 'center' },
+  sellBtn: { backgroundColor: C.greenDark, borderRadius: R.md, padding: 9, alignItems: 'center' },
   sellBtnDisabled: { backgroundColor: '#333' },
   sellBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
 
@@ -564,15 +564,15 @@ const styles = StyleSheet.create({
   roiRank: { color: '#555', fontSize: F.size.sm, width: 22 },
   roiName: { flex: 1, color: '#ccc', fontSize: F.size.sm },
   roiRight: { alignItems: 'flex-end' },
-  roiValue: { color: '#81c784', fontSize: F.size.sm, fontWeight: 'bold' },
+  roiValue: { color: C.green, fontSize: F.size.sm, fontWeight: 'bold' },
   roiPrice: { color: C.textFaint, fontSize: F.size.xs },
 
   invRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: C.divider },
   invRowWarn: { backgroundColor: '#2a1a0a', borderRadius: R.sm },
   invName: { flex: 1, color: '#ccc', fontSize: F.size.sm },
   invQty: { color: C.textMuted, fontSize: 11, marginRight: S.sm },
-  invSellBtn: { backgroundColor: '#1b5e20', borderRadius: R.sm, paddingHorizontal: S.sm, paddingVertical: S.xs },
-  invSellText: { color: '#81c784', fontSize: 11, fontWeight: 'bold' },
+  invSellBtn: { backgroundColor: C.bgElevated, borderRadius: R.sm, paddingHorizontal: S.sm, paddingVertical: S.xs },
+  invSellText: { color: C.green, fontSize: 11, fontWeight: 'bold' },
   spoilageWarn: { backgroundColor: '#2a1400', borderRadius: R.sm, padding: S.sm, marginBottom: 6, borderLeftWidth: 3, borderLeftColor: '#ff7043' },
   spoilageWarnText: { color: '#ff8a65', fontSize: 11 },
 
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
   alertPanel: { backgroundColor: C.bgCard, borderRadius: 10, padding: 10, marginTop: S.sm, gap: 6 },
   alertPanelTitle: { color: C.text, fontSize: 11, fontWeight: 'bold', marginBottom: 2 },
   alertActiveRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  alertActiveText: { color: '#66bb6a', fontSize: F.size.sm },
+  alertActiveText: { color: C.green, fontSize: F.size.sm },
   alertRemoveBtn: { color: '#ef5350', fontSize: F.size.sm, paddingHorizontal: 6 },
   alertDirectionRow: { flexDirection: 'row', gap: 6 },
   alertDirBtn: { flex: 1, backgroundColor: '#0d1117', borderRadius: R.sm, paddingVertical: 5, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
@@ -597,14 +597,14 @@ const styles = StyleSheet.create({
   alertSummaryTitle: { color: C.text, fontSize: F.size.xs, fontWeight: 'bold', marginBottom: S.xs },
   alertSummaryChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f3460', borderRadius: R.lg, paddingHorizontal: S.sm, paddingVertical: S.xs, gap: 4 },
   alertSummaryChipName: { color: C.text, fontSize: F.size.xs, fontWeight: 'bold' },
-  alertSummaryChipPrice: { color: '#66bb6a', fontSize: F.size.xs },
+  alertSummaryChipPrice: { color: C.green, fontSize: F.size.xs },
   alertSummaryChipRemove: { color: '#ef5350', fontSize: 11, paddingLeft: 2 },
 });
 
 const regionStyles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 6, marginBottom: 10, flexWrap: 'wrap' },
-  chip: { flex: 1, minWidth: 90, borderWidth: 1, borderColor: '#2a3a2a', backgroundColor: '#0f1e0f', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
-  chipActive: { borderColor: '#4caf50', backgroundColor: '#0f2a0f' },
+  chip: { flex: 1, minWidth: 90, borderWidth: 1, borderColor: '#2a3a2a', backgroundColor: C.bgDeep, borderRadius: R.md, padding: S.sm, alignItems: 'center' },
+  chipActive: { borderColor: C.green, backgroundColor: C.bgDeep },
   chipLocked: { opacity: 0.4 },
   chipIcon: { fontSize: F.size.xxl, marginBottom: 2 },
   chipName: { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', textAlign: 'center' },

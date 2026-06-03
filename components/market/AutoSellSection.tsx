@@ -60,6 +60,6 @@ const styles = StyleSheet.create({
   autoSellPrice: { color: C.textMuted, fontSize: 11, marginTop: 1 },
   autoSellInput: { backgroundColor: '#0a1628', color: C.white, fontSize: F.size.sm, borderRadius: R.sm, padding: 6, width: 72, marginHorizontal: S.sm, textAlign: 'center' },
   autoSellToggle: { backgroundColor: '#333', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: 6 },
-  autoSellToggleOn: { backgroundColor: '#1b5e20' },
+  autoSellToggleOn: { backgroundColor: C.greenDark },
   autoSellToggleText: { color: C.white, fontWeight: 'bold', fontSize: F.size.sm },
 });

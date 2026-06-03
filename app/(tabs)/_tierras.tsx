@@ -44,7 +44,7 @@ const CROP_ICONS: Record<string, string> = {
 };
 
 const SOIL_BAR_COLORS = {
-  good: '#4caf50',
+  good: C.green,
   warn: '#ffa726',
   bad:  '#ef5350',
 };
@@ -168,7 +168,7 @@ function WaterParcelSection({ parcel }: { parcel: LandParcel }) {
               : connectedWell.status}
           </Text>
         ) : parcel.irrigated ? (
-          <Text style={{ color: '#4caf50', fontSize: F.size.md }}>Grid water (enabled farm-wide)</Text>
+          <Text style={{ color: C.green, fontSize: F.size.md }}>Grid water (enabled farm-wide)</Text>
         ) : (
           <Text style={{ color: C.faint, fontSize: F.size.md }}>No water source connected</Text>
         )}
@@ -236,7 +236,7 @@ function ManagementTab({ parcel, onClose }: { parcel: LandParcel; onClose: () =>
       {/* Lease warning */}
       {lease && (
         <View style={{ backgroundColor: '#2a1a00', borderRadius: 8, padding: 10, marginBottom: 12 }}>
-          <Text style={{ color: '#ffa726', fontSize: 12, fontWeight: 'bold' }}>📝 Leased from {lease.npcName}</Text>
+          <Text style={{ color: C.amber, fontSize: 12, fontWeight: 'bold' }}>📝 Leased from {lease.npcName}</Text>
           <Text style={{ color: '#888', fontSize: 11 }}>
             {lease.leaseType === 'sharecrop'
               ? `${Math.round((lease.landOwnerSharePct ?? 0.35) * 100)}% harvest share`
@@ -279,7 +279,7 @@ function ManagementTab({ parcel, onClose }: { parcel: LandParcel; onClose: () =>
             <Text style={{ color: C.text, fontSize: 12 }}>{edgeLabels[edge]}</Text>
             {existing ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={{ color: '#4caf50', fontSize: 11 }}>
+                <Text style={{ color: C.green, fontSize: 11 }}>
                   🌳 {existing.type.replace('hdg_', '')} · {existing.mature ? 'Mature' : 'Growing'}
                 </Text>
               </View>
@@ -291,7 +291,7 @@ function ManagementTab({ parcel, onClose }: { parcel: LandParcel; onClose: () =>
                     <TouchableOpacity
                       key={type}
                       style={{
-                        backgroundColor: money >= cost ? '#1b3a1b' : '#2a2a2a',
+                        backgroundColor: money >= cost ? C.bgElevated : '#2a2a2a',
                         borderRadius: R.sm,
                         paddingHorizontal: 8,
                         paddingVertical: 4,
@@ -299,7 +299,7 @@ function ManagementTab({ parcel, onClose }: { parcel: LandParcel; onClose: () =>
                       disabled={money < cost}
                       onPress={() => { installHedgerow(parcel.id, edge, type); onClose(); }}
                     >
-                      <Text style={{ color: money >= cost ? '#81c784' : '#555', fontSize: 10 }}>
+                      <Text style={{ color: money >= cost ? C.green : C.textFaint, fontSize: 10 }}>
                         {type.replace('_', ' ')} €{cost.toLocaleString()}
                       </Text>
                     </TouchableOpacity>
@@ -317,7 +317,7 @@ function ManagementTab({ parcel, onClose }: { parcel: LandParcel; onClose: () =>
 export default function TierrasScreen() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
-  const CELL_SIZE = Math.min(60, Math.floor((Math.min(screenWidth, 480) - 20) / MAP_COLS));
+  const CELL_SIZE = Math.min(68, Math.floor((Math.min(screenWidth, 480) - 20) / MAP_COLS));
 
   const {
     parcels, money, day, inventory, machines, buildings, cooperative, prices, forecast,
@@ -408,28 +408,28 @@ export default function TierrasScreen() {
     const ready = isReady(parcel);
     const selected = mapSelected?.id === parcel.id;
 
-    let bg = '#0d0d14';        // not owned
-    let borderColor = '#222230';
+    let bg = '#060a14';
+    let borderColor = C.border;
     let mainIcon = '';
     let statusIcon = '';
 
     if (parcel.owned) {
       if (parcel.diseased) {
-        bg = '#2a1a00'; borderColor = '#8B4513'; statusIcon = '🦠';
+        bg = '#1f0800'; borderColor = '#7a2800'; statusIcon = '🦠';
       } else if (event) {
-        bg = '#5c1a1a'; borderColor = '#c62828'; statusIcon = '⚠️';
+        bg = '#1f0808'; borderColor = '#991b1b'; statusIcon = '⚠️';
       } else if (parcel.pestState?.detectedDay) {
-        bg = '#3a1500'; borderColor = '#e65100'; statusIcon = '\ud83d\udc1b';
+        bg = '#1f0e00'; borderColor = '#c2410c'; statusIcon = '\ud83d\udc1b';
       } else if (parcel.hasWeeds) {
-        bg = '#3d2800'; borderColor = '#e65100';
+        bg = '#1a1600'; borderColor = '#a16207';
       } else if (parcel.plantedCrop && ready) {
-        bg = '#1b5e20'; borderColor = '#43a047';
+        bg = C.bgDeep; borderColor = C.green;
       } else if (parcel.plantedCrop) {
-        bg = '#1a3a1a'; borderColor = '#2e7d32';
+        bg = C.bgDeep; borderColor = C.greenDark;
       } else if (parcel.tilled) {
-        bg = '#2a1f0a'; borderColor = '#5d4037'; statusIcon = '⬛';
+        bg = '#1a1200'; borderColor = '#78350f'; statusIcon = '⬛';
       } else {
-        bg = '#1a2744'; borderColor = '#3a5080';
+        bg = '#0f172a'; borderColor = C.border;
       }
       mainIcon = parcel.plantedCrop ? (CROP_ICONS[parcel.plantedCrop.cropId] ?? '🌱') : '';
       if (parcel.hasWeeds && !parcel.diseased) statusIcon = '🌿';
@@ -446,7 +446,7 @@ export default function TierrasScreen() {
           width: CELL_SIZE,
           height: CELL_SIZE,
           margin: 2,
-          borderRadius: 6,
+          borderRadius: 10,
           backgroundColor: bg,
           borderWidth: selected ? 2 : 1,
           borderColor,
@@ -467,7 +467,7 @@ export default function TierrasScreen() {
               </Text>
             ) : null}
             {ready && !statusIcon ? (
-              <Text style={{ fontSize: CELL_SIZE * 0.22, color: '#a5d6a7', fontWeight: 'bold' }}>✓</Text>
+              <Text style={{ fontSize: CELL_SIZE * 0.22, color: C.greenSoft, fontWeight: 'bold' }}>✓</Text>
             ) : null}
             <Text style={{ fontSize: CELL_SIZE * 0.2, color: '#88aacc', marginTop: 1 }}>{parcel.hectares}ha</Text>
           </>
@@ -508,7 +508,7 @@ export default function TierrasScreen() {
         {/* Organic / lease / tillage badges */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 4 }}>
           {parcel.organicStatus && parcel.organicStatus !== 'conventional' && (
-            <Text style={[styles.badge, { color: parcel.organicStatus === 'organic' ? '#4caf50' : '#ffa726' }]}>
+            <Text style={[styles.badge, { color: parcel.organicStatus === 'organic' ? C.green : '#ffa726' }]}>
               {parcel.organicStatus === 'organic' ? '🌿 Organic' : `🔄 ${parcel.organicStatus.replace('_', ' ')}`}
             </Text>
           )}
@@ -794,8 +794,8 @@ export default function TierrasScreen() {
             {/* Map legend */}
             <View style={styles.mapLegend}>
               {[
-                { bg: '#0f3a0f', label: 'Planted' },
-                { bg: '#1a5c1a', label: 'Ready' },
+                { bg: C.bgDeep, label: 'Planted' },
+                { bg: C.greenDark, label: 'Ready' },
                 { bg: '#3a1010', label: 'Event' },
                 { bg: '#2a1f00', label: 'Weeds' },
                 { bg: C.bgCard, label: 'Empty' },
@@ -1074,7 +1074,7 @@ export default function TierrasScreen() {
                           : `🚫 ${crop.seasons.join(', ')} only`}
                       </Text>
                       {inSeason && (
-                        <Text style={{ fontSize: 10, color: estProfit >= 0 ? '#4caf50' : '#f44336', marginTop: 1 }}>
+                        <Text style={{ fontSize: 10, color: estProfit >= 0 ? C.green : '#f44336', marginTop: 1 }}>
                           Est. profit: {estProfit >= 0 ? '+' : ''}${Math.round(estProfit).toLocaleString()}
                         </Text>
                       )}
@@ -1097,9 +1097,9 @@ export default function TierrasScreen() {
               if (!lastId) return null; // first planting, no advice needed
               if (willRotate) {
                 return (
-                  <View style={{ backgroundColor: '#0a2a0a', borderRadius: 8, padding: 10, marginTop: 8, borderLeftWidth: 3, borderLeftColor: '#4caf50' }}>
+                  <View style={{ backgroundColor: C.bgDeep, borderRadius: 8, padding: 10, marginTop: 8, borderLeftWidth: 3, borderLeftColor: C.green }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={{ color: '#66bb6a', fontSize: 12, fontWeight: 'bold' }}>✅ +15% Rotation Bonus</Text>
+                      <Text style={{ color: C.green, fontSize: 12, fontWeight: 'bold' }}>✅ +15% Rotation Bonus</Text>
                       <HelpSheet
                         title="Crop Rotation"
                         body="Planting a different crop than the previous one gives a +15% yield bonus. Rotating also slows fertility loss over time. Try to avoid planting the same high-drain crop twice in a row."
@@ -1149,7 +1149,7 @@ export default function TierrasScreen() {
               const estRevenue = Math.round(estYield * currentPrice);
               const estProfit = estRevenue - seedCostPrev;
               const dailyRate = Math.round(estProfit / crop.growthDays);
-              const profitColor = estProfit >= 0 ? '#66bb6a' : '#ef5350';
+              const profitColor = estProfit >= 0 ? C.green : '#ef5350';
               const cheapestHerbicide = PRODUCT_TYPES
                 .filter(p => p.category === 'herbicide')
                 .sort((a, b) => a.cost - b.cost)[0];
@@ -1159,7 +1159,7 @@ export default function TierrasScreen() {
               const rows: [string, string, string][] = [
                 ['Seed cost', `-$${baseSeedCost.toLocaleString()}`, '#ef9a9a'],
 
-                [`Est. yield (${Math.round(estYield).toLocaleString()} ${crop.unit})`, `+$${estRevenue.toLocaleString()}`, '#4caf50'],
+                [`Est. yield (${Math.round(estYield).toLocaleString()} ${crop.unit})`, `+$${estRevenue.toLocaleString()}`, C.green],
                 ['Est. profit', `${estProfit >= 0 ? '+' : ''}$${estProfit.toLocaleString()}`, profitColor],
                 ['Daily return', `$${dailyRate.toLocaleString()}/day`, dailyRate >= 0 ? '#64b5f6' : '#ef5350'],
                 ['Ready in', `${crop.growthDays}d`, C.textMuted],
@@ -1175,7 +1175,7 @@ export default function TierrasScreen() {
                   ))}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
                     <Text style={{ color: C.textFaint, fontSize: 11 }}>Fertility after harvest</Text>
-                    <Text style={{ color: crop.fertilityDrain === 0 ? '#66bb6a' : crop.fertilityDrain >= 2 ? '#ef5350' : '#ffb74d', fontSize: 11, fontWeight: 'bold' }}>
+                    <Text style={{ color: crop.fertilityDrain === 0 ? C.green : crop.fertilityDrain >= 2 ? '#ef5350' : '#ffb74d', fontSize: 11, fontWeight: 'bold' }}>
                       {crop.fertilityDrain === 0 ? '✅ No drain (fixes N₂)' : `⚠️ -${crop.fertilityDrain} pt${crop.fertilityDrain > 1 ? 's' : ''}`}
                     </Text>
                   </View>
@@ -1486,10 +1486,10 @@ const styles = StyleSheet.create({
   marketCard: { width: '45%' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: S.xs },
   cardTitle: { color: C.text, fontWeight: 'bold', fontSize: 15 },
-  fertility: { color: '#aaa', fontSize: F.size.sm },
+  fertility: { color: C.textMuted, fontSize: F.size.sm },
   soilBadge: { color: C.textMuted, fontSize: F.size.xs, marginTop: 2 },
   badge: { fontSize: 10, fontWeight: '600', backgroundColor: '#1a1a2e', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 },
-  cropTag: { color: '#81c784', fontSize: F.size.sm, marginTop: 2 },
+  cropTag: { color: C.textDim, fontSize: F.size.sm, marginTop: 2 },
   emptyTag: { color: '#555', fontSize: F.size.sm, marginTop: 2 },
   frostWarning: {
     backgroundColor: '#1a1a3a',
@@ -1505,18 +1505,18 @@ const styles = StyleSheet.create({
     color: '#90caf9',
   },
   weedTag: { color: '#ffb74d', fontSize: 11, marginTop: 3 },
-  daysLeft: { color: '#aaa', fontSize: 11, marginTop: S.xs },
+  daysLeft: { color: C.textMuted, fontSize: 11, marginTop: S.xs },
   priceTag: { color: '#64b5f6', fontSize: F.size.md, fontWeight: 'bold', marginTop: 2, marginBottom: S.xs },
 
-  harvestBtn: { backgroundColor: '#2e7d32', borderRadius: R.sm, padding: 6, marginTop: 6, alignItems: 'center' },
+  harvestBtn: { backgroundColor: C.greenDark, borderRadius: R.sm, padding: 6, marginTop: 6, alignItems: 'center' },
   plantBtn: { backgroundColor: '#1565c0', borderRadius: R.sm, padding: 6, marginTop: 6, alignItems: 'center' },
-  buyBtn: { backgroundColor: '#2e7d32', borderRadius: R.sm, padding: 6, alignItems: 'center' },
+  buyBtn: { backgroundColor: C.greenDark, borderRadius: R.sm, padding: 6, alignItems: 'center' },
   btnDisabled: { backgroundColor: '#333' },
   btnText: { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
 
   eventAlert: { backgroundColor: '#4a1515', borderRadius: R.sm, padding: S.sm, marginTop: 6 },
   eventText: { color: '#ffcdd2', fontSize: F.size.sm, fontWeight: 'bold', marginBottom: S.xs },
-  resolveBtn: { backgroundColor: '#b71c1c', borderRadius: 5, padding: 5, alignItems: 'center' },
+  resolveBtn: { backgroundColor: C.redDark, borderRadius: 5, padding: 5, alignItems: 'center' },
   resolveBtnText: { color: C.white, fontSize: 11, fontWeight: 'bold' },
   noProductText: { color: '#ef9a9a', fontSize: 11 },
   fertilizeBtn: { backgroundColor: '#1565c0', borderRadius: R.sm, padding: 5, marginTop: S.xs, alignItems: 'center' },
@@ -1528,7 +1528,7 @@ const styles = StyleSheet.create({
   modalBox: { backgroundColor: C.bgCard, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '80%' },
   modalTitle: { color: C.text, fontWeight: 'bold', fontSize: 17, marginBottom: S.md },
   fertRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  fertLabel: { color: '#aaa', fontSize: F.size.sm, flex: 1, marginRight: S.sm },
+  fertLabel: { color: C.textMuted, fontSize: F.size.sm, flex: 1, marginRight: S.sm },
   fertToggle: { backgroundColor: '#333', borderRadius: R.md, paddingHorizontal: 14, paddingVertical: 6 },
   fertToggleOn: { backgroundColor: '#1565c0' },
   fertToggleText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
@@ -1540,28 +1540,28 @@ const styles = StyleSheet.create({
   cropOptionLeft: { flex: 1 },
   cropOptionName: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
   cropOptionDetail: { color: C.textMuted, fontSize: 11, marginTop: 2 },
-  cropOptionCost: { color: '#4caf50', fontWeight: 'bold', fontSize: F.size.lg },
-  rotationBadge: { backgroundColor: '#1b3a1b', borderRadius: R.sm, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: '#4caf50' },
-  rotationBadgeText: { color: '#81c784', fontSize: F.size.xs, fontWeight: 'bold' },
+  cropOptionCost: { color: C.green, fontWeight: 'bold', fontSize: F.size.lg },
+  rotationBadge: { backgroundColor: C.bgElevated, borderRadius: R.sm, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.green },
+  rotationBadgeText: { color: C.textDim, fontSize: F.size.xs, fontWeight: 'bold' },
   cancelBtn: { backgroundColor: '#333', borderRadius: 10, padding: S.md, alignItems: 'center', marginTop: S.md },
-  cancelBtnText: { color: '#aaa', fontWeight: 'bold', fontSize: F.size.lg },
+  cancelBtnText: { color: C.textMuted, fontWeight: 'bold', fontSize: F.size.lg },
 
   // Filters
   filterBar: { paddingHorizontal: S.sm, marginBottom: S.xs },
   filterChip: { backgroundColor: C.bgCard, borderRadius: R.xl, paddingHorizontal: S.md, paddingVertical: 5, marginRight: 6, marginVertical: S.xs },
-  filterChipActive: { backgroundColor: '#1565c0' },
-  filterChipText: { color: C.textFaint, fontSize: F.size.sm, fontWeight: 'bold' },
-  filterChipTextActive: { color: C.white },
+  filterChipActive: { backgroundColor: C.bgElevated },
+  filterChipText: { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'bold' },
+  filterChipTextActive: { color: C.text },
 
   // Batch harvest
-  batchHarvestBtn: { backgroundColor: '#2e7d32', borderRadius: R.md, marginHorizontal: S.md, marginBottom: 6, padding: 10, alignItems: 'center' },
+  batchHarvestBtn: { backgroundColor: C.greenDark, borderRadius: R.md, marginHorizontal: S.md, marginBottom: 6, padding: 10, alignItems: 'center' },
   batchHarvestText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
 
   // Greenhouse
   ghRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: S.xs },
-  ghBadge: { color: '#81c784', fontSize: 11, fontWeight: 'bold' },
+  ghBadge: { color: C.textDim, fontSize: 11, fontWeight: 'bold' },
   ghRemove: { color: '#ef9a9a', fontSize: 11 },
-  ghInstallBtn: { backgroundColor: '#1b3a20', borderRadius: R.sm, padding: 5, marginTop: S.xs, alignItems: 'center' },
+  ghInstallBtn: { backgroundColor: C.bgCard, borderRadius: R.sm, padding: 5, marginTop: S.xs, alignItems: 'center' },
   cardSub: { color: C.textMuted, fontSize: 11, marginTop: 1 },
   // Irrigation
   irrigatedBadge: { color: '#4fc3f7', fontSize: 11, fontWeight: 'bold', marginTop: S.xs },
@@ -1573,13 +1573,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: C.bgCard,
+    backgroundColor: C.bgDeep,
+    borderTopLeftRadius: R.xl,
+    borderTopRightRadius: R.xl,
     borderTopWidth: 1,
-    borderTopColor: '#c8860a66',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 14,
-    paddingBottom: 20,
+    borderTopColor: C.border,
+    padding: S.lg,
+    maxHeight: 200,
   },
   mapPanelHeader:    { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
   mapPanelTitle:     { color: C.text, fontWeight: 'bold', fontSize: 15 },
@@ -1592,13 +1592,13 @@ const styles = StyleSheet.create({
   mapActionBtn:    { flex: 1, borderRadius: 10, padding: 11, alignItems: 'center', minWidth: 100 },
   mapActionDisabled: { opacity: 0.45 },
   mapActionBuy:    { backgroundColor: '#1565c0' },
-  mapActionPlant:  { backgroundColor: '#1b5e20' },
-  mapActionHarvest:{ backgroundColor: '#2e7d32' },
+  mapActionPlant:  { backgroundColor: C.greenDark },
+  mapActionHarvest:{ backgroundColor: C.greenDark },
   mapActionText:   { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
   mapActionAlert:  { flex: 1, backgroundColor: '#3a1200', borderRadius: 10, padding: 11, alignItems: 'center' },
   mapActionAlertText: { color: '#ffb74d', fontSize: F.size.sm, fontWeight: 'bold', textAlign: 'center' },
   mapActionInfo:   { flex: 1, backgroundColor: '#1a2744', borderRadius: 10, padding: 11, alignItems: 'center' },
-  mapActionInfoText: { color: '#81c784', fontSize: F.size.md, fontWeight: 'bold' },
+  mapActionInfoText: { color: C.textDim, fontSize: F.size.md, fontWeight: 'bold' },
 
   // World Map button
   worldMapBtn: {
@@ -1622,22 +1622,22 @@ const styles = StyleSheet.create({
 const localStyles = StyleSheet.create({
   opBtn:          { backgroundColor: '#0f3460', borderRadius: R.md, padding: S.sm, alignItems: 'center', marginTop: S.sm },
   opBtnYellow:    { backgroundColor: '#e65100' },
-  opBtnRed:       { backgroundColor: '#b71c1c' },
+  opBtnRed:       { backgroundColor: C.redDark },
   opBtnText:      { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
   progressRow:    { backgroundColor: C.bg, borderRadius: R.md, padding: S.sm, marginTop: S.sm },
   progressText:   { color: '#ffb74d', fontSize: F.size.sm, textAlign: 'center' },
-  batchPlantBtn:  { backgroundColor: '#1a3a1a', borderRadius: R.md, padding: 10, alignItems: 'center', marginHorizontal: S.md, marginTop: 6 },
-  batchPlantText: { color: '#66bb6a', fontSize: F.size.md, fontWeight: 'bold' },
+  batchPlantBtn:  { backgroundColor: C.bgCard, borderRadius: R.md, padding: 10, alignItems: 'center', marginHorizontal: S.md, marginTop: 6 },
+  batchPlantText: { color: C.green, fontSize: F.size.md, fontWeight: 'bold' },
   batchBox:       { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginHorizontal: S.md, marginTop: 6 },
   batchTitle:     { color: C.text, fontSize: F.size.md, fontWeight: 'bold' },
   batchChip:      { backgroundColor: '#0d1a2e', borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6, marginRight: 6, borderWidth: 1, borderColor: '#2a3a5e' },
-  batchChipActive:{ backgroundColor: '#1a3a1a', borderColor: '#66bb6a' },
+  batchChipActive:{ backgroundColor: C.bgCard, borderColor: C.green },
   batchChipText:  { color: C.textMuted, fontSize: 11 },
   batchCancel:    { justifyContent: 'center', paddingHorizontal: S.md },
   screenTitle: {
     color: C.text,
-    fontSize: F.size.xl,
-    fontWeight: F.weight.bold,
+    fontSize: F.size.xxl,
+    fontWeight: F.weight.heavy,
     paddingHorizontal: S.md,
     paddingTop: S.sm,
     paddingBottom: S.xs,
