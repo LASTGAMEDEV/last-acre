@@ -17,6 +17,7 @@ import { PEST_CONFIG } from '../../engine/pests';
 import ContractorModal from '../../components/ContractorModal';
 import { getContractorCost, ContractorOperation } from '../../engine/machinery';
 import HelpSheet from '../../components/HelpSheet';
+import GuideButton from '../../components/GuideButton';
 import { HedgerowType, HEDGEROW_COST } from '../../engine/hedgerows';
 import { TILLAGE_FUEL_MULT } from '../../engine/tillage';
 
@@ -748,9 +749,12 @@ export default function TierrasScreen() {
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={localStyles.screenTitle}>My Fields</Text>
-        <TouchableOpacity style={styles.viewToggle} onPress={() => { setMapView(v => !v); setMapSelected(null); }}>
-          <Text style={styles.viewToggleText}>{mapView ? '📋 List' : '🗺️ Map'}</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+          <GuideButton entryId="system_soil_health" compact />
+          <TouchableOpacity style={styles.viewToggle} onPress={() => { setMapView(v => !v); setMapSelected(null); }}>
+            <Text style={styles.viewToggleText}>{mapView ? '📋 List' : '🗺️ Map'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Hint cards */}

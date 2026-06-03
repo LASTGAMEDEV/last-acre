@@ -19,6 +19,7 @@ import { sellRevenue, computeSellPressureModifier, sellPressureDuration } from '
 import { getSeason } from '../../engine/climate';
 import HelpSheet from '../../components/HelpSheet';
 import DispatchModal from '../../components/DispatchModal';
+import GuideButton from '../../components/GuideButton';
 
 const TIER_COLORS: Record<CropTier, string> = {
   D: '#9e9e9e', C: C.green, B: '#2196f3', A: '#9c27b0', S: '#ff9800',
@@ -250,7 +251,10 @@ export default function MarketPricesSection() {
         <ScrollView style={styles.rightPanel} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* Chart header */}
           <View style={styles.chartMeta}>
-            <Text style={styles.chartCropName}>{selected.name}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+              <Text style={styles.chartCropName}>{selected.name}</Text>
+              <GuideButton entryId={selected.id === 'wheat' ? 'crop_wheat' : 'system_market_prices'} compact />
+            </View>
             <View style={styles.chartPriceRow}>
               <Text style={styles.chartCurrentPrice}>${current.toFixed(2)}</Text>
               <Text style={styles.chartUnit}>/{selected.unit}</Text>
@@ -342,6 +346,7 @@ export default function MarketPricesSection() {
                         body="Selling a large quantity of a crop at once drives the market price down temporarily. Spreading sales over several days or selling smaller amounts avoids the penalty. The pressure lifts after a few days."
                         buttonSize={12}
                       />
+                      <GuideButton entryId="system_market_prices" compact />
                     </View>
                   )}
                   {activePressure && (

@@ -17,6 +17,7 @@ import { computeHiveHealth, getLinkedParcelCount, getColmenaCapacity } from '../
 import { BREED_TYPES } from '../../data/breedTypes';
 import { ENCLOSURE_BUILDINGS } from '../../constants/enclosures';
 import HelpSheet from '../../components/HelpSheet';
+import GuideButton from '../../components/GuideButton';
 import { DAIRY_SPECIES } from '../../engine/productionBuildings';
 
 function WelfareBadge({ score }: { score: number | undefined }) {
@@ -503,6 +504,7 @@ export default function AnimalesScreen() {
                     <View style={genStyles.panelHeader}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Text style={genStyles.panelTitle}>🧬 Genes</Text>
+                        <GuideButton entryId="system_animals_welfare" compact />
                         <HelpSheet
                           title="Gene Grade"
                           body="Each gene is scored D (weak) to S (exceptional). The overall grade is the average of all four genes. Higher grades mean more production, disease resistance, faster growth, or better sell price. Breed selectively to improve grades over generations."

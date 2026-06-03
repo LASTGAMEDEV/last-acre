@@ -4,6 +4,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import HintCard from '../../components/HintCard';
 import HelpSheet from '../../components/HelpSheet';
+import GuideButton from '../../components/GuideButton';
 import {
   PROCESSING_RECIPES, PROCESSED_ITEM_DEFS, ProcessingRecipe,
   qualityLabel, qualityColor,
@@ -114,6 +115,7 @@ export default function ProcesadoScreen() {
             <HintCard id="hint_processing" title="Process crops for higher margins" body="Raw crops sell at base price, but processed goods sell for 2–5× more. Build a processing building, assign a worker, and queue a recipe." />
           )}
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 4 }}>
+            <GuideButton entryId="system_processing" compact />
             <HelpSheet title="Processing" body="Processing takes in-game days. Each building needs a worker. Higher building tiers unlock more recipes and raise quality ceilings. Stage 4 products age and improve over time." />
             <Text style={{ color: C.textFaint, fontSize: 11, marginLeft: 6 }}>How does processing work?</Text>
           </View>

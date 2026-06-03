@@ -1,426 +1,327 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 'react-native';
-import { CROP_TYPES, CropType, CropTier } from '../data/cropTypes';
-import { BUILDING_TYPES, BUILDING_CATEGORY_LABELS, BuildingCategory } from '../data/buildingTypes';
-import { ANIMAL_TYPES } from '../data/animalTypes';
-import { C } from '../constants/theme';
+import React, { useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, useWindowDimensions } from 'react-native';
+import { GUIDE_CATEGORY_LABELS, GUIDE_CATEGORY_ORDER, GUIDE_ENTRIES, searchGuideEntries } from '../data/guideEntries';
+import { buildGuideContext, getEraSection, getFarmStatePanel } from '../engine/guideContext';
+import { useGameStore } from '../store/useGameStore';
+import type { GuideCategory, GuideEntry, GuideVisualRef } from '../types/guide';
+import { C, F, R, S } from '../constants/theme';
+import Card from './ui/Card';
+import Badge, { BadgeVariant } from './ui/Badge';
 
-// ── Tier config ────────────────────────────────────────────────────────────────
-const TIER_COLORS: Record<CropTier, string> = {
-  D: '#78909c',
-  C: C.green,
-  B: '#42a5f5',
-  A: '#ab47bc',
-  S: '#ffd700',
+const ALL_CATEGORIES = 'all';
+type CategoryFilter = GuideCategory | typeof ALL_CATEGORIES;
+
+const TONE_TO_BADGE: Record<string, BadgeVariant> = {
+  good: 'success',
+  warning: 'warning',
+  danger: 'danger',
+  info: 'info',
 };
 
-const SEASON_ICONS: Record<string, string> = {
-  spring: '🌱',
-  summer: '☀️',
-  autumn: '🍂',
-  winter: '❄️',
-};
+function VisualExplainer({ visual }: { visual?: GuideVisualRef }) {
+  if (!visual) return null;
 
-type EncycTab = 'crops' | 'buildings' | 'animals' | 'mechanics';
-type TierFilter = 'All' | CropTier;
-
-const ENCYCLOTABS: { id: EncycTab; label: string }[] = [
-  { id: 'crops',     label: '🌾 Crops' },
-  { id: 'buildings', label: '🏗️ Buildings' },
-  { id: 'animals',   label: '🐄 Animals' },
-  { id: 'mechanics', label: '⚙️ Mechanics' },
-];
-
-const TIER_FILTERS: TierFilter[] = ['All', 'D', 'C', 'B', 'A', 'S'];
-
-// ── Crops Section ──────────────────────────────────────────────────────────────
-function CropsSection() {
-  const [tierFilter, setTierFilter] = useState<TierFilter>('All');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  const sorted = [...CROP_TYPES]
-    .filter(c => tierFilter === 'All' || c.tier === tierFilter)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  if (visual.kind === 'before_after') {
+    return (
+      <Card variant="info" style={styles.visualCard}>
+        <Text style={styles.visualTitle}>{visual.title}</Text>
+        <View style={styles.beforeAfterRow}>
+          <View style={styles.beforeAfterBox}>
+            <Text style={styles.beforeAfterLabel}>Before</Text>
+            <Text style={styles.beforeAfterText}>{visual.before}</Text>
+          </View>
+          <Text style={styles.arrow}>→</Text>
+          <View style={styles.beforeAfterBox}>
+            <Text style={styles.beforeAfterLabel}>After</Text>
+            <Text style={styles.beforeAfterText}>{visual.after}</Text>
+          </View>
+        </View>
+      </Card>
+    );
+  }
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 10, gap: 6 }} showsVerticalScrollIndicator={false}>
-      {/* Tier filter row */}
-      <View style={enc.filterRow}>
-        {TIER_FILTERS.map(t => (
-          <TouchableOpacity
-            key={t}
-            style={[enc.filterBtn, tierFilter === t && { backgroundColor: t === 'All' ? '#0f3460' : TIER_COLORS[t as CropTier] + '44', borderColor: t === 'All' ? '#e8d5a3' : TIER_COLORS[t as CropTier] }]}
-            onPress={() => setTierFilter(t)}
-          >
-            <Text style={[enc.filterBtnText, tierFilter === t && { color: t === 'All' ? '#e8d5a3' : TIER_COLORS[t as CropTier] }]}>
-              {t}
-            </Text>
-          </TouchableOpacity>
+    <Card variant="info" style={styles.visualCard}>
+      <Text style={styles.visualTitle}>{visual.title}</Text>
+      <View style={styles.diagramRow}>
+        {(visual.nodes ?? []).map((node, index) => (
+          <React.Fragment key={node}>
+            <View style={styles.diagramNode}>
+              <Text style={styles.diagramText}>{node}</Text>
+            </View>
+            {index < (visual.nodes?.length ?? 0) - 1 && <Text style={styles.diagramArrow}>→</Text>}
+          </React.Fragment>
         ))}
       </View>
-
-      {sorted.map(crop => {
-        const expanded = expandedId === crop.id;
-        return (
-          <TouchableOpacity
-            key={crop.id}
-            style={enc.card}
-            onPress={() => setExpandedId(expanded ? null : crop.id)}
-            activeOpacity={0.8}
-          >
-            {/* Header row */}
-            <View style={enc.cropHeader}>
-              <View style={[enc.tierBadge, { backgroundColor: TIER_COLORS[crop.tier] + '33', borderColor: TIER_COLORS[crop.tier] }]}>
-                <Text style={[enc.tierText, { color: TIER_COLORS[crop.tier] }]}>{crop.tier}</Text>
-              </View>
-              <Text style={enc.cropName}>{crop.name}</Text>
-              <View style={enc.seasonIcons}>
-                {crop.seasons.map(s => (
-                  <Text key={s} style={enc.seasonIcon}>{SEASON_ICONS[s]}</Text>
-                ))}
-              </View>
-            </View>
-
-            {/* Stats row */}
-            <View style={enc.statsRow}>
-              <View style={enc.stat}>
-                <Text style={enc.statLabel}>Price</Text>
-                <Text style={enc.statValue}>${crop.basePrice}/{crop.unit}</Text>
-              </View>
-              <View style={enc.stat}>
-                <Text style={enc.statLabel}>Days</Text>
-                <Text style={enc.statValue}>{crop.growthDays}d</Text>
-              </View>
-              <View style={enc.stat}>
-                <Text style={enc.statLabel}>Yield</Text>
-                <Text style={enc.statValue}>{crop.baseYield}{crop.unit}</Text>
-              </View>
-            </View>
-
-            {/* Expanded details */}
-            {expanded && (
-              <View style={enc.expandedBox}>
-                <View style={enc.detailRow}>
-                  <Text style={enc.detailLabel}>Peak Season</Text>
-                  <Text style={enc.detailValue}>{SEASON_ICONS[crop.peakSeason]} {crop.peakSeason}</Text>
-                </View>
-                <View style={enc.detailRow}>
-                  <Text style={enc.detailLabel}>Seed Cost</Text>
-                  <Text style={enc.detailValue}>${crop.seedCost.toLocaleString()}/ha</Text>
-                </View>
-                <View style={enc.detailRow}>
-                  <Text style={enc.detailLabel}>Water Need</Text>
-                  <Text style={enc.detailValue}>{'💧'.repeat(crop.waterNeed)}</Text>
-                </View>
-                <View style={enc.detailRow}>
-                  <Text style={enc.detailLabel}>Fertility Drain</Text>
-                  <Text style={[enc.detailValue, { color: crop.fertilityDrain === 0 ? C.green : crop.fertilityDrain >= 2 ? '#ef9a9a' : '#ccc' }]}>
-                    {crop.fertilityDrain === 0 ? '✅ Restores soil' : `-${crop.fertilityDrain} pts`}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
+    </Card>
   );
 }
 
-// ── Buildings Section ──────────────────────────────────────────────────────────
-function BuildingsSection() {
-  const categories = Object.keys(BUILDING_CATEGORY_LABELS) as BuildingCategory[];
+function EntryPreview({ entry, selected, onPress }: { entry: GuideEntry; selected: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
+      <Card variant={selected ? 'info' : 'default'} style={styles.entryCard}>
+        <View style={styles.entryHeader}>
+          <Text style={styles.entryTitle}>{entry.title}</Text>
+          <Badge label={GUIDE_CATEGORY_LABELS[entry.category]} variant={selected ? 'info' : 'neutral'} />
+        </View>
+        <Text style={styles.entrySummary}>{entry.summary}</Text>
+        <View style={styles.tagRow}>
+          {entry.tags.slice(0, 4).map(tag => (
+            <Text key={tag} style={styles.tag}>#{tag}</Text>
+          ))}
+        </View>
+      </Card>
+    </TouchableOpacity>
+  );
+}
+
+function EntryDetail({
+  entry,
+  entriesById,
+  onSelectEntry,
+}: {
+  entry: GuideEntry;
+  entriesById: Map<string, GuideEntry>;
+  onSelectEntry: (id: string) => void;
+}) {
+  const store = useGameStore();
+  const context = buildGuideContext({
+    day: store.day,
+    money: store.money,
+    inventory: store.inventory,
+    buildings: store.buildings,
+    ownedCropSeedIds: (store.seedVault ?? []).map(seed => seed.cropId),
+    ownedAnimalTypeIds: [...new Set((store.animals ?? []).map(animal => animal.typeId))],
+    loansTotalOwed: (store.loans ?? []).filter(loan => !loan.paid).reduce((sum, loan) => sum + loan.totalOwed, 0),
+    activeContractCount: (store.contracts ?? []).filter(contract => !contract.completed && !contract.failed).length,
+    selectedParcelSoil: null,
+  });
+
+  const eraSection = getEraSection(entry, context);
+  const farmPanel = getFarmStatePanel(entry, context);
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 10, gap: 10 }} showsVerticalScrollIndicator={false}>
-      {categories.map(cat => {
-        const buildings = BUILDING_TYPES.filter(b => b.category === cat);
-        return (
-          <View key={cat}>
-            <Text style={enc.groupHeader}>{BUILDING_CATEGORY_LABELS[cat]}</Text>
-            {buildings.map(b => (
-              <View key={b.id} style={[enc.card, { marginBottom: 6 }]}>
-                <View style={enc.bldHeader}>
-                  <Text style={enc.bldName}>{b.name}</Text>
-                  <Text style={enc.bldCost}>${b.cost.toLocaleString()}</Text>
-                </View>
-                <View style={enc.bldMeta}>
-                  <Text style={enc.bldMaint}>
-                    {b.maintenancePerDay < 0 ? `+$${Math.abs(b.maintenancePerDay)}/d` : `$${b.maintenancePerDay}/d maint.`}
-                  </Text>
-                </View>
-                <Text style={enc.bldEffect}>{b.effectLabel}</Text>
+    <ScrollView style={styles.detailScroll} contentContainerStyle={styles.detailContent} showsVerticalScrollIndicator={false}>
+      <Card variant="elevated">
+        <View style={styles.detailTitleRow}>
+          <Text style={styles.detailTitle}>{entry.title}</Text>
+          <Badge label={`${context.calendarYear}`} variant="purple" />
+        </View>
+        <Text style={styles.detailSummary}>{entry.summary}</Text>
+      </Card>
+
+      <VisualExplainer visual={entry.visual} />
+
+      <GuideSection title="Why It Matters" body={entry.whyItMatters} />
+      <GuideList title="How To Use It" items={entry.howToUse} />
+      <GuideList title="Mistakes To Avoid" items={entry.mistakesToAvoid} tone="warning" />
+
+      {eraSection && (
+        <Card variant="info">
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>{eraSection.title}</Text>
+            <Badge label={context.eraLabel} variant="info" />
+          </View>
+          <Text style={styles.sectionBody}>{eraSection.body}</Text>
+        </Card>
+      )}
+
+      {farmPanel && (
+        <Card variant="default">
+          <Text style={styles.sectionTitle}>{farmPanel.title}</Text>
+          <View style={styles.farmRows}>
+            {farmPanel.rows.map(row => (
+              <View key={row.label} style={styles.farmRow}>
+                <Text style={styles.farmLabel}>{row.label}</Text>
+                <Badge label={row.value} variant={TONE_TO_BADGE[row.tone ?? 'info'] ?? 'neutral'} />
               </View>
             ))}
           </View>
-        );
-      })}
+          {farmPanel.nextActions.length > 0 && (
+            <View style={styles.nextActions}>
+              <Text style={styles.nextTitle}>Next sensible action</Text>
+              {farmPanel.nextActions.map(action => (
+                <Text key={action} style={styles.bullet}>• {action}</Text>
+              ))}
+            </View>
+          )}
+        </Card>
+      )}
+
+      {entry.relatedEntryIds.length > 0 && (
+        <Card variant="default">
+          <Text style={styles.sectionTitle}>Related Entries</Text>
+          <View style={styles.relatedGrid}>
+            {entry.relatedEntryIds.map(id => {
+              const related = entriesById.get(id);
+              if (!related) return null;
+              return (
+                <TouchableOpacity key={id} style={styles.relatedBtn} onPress={() => onSelectEntry(id)}>
+                  <Text style={styles.relatedText}>{related.title}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Card>
+      )}
     </ScrollView>
   );
 }
 
-// ── Animals Section ────────────────────────────────────────────────────────────
-function AnimalsSection() {
-  const sorted = [...ANIMAL_TYPES].sort((a, b) => a.name.localeCompare(b.name));
-
+function GuideSection({ title, body }: { title: string; body: string }) {
   return (
-    <ScrollView contentContainerStyle={{ padding: 10, gap: 6 }} showsVerticalScrollIndicator={false}>
-      {sorted.map(animal => (
-        <View key={animal.id} style={enc.card}>
-          <View style={enc.animalHeader}>
-            <Text style={enc.animalName}>{animal.name}</Text>
-            <Text style={enc.animalCost}>${animal.buyCost.toLocaleString()}</Text>
-          </View>
-          <View style={enc.statsRow}>
-            <View style={enc.stat}>
-              <Text style={enc.statLabel}>Production</Text>
-              <Text style={enc.statValue}>
-                {animal.productionType
-                  ? `${animal.productionType} ×${animal.productionRate}/d`
-                  : 'sell only'}
-              </Text>
-            </View>
-            <View style={enc.stat}>
-              <Text style={enc.statLabel}>Maturity</Text>
-              <Text style={enc.statValue}>{animal.maturityDays}d</Text>
-            </View>
-            <View style={enc.stat}>
-              <Text style={enc.statLabel}>Max Sell</Text>
-              <Text style={enc.statValue}>${animal.maxSellPrice.toLocaleString()}</Text>
-            </View>
-          </View>
-        </View>
-      ))}
-    </ScrollView>
+    <Card variant="default">
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.sectionBody}>{body}</Text>
+    </Card>
   );
 }
 
-// ── Mechanics Section ──────────────────────────────────────────────────────────
-const MECHANICS = [
-  {
-    icon: '🔄',
-    title: 'Crop Rotation',
-    body: 'Planting a different crop on the same plot after harvest grants +15% yield on the new crop. Avoid repeating the same crop back-to-back to keep your soil productive.',
-  },
-  {
-    icon: '🪨',
-    title: 'Soil Types',
-    body: 'Each plot has a soil type: Sandy, Loamy, Clay, or Chalky. Some crops thrive in specific soils (e.g. root crops prefer loamy, drought crops like sandy). Check soil affinity before planting.',
-  },
-  {
-    icon: '📅',
-    title: 'Seasons',
-    body: 'The year is divided into 4 seasons of 90 days each — Spring, Summer, Autumn, Winter. Each crop can only be planted in its listed seasons. Greenhouses bypass this restriction.',
-  },
-  {
-    icon: '📉',
-    title: 'Sell Pressure',
-    body: 'Large one-time sales temporarily depress market prices for that commodity. Selling in smaller batches or waiting for prices to recover maximises total revenue.',
-  },
-  {
-    icon: '⭐',
-    title: 'Prestige',
-    body: 'Complete a full in-game year (360 days) to earn a Prestige level. Each Prestige level grants a permanent +5% revenue bonus that carries over into your next run.',
-  },
-  {
-    icon: '🏭',
-    title: 'Rivals',
-    body: 'NPC rival farms buy and sell land, hire workers, and periodically flood the market with cheap goods. Watch their wealth in the Dashboard — if a rival is surging, expect price drops soon.',
-  },
-];
-
-// ── Search Index ───────────────────────────────────────────────────────────────
-type SearchCategory = 'crop' | 'building' | 'animal' | 'mechanic';
-
-interface SearchResult {
-  id: string;
-  category: SearchCategory;
-  name: string;
-  description: string;
-  badge: string;
-}
-
-function buildSearchIndex(): SearchResult[] {
-  const results: SearchResult[] = [];
-  for (const c of CROP_TYPES) {
-    results.push({ id: `crop_${c.id}`, category: 'crop', name: c.name, description: `Tier ${c.tier} · $${c.basePrice}/${c.unit} · ${c.growthDays} days · seasons: ${c.seasons.join(', ')}`, badge: '🌾' });
-  }
-  for (const b of BUILDING_TYPES) {
-    results.push({ id: `bld_${b.id}`, category: 'building', name: b.name, description: b.effectLabel, badge: '🏠' });
-  }
-  for (const a of ANIMAL_TYPES) {
-    results.push({ id: `animal_${a.id}`, category: 'animal', name: a.name, description: `${a.enclosureType} enclosure · matures in ${a.maturityDays} days`, badge: '🐄' });
-  }
-  for (const m of MECHANICS) {
-    results.push({ id: `mech_${m.title.replace(/\s+/g, '_')}`, category: 'mechanic', name: m.title, description: m.body, badge: '📖' });
-  }
-  return results;
-}
-
-const SEARCH_INDEX: SearchResult[] = buildSearchIndex();
-
-function MechanicsSection() {
+function GuideList({ title, items, tone = 'default' }: { title: string; items: string[]; tone?: 'default' | 'warning' }) {
   return (
-    <ScrollView contentContainerStyle={{ padding: 10, gap: 10 }} showsVerticalScrollIndicator={false}>
-      {MECHANICS.map(m => (
-        <View key={m.title} style={enc.mechCard}>
-          <View style={enc.mechHeaderRow}>
-            <Text style={enc.mechIcon}>{m.icon}</Text>
-            <Text style={enc.mechTitle}>{m.title}</Text>
-          </View>
-          <Text style={enc.mechBody}>{m.body}</Text>
-        </View>
+    <Card variant={tone === 'warning' ? 'warning' : 'default'}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {items.map(item => (
+        <Text key={item} style={styles.bullet}>• {item}</Text>
       ))}
-    </ScrollView>
+    </Card>
   );
 }
 
-// ── Main Encyclopedia ──────────────────────────────────────────────────────────
 export default function Encyclopedia() {
-  const [tab, setTab] = useState<EncycTab>('crops');
-  const [searchQuery, setSearchQuery] = useState('');
-  const trimmed = searchQuery.trim().toLowerCase();
-  const isSearching = trimmed.length > 0;
-  const filteredResults = isSearching
-    ? SEARCH_INDEX.filter(item => item.name.toLowerCase().includes(trimmed) || item.description.toLowerCase().includes(trimmed))
-    : [];
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState<CategoryFilter>(ALL_CATEGORIES);
+  const [selectedId, setSelectedId] = useState<string>(GUIDE_ENTRIES[0]?.id ?? '');
+  const { width } = useWindowDimensions();
+  const compact = width < 760;
+
+  const entriesById = useMemo(() => new Map(GUIDE_ENTRIES.map(entry => [entry.id, entry])), []);
+  const filtered = useMemo(
+    () => searchGuideEntries(query, category === ALL_CATEGORIES ? undefined : category),
+    [query, category],
+  );
+  const selected = entriesById.get(selectedId) ?? filtered[0] ?? GUIDE_ENTRIES[0];
 
   return (
-    <View style={enc.container}>
-      {/* Search bar */}
-      <View style={enc.searchRow}>
+    <View style={[styles.container, compact && styles.containerCompact]}>
+      <View style={[styles.sidebar, compact && styles.sidebarCompact]}>
+        <Text style={styles.title}>Guide</Text>
+        <Text style={styles.subtitle}>Search the farm, then jump back into work with a next action.</Text>
         <TextInput
-          style={enc.searchInput}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search crops, buildings, animals…"
-          placeholderTextColor="#444"
-          returnKeyType="search"
-          clearButtonMode="never"
+          style={styles.search}
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search crops, soil, contracts..."
+          placeholderTextColor={C.textFaint}
         />
-        {isSearching && (
-          <TouchableOpacity style={enc.searchClear} onPress={() => setSearchQuery('')}>
-            <Text style={enc.searchClearText}>✕</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Inner tab bar — hidden while searching */}
-      {!isSearching && <View style={enc.tabBar}>
-        {ENCYCLOTABS.map(t => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
           <TouchableOpacity
-            key={t.id}
-            style={[enc.tabBtn, tab === t.id && enc.tabBtnActive]}
-            onPress={() => setTab(t.id)}
+            style={[styles.categoryChip, category === ALL_CATEGORIES && styles.categoryChipActive]}
+            onPress={() => setCategory(ALL_CATEGORIES)}
           >
-            <Text style={[enc.tabBtnText, tab === t.id && enc.tabBtnTextActive]}>
-              {t.label}
-            </Text>
+            <Text style={[styles.categoryText, category === ALL_CATEGORIES && styles.categoryTextActive]}>All</Text>
           </TouchableOpacity>
-        ))}
-      </View>}
-
-      {tab === 'crops'     && !isSearching && <CropsSection />}
-      {tab === 'buildings' && !isSearching && <BuildingsSection />}
-      {tab === 'animals'   && !isSearching && <AnimalsSection />}
-      {tab === 'mechanics' && !isSearching && <MechanicsSection />}
-
-      {/* Search results */}
-      {isSearching && (
-        <ScrollView contentContainerStyle={{ padding: 10, gap: 6 }} showsVerticalScrollIndicator={false}>
-          {filteredResults.length === 0 ? (
-            <View style={enc.searchEmpty}>
-              <Text style={enc.searchEmptyText}>No results for &quot;{searchQuery.trim()}&quot;</Text>
-            </View>
-          ) : (
-            filteredResults.map(item => (
-              <View key={item.id} style={enc.searchResultCard}>
-                <View style={enc.searchResultHeader}>
-                  <Text style={enc.searchResultBadge}>{item.badge}</Text>
-                  <Text style={enc.searchResultCategory}>{item.category.toUpperCase()}</Text>
-                  <Text style={enc.searchResultName}>{item.name}</Text>
-                </View>
-                <Text style={enc.searchResultDesc} numberOfLines={2}>{item.description}</Text>
-              </View>
-            ))
+          {GUIDE_CATEGORY_ORDER.map(cat => (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.categoryChip, category === cat && styles.categoryChipActive]}
+              onPress={() => setCategory(cat)}
+            >
+              <Text style={[styles.categoryText, category === cat && styles.categoryTextActive]}>{GUIDE_CATEGORY_LABELS[cat]}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <ScrollView style={styles.entriesList} showsVerticalScrollIndicator={false}>
+          {filtered.map(entry => (
+            <EntryPreview
+              key={entry.id}
+              entry={entry}
+              selected={entry.id === selected?.id}
+              onPress={() => setSelectedId(entry.id)}
+            />
+          ))}
+          {filtered.length === 0 && (
+            <Card variant="warning">
+              <Text style={styles.sectionTitle}>No guide entries found</Text>
+              <Text style={styles.sectionBody}>Try a broader term like soil, money, animals, contracts, or yield.</Text>
+            </Card>
           )}
         </ScrollView>
-      )}
+      </View>
+
+      <View style={[styles.detailPane, compact && styles.detailPaneCompact]}>
+        {selected && <EntryDetail entry={selected} entriesById={entriesById} onSelectEntry={setSelectedId} />}
+      </View>
     </View>
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────────
-const enc = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: '#1a1a2e' },
-
-  // Tab bar
-  tabBar:           { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 6, gap: 4, backgroundColor: '#1a1a2e' },
-  tabBtn:           { flex: 1, backgroundColor: '#16213e', borderRadius: 8, paddingVertical: 7, alignItems: 'center' },
-  tabBtnActive:     { backgroundColor: '#0f3460' },
-  tabBtnText:       { color: '#888', fontSize: 9, fontWeight: 'bold' },
-  tabBtnTextActive: { color: '#e8d5a3' },
-
-  // Filter row
-  filterRow:        { flexDirection: 'row', gap: 4, marginBottom: 4 },
-  filterBtn:        { flex: 1, backgroundColor: '#16213e', borderRadius: 6, paddingVertical: 5, alignItems: 'center', borderWidth: 1, borderColor: 'transparent' },
-  filterBtnText:    { color: '#888', fontSize: 10, fontWeight: 'bold' },
-
-  // Card
-  card:             { backgroundColor: '#16213e', borderRadius: 10, padding: 10 },
-
-  // Crop header
-  cropHeader:       { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  tierBadge:        { borderRadius: 4, borderWidth: 1, paddingHorizontal: 5, paddingVertical: 1 },
-  tierText:         { fontSize: 10, fontWeight: 'bold' },
-  cropName:         { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold', flex: 1 },
-  seasonIcons:      { flexDirection: 'row', gap: 2 },
-  seasonIcon:       { fontSize: 10 },
-
-  // Stats row
-  statsRow:         { flexDirection: 'row', gap: 4 },
-  stat:             { flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 6, alignItems: 'center' },
-  statLabel:        { color: '#555', fontSize: 9, marginBottom: 2 },
-  statValue:        { color: '#ccc', fontSize: 11, fontWeight: 'bold' },
-
-  // Expanded details
-  expandedBox:      { marginTop: 8, borderTopWidth: 1, borderTopColor: '#1e1e3a', paddingTop: 8, gap: 4 },
-  detailRow:        { flexDirection: 'row', justifyContent: 'space-between' },
-  detailLabel:      { color: '#888', fontSize: 11 },
-  detailValue:      { color: '#ccc', fontSize: 11 },
-
-  // Group header
-  groupHeader:      { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold', marginBottom: 6, marginTop: 4 },
-
-  // Building card
-  bldHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  bldName:          { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold', flex: 1 },
-  bldCost:          { color: C.green, fontSize: 12, fontWeight: 'bold' },
-  bldMeta:          { marginBottom: 3 },
-  bldMaint:         { color: '#888', fontSize: 10 },
-  bldEffect:        { color: '#ccc', fontSize: 11, lineHeight: 15 },
-
-  // Animal card
-  animalHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  animalName:       { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' },
-  animalCost:       { color: C.green, fontSize: 12, fontWeight: 'bold' },
-
-  // Mechanics
-  mechCard:         { backgroundColor: '#16213e', borderRadius: 10, padding: 12, gap: 6 },
-  mechHeaderRow:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  mechIcon:         { fontSize: 20 },
-  mechTitle:        { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' },
-  mechBody:         { color: '#ccc', fontSize: 12, lineHeight: 18 },
-  searchRow:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 6, backgroundColor: '#1a1a2e', gap: 6 },
-  searchInput:          { flex: 1, backgroundColor: '#16213e', borderRadius: 8, borderWidth: 1, borderColor: '#2a2a4a', color: '#e8d5a3', fontSize: 12, paddingHorizontal: 10, paddingVertical: 6 },
-  searchClear:          { backgroundColor: '#16213e', borderRadius: 8, padding: 6, alignItems: 'center', justifyContent: 'center' },
-  searchClearText:      { color: '#888', fontSize: 14, fontWeight: 'bold' },
-  searchEmpty:          { paddingVertical: 40, alignItems: 'center' },
-  searchEmptyText:      { color: '#555', fontSize: 13 },
-  searchResultCard:     { backgroundColor: '#16213e', borderRadius: 10, padding: 10, gap: 4 },
-  searchResultHeader:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  searchResultBadge:    { fontSize: 14 },
-  searchResultCategory: { color: '#555', fontSize: 9, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 },
-  searchResultName:     { color: '#e8d5a3', fontSize: 12, fontWeight: 'bold', flex: 1 },
-  searchResultDesc:     { color: '#888', fontSize: 11, lineHeight: 15 },
+const styles = StyleSheet.create({
+  container: { flex: 1, flexDirection: 'row', backgroundColor: C.bg },
+  containerCompact: { flexDirection: 'column' },
+  sidebar: { width: '44%', minWidth: 280, borderRightWidth: 1, borderRightColor: C.divider, padding: S.md },
+  sidebarCompact: { width: '100%', minWidth: 0, maxHeight: 330, borderRightWidth: 0, borderBottomWidth: 1, borderBottomColor: C.divider },
+  detailPane: { flex: 1 },
+  detailPaneCompact: { minHeight: 360 },
+  title: { color: C.text, fontSize: F.size.title, fontWeight: F.weight.heavy },
+  subtitle: { color: C.textDim, fontSize: F.size.sm, lineHeight: 18, marginTop: 4, marginBottom: S.md },
+  search: {
+    backgroundColor: C.bgInput,
+    color: C.text,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: R.md,
+    paddingHorizontal: S.md,
+    paddingVertical: S.sm,
+    marginBottom: S.sm,
+  },
+  categoryScroll: { maxHeight: 42, marginBottom: S.sm },
+  categoryChip: {
+    backgroundColor: C.bgCard,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: R.pill,
+    paddingHorizontal: S.md,
+    paddingVertical: 6,
+    marginRight: S.sm,
+  },
+  categoryChipActive: { backgroundColor: C.amberDark, borderColor: C.amberSoft },
+  categoryText: { color: C.textDim, fontSize: F.size.sm, fontWeight: F.weight.bold },
+  categoryTextActive: { color: C.white },
+  entriesList: { flex: 1 },
+  entryCard: { marginBottom: S.sm },
+  entryHeader: { gap: S.xs, marginBottom: S.xs },
+  entryTitle: { color: C.text, fontSize: F.size.lg, fontWeight: F.weight.heavy },
+  entrySummary: { color: C.textDim, fontSize: F.size.sm, lineHeight: 18 },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: S.sm },
+  tag: { color: C.textFaint, fontSize: F.size.xs },
+  detailScroll: { flex: 1 },
+  detailContent: { padding: S.md, paddingBottom: S.xxl },
+  detailTitleRow: { flexDirection: 'row', justifyContent: 'space-between', gap: S.md, alignItems: 'flex-start' },
+  detailTitle: { color: C.text, fontSize: F.size.title, fontWeight: F.weight.heavy, flex: 1 },
+  detailSummary: { color: C.textDim, fontSize: F.size.body, lineHeight: 21, marginTop: S.sm },
+  visualCard: { overflow: 'hidden' },
+  visualTitle: { color: C.text, fontSize: F.size.md, fontWeight: F.weight.bold, marginBottom: S.sm },
+  diagramRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  diagramNode: { backgroundColor: C.bgInput, borderColor: C.border, borderWidth: 1, borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: 7 },
+  diagramText: { color: C.text, fontSize: F.size.sm, fontWeight: F.weight.bold },
+  diagramArrow: { color: C.amberSoft, fontSize: F.size.lg, fontWeight: F.weight.bold },
+  beforeAfterRow: { flexDirection: 'row', alignItems: 'stretch', gap: S.sm },
+  beforeAfterBox: { flex: 1, backgroundColor: C.bgInput, borderRadius: R.md, padding: S.sm, borderWidth: 1, borderColor: C.border },
+  beforeAfterLabel: { color: C.textMuted, fontSize: F.size.xs, fontWeight: F.weight.bold, marginBottom: 4 },
+  beforeAfterText: { color: C.text, fontSize: F.size.sm, lineHeight: 18 },
+  arrow: { color: C.amberSoft, alignSelf: 'center', fontSize: F.size.xl },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', gap: S.md, alignItems: 'flex-start' },
+  sectionTitle: { color: C.text, fontSize: F.size.lg, fontWeight: F.weight.heavy, marginBottom: S.sm },
+  sectionBody: { color: C.textDim, fontSize: F.size.body, lineHeight: 21 },
+  bullet: { color: C.textDim, fontSize: F.size.body, lineHeight: 22, marginBottom: 4 },
+  farmRows: { gap: S.sm },
+  farmRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: S.md },
+  farmLabel: { color: C.textDim, fontSize: F.size.sm, flex: 1 },
+  nextActions: { marginTop: S.md, borderTopWidth: 1, borderTopColor: C.divider, paddingTop: S.md },
+  nextTitle: { color: C.amberSoft, fontSize: F.size.sm, fontWeight: F.weight.bold, marginBottom: S.xs },
+  relatedGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: S.sm },
+  relatedBtn: { backgroundColor: C.bgInput, borderColor: C.border, borderWidth: 1, borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: S.sm },
+  relatedText: { color: C.text, fontSize: F.size.sm, fontWeight: F.weight.bold },
 });
