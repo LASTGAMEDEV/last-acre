@@ -41,6 +41,60 @@ function useGuideContext() {
   }), [store]);
 }
 
+function GuideVisualPanel({ entry }: { entry: NonNullable<ReturnType<typeof getGuideEntry>> }) {
+  const visual = entry.visual;
+  if (!visual) return null;
+
+  if (visual.kind === 'before_after') {
+    return (
+      <Card variant="info">
+        <Text style={styles.sectionTitle}>{visual.title}</Text>
+        <View style={styles.beforeAfterRow}>
+          <View style={styles.beforeAfterPanel}>
+            <Text style={styles.visualLabel}>Before</Text>
+            <Text style={styles.visualText}>{visual.before}</Text>
+          </View>
+          <View style={styles.beforeAfterPanel}>
+            <Text style={styles.visualLabel}>After</Text>
+            <Text style={styles.visualText}>{visual.after}</Text>
+          </View>
+        </View>
+      </Card>
+    );
+  }
+
+  if (visual.kind === 'illustration') {
+    return (
+      <Card variant="info">
+        <Text style={styles.sectionTitle}>{visual.title}</Text>
+        <View style={styles.illustrationBox}>
+          {(visual.nodes ?? [entry.title]).slice(0, 6).map(node => (
+            <View key={node} style={styles.visualChip}>
+              <Text style={styles.visualChipText}>{node}</Text>
+            </View>
+          ))}
+        </View>
+      </Card>
+    );
+  }
+
+  return (
+    <Card variant="info">
+      <Text style={styles.sectionTitle}>{visual.title}</Text>
+      <View style={styles.diagramRow}>
+        {(visual.nodes ?? []).slice(0, 6).map((node, index, nodes) => (
+          <React.Fragment key={node}>
+            <View style={styles.diagramNode}>
+              <Text style={styles.diagramText}>{node}</Text>
+            </View>
+            {index < nodes.length - 1 && <Text style={styles.diagramArrow}>-&gt;</Text>}
+          </React.Fragment>
+        ))}
+      </View>
+    </Card>
+  );
+}
+
 function GuideModal({ entryId, visible, onClose }: { entryId: string; visible: boolean; onClose: () => void }) {
   const context = useGuideContext();
   const entry = getGuideEntry(entryId) ?? GUIDE_ENTRIES[0];
@@ -61,6 +115,8 @@ function GuideModal({ entryId, visible, onClose }: { entryId: string; visible: b
               <Badge label={`${context.calendarYear}`} variant="purple" />
             </View>
             <Text style={styles.summary}>{entry.summary}</Text>
+
+            <GuideVisualPanel entry={entry} />
 
             <Card variant="default">
               <Text style={styles.sectionTitle}>Why it matters</Text>
@@ -178,6 +234,17 @@ const styles = StyleSheet.create({
   sectionTitle: { color: C.text, fontSize: F.size.lg, fontWeight: F.weight.heavy, marginBottom: S.sm },
   body: { color: C.textDim, fontSize: F.size.body, lineHeight: 21 },
   bullet: { color: C.textDim, fontSize: F.size.body, lineHeight: 22, marginBottom: 4 },
+  diagramRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: S.xs },
+  diagramNode: { backgroundColor: C.bgElevated, borderRadius: R.md, borderWidth: 1, borderColor: C.border, paddingHorizontal: S.sm, paddingVertical: S.xs },
+  diagramText: { color: C.text, fontSize: F.size.sm, fontWeight: F.weight.bold },
+  diagramArrow: { color: C.amberSoft, fontSize: F.size.sm, fontWeight: F.weight.bold },
+  illustrationBox: { flexDirection: 'row', flexWrap: 'wrap', gap: S.sm },
+  visualChip: { backgroundColor: C.bgElevated, borderRadius: R.pill, borderWidth: 1, borderColor: C.border, paddingHorizontal: S.md, paddingVertical: S.xs },
+  visualChipText: { color: C.textDim, fontSize: F.size.sm, fontWeight: F.weight.bold },
+  beforeAfterRow: { flexDirection: 'row', gap: S.sm },
+  beforeAfterPanel: { flex: 1, backgroundColor: C.bgElevated, borderRadius: R.md, borderWidth: 1, borderColor: C.border, padding: S.sm },
+  visualLabel: { color: C.amberSoft, fontSize: F.size.xs, fontWeight: F.weight.heavy, textTransform: 'uppercase', marginBottom: 4 },
+  visualText: { color: C.textDim, fontSize: F.size.sm, lineHeight: 18 },
   farmRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: S.md, marginBottom: S.sm },
   farmLabel: { flex: 1, color: C.textDim, fontSize: F.size.sm },
   nextAction: { color: C.amberSoft, fontSize: F.size.sm, lineHeight: 20, marginTop: S.xs },

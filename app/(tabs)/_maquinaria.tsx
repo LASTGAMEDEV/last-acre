@@ -3,8 +3,10 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ViewStyle } from 
 import { useGameStore, OwnedMachine, OwnedAttachment, OwnedTrailer, TractorJob, HarvestJob, DeliveryJob } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import SubTabBar from '../../components/SubTabBar';
+import GuideButton from '../../components/GuideButton';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { ATTACHMENT_TYPES } from '../../data/attachmentTypes';
+import { GUIDE_ENTRY_IDS } from '../../data/guideEntries';
 
 type MachineryTab = 'fleet' | 'attachments' | 'jobs' | 'deliveries';
 
@@ -40,7 +42,10 @@ function FleetTab() {
     );
     return (
       <View key={m.id} style={s.machineCard}>
-        <Text style={s.machineName}>{mt.name}</Text>
+        <View style={s.machineTitleRow}>
+          <Text style={s.machineName}>{mt.name}</Text>
+          <GuideButton entryId={GUIDE_ENTRY_IDS.machine(mt.id)} compact />
+        </View>
         {repair && (
           <Text style={s.repairBadge}>
             {repair.startDay === null ? '⚠️ Broken' : `🔧 Repairing · ready day ${repair.readyDay}`}
@@ -64,7 +69,10 @@ function FleetTab() {
     const trailerType = hitched ? MACHINE_TYPES.find(t => t.id === hitched.typeId) : null;
     return (
       <View key={m.id} style={s.machineCard}>
-        <Text style={s.machineName}>{mt.name}</Text>
+        <View style={s.machineTitleRow}>
+          <Text style={s.machineName}>{mt.name}</Text>
+          <GuideButton entryId={GUIDE_ENTRY_IDS.machine(mt.id)} compact />
+        </View>
         <Text style={s.machineDetail}>
           {trailerType
             ? `🔗 ${trailerType.name} (${trailerType.capacityKg?.toLocaleString()} kg)`
@@ -188,7 +196,10 @@ function AttachmentsTab() {
             if (!at) return null;
             return (
               <View key={a.id} style={s.machineCard}>
-                <Text style={s.machineName}>{at.name}</Text>
+                <View style={s.machineTitleRow}>
+                  <Text style={s.machineName}>{at.name}</Text>
+                  <GuideButton entryId="system_machinery_transport" compact />
+                </View>
                 <Text style={s.machineDetail}>{at.operation} · {at.haPerDay} ha/day · fits {at.compatibleTractorSizes.join('+')} tractors</Text>
               </View>
             );
@@ -210,7 +221,10 @@ function AttachmentsTab() {
               : null;
             return (
               <View key={tr.id} style={s.machineCard}>
-                <Text style={s.machineName}>{tt.name} · {tt.capacityKg?.toLocaleString()} kg</Text>
+                <View style={s.machineTitleRow}>
+                  <Text style={s.machineName}>{tt.name} · {tt.capacityKg?.toLocaleString()} kg</Text>
+                  <GuideButton entryId={GUIDE_ENTRY_IDS.machine(tt.id)} compact />
+                </View>
                 <Text style={s.machineDetail}>
                   {hitchedTruckType ? `Hitched to: ${hitchedTruckType.name}` : 'Not hitched'}
                 </Text>
@@ -363,7 +377,8 @@ const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: C.bg },
   sectionHeader:{ color: C.text, fontSize: F.size.md, fontWeight: 'bold', paddingHorizontal: S.md, paddingTop: S.lg, paddingBottom: 6 },
   machineCard:  { backgroundColor: C.bgCard, borderRadius: 10, margin: S.sm, padding: S.md },
-  machineName:  { color: C.white, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: S.xs },
+  machineTitleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: S.sm, marginBottom: S.xs },
+  machineName:  { flex: 1, color: C.white, fontWeight: 'bold', fontSize: F.size.lg },
   machineDetail:{ color: C.textMuted, fontSize: F.size.sm, marginBottom: 2 },
   repairBadge:  { color: C.red, fontSize: F.size.sm, marginBottom: 2 },
   jobBadge:     { color: C.amber, fontSize: F.size.sm },

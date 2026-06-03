@@ -2,8 +2,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
+import GuideButton from '../GuideButton';
 import { CONTRACT_TEMPLATES } from '../../engine/contracts';
 import { CROP_TYPES } from '../../data/cropTypes';
+import { GUIDE_ENTRY_IDS } from '../../data/guideEntries';
 
 function ContractsSection() {
   const { contracts, prices, inventory, day, acceptContract, declineContract, deliverCrop, declinedTemplates, counterOfferContract } = useGameStore();
@@ -17,7 +19,10 @@ function ContractsSection() {
   return (
     <View>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Active contracts ({activeContracts.length})</Text>
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.sectionTitle}>Active contracts ({activeContracts.length})</Text>
+          <GuideButton entryId="system_contracts" compact />
+        </View>
         {activeContracts.length === 0 && <Text style={styles.emptyText}>No active contracts.</Text>}
         {activeContracts.map(c => {
           const crop = CROP_TYPES.find(cr => cr.id === c.cropId);
@@ -30,6 +35,7 @@ function ContractsSection() {
             <View key={c.id} style={[styles.contractCard, overdue && styles.loanCardOverdue]}>
               <View style={styles.loanCardHeader}>
                 <Text style={styles.contractTitle}>{crop?.name}</Text>
+                {crop && <GuideButton entryId={GUIDE_ENTRY_IDS.crop(crop.id)} compact />}
                 {overdue && <Text style={styles.overdueTag}>OVERDUE</Text>}
               </View>
               <Text style={styles.contractDetail}>
@@ -60,7 +66,10 @@ function ContractsSection() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Available offers</Text>
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.sectionTitle}>Available offers</Text>
+          <GuideButton entryId="system_contracts" compact />
+        </View>
         {availableTemplates.length === 0 && <Text style={styles.emptyText}>No offers available right now.</Text>}
         {availableTemplates.map(t => {
           const crop = CROP_TYPES.find(c => c.id === t.cropId);
@@ -71,7 +80,10 @@ function ContractsSection() {
           const isNegotiating = negotiatingId === t.id;
           return (
             <View key={t.id} style={styles.offerCard}>
-              <Text style={styles.offerName}>{t.name}</Text>
+              <View style={styles.offerTitleRow}>
+                <Text style={styles.offerName}>{t.name}</Text>
+                {crop && <GuideButton entryId={GUIDE_ENTRY_IDS.crop(crop.id)} compact />}
+              </View>
               <Text style={styles.offerDetail}>
                 {crop?.name} · {t.amountRange[0].toLocaleString()}–{t.amountRange[1].toLocaleString()} {unit}
               </Text>
@@ -216,6 +228,7 @@ const styles = StyleSheet.create({
   // Sections
   section: { backgroundColor: C.bgCard, borderRadius: R.lg, margin: S.md, padding: 14 },
   sectionTitle: { color: C.text, fontWeight: 'bold', fontSize: 15, marginBottom: 10 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: S.sm, marginBottom: 10 },
   emptyText: { color: '#555', fontSize: F.size.sm },
   apr: { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'normal' },
 
@@ -251,7 +264,7 @@ const styles = StyleSheet.create({
   // Active loans
   loanCard: { backgroundColor: '#0f3460', borderRadius: 10, padding: S.md, marginBottom: S.sm },
   loanCardOverdue: { borderWidth: 1, borderColor: '#f44336' },
-  loanCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: S.sm },
+  loanCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: S.sm, marginBottom: S.sm },
   loanCardTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
   overdueTag: { backgroundColor: '#f44336', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2 },
   loanCardDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
@@ -293,7 +306,8 @@ const styles = StyleSheet.create({
   progressFill: { height: 6, backgroundColor: C.green, borderRadius: 3 },
   progressLabel: { color: C.textFaint, fontSize: F.size.xs },
   offerCard: { backgroundColor: '#1b3a4b', borderRadius: R.md, padding: S.md, marginBottom: 10 },
-  offerName: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: S.xs },
+  offerTitleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: S.sm, marginBottom: S.xs },
+  offerName: { flex: 1, color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
   offerDetail: { color: '#aaa', fontSize: F.size.sm, marginBottom: 2 },
   offerBtns: { flexDirection: 'row', gap: 8, marginTop: 10 },
   acceptBtn: { flex: 1, backgroundColor: C.greenDark, borderRadius: R.md, padding: 9, alignItems: 'center' },

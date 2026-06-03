@@ -20,6 +20,7 @@ import { getSeason } from '../../engine/climate';
 import HelpSheet from '../../components/HelpSheet';
 import DispatchModal from '../../components/DispatchModal';
 import GuideButton from '../../components/GuideButton';
+import { GUIDE_ENTRY_IDS } from '../../data/guideEntries';
 
 const TIER_COLORS: Record<CropTier, string> = {
   D: '#9e9e9e', C: C.green, B: '#2196f3', A: '#9c27b0', S: '#ff9800',
@@ -253,7 +254,7 @@ export default function MarketPricesSection() {
           <View style={styles.chartMeta}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
               <Text style={styles.chartCropName}>{selected.name}</Text>
-              <GuideButton entryId={selected.id === 'wheat' ? 'crop_wheat' : 'system_market_prices'} compact />
+              <GuideButton entryId={GUIDE_ENTRY_IDS.crop(selected.id)} compact />
             </View>
             <View style={styles.chartPriceRow}>
               <Text style={styles.chartCurrentPrice}>${current.toFixed(2)}</Text>

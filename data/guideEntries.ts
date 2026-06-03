@@ -1,3 +1,7 @@
+import { ANIMAL_TYPES } from './animalTypes';
+import { BUILDING_CATEGORY_LABELS, BUILDING_TYPES } from './buildingTypes';
+import { CROP_TYPES } from './cropTypes';
+import { MACHINE_TYPES } from './machineTypes';
 import type { GuideCategory, GuideEntry } from '../types/guide';
 
 export const GUIDE_CATEGORY_LABELS: Record<GuideCategory, string> = {
@@ -37,7 +41,7 @@ export const GUIDE_CATEGORY_ORDER: GuideCategory[] = [
   'common_problems',
 ];
 
-export const GUIDE_ENTRIES: GuideEntry[] = [
+const BASE_GUIDE_ENTRIES: GuideEntry[] = [
   {
     id: 'first_year',
     title: 'Your First Year',
@@ -603,7 +607,251 @@ export const GUIDE_ENTRIES: GuideEntry[] = [
     visual: { kind: 'diagram', title: 'Scale balance', nodes: ['Land', 'Machines', 'Workers', 'Cash', 'Storage'] },
     farmStateRules: [{ kind: 'finance' }, { kind: 'generic' }],
   },
+  {
+    id: 'problem_dont_know_next',
+    title: 'I Do Not Know What To Do Next',
+    category: 'common_problems',
+    tags: ['lost', 'next step', 'priority', 'planning'],
+    summary: 'When the farm feels too open-ended, choose the nearest bottleneck and solve one thing instead of trying to optimize everything.',
+    whyItMatters: 'The game has many systems, but progress usually comes from a short chain: plant, grow, harvest, sell or process, then reinvest.',
+    howToUse: [
+      'Check fields first: empty owned land is usually the simplest missed opportunity.',
+      'Check cash second: if money is tight, sell inventory or accept a reachable contract.',
+      'Check bottlenecks third: storage, machinery, water, feed, or buildings may be blocking the next expansion.',
+    ],
+    mistakesToAvoid: [
+      'Buying a new system before the current farm loop is stable.',
+      'Advancing days repeatedly without checking fields, animals, and contracts.',
+      'Treating the biggest purchase as automatically the best next step.',
+    ],
+    relatedEntryIds: ['first_year', 'system_market_prices', 'system_storage_quality'],
+    visual: { kind: 'diagram', title: 'Find the next move', nodes: ['Fields', 'Cash', 'Contracts', 'Bottleneck', 'One upgrade'] },
+    farmStateRules: [{ kind: 'generic' }],
+  },
+  {
+    id: 'problem_cash_crunch',
+    title: 'Running Out Of Money',
+    category: 'common_problems',
+    tags: ['money', 'cash', 'loan', 'sell', 'debt'],
+    summary: 'A cash crunch means the farm needs liquidity before expansion: sell what is not strategic, delay upgrades, and borrow only against a clear payoff.',
+    whyItMatters: 'Low cash makes good decisions harder because seed, fuel, feed, maintenance, and emergency repairs all compete for the same money.',
+    howToUse: [
+      'Sell inventory that is not needed for contracts or near-term processing.',
+      'Use loans for productive assets, not to cover random spending.',
+      'Avoid buying new buildings until seed, fuel, feed, and maintenance are funded.',
+    ],
+    mistakesToAvoid: [
+      'Taking a large loan without a harvest, contract, or production plan.',
+      'Selling all stock and then missing a contract delivery.',
+      'Buying more animals while feed or cash is already unstable.',
+    ],
+    relatedEntryIds: ['system_banking_credit', 'system_market_prices', 'system_contracts'],
+    visual: { kind: 'diagram', title: 'Cash recovery', nodes: ['Sell surplus', 'Fund essentials', 'Delay upgrades', 'Borrow carefully', 'Rebuild reserves'] },
+    farmStateRules: [{ kind: 'generic' }],
+  },
+  {
+    id: 'problem_water_shortage',
+    title: 'Water Shortage',
+    category: 'common_problems',
+    tags: ['water', 'drought', 'irrigation', 'crops'],
+    summary: 'Water problems are solved by matching thirsty crops to the right season, keeping irrigation capacity ahead of land expansion, and reacting before drought damage lands.',
+    whyItMatters: 'High-value crops can become bad bets if the farm cannot support their water demand.',
+    howToUse: [
+      'Favor lower water-need crops when irrigation is weak.',
+      'Buy irrigation or water infrastructure before expanding thirsty crop acreage.',
+      'Use the weather forecast before planting large fields.',
+    ],
+    mistakesToAvoid: [
+      'Planting thirsty crops across every parcel at once.',
+      'Waiting until drought damage appears before investing in water.',
+      'Ignoring soil recovery after weather stress.',
+    ],
+    relatedEntryIds: ['system_water_irrigation', 'system_crop_seasons', 'system_soil_health'],
+    visual: { kind: 'diagram', title: 'Water decision', nodes: ['Forecast', 'Crop water need', 'Irrigation', 'Field size', 'Risk'] },
+    farmStateRules: [{ kind: 'generic' }],
+  },
+  {
+    id: 'problem_feed_shortage',
+    title: 'Feed Shortage',
+    category: 'common_problems',
+    tags: ['feed', 'animals', 'welfare', 'production'],
+    summary: 'Feed shortages mean the animal side of the farm is larger than the crop, inventory, or cash base supporting it.',
+    whyItMatters: 'Livestock can produce steady value, but poor feed planning lowers welfare and blocks reliable production.',
+    howToUse: [
+      'Slow animal purchases until feed inventory is stable.',
+      'Use crops, market buys, or processing chains that support the species you own.',
+      'Keep a reserve before winter or any major livestock expansion.',
+    ],
+    mistakesToAvoid: [
+      'Buying animals because housing exists, even when feed does not.',
+      'Spending feed money on buildings that do not solve the shortage.',
+      'Ignoring welfare until production has already dropped.',
+    ],
+    relatedEntryIds: ['system_animals_welfare', 'problem_animals_not_producing', 'system_processing'],
+    visual: { kind: 'diagram', title: 'Feed stability', nodes: ['Count animals', 'Check feed', 'Secure source', 'Build reserve', 'Expand slowly'] },
+    farmStateRules: [{ kind: 'generic' }],
+  },
+  {
+    id: 'problem_overwhelmed',
+    title: 'The Farm Feels Overwhelming',
+    category: 'common_problems',
+    tags: ['overwhelmed', 'focus', 'systems', 'beginner'],
+    summary: 'When there are too many choices, run the farm in layers: fields first, animals second, contracts third, upgrades last.',
+    whyItMatters: 'A readable routine lets the player enjoy depth without feeling like every screen demands attention every day.',
+    howToUse: [
+      'Start each session by checking fields and urgent deadlines.',
+      'Only visit specialist screens when a problem points there.',
+      'Pick one goal for the season and let other systems wait.',
+    ],
+    mistakesToAvoid: [
+      'Opening every tab every day with no priority.',
+      'Trying to learn all late-game systems at once.',
+      'Confusing optional optimization with required survival.',
+    ],
+    relatedEntryIds: ['first_year', 'problem_dont_know_next', 'system_contracts'],
+    visual: { kind: 'diagram', title: 'Simple routine', nodes: ['Fields', 'Animals', 'Deadlines', 'Cash', 'One improvement'] },
+    farmStateRules: [{ kind: 'generic' }],
+  },
 ];
+
+const BASE_IDS = new Set(BASE_GUIDE_ENTRIES.map(entry => entry.id));
+
+function cropGuideId(cropId: string) {
+  return `crop_${cropId}`;
+}
+
+function animalGuideId(animalId: string) {
+  return `animal_${animalId}`;
+}
+
+function buildingGuideId(buildingId: string) {
+  return `building_${buildingId}`;
+}
+
+function machineGuideId(machineId: string) {
+  return `machine_${machineId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+}
+
+const GENERATED_CROP_ENTRIES: GuideEntry[] = CROP_TYPES
+  .filter(crop => !BASE_IDS.has(cropGuideId(crop.id)))
+  .map(crop => ({
+    id: cropGuideId(crop.id),
+    title: crop.name,
+    category: 'crops_fields',
+    tags: ['crop', crop.tier.toLowerCase(), crop.unit, ...crop.seasons],
+    summary: `${crop.name} is a tier ${crop.tier} crop planted in ${crop.seasons.join(', ')} with ${crop.waterNeed}/5 water need.`,
+    whyItMatters: crop.coverCrop
+      ? 'Cover crops are not grown for direct revenue; they protect and restore the field for better future harvests.'
+      : `This crop turns land, seed cost, water, and timing into ${crop.unit} inventory that can be sold, stored, contracted, or processed.`,
+    howToUse: [
+      `Plant during ${crop.seasons.join(', ')} unless protected by special infrastructure.`,
+      `Budget about $${crop.seedCost.toLocaleString()} per hectare for seed before planting.`,
+      crop.coverCrop ? 'Use it when soil recovery matters more than immediate revenue.' : `Compare today’s price against the base price of $${crop.basePrice.toFixed(2)}/${crop.unit} before selling.`,
+    ],
+    mistakesToAvoid: [
+      `Planting outside its season or without enough cash for seed.`,
+      crop.waterNeed >= 4 ? 'Ignoring irrigation and drought risk for a thirsty crop.' : 'Ignoring soil and rotation just because the crop is reliable.',
+      crop.fertilityDrain >= 2 ? 'Repeating it too often without soil recovery.' : 'Forgetting that even low-drain crops still need market timing.',
+    ],
+    relatedEntryIds: ['system_crop_seasons', 'system_soil_health', 'system_market_prices'],
+    visual: { kind: 'diagram', title: `${crop.name} decision`, nodes: ['Season', 'Soil', 'Water', 'Seed', 'Market'] },
+    farmStateRules: [{ kind: 'crop', targetId: crop.id }],
+  }));
+
+const GENERATED_ANIMAL_ENTRIES: GuideEntry[] = ANIMAL_TYPES
+  .filter(animal => !BASE_IDS.has(animalGuideId(animal.id)))
+  .map(animal => ({
+    id: animalGuideId(animal.id),
+    title: animal.name,
+    category: 'animals_welfare',
+    tags: ['animal', animal.enclosureType, animal.feedType ?? 'self-sufficient', animal.productionType ?? 'breeding'],
+    summary: `${animal.name} ${animal.productionType ? `produces ${animal.productionType}` : 'is managed for breeding or sale'} after ${animal.maturityDays} days.`,
+    whyItMatters: 'Animals can create recurring value, but they also create daily feed, housing, welfare, and production-building pressure.',
+    howToUse: [
+      animal.feedType ? `Secure ${animal.feedType} before expanding this species.` : 'This species is mostly self-sufficient but still benefits from proper habitat and management.',
+      `Wait for maturity before expecting full production.`,
+      'Use genetics, welfare, and the right building chain to improve long-term value.',
+    ],
+    mistakesToAvoid: [
+      'Buying too many animals before feed and housing are ready.',
+      'Ignoring maturity time and expecting immediate output.',
+      'Treating every species like it has the same production loop.',
+    ],
+    relatedEntryIds: ['system_animals_welfare', 'system_processing', 'problem_animals_not_producing'],
+    visual: { kind: 'diagram', title: `${animal.name} loop`, nodes: ['Housing', 'Feed', 'Maturity', 'Production', 'Sale'] },
+    farmStateRules: [{ kind: 'animal', targetId: animal.id }],
+  }));
+
+const GENERATED_BUILDING_ENTRIES: GuideEntry[] = BUILDING_TYPES
+  .filter(building => !BASE_IDS.has(buildingGuideId(building.id)))
+  .map(building => ({
+    id: buildingGuideId(building.id),
+    title: building.name,
+    category: building.category === 'processing'
+      ? 'processing_storage'
+      : building.category === 'animal' || building.category === 'production'
+        ? 'animals_welfare'
+        : 'buildings_infrastructure',
+    tags: ['building', building.category, building.buildingTier ?? 'standard'],
+    summary: `${building.name} is a ${BUILDING_CATEGORY_LABELS[building.category].toLowerCase()} building that costs $${building.cost.toLocaleString()}.`,
+    whyItMatters: building.effectLabel || 'Buildings unlock capacity, resilience, or new farm systems that pure cash cannot replace.',
+    howToUse: [
+      'Buy it when this building solves a current bottleneck, not just because it is available.',
+      building.capacity ? `Use its capacity carefully: ${building.capacity.toLocaleString()} units/slots.` : 'Check whether it unlocks a system, upgrade path, or production chain.',
+      building.maintenancePerDay > 0 ? `Budget $${building.maintenancePerDay.toLocaleString()} per day for maintenance.` : 'Check whether it creates passive benefit or income.',
+    ],
+    mistakesToAvoid: [
+      'Spending cash on infrastructure before the farm can use it.',
+      'Forgetting maintenance and worker requirements.',
+      'Buying the building without checking related systems.',
+    ],
+    relatedEntryIds: building.category === 'processing'
+      ? ['system_processing', 'system_storage_quality', 'system_electricity']
+      : building.category === 'animal' || building.category === 'production'
+        ? ['system_animals_welfare', 'animal_cow', 'system_processing']
+        : ['system_water_irrigation', 'system_electricity', 'system_machinery_transport'],
+    visual: { kind: 'diagram', title: `${building.name} role`, nodes: ['Cost', 'Capacity', 'Operation', 'Payoff'] },
+    farmStateRules: [{ kind: 'building', targetId: building.id }],
+  }));
+
+const GENERATED_MACHINE_ENTRIES: GuideEntry[] = MACHINE_TYPES
+  .filter(machine => !BASE_IDS.has(machineGuideId(machine.id)))
+  .map(machine => ({
+    id: machineGuideId(machine.id),
+    title: machine.name,
+    category: 'machinery_transport',
+    tags: ['machine', machine.category, machine.size],
+    summary: `${machine.name} is a ${machine.size} ${machine.category} with $${machine.maintenancePerDay.toLocaleString()}/day maintenance.`,
+    whyItMatters: 'Machinery controls whether the farm can complete fieldwork, hauling, irrigation, and delivery on time.',
+    howToUse: [
+      'Buy machinery when it removes a repeated bottleneck.',
+      machine.fuelPerDay ? `Budget fuel for active work: about ${machine.fuelPerDay} L per job-day.` : 'Check compatibility and capacity before buying.',
+      machine.capacityKg ? `Use its capacity: ${machine.capacityKg.toLocaleString()} ${machine.category === 'trailer' && machine.id.includes('livestock') ? 'head' : 'kg'}.` : 'Pair it with compatible attachments or trailers where needed.',
+    ],
+    mistakesToAvoid: [
+      'Buying equipment without the compatible attachment, trailer, or truck.',
+      'Ignoring maintenance and repair timing before peak season.',
+      'Expanding land faster than machinery capacity.',
+    ],
+    relatedEntryIds: ['system_machinery_transport', 'system_workers', 'problem_machines_break'],
+    visual: { kind: 'diagram', title: `${machine.name} fit`, nodes: ['Job', 'Compatibility', 'Fuel', 'Capacity', 'Timing'] },
+    farmStateRules: [{ kind: 'generic' }],
+  }));
+
+export const GUIDE_ENTRIES: GuideEntry[] = [
+  ...BASE_GUIDE_ENTRIES,
+  ...GENERATED_CROP_ENTRIES,
+  ...GENERATED_ANIMAL_ENTRIES,
+  ...GENERATED_BUILDING_ENTRIES,
+  ...GENERATED_MACHINE_ENTRIES,
+];
+
+export const GUIDE_ENTRY_IDS = {
+  crop: cropGuideId,
+  animal: animalGuideId,
+  building: buildingGuideId,
+  machine: machineGuideId,
+};
 
 export function getGuideEntry(id: string): GuideEntry | undefined {
   return GUIDE_ENTRIES.find(entry => entry.id === id);

@@ -3,11 +3,13 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from '
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import SubTabBar from '../../components/SubTabBar';
+import GuideButton from '../../components/GuideButton';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { PRODUCT_TYPES, CATEGORY_LABELS, ProductCategory } from '../../data/productTypes';
 import { BUILDING_TYPES, BUILDING_CATEGORY_LABELS, BuildingCategory, PRODUCTION_EQUIPMENT } from '../../data/buildingTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { ATTACHMENT_TYPES } from '../../data/attachmentTypes';
+import { GUIDE_ENTRY_IDS } from '../../data/guideEntries';
 import { isHistoricallyUnlocked } from '../../engine/timeline';
 
 type ShopTab = 'seeds' | 'products' | 'buildings' | 'machinery';
@@ -43,7 +45,10 @@ function SeedsTab() {
             <View style={[styles.tierBadge, { backgroundColor: TIER_COLORS[item.tier] }]}>
               <Text style={styles.tierText}>{item.tier}</Text>
             </View>
-            <Text style={styles.cropName}>{item.name}</Text>
+            <View style={styles.cardTitleRow}>
+              <Text style={styles.cropName}>{item.name}</Text>
+              <GuideButton entryId={GUIDE_ENTRY_IDS.crop(item.id)} compact />
+            </View>
             <Text style={styles.detail}>🌱 {item.growthDays}d · {item.baseYield} {item.unit}/ha</Text>
             <Text style={styles.detail}>💰 ${item.basePrice}/{item.unit}</Text>
             <Text style={styles.detail}>🛒 ${item.seedCost.toLocaleString()}/ha</Text>
@@ -166,7 +171,10 @@ function BuildingsTab() {
                   (bt?.category === 'production' && !bt.animalTypeId && (buildings ?? []).includes(building.id));
                 return (
                   <View key={building.id} style={styles.buildingCard}>
-                    <Text style={styles.buildingName}>{building.name}</Text>
+                    <View style={styles.cardTitleRow}>
+                      <Text style={styles.buildingName}>{building.name}</Text>
+                      <GuideButton entryId={GUIDE_ENTRY_IDS.building(building.id)} compact />
+                    </View>
                     {building.capacity && (
                       <Text style={styles.buildingCapacity}>
                         {cat === 'animal'
@@ -279,6 +287,7 @@ function MachineryTab() {
     <View key={m.id} style={mStyles.card}>
       <View style={mStyles.cardHeader}>
         <Text style={mStyles.cardName}>{m.name}</Text>
+        <GuideButton entryId={GUIDE_ENTRY_IDS.machine(m.id)} compact />
         {owned > 0 && <Text style={mStyles.ownedPill}>Owned: {owned}</Text>}
       </View>
       <Text style={mStyles.cardDetail}>💰 ${m.cost.toLocaleString()}</Text>
@@ -303,6 +312,7 @@ function MachineryTab() {
     <View key={a.id} style={mStyles.card}>
       <View style={mStyles.cardHeader}>
         <Text style={mStyles.cardName}>{a.name}</Text>
+        <GuideButton entryId="system_machinery_transport" compact />
         {ownedAttachCount(a.id) > 0 && <Text style={mStyles.ownedPill}>Owned: {ownedAttachCount(a.id)}</Text>}
       </View>
       <Text style={mStyles.cardDetail}>💰 ${a.cost.toLocaleString()}</Text>
@@ -381,8 +391,8 @@ const mStyles = StyleSheet.create({
   sectionBtnTextActive: { color: C.white, fontWeight: 'bold' },
   sectionHeader:     { color: C.text, fontSize: F.size.lg, fontWeight: 'bold', marginTop: S.lg, marginBottom: S.sm, paddingHorizontal: S.md },
   card:              { backgroundColor: C.bgCard, borderRadius: 10, margin: S.sm, padding: S.md },
-  cardHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  cardName:          { color: C.white, fontWeight: 'bold', fontSize: F.size.lg },
+  cardHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: S.sm, marginBottom: 6 },
+  cardName:          { flex: 1, color: C.white, fontWeight: 'bold', fontSize: F.size.lg },
   ownedPill:         { backgroundColor: C.greenDark, borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: 2, color: C.textDim, fontSize: 11 },
   cardDetail:        { color: C.textMuted, fontSize: F.size.sm, marginBottom: 3 },
   buyBtn:            { backgroundColor: C.greenDark, borderRadius: R.md, padding: 10, alignItems: 'center', marginTop: S.sm },
@@ -431,9 +441,10 @@ const styles = StyleSheet.create({
   // Seeds
   seedCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, margin: 6, flex: 1, borderLeftWidth: 3, borderLeftColor: C.border },
   cardSelected: { borderWidth: 2, borderColor: C.text },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: S.xs, marginBottom: S.xs },
   tierBadge: { alignSelf: 'flex-start', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2, marginBottom: S.xs },
   tierText: { color: C.white, fontSize: 11, fontWeight: 'bold' },
-  cropName: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: S.xs },
+  cropName: { flex: 1, color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
   detail: { color: C.textMuted, fontSize: 11, marginBottom: 1 },
   plantPanel: { backgroundColor: C.bgElevated, padding: S.md, borderTopWidth: 1, borderTopColor: C.divider },
   plantTitle: { color: C.text, fontWeight: 'bold', marginBottom: S.sm, fontSize: F.size.md },
@@ -460,7 +471,7 @@ const styles = StyleSheet.create({
   // Buildings
   buildingGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   buildingCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, margin: 5, width: '47%' },
-  buildingName: { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: S.xs },
+  buildingName: { flex: 1, color: C.text, fontWeight: 'bold', fontSize: F.size.md },
   buildingCapacity: { color: C.blue, fontSize: 11, marginBottom: 2 },
   buildingEffect: { color: C.textMuted, fontSize: 11, marginBottom: S.xs },
   buildingMaint: { color: C.red, fontSize: F.size.xs, marginBottom: 6 },

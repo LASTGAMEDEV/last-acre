@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert 
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import HelpSheet from '../../components/HelpSheet';
+import GuideButton from '../../components/GuideButton';
 import {
   LOAN_TIERS,
   computeCreditScore,
@@ -70,6 +71,10 @@ function BankingSection() {
     <View>
       {/* Credit profile */}
       <View style={styles.creditCard}>
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.sectionTitle}>Banking profile</Text>
+          <GuideButton entryId="system_banking_credit" compact />
+        </View>
         <View style={styles.creditRow}>
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -122,7 +127,10 @@ function BankingSection() {
 
       {/* Custom loan form */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Request loan</Text>
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.sectionTitle}>Request loan</Text>
+          <GuideButton entryId="system_banking_credit" compact />
+        </View>
 
         {/* Quick amount buttons */}
         <Text style={styles.fieldLabel}>Quick amount</Text>
@@ -583,6 +591,7 @@ const styles = StyleSheet.create({
   // Sections
   section: { backgroundColor: C.bgCard, borderRadius: R.lg, margin: S.md, padding: 14 },
   sectionTitle: { color: C.text, fontWeight: 'bold', fontSize: 15, marginBottom: 10 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: S.sm, marginBottom: 10 },
   emptyText: { color: '#555', fontSize: F.size.sm },
   apr: { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'normal' },
 
