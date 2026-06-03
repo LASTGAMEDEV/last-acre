@@ -13,7 +13,7 @@ import { isHistoricallyUnlocked } from '../../engine/timeline';
 type ShopTab = 'seeds' | 'products' | 'buildings' | 'machinery';
 
 const TIER_COLORS: Record<CropTier, string> = {
-  D: '#9e9e9e', C: '#4caf50', B: '#2196f3', A: '#9c27b0', S: '#ff9800',
+  D: C.textMuted, C: C.green, B: C.blue, A: C.purple, S: C.orange,
 };
 
 const PRODUCT_CATEGORY_ORDER: ProductCategory[] = [
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: S.sm },
 
   // Seeds
-  seedCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, margin: 6, flex: 1, borderLeftWidth: 3, borderLeftColor: '#333' },
+  seedCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, margin: 6, flex: 1, borderLeftWidth: 3, borderLeftColor: C.border },
   cardSelected: { borderWidth: 2, borderColor: C.text },
   tierBadge: { alignSelf: 'flex-start', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2, marginBottom: S.xs },
   tierText: { color: C.white, fontSize: 11, fontWeight: 'bold' },

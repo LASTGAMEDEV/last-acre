@@ -10,16 +10,16 @@ import { WINDOW_LABELS, TimeWindow } from '../../engine/nightOps';
 type Tab = 'staff' | 'requests' | 'hire';
 
 function satColor(sat: number) {
-  if (sat >= 70) return '#66bb6a';
-  if (sat >= 40) return '#ffa726';
-  return '#ef5350';
+  if (sat >= 70) return C.green;
+  if (sat >= 40) return C.amber;
+  return C.red;
 }
 
 function fatigueColor(val: number): string {
-  if (val <= 30) return '#4caf50';
-  if (val <= 60) return '#ffa726';
-  if (val <= 80) return '#ef5350';
-  return '#b71c1c';
+  if (val <= 30) return C.green;
+  if (val <= 60) return C.amber;
+  if (val <= 80) return C.red;
+  return C.redDark;
 }
 
 function tierLabel(tier: number) {

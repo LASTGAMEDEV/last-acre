@@ -5,6 +5,10 @@ import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { getSeason } from '../../engine/climate';
 
+const CALENDARIO_COLORS = {
+  urgentBadge: '#bf360c',
+} as const;
+
 type CalendarEntry = {
   id: string;
   icon: string;
@@ -132,11 +136,11 @@ export default function CalendarioScreen() {
   const upcoming = entries.filter(e => e.daysLeft >= 0);
 
   const CATEGORY_COLORS: Record<string, string> = {
-    contract:  '#1565c0',
+    contract:  C.blue,
     loan:      C.redDark,
-    futures:   '#4a148c',
-    deposit:   '#1b5e20',
-    season:    '#e65100',
+    futures:   C.purple,
+    deposit:   C.green,
+    season:    C.orange,
     recurring: C.greenDark,
   };
 
@@ -151,7 +155,7 @@ export default function CalendarioScreen() {
           <Text style={[styles.cardTitle, entry.urgent && styles.cardTitleUrgent]}>{entry.title}</Text>
           <Text style={styles.cardDetail}>{entry.detail}</Text>
         </View>
-        <View style={[styles.badge, { backgroundColor: entry.daysLeft < 0 ? C.redDark : entry.urgent ? '#bf360c' : C.bgElevated }]}>
+        <View style={[styles.badge, { backgroundColor: entry.daysLeft < 0 ? C.redDark : entry.urgent ? CALENDARIO_COLORS.urgentBadge : C.bgElevated }]}>
           <Text style={styles.badgeDays}>
             {entry.daysLeft < 0 ? `${Math.abs(entry.daysLeft)}d overdue` : entry.daysLeft === 0 ? 'Today' : `${entry.daysLeft}d`}
           </Text>
