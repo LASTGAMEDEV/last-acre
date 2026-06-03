@@ -35,7 +35,7 @@ function ProductionBuildingsSection() {
         {productionBuildings.map((pb: ProductionBuildingState) => {
           const bt = BUILDING_TYPES.find(b => b.id === pb.buildingTypeId);
           if (!bt) return null;
-          const certColor = pb.certificationTier === 'organic' ? '#4caf50' : pb.certificationTier === 'certified' ? '#2196f3' : '#9e9e9e';
+          const certColor = pb.certificationTier === 'organic' ? C.green : pb.certificationTier === 'certified' ? '#2196f3' : '#9e9e9e';
           const certLabel = pb.certificationTier === 'organic' ? '🌿 Organic' : pb.certificationTier === 'certified' ? '✅ Certified' : 'Basic';
           const availableWorkers = farmhands.filter((w: any) => !pb.assignedWorkerIds.includes(w.id));
           const maxSlots = bt.equipmentSlotCount ?? 2;
@@ -58,7 +58,7 @@ function ProductionBuildingsSection() {
                 <View style={{ flex: 1, height: 8, backgroundColor: '#2a2a4a', borderRadius: 4 }}>
                   <View style={{
                     width: `${pb.hygiene}%` as any, height: 8, borderRadius: 4,
-                    backgroundColor: pb.hygiene >= 80 ? '#4caf50' : pb.hygiene >= 60 ? '#ff9800' : pb.hygiene >= 40 ? '#ff5722' : '#ef5350',
+                    backgroundColor: pb.hygiene >= 80 ? C.green : pb.hygiene >= 60 ? '#ff9800' : pb.hygiene >= 40 ? '#ff5722' : '#ef5350',
                   }} />
                 </View>
                 <Text style={{ color: '#aaa', fontSize: 11, width: 32 }}>{Math.round(pb.hygiene)}%</Text>
@@ -75,7 +75,7 @@ function ProductionBuildingsSection() {
               <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 4 }}>Workers assigned: {pb.assignedWorkerIds.length}</Text>
               {pb.assignedWorkerIds.map((wid, idx) => (
                 <View key={wid} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <Text style={{ color: '#81c784', fontSize: 12 }}>👷 Farmhand #{idx + 1}</Text>
+                  <Text style={{ color: C.green, fontSize: 12 }}>👷 Farmhand #{idx + 1}</Text>
                   <TouchableOpacity onPress={() => unassignWorkerFromBuilding(pb.id, wid)}>
                     <Text style={{ color: '#ef5350', fontSize: 12 }}>Unassign</Text>
                   </TouchableOpacity>
@@ -97,7 +97,7 @@ function ProductionBuildingsSection() {
               {pb.equipmentSlots.map(eqId => {
                 const eq = PRODUCTION_EQUIPMENT.find(e => e.id === eqId);
                 return (
-                  <Text key={eqId} style={{ color: '#81c784', fontSize: 11, marginBottom: 2 }}>
+                  <Text key={eqId} style={{ color: C.green, fontSize: 11, marginBottom: 2 }}>
                     ✓ {eq?.name ?? eqId}
                   </Text>
                 );
@@ -111,11 +111,11 @@ function ProductionBuildingsSection() {
               {/* Deep clean */}
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                 <TouchableOpacity
-                  style={{ flex: 1, backgroundColor: pb.hygiene > 80 ? '#2a2a4a' : '#1b5e20', borderRadius: 6, padding: 8, alignItems: 'center' }}
+                  style={{ flex: 1, backgroundColor: pb.hygiene > 80 ? '#2a2a4a' : C.greenDark, borderRadius: 6, padding: 8, alignItems: 'center' }}
                   onPress={() => performDeepClean(pb.id, false)}
                   disabled={pb.hygiene > 80}
                 >
-                  <Text style={{ color: pb.hygiene > 80 ? '#555' : '#a5d6a7', fontSize: 12 }}>
+                  <Text style={{ color: pb.hygiene > 80 ? '#555' : C.greenSoft, fontSize: 12 }}>
                     {pb.hygiene > 80 ? '✓ Clean' : '🧹 Deep Clean (Worker)'}
                   </Text>
                 </TouchableOpacity>

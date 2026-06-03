@@ -238,12 +238,12 @@ export default function EconomyStatsSection() {
             <View style={styles.statsRow}><Text style={styles.statsLabel}>Last 7 days</Text><Text style={styles.statsValue}>${Math.round(rev7).toLocaleString()}</Text></View>
             <View style={styles.statsRow}><Text style={styles.statsLabel}>Last 30 days</Text><Text style={styles.statsValue}>${Math.round(rev30).toLocaleString()}</Text></View>
             <View style={styles.statsRow}><Text style={styles.statsLabel}>Last 90 days</Text><Text style={styles.statsValue}>${Math.round(rev90).toLocaleString()}</Text></View>
-            <View style={styles.statsRow}><Text style={styles.statsLabel}>All time</Text><Text style={[styles.statsValue, { color: '#81c784' }]}>${Math.round(totalRevenue).toLocaleString()}</Text></View>
+            <View style={styles.statsRow}><Text style={styles.statsLabel}>All time</Text><Text style={[styles.statsValue, { color: C.green }]}>${Math.round(totalRevenue).toLocaleString()}</Text></View>
           </View>
           <View style={styles.statsCard}>
             <Text style={styles.statsCardTitle}>Revenue by Category</Text>
             {[
-              { key: 'crops', label: '🌾 Crops', color: '#66bb6a' },
+              { key: 'crops', label: '🌾 Crops', color: C.green },
               { key: 'animals', label: '🐄 Animals', color: '#42a5f5' },
               { key: 'processed', label: '🏭 Processed', color: '#ab47bc' },
               { key: 'contracts', label: '📋 Contracts', color: '#ffa726' },
@@ -867,7 +867,7 @@ export default function EconomyStatsSection() {
                   />
 
                   {previewAmt > 0 && (
-                    <Text style={[styles.modalSub, { color: isOnTime ? '#81c784' : '#ef9a9a', marginBottom: S.sm }]}>
+                    <Text style={[styles.modalSub, { color: isOnTime ? C.green : '#ef9a9a', marginBottom: S.sm }]}>
                       Revenue: ${previewRevenue.toFixed(0)}
                       {isOnTime ? ' ✓ On-time' : ' ⚠️ Below 80% — counts as missed'}
                     </Text>
@@ -939,11 +939,11 @@ const styles = StyleSheet.create({
   futuresTermBtnText:  { color: C.textFaint, fontWeight: 'bold', fontSize: F.size.md },
   futuresTermBtnTextActive: { color: C.white },
   futuresPreview:      { backgroundColor: '#0a1628', borderRadius: R.md, padding: S.sm, marginBottom: 10 },
-  futuresPreviewText:  { color: '#81c784', fontSize: 11 },
-  futuresOpenBtn:      { backgroundColor: '#1b5e20', borderRadius: R.md, padding: 10, alignItems: 'center' },
+  futuresPreviewText:  { color: C.green, fontSize: 11 },
+  futuresOpenBtn:      { backgroundColor: C.bgElevated, borderRadius: R.md, padding: 10, alignItems: 'center' },
   futuresOpenBtnDisabled: { backgroundColor: '#333' },
   futuresOpenBtnText:  { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
-  futuresFlash:        { color: '#81c784', fontSize: F.size.sm, textAlign: 'center', marginTop: S.sm },
+  futuresFlash:        { color: C.green, fontSize: F.size.sm, textAlign: 'center', marginTop: S.sm },
 
   futuresCard:         { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.xs },
   futuresCardLast:    { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.xxl },
@@ -954,11 +954,11 @@ const styles = StyleSheet.create({
   futuresPosName:      { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
   futuresPosDetail:    { color: C.textMuted, fontSize: 11, marginTop: 2 },
   futuresPosStock:     { fontSize: 11, marginTop: 3 },
-  futuresPosStockOk:   { color: '#66bb6a' },
+  futuresPosStockOk:   { color: C.green },
   futuresPosStockShort:{ color: '#ffa726' },
   futuresPosDelivery:  { color: '#aaa', fontSize: F.size.sm, fontWeight: 'bold' },
   futuresPosDay:       { color: '#555', fontSize: F.size.xs, marginTop: 2 },
-  futuresSettledBadge: { color: '#66bb6a', fontSize: F.size.sm, fontWeight: 'bold' },
+  futuresSettledBadge: { color: C.green, fontSize: F.size.sm, fontWeight: 'bold' },
 
   // Orders tab
   ordersSection:            { margin: S.md, backgroundColor: C.bgCard, borderRadius: R.lg, padding: 14 },
@@ -988,7 +988,7 @@ const styles = StyleSheet.create({
   ordersRowExpiry:          { color: '#ffa726', fontSize: F.size.xs, marginTop: 2 },
   ordersCancelBtn:          { backgroundColor: '#b71c1c', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6 },
   ordersCancelText:         { color: C.white, fontSize: 11, fontWeight: 'bold' },
-  ordersBadgeGood:          { color: '#66bb6a', fontSize: 11, fontWeight: 'bold' },
+  ordersBadgeGood:          { color: C.green, fontSize: 11, fontWeight: 'bold' },
   ordersBadgeWarn:          { color: '#ffa726', fontSize: 11 },
   ordersBadgeGray:          { color: '#555', fontSize: 11 },
 

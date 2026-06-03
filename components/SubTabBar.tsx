@@ -1,9 +1,7 @@
 // components/SubTabBar.tsx
 import React, { useRef, useEffect } from 'react';
 import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
-import { useGameStore } from '../store/useGameStore';
-import { getSeason } from '../engine/climate';
-import { SEASON_THEME, C, S, F, R, MIN_TOUCH } from '../constants/theme';
+import { C, S, F, R } from '../constants/theme';
 
 interface Tab {
   id: string;
@@ -17,9 +15,6 @@ interface Props {
 }
 
 export default function SubTabBar({ tabs, active, onSelect }: Props) {
-  const day = useGameStore(s => s.day);
-  const season = getSeason(day);
-  const theme = SEASON_THEME[season];
   const scrollRef = useRef<ScrollView>(null);
 
   // Scroll active tab into view
@@ -47,9 +42,7 @@ export default function SubTabBar({ tabs, active, onSelect }: Props) {
               onPress={() => onSelect(t.id)}
               style={[
                 styles.pill,
-                isActive
-                  ? { backgroundColor: theme.accent }
-                  : { backgroundColor: 'transparent', borderColor: C.textFaint, borderWidth: 1.5 },
+                isActive ? styles.pillActive : styles.pillInactive,
               ]}
               activeOpacity={0.75}
             >
@@ -70,23 +63,35 @@ export default function SubTabBar({ tabs, active, onSelect }: Props) {
 const styles = StyleSheet.create({
   wrapper: {
     paddingVertical: S.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: C.divider,
   },
   row: {
     flexDirection: 'row',
     paddingHorizontal: S.md,
-    gap: S.sm,
+    gap: S.xs,
   },
   pill: {
     borderRadius: R.pill,
     paddingHorizontal: S.md,
-    paddingVertical: S.sm,
-    minHeight: MIN_TOUCH,
+    paddingVertical: 7,
+    minHeight: 34,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  pillActive: {
+    backgroundColor: C.bgElevated,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  pillInactive: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   label: {
     fontSize: F.size.sm,
   },
-  labelActive:   { color: C.white, fontWeight: F.weight.bold },
+  labelActive:   { color: C.text, fontWeight: F.weight.bold },
   labelInactive: { color: C.textMuted, fontWeight: F.weight.normal },
 });

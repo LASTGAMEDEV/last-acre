@@ -77,7 +77,7 @@ export default function LandManagementSection() {
               {offer.improvementClauseAvailable ? ' · improvement clause available' : ''}
             </Text>
             <TouchableOpacity
-              style={[ls.actionBtn, { backgroundColor: '#2e7d32' }]}
+              style={[ls.actionBtn, { backgroundColor: C.greenDark }]}
               onPress={() => signLease(i, false)}
             >
               <Text style={ls.actionBtnText}>Sign lease</Text>

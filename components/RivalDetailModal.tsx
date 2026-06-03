@@ -7,6 +7,7 @@ import { useGameStore } from '../store/useGameStore';
 import { NPC_FARM_GROUP, RIVAL_GROUP_NAME } from '../data/npcFarmGroups';
 import { CROP_TYPES } from '../data/cropTypes';
 import { NPC_FARM_DEFINITIONS } from '../data/npcFarms';
+import { C } from '../constants/theme';
 
 interface Props {
   group: 'rivalA' | 'rivalB' | null;
@@ -62,7 +63,7 @@ export default function RivalDetailModal({ group, onClose }: Props) {
   // Tier (highest tier in group)
   const maxTier = Math.max(1, ...groupFarms.map(f => f.tier)) as 1 | 2 | 3;
   const tierLabel = maxTier === 3 ? 'Dominant' : maxTier === 2 ? 'Established' : 'Small';
-  const tierColor = maxTier === 3 ? '#ef5350' : maxTier === 2 ? '#ffb74d' : '#66bb6a';
+  const tierColor = maxTier === 3 ? '#ef5350' : maxTier === 2 ? '#ffb74d' : C.green;
 
   // Next dump
   const nextDumpIn = groupFarms.length > 0
@@ -104,7 +105,7 @@ export default function RivalDetailModal({ group, onClose }: Props) {
             </View>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>vs. starting</Text>
-              <Text style={[styles.statValue, { color: wealthGrowthPct >= 0 ? '#66bb6a' : '#ef5350' }]}>
+              <Text style={[styles.statValue, { color: wealthGrowthPct >= 0 ? C.green : '#ef5350' }]}>
                 {wealthGrowthPct >= 0 ? '+' : ''}{wealthGrowthPct}%
               </Text>
             </View>
@@ -136,7 +137,7 @@ export default function RivalDetailModal({ group, onClose }: Props) {
             <Text style={styles.sectionTitle}>🏭 Member farms</Text>
             {groupFarms.map(farm => (
               <View key={farm.id} style={styles.farmRow}>
-                <View style={[styles.tierDot, { backgroundColor: farm.tier === 3 ? '#ef5350' : farm.tier === 2 ? '#ffb74d' : '#66bb6a' }]} />
+                <View style={[styles.tierDot, { backgroundColor: farm.tier === 3 ? '#ef5350' : farm.tier === 2 ? '#ffb74d' : C.green }]} />
                 <Text style={styles.farmName}>{farm.name}</Text>
                 <Text style={styles.farmWealth}>${Math.round(farm.wealth).toLocaleString()}</Text>
                 <Text style={styles.farmSell}>sells in {Math.max(0, farm.nextSellDay - day)}d</Text>

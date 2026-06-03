@@ -18,7 +18,7 @@ const STATUS_COLOR: Record<string, string> = {
   transition_1: '#ffa726',
   transition_2: '#ffa726',
   transition_3: '#ffa726',
-  organic: '#4caf50',
+  organic: C.green,
   decertified: '#ef5350',
 };
 
@@ -39,7 +39,7 @@ export default function CertificationsSection() {
           {organicParcels.length} of {owned.length} parcels in transition or certified
         </Text>
         {organicParcels.filter(p => p.organicStatus === 'organic').length > 0 && (
-          <Text style={[cs.row, { color: '#4caf50' }]}>
+          <Text style={[cs.row, { color: C.green }]}>
             ✅ {organicParcels.filter(p => p.organicStatus === 'organic').length} parcels fully certified
           </Text>
         )}
@@ -118,6 +118,6 @@ const cs = StyleSheet.create({
   badge: { fontSize: F.size.sm, fontWeight: '600' },
   alertBox: { borderRadius: R.sm, padding: S.sm, marginTop: 4 },
   alertText: { fontSize: F.size.sm, color: C.text },
-  actionBtn: { backgroundColor: '#2e7d32', borderRadius: R.sm, padding: S.sm, marginTop: 4, alignItems: 'center' },
+  actionBtn: { backgroundColor: C.greenDark, borderRadius: R.sm, padding: S.sm, marginTop: 4, alignItems: 'center' },
   actionBtnText: { color: '#fff', fontWeight: '600', fontSize: F.size.sm },
 });

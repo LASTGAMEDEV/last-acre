@@ -779,6 +779,12 @@ export interface GameState {
   completedMilestones: string[];
   milestonePopup: { icon: string; title: string; reward: number } | null;
   tutorialSeen: boolean;
+  dayOneChecklist: {
+    tilled:    boolean;
+    planted:   boolean;
+    advanced5: boolean;
+    harvested: boolean;
+  };
   firstMissionStep: number; // 0=plant, 1=harvest, 2=sell, 3=hire worker, 4=sign contract, 5=done
   dismissedHints: string[];  // IDs of hints the player has permanently dismissed
   totalRevenue: number;
@@ -1037,6 +1043,7 @@ export interface GameState {
   claimSeasonGoalReward: (goalId: string) => void;
   resetGame: () => void;
   markTutorialSeen: () => void;
+  markDayOneStep: (step: 'tilled' | 'planted' | 'advanced5' | 'harvested') => void;
   dismissHint: (id: string) => void;
   markYearEndShown: () => void;
   installGreenhouse: (parcelId: string) => void;
@@ -1407,6 +1414,12 @@ function makeInitialState() {
     completedMilestones: [] as string[],
     milestonePopup: null as { icon: string; title: string; reward: number } | null,
     tutorialSeen: false,
+    dayOneChecklist: {
+      tilled:    false,
+      planted:   false,
+      advanced5: false,
+      harvested: false,
+    },
     firstMissionStep: 0,
     dismissedHints: [] as string[],
     totalRevenue: 0,
@@ -4213,6 +4226,7 @@ export const useGameStore = create<GameState>()(
         const fuelPausedNames: string[] = [];
 
         // ── Process TractorJobs ──────────────────────────────────────────────
+        let tillCompletedThisDay = false;
         let tractorSlurryDrain = 0;
         const completedTractorJobIds: string[] = [];
         for (const job of (state.tractorJobs ?? [])) {
@@ -4241,6 +4255,7 @@ export const useGameStore = create<GameState>()(
             finalParcels = finalParcels.map((p: LandParcel) =>
               job.parcelIds.includes(p.id) ? { ...p, tilled: true } : p
             );
+            tillCompletedThisDay = true;
             summary.push({
               id: `tj_${job.id}`,
               icon: '🚜',
@@ -6115,6 +6130,13 @@ export const useGameStore = create<GameState>()(
           pendingAnalyses: newPendingAnalyses,
           colmenaNegligenceStartDay,
         });
+        const newDayAfterSet = get().day;
+        if (newDayAfterSet >= 5 && !get().dayOneChecklist.advanced5) {
+          get().markDayOneStep('advanced5');
+        }
+        if (tillCompletedThisDay && !get().dayOneChecklist.tilled) {
+          get().markDayOneStep('tilled');
+        }
       },
 
       advanceDays: (n: number) => {
@@ -6261,6 +6283,7 @@ export const useGameStore = create<GameState>()(
           ),
           firstMissionStep: state.firstMissionStep === 0 ? 1 : state.firstMissionStep,
         });
+        get().markDayOneStep('planted');
       },
 
       harvestCrop: (parcelId) => {
@@ -6425,6 +6448,7 @@ export const useGameStore = create<GameState>()(
             longestDay: state.personalRecords?.longestDay ?? state.day,
           },
         });
+        get().markDayOneStep('harvested');
       },
 
       sellCrop: (cropId, units, marketId) => {
@@ -7163,6 +7187,7 @@ export const useGameStore = create<GameState>()(
               parcelIds.includes(p.id) ? { ...p, tilled: true } : p
             ),
           });
+          get().markDayOneStep('tilled');
 
         } else if (operation === 'plant') {
           if (!cropId) return;
@@ -8690,6 +8715,12 @@ export const useGameStore = create<GameState>()(
         set({ tutorialSeen: true });
       },
 
+      markDayOneStep: (step: 'tilled' | 'planted' | 'advanced5' | 'harvested') => {
+        set(state => ({
+          dayOneChecklist: { ...state.dayOneChecklist, [step]: true },
+        }));
+      },
+
       dismissHint: (id) => {
         const state = get();
         if ((state.dismissedHints ?? []).includes(id)) return;
@@ -10081,7 +10112,7 @@ export const useGameStore = create<GameState>()(
           buyProcessingBuilding, upgradeProcessingBuilding,
           assignWorkerToProcessingBuilding, unassignWorkerFromProcessingBuilding,
           installColdStorage,
-          openTimeDeposit, closeTimeDeposit, resetGame, markTutorialSeen, markYearEndShown,
+          openTimeDeposit, closeTimeDeposit, resetGame, markTutorialSeen, markDayOneStep, markYearEndShown,
           installGreenhouse, removeGreenhouse, openFuture, joinCooperative, leaveCooperative,
           joinCoop, leaveCoop, deliverToCoop, voteAGM, submitCounterProposal, bookCoopEquipment,
           harvestAllReady, collectAllProduction, setAutoSell, startNewSeason,

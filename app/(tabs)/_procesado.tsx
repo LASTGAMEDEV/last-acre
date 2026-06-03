@@ -90,7 +90,9 @@ export default function ProcesadoScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.screenTitle}>🏭 Artisan Processing</Text>
+      <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider }}>
+        <Text style={{ color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy }}>Processing</Text>
+      </View>
       <Text style={styles.screenSubtitle}>Transform raw goods into finished products</Text>
 
       {/* Tab bar */}
@@ -113,7 +115,7 @@ export default function ProcesadoScreen() {
           )}
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 4 }}>
             <HelpSheet title="Processing" body="Processing takes in-game days. Each building needs a worker. Higher building tiers unlock more recipes and raise quality ceilings. Stage 4 products age and improve over time." />
-            <Text style={{ color: '#555', fontSize: 11, marginLeft: 6 }}>How does processing work?</Text>
+            <Text style={{ color: C.textFaint, fontSize: 11, marginLeft: 6 }}>How does processing work?</Text>
           </View>
 
           {[1, 2, 3, 4].map(stage => {
@@ -354,7 +356,6 @@ export default function ProcesadoScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   content: { paddingBottom: 100 },
-  screenTitle: { color: C.text, fontSize: F.size.xl, fontWeight: F.weight.bold, paddingHorizontal: S.md, paddingTop: S.sm, paddingBottom: S.xs },
   screenSubtitle: { color: C.textMuted, fontSize: F.size.xs, paddingHorizontal: S.md, paddingBottom: S.xs },
 
   tabBar: { flexDirection: 'row', marginHorizontal: S.md, marginBottom: S.sm, backgroundColor: C.bgCard, borderRadius: R.md, padding: 3 },
@@ -372,26 +373,26 @@ const styles = StyleSheet.create({
   buildingInfo: { flex: 1 },
   buildingName: { color: C.text, fontWeight: 'bold', fontSize: 15 },
   buildingLocked: { color: C.textMuted, fontSize: 11, marginTop: 2 },
-  buildingTier: { color: '#81c784', fontSize: 11, marginTop: 2 },
+  buildingTier: { color: C.textDim, fontSize: 11, marginTop: 2 },
   buildingBadge: { borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: 3 },
-  badgeOwned: { backgroundColor: '#1b3a1b' },
-  badgeLocked: { backgroundColor: '#2a2a2a' },
-  badgeText: { fontSize: 11, fontWeight: 'bold', color: '#aaa' },
+  badgeOwned: { backgroundColor: C.bgElevated },
+  badgeLocked: { backgroundColor: C.bgCard },
+  badgeText: { fontSize: 11, fontWeight: 'bold', color: C.textMuted },
 
   buildingDetails: { backgroundColor: C.bgDeep, borderRadius: 10, padding: S.md, marginTop: 4 },
-  actionBtn: { backgroundColor: '#c8860a', borderRadius: R.md, padding: S.sm, alignItems: 'center', marginBottom: S.sm },
+  actionBtn: { backgroundColor: C.amber, borderRadius: R.md, padding: S.sm, alignItems: 'center', marginBottom: S.sm },
   actionBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
-  actionBtnSecondary: { backgroundColor: '#2a4a6a', borderRadius: R.md, padding: S.sm, alignItems: 'center', marginBottom: S.sm },
+  actionBtnSecondary: { backgroundColor: C.bgElevated, borderRadius: R.md, padding: S.sm, alignItems: 'center', marginBottom: S.sm },
   actionBtnSecondaryText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
 
   workerSection: { marginTop: S.sm, marginBottom: S.sm },
   workerLabel: { color: C.textMuted, fontSize: 11, fontWeight: 'bold', marginBottom: 4 },
   workerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 3 },
   workerName: { color: C.text, fontSize: 12 },
-  workerRemove: { fontSize: 12, color: '#ff7043' },
+  workerRemove: { fontSize: 12, color: C.red },
   workerAssignRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-  workerAssignBtn: { backgroundColor: '#333', borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 4 },
-  workerAssignText: { color: '#81c784', fontSize: 11 },
+  workerAssignBtn: { backgroundColor: C.bgElevated, borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 4 },
+  workerAssignText: { color: C.textDim, fontSize: 11 },
 
   recipeCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: C.divider },
   recipeCardLocked: { opacity: 0.5 },
@@ -399,22 +400,22 @@ const styles = StyleSheet.create({
   recipeIcon: { fontSize: 22, marginTop: 2 },
   recipeName: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
   recipeTime: { color: C.textMuted, fontSize: 11, marginTop: 2 },
-  tierLock: { color: '#ff7043', fontSize: 11, fontWeight: 'bold' },
+  tierLock: { color: C.red, fontSize: 11, fontWeight: 'bold' },
 
   inputsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', backgroundColor: C.bgDeep, borderRadius: R.md, padding: 10, marginBottom: 10, gap: 6 },
-  inputPill: { backgroundColor: '#2a2a2a', borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 3 },
+  inputPill: { backgroundColor: C.bgCard, borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 3 },
   inputPillText: { color: C.textMuted, fontSize: 11 },
-  flowArrow: { color: '#c8860a', fontSize: 16, fontWeight: 'bold' },
-  outputPill: { backgroundColor: '#1b3a1b', borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 3 },
-  outputPillText: { color: '#81c784', fontSize: 11, fontWeight: 'bold' },
-  outputValue: { color: '#c8860a', fontSize: 11, marginTop: 2 },
+  flowArrow: { color: C.amber, fontSize: 16, fontWeight: 'bold' },
+  outputPill: { backgroundColor: C.bgElevated, borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 3 },
+  outputPillText: { color: C.textDim, fontSize: 11, fontWeight: 'bold' },
+  outputValue: { color: C.amber, fontSize: 11, marginTop: 2 },
 
   batchRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   batchBtn: { backgroundColor: C.divider, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6 },
   batchBtnText: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
   batchCount: { color: C.text, fontSize: F.size.md, minWidth: 60, textAlign: 'center' },
-  queueBtn: { flex: 1, backgroundColor: '#c8860a', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
-  queueBtnDisabled: { backgroundColor: '#333' },
+  queueBtn: { flex: 1, backgroundColor: C.amber, borderRadius: R.md, padding: S.sm, alignItems: 'center' },
+  queueBtnDisabled: { backgroundColor: C.bgElevated },
   queueBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
 
   section: { marginTop: S.sm, paddingHorizontal: S.md },
@@ -422,14 +423,14 @@ const styles = StyleSheet.create({
   emptyText: { color: C.textMuted, fontSize: F.size.sm, textAlign: 'center', paddingVertical: 32 },
 
   batchCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: C.divider },
-  batchCardReady: { borderColor: '#2e7d32' },
+  batchCardReady: { borderColor: C.greenDark },
   batchRow2: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   batchTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
   batchDays: { color: C.textMuted, fontSize: 11 },
   batchDetail: { color: C.textMuted, fontSize: 12, marginBottom: 6 },
-  batchReady: { color: '#81c784', fontWeight: 'bold', fontSize: 12 },
+  batchReady: { color: C.textDim, fontWeight: 'bold', fontSize: 12 },
   progressBar: { height: 4, backgroundColor: C.divider, borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: 4, backgroundColor: '#c8860a', borderRadius: 2 },
+  progressFill: { height: 4, backgroundColor: C.amber, borderRadius: 2 },
 
   inventoryCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginBottom: S.sm, borderWidth: 1, borderColor: C.divider },
   inventoryHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
@@ -440,8 +441,8 @@ const styles = StyleSheet.create({
   qualityScore: { color: C.textMuted, fontSize: 11 },
   inventoryMeta: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   expiryText: { color: C.textMuted, fontSize: 11 },
-  expiryWarning: { color: '#ff7043' },
+  expiryWarning: { color: C.red },
   inventoryPrice: { color: C.textMuted, fontSize: 11 },
-  sellBtn: { backgroundColor: '#2e7d32', borderRadius: R.sm, padding: 8, alignItems: 'center' },
+  sellBtn: { backgroundColor: C.greenDark, borderRadius: R.sm, padding: 8, alignItems: 'center' },
   sellBtnText: { color: C.white, fontSize: 12, fontWeight: 'bold' },
 });

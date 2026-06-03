@@ -77,9 +77,9 @@ const smk = StyleSheet.create({
   vaultName:     { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
   vaultGenes:    { color: C.textMuted, fontSize: F.size.xs, marginTop: 1 },
   vaultQty:      { color: '#555', fontSize: F.size.xs, marginTop: 1 },
-  sellBtn:       { backgroundColor: '#1a3a1a', borderRadius: 7, paddingHorizontal: 10, paddingVertical: S.sm, alignItems: 'center' },
-  sellBtnText:   { color: '#66bb6a', fontSize: 11, fontWeight: 'bold' },
-  sellBtnSub:    { color: '#4caf50', fontSize: F.size.xs },
+  sellBtn:       { backgroundColor: C.bgCard, borderRadius: 7, paddingHorizontal: 10, paddingVertical: S.sm, alignItems: 'center' },
+  sellBtnText:   { color: C.green, fontSize: 11, fontWeight: 'bold' },
+  sellBtnSub:    { color: C.green, fontSize: F.size.xs },
 });
 
 export default SeedMarketSection;

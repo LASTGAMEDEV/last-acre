@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions } from 'react-native';
 import { useGameStore } from '../store/useGameStore';
+import { C, F, R, S } from '../constants/theme';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -30,7 +31,7 @@ function CycleVisual() {
 
 function SeasonVisual() {
   const seasons = [
-    { icon: '🌸', name: 'Spring', color: '#a5d6a7' },
+    { icon: '🌸', name: 'Spring', color: C.greenSoft },
     { icon: '☀️', name: 'Summer', color: '#fff176' },
     { icon: '🍂', name: 'Autumn', color: '#ffb74d' },
     { icon: '❄️', name: 'Winter', color: '#90caf9' },
@@ -50,7 +51,7 @@ function SeasonVisual() {
 
 function FertilityVisual() {
   const bars = [
-    { label: 'High 🟢', val: 0.9, color: '#4caf50' },
+    { label: 'High 🟢', val: 0.9, color: C.green },
     { label: 'Med 🟡', val: 0.55, color: '#ffb74d' },
     { label: 'Low 🔴', val: 0.2, color: '#ef5350' },
   ];
@@ -73,9 +74,9 @@ function FertilityVisual() {
 function RotationVisual() {
   return (
     <View style={{ gap: 8 }}>
-      <View style={[vis.rotBox, { borderColor: '#4caf5066', backgroundColor: '#0a2a0a' }]}>
+      <View style={[vis.rotBox, { borderColor: '#4caf5066', backgroundColor: C.bgDeep }]}>
         <Text style={vis.rotIcon}>🌽 → 🌾</Text>
-        <Text style={[vis.rotLabel, { color: '#66bb6a' }]}>✅ +15% Rotation Bonus</Text>
+        <Text style={[vis.rotLabel, { color: C.green }]}>✅ +15% Rotation Bonus</Text>
         <Text style={vis.rotSub}>Different crop = yield boost</Text>
       </View>
       <View style={[vis.rotBox, { borderColor: '#ffb74d66', backgroundColor: '#2a1a00' }]}>
@@ -89,7 +90,7 @@ function RotationVisual() {
 
 function MarketVisual() {
   const items = [
-    { crop: '🌾 Wheat', signal: '🟢 BUY', price: '+18%', color: '#4caf50' },
+    { crop: '🌾 Wheat', signal: '🟢 BUY', price: '+18%', color: C.green },
     { crop: '🌽 Corn',  signal: '🟡 HOLD', price: '+2%',  color: '#ffb74d' },
     { crop: '🍅 Tomato',signal: '🔴 WAIT', price: '-8%',  color: '#ef5350' },
   ];
@@ -131,33 +132,33 @@ function MachinesVisual() {
 
 const vis = StyleSheet.create({
   row:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
-  arrow:      { color: '#555', fontSize: 16 },
+  arrow:      { color: C.textFaint, fontSize: 16 },
   cycleBox:   { alignItems: 'center', flex: 1 },
   cycleIcon:  { fontSize: 24 },
-  cycleLabel: { color: '#aaa', fontSize: 10, marginTop: 2 },
+  cycleLabel: { color: C.textDim, fontSize: 10, marginTop: 2 },
   seasonBox:  { flex: 1, alignItems: 'center', borderWidth: 1, borderRadius: 8, padding: 6 },
   seasonIcon: { fontSize: 18 },
   seasonLabel:{ fontSize: 9, fontWeight: 'bold', marginTop: 2 },
-  seasonDays: { color: '#555', fontSize: 9 },
+  seasonDays: { color: C.textFaint, fontSize: 9 },
   fertRow:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  fertLabel:  { color: '#aaa', fontSize: 11, width: 70 },
-  fertTrack:  { flex: 1, height: 8, backgroundColor: '#0d1117', borderRadius: 4, overflow: 'hidden' },
+  fertLabel:  { color: C.textDim, fontSize: 11, width: 70 },
+  fertTrack:  { flex: 1, height: 8, backgroundColor: C.bgDeep, borderRadius: 4, overflow: 'hidden' },
   fertFill:   { height: 8, borderRadius: 4 },
   fertPct:    { fontSize: 11, width: 34, textAlign: 'right', fontWeight: 'bold' },
-  fertNote:   { color: '#555', fontSize: 10, textAlign: 'center', marginTop: 2 },
+  fertNote:   { color: C.textFaint, fontSize: 10, textAlign: 'center', marginTop: 2 },
   rotBox:     { borderWidth: 1, borderRadius: 8, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
   rotIcon:    { fontSize: 20 },
   rotLabel:   { fontSize: 12, fontWeight: 'bold' },
-  rotSub:     { color: '#666', fontSize: 10 },
-  mktRow:     { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0d1117', borderRadius: 8, padding: 8, gap: 8 },
-  mktCrop:    { color: '#ccc', fontSize: 12, flex: 1 },
+  rotSub:     { color: C.textMuted, fontSize: 10 },
+  mktRow:     { flexDirection: 'row', alignItems: 'center', backgroundColor: C.bgDeep, borderRadius: 8, padding: 8, gap: 8 },
+  mktCrop:    { color: C.textDim, fontSize: 12, flex: 1 },
   mktSignal:  { fontSize: 11, fontWeight: 'bold', width: 74 },
   mktPrice:   { fontSize: 12, fontWeight: 'bold', width: 36, textAlign: 'right' },
-  machRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#0d1117', borderRadius: 8, padding: 8 },
+  machRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.bgDeep, borderRadius: 8, padding: 8 },
   machIcon:   { fontSize: 22 },
-  machName:   { color: '#ccc', fontSize: 12, fontWeight: 'bold' },
-  machBadge:  { backgroundColor: '#0f3460', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  machEffect: { color: '#64b5f6', fontSize: 11, fontWeight: 'bold' },
+  machName:   { color: C.textDim, fontSize: 12, fontWeight: 'bold' },
+  machBadge:  { backgroundColor: C.bgElevated, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  machEffect: { color: C.blue, fontSize: 11, fontWeight: 'bold' },
 });
 
 // ── Steps data ─────────────────────────────────────────────────────────────────
@@ -355,73 +356,73 @@ export default function TutorialModal() {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: 'rgba(0,0,0,0.88)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    padding: S.lg,
   },
   card: {
-    backgroundColor: '#16213e',
-    borderRadius: 18,
-    padding: 20,
+    backgroundColor: C.bgCard,
+    borderRadius: R.xl,
+    padding: S.xl,
     width: '100%',
     maxWidth: 440,
     borderWidth: 1,
-    borderColor: '#0f3460',
+    borderColor: C.border,
   },
   progressTrack: {
     height: 3,
-    backgroundColor: '#0d1117',
+    backgroundColor: C.bgDeep,
     borderRadius: 2,
-    marginBottom: 10,
+    marginBottom: S.sm,
     overflow: 'hidden',
   },
   progressFill: {
     height: 3,
-    backgroundColor: '#c8860a',
+    backgroundColor: C.amber,
     borderRadius: 2,
   },
   stepCount: {
-    color: '#555',
-    fontSize: 10,
+    color: C.textFaint,
+    fontSize: F.size.xs,
     textAlign: 'right',
-    marginBottom: 12,
+    marginBottom: S.md,
   },
-  icon:     { fontSize: 38, textAlign: 'center', marginBottom: 6 },
-  title:    { color: '#e8d5a3', fontSize: 17, fontWeight: 'bold', textAlign: 'center', marginBottom: 4 },
-  subtitle: { color: '#888', fontSize: 12, textAlign: 'center', marginBottom: 14, lineHeight: 18 },
+  icon:     { fontSize: 38, textAlign: 'center', marginBottom: S.sm },
+  title:    { color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy, textAlign: 'center', marginBottom: S.xs },
+  subtitle: { color: C.textDim, fontSize: F.size.sm, textAlign: 'center', marginBottom: S.lg, lineHeight: 18 },
   visualBox: {
-    backgroundColor: '#0d1117',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 14,
+    backgroundColor: C.bgDeep,
+    borderRadius: R.lg,
+    padding: S.md,
+    marginBottom: S.md,
   },
   tipBox: {
-    backgroundColor: '#1a2a0a',
-    borderRadius: 8,
-    padding: 10,
+    backgroundColor: C.bgDeep,
+    borderRadius: R.md,
+    padding: S.md,
     borderLeftWidth: 3,
-    borderLeftColor: '#c8860a',
-    marginBottom: 8,
+    borderLeftColor: C.amber,
+    marginBottom: S.sm,
   },
-  tipLabel: { color: '#c8860a', fontSize: 10, fontWeight: 'bold', marginBottom: 3 },
-  tipText:  { color: '#ccc', fontSize: 12, lineHeight: 17 },
-  navHint:  { color: '#555', fontSize: 10, textAlign: 'center', marginBottom: 4 },
+  tipLabel: { color: C.amber, fontSize: F.size.xs, fontWeight: F.weight.bold, marginBottom: 3 },
+  tipText:  { color: C.textDim, fontSize: F.size.sm, lineHeight: 17 },
+  navHint:  { color: C.textFaint, fontSize: F.size.xs, textAlign: 'center', marginBottom: S.xs },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 6,
-    marginTop: 14,
-    marginBottom: 16,
+    gap: S.sm,
+    marginTop: S.md,
+    marginBottom: S.lg,
   },
-  dot:      { width: 7, height: 7, borderRadius: 4, backgroundColor: '#1e1e3a' },
-  dotActive:{ backgroundColor: '#e8d5a3', width: 20 },
-  dotDone:  { backgroundColor: '#0f3460' },
-  btnRow:   { flexDirection: 'row', gap: 10 },
-  backBtn:  { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#333', alignItems: 'center' },
-  backText: { color: '#888', fontSize: 13 },
-  skipBtn:  { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#333', alignItems: 'center' },
-  skipText: { color: '#555', fontSize: 13 },
-  nextBtn:  { flex: 2, padding: 12, borderRadius: 10, backgroundColor: '#c8860a', alignItems: 'center' },
-  nextText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  dot:       { width: 7, height: 7, borderRadius: 4, backgroundColor: C.bgElevated },
+  dotActive: { backgroundColor: C.amberSoft, width: 20 },
+  dotDone:   { backgroundColor: C.surface },
+  btnRow:    { flexDirection: 'row', gap: S.sm },
+  backBtn:   { flex: 1, padding: S.md, borderRadius: R.md, borderWidth: 1, borderColor: C.border, alignItems: 'center' },
+  backText:  { color: C.textDim, fontSize: F.size.md },
+  skipBtn:   { flex: 1, padding: S.md, borderRadius: R.md, borderWidth: 1, borderColor: C.border, alignItems: 'center' },
+  skipText:  { color: C.textFaint, fontSize: F.size.md },
+  nextBtn:   { flex: 2, padding: S.md, borderRadius: R.md, backgroundColor: C.amberDark, alignItems: 'center' },
+  nextText:  { color: '#fff', fontWeight: F.weight.heavy, fontSize: F.size.md },
 });

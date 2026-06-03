@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useGameStore } from '../store/useGameStore';
+import { C, F, R, S } from '../constants/theme';
 
 interface Props {
   id: string;
@@ -34,11 +35,11 @@ export default function HintCard({ id, title, body, actionLabel, onAction }: Pro
 }
 
 const s = StyleSheet.create({
-  card:       { margin: 10, marginBottom: 0, borderWidth: 1, borderColor: '#7a5c00', backgroundColor: '#1e1600', borderRadius: 8, padding: 12 },
-  topRow:     { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 },
-  title:      { color: '#ffd700', fontSize: 13, fontWeight: 'bold', flex: 1 },
-  dismiss:    { color: '#7a5c00', fontSize: 16, paddingLeft: 8 },
-  body:       { color: '#c8a86b', fontSize: 12, lineHeight: 18 },
-  actionBtn:  { marginTop: 8, alignSelf: 'flex-start', backgroundColor: '#7a5c00', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 6 },
-  actionText: { color: '#ffd700', fontSize: 12, fontWeight: 'bold' },
+  card:       { margin: S.md, marginBottom: 0, borderLeftWidth: 3, borderLeftColor: C.amber, backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md },
+  topRow:     { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: S.xs },
+  title:      { color: C.text, fontSize: F.size.md, fontWeight: F.weight.bold, flex: 1 },
+  dismiss:    { color: C.textDim, fontSize: 16, paddingLeft: S.sm },
+  body:       { color: C.textDim, fontSize: F.size.sm, lineHeight: 18 },
+  actionBtn:  { marginTop: S.sm, alignSelf: 'flex-start', backgroundColor: C.amber, paddingHorizontal: S.md, paddingVertical: S.xs, borderRadius: R.sm },
+  actionText: { color: C.bgCard, fontSize: F.size.sm, fontWeight: F.weight.bold },
 });

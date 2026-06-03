@@ -17,7 +17,7 @@ function FleetTab() {
     return cap;
   }, 200);
   const fuelPct = Math.min(1, (fuel ?? 0) / fuelCapacity);
-  const fuelColor = fuelPct > 0.5 ? '#66bb6a' : fuelPct > 0.2 ? '#ffa726' : '#ef5350';
+  const fuelColor = fuelPct > 0.5 ? C.green : fuelPct > 0.2 ? C.amber : C.red;
   const liveFuelPrice = fuelPrice ?? 1.20;
   const fillCost = Math.round(Math.max(0, fuelCapacity - (fuel ?? 0)) * liveFuelPrice);
 
@@ -88,7 +88,7 @@ function FleetTab() {
           <Text style={s.fuelTitle}>⛽ Fuel</Text>
           <Text style={s.fuelAmount}>{Math.round(fuel ?? 0).toLocaleString()} / {fuelCapacity.toLocaleString()} L</Text>
         </View>
-        <Text style={{ color: '#aaa', fontSize: 11 }}>⛽ ${liveFuelPrice.toFixed(2)}/L</Text>
+        <Text style={{ color: C.textMuted, fontSize: 11 }}>⛽ ${liveFuelPrice.toFixed(2)}/L</Text>
         <View style={s.fuelGaugeBg}>
           <View style={[s.fuelGaugeFill, { width: `${Math.round(fuelPct * 100)}%` as `${number}%`, backgroundColor: fuelColor }]} />
         </View>
@@ -287,8 +287,8 @@ function DeliveriesTab() {
   if (activeJobs.length === 0) {
     return (
       <View style={{ padding: 24, alignItems: 'center' }}>
-        <Text style={{ color: '#555', fontSize: 14 }}>No active deliveries.</Text>
-        <Text style={{ color: '#444', fontSize: 12, marginTop: 4 }}>
+        <Text style={{ color: C.textFaint, fontSize: 14 }}>No active deliveries.</Text>
+        <Text style={{ color: C.textFaint, fontSize: 12, marginTop: 4 }}>
           Dispatch a truck from the sell screen.
         </Text>
       </View>
@@ -308,16 +308,16 @@ function DeliveriesTab() {
               <Text style={{ color: C.text, fontWeight: 'bold' }}>
                 {truckType?.name ?? 'Truck'} → {job.marketId}
               </Text>
-              <Text style={{ color: daysLeft === 0 ? '#66bb6a' : C.textMuted, fontSize: 12 }}>
+              <Text style={{ color: daysLeft === 0 ? C.green : C.textMuted, fontSize: 12 }}>
                 {daysLeft === 0 ? 'Arriving today' : `${daysLeft}d left`}
               </Text>
             </View>
-            <Text style={{ color: '#aaa', fontSize: 12 }}>{cargoSummary}</Text>
-            <Text style={{ color: '#66bb6a', fontSize: 12, marginTop: 2 }}>
+            <Text style={{ color: C.textMuted, fontSize: 12 }}>{cargoSummary}</Text>
+            <Text style={{ color: C.green, fontSize: 12, marginTop: 2 }}>
               Expected: ${job.expectedRevenue.toLocaleString()}
             </Text>
             {job.needsMaintenance && (
-              <Text style={{ color: '#ff9800', fontSize: 11, marginTop: 4 }}>
+              <Text style={{ color: C.amber, fontSize: 11, marginTop: 4 }}>
                 ⚠ Broke down — delayed by {job.breakdownDaysAdded}d
               </Text>
             )}
@@ -341,7 +341,9 @@ export default function MaquinariaScreen() {
 
   return (
     <View style={s.container}>
-      <Text style={s.screenTitle}>Machinery</Text>
+      <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider }}>
+        <Text style={{ color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy }}>Machinery</Text>
+      </View>
       <SubTabBar
         tabs={MACHINERY_TABS}
         active={tab}
@@ -359,41 +361,33 @@ export default function MaquinariaScreen() {
 
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: C.bg },
-  screenTitle: {
-    color: C.text,
-    fontSize: F.size.xl,
-    fontWeight: F.weight.bold,
-    paddingHorizontal: S.md,
-    paddingTop: S.sm,
-    paddingBottom: S.xs,
-  },
   sectionHeader:{ color: C.text, fontSize: F.size.md, fontWeight: 'bold', paddingHorizontal: S.md, paddingTop: S.lg, paddingBottom: 6 },
   machineCard:  { backgroundColor: C.bgCard, borderRadius: 10, margin: S.sm, padding: S.md },
   machineName:  { color: C.white, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: S.xs },
-  machineDetail:{ color: '#aaa', fontSize: F.size.sm, marginBottom: 2 },
-  repairBadge:  { color: '#ef5350', fontSize: F.size.sm, marginBottom: 2 },
-  jobBadge:     { color: '#ffb74d', fontSize: F.size.sm },
-  idleBadge:    { color: '#81c784', fontSize: F.size.sm },
-  empty:        { color: '#555', fontSize: F.size.md, textAlign: 'center', marginTop: 40, paddingHorizontal: 20 },
+  machineDetail:{ color: C.textMuted, fontSize: F.size.sm, marginBottom: 2 },
+  repairBadge:  { color: C.red, fontSize: F.size.sm, marginBottom: 2 },
+  jobBadge:     { color: C.amber, fontSize: F.size.sm },
+  idleBadge:    { color: C.textDim, fontSize: F.size.sm },
+  empty:        { color: C.textFaint, fontSize: F.size.md, textAlign: 'center', marginTop: 40, paddingHorizontal: 20 },
   hitchRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: S.sm },
-  smallBtn:     { backgroundColor: '#0f3460', borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6 },
-  smallBtnText: { color: '#64b5f6', fontSize: F.size.sm },
+  smallBtn:     { backgroundColor: C.bgElevated, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6 },
+  smallBtnText: { color: C.blue, fontSize: F.size.sm },
   jobCard:      { backgroundColor: C.bgCard, borderRadius: 10, margin: S.sm, padding: S.md },
   jobTitle:     { color: C.text, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: S.xs },
   progressBar:  { height: 6, backgroundColor: C.bg, borderRadius: 3, marginTop: S.sm, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#81c784', borderRadius: 3 },
+  progressFill: { height: '100%', backgroundColor: C.textDim, borderRadius: 3 },
   fuelCard:           { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, margin: S.sm, gap: 8 },
   fuelHeader:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   fuelTitle:          { color: C.text, fontSize: F.size.md, fontWeight: 'bold' },
   fuelAmount:         { color: C.textMuted, fontSize: 11 },
-  fuelGaugeBg:        { height: 8, backgroundColor: '#0d1117', borderRadius: R.xs, overflow: 'hidden' },
+  fuelGaugeBg:        { height: 8, backgroundColor: C.bgDeep, borderRadius: R.xs, overflow: 'hidden' },
   fuelGaugeFill:      { height: 8, borderRadius: R.xs },
   fuelBuyRow:         { flexDirection: 'row', gap: 6 },
-  fuelBuyBtn:         { flex: 1, backgroundColor: '#0f3460', borderRadius: R.md, paddingVertical: 7, alignItems: 'center' },
+  fuelBuyBtn:         { flex: 1, backgroundColor: C.bgElevated, borderRadius: R.md, paddingVertical: 7, alignItems: 'center' },
   fuelBuyBtnDisabled: { backgroundColor: C.bg, opacity: 0.5 },
-  fuelFillBtn:        { backgroundColor: '#1a3a20' },
+  fuelFillBtn:        { backgroundColor: C.bgElevated },
   fuelBuyBtnTop:      { color: C.text, fontSize: 11, fontWeight: 'bold' },
-  fuelBuyBtnSub:      { color: '#66bb6a', fontSize: F.size.xs },
-  escrowBadge: { backgroundColor: '#2a2a2a', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: 6, alignSelf: 'flex-start', marginTop: 6 },
+  fuelBuyBtnSub:      { color: C.green, fontSize: F.size.xs },
+  escrowBadge: { backgroundColor: C.bgElevated, borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: 6, alignSelf: 'flex-start', marginTop: 6 },
   escrowText:  { color: C.textFaint, fontSize: 11, fontStyle: 'italic' },
 });

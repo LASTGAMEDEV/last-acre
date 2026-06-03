@@ -10,16 +10,16 @@ import { WINDOW_LABELS, TimeWindow } from '../../engine/nightOps';
 type Tab = 'staff' | 'requests' | 'hire';
 
 function satColor(sat: number) {
-  if (sat >= 70) return '#66bb6a';
-  if (sat >= 40) return '#ffa726';
-  return '#ef5350';
+  if (sat >= 70) return C.green;
+  if (sat >= 40) return C.amber;
+  return C.red;
 }
 
 function fatigueColor(val: number): string {
-  if (val <= 30) return '#4caf50';
-  if (val <= 60) return '#ffa726';
-  if (val <= 80) return '#ef5350';
-  return '#b71c1c';
+  if (val <= 30) return C.green;
+  if (val <= 60) return C.amber;
+  if (val <= 80) return C.red;
+  return C.redDark;
 }
 
 function tierLabel(tier: number) {
@@ -35,9 +35,9 @@ function SatBar({ value }: { value: number }) {
   );
 }
 const sb = StyleSheet.create({
-  track: { height: 8, backgroundColor: '#222', borderRadius: 4, overflow: 'hidden', flex: 1, marginRight: 6 },
+  track: { height: 8, backgroundColor: C.bgDeep, borderRadius: 4, overflow: 'hidden', flex: 1, marginRight: 6 },
   fill: { height: '100%', borderRadius: 4 },
-  label: { color: '#888', fontSize: 10, minWidth: 28, textAlign: 'right' },
+  label: { color: C.textMuted, fontSize: 10, minWidth: 28, textAlign: 'right' },
 });
 
 // ── Worker detail modal ───────────────────────────────────────────────────────
@@ -73,7 +73,7 @@ function WorkerDetail({ worker, onClose }: { worker: Worker; onClose: () => void
               style={[wd.shiftChip, worker.shiftPreference === pref && wd.shiftChipActive]}
               onPress={() => setWorkerShiftPreference(worker.id, pref)}
             >
-              <Text style={[wd.shiftChipText, worker.shiftPreference === pref && { color: '#fff' }]}>
+              <Text style={[wd.shiftChipText, worker.shiftPreference === pref && { color: C.white }]}>
                 {pref === 'day' ? '☀️' : pref === 'night' ? '🌙' : pref === 'twilight' ? '🌅' : '⚡'} {pref}
               </Text>
             </TouchableOpacity>
@@ -83,10 +83,10 @@ function WorkerDetail({ worker, onClose }: { worker: Worker; onClose: () => void
         {/* Fatigue */}
         <Text style={st.sectionLabel}>Fatigue</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: S.md, marginBottom: 4 }}>
-          <View style={{ flex: 1, height: 8, backgroundColor: '#222', borderRadius: 4, overflow: 'hidden', marginRight: 6 }}>
+          <View style={{ flex: 1, height: 8, backgroundColor: C.bgDeep, borderRadius: 4, overflow: 'hidden', marginRight: 6 }}>
             <View style={{ width: `${Math.min(100, (worker.fatigueLevel ?? 0))}%`, height: '100%', borderRadius: 4, backgroundColor: fatigueColor(worker.fatigueLevel ?? 0) }} />
           </View>
-          <Text style={{ color: '#888', fontSize: 10, minWidth: 28, textAlign: 'right' }}>{Math.round(worker.fatigueLevel ?? 0)}%</Text>
+          <Text style={{ color: C.textMuted, fontSize: 10, minWidth: 28, textAlign: 'right' }}>{Math.round(worker.fatigueLevel ?? 0)}%</Text>
         </View>
         {(worker.consecutiveNightShifts ?? 0) > 0 && (
           <Text style={wd.warn}>🌙 {worker.consecutiveNightShifts} consecutive night shifts</Text>
@@ -134,19 +134,19 @@ const wd = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: S.md, paddingTop: 48 },
   title: { color: C.text, fontWeight: 'bold', fontSize: F.size.xl },
-  close: { color: '#aaa', fontSize: 18 },
+  close: { color: C.textMuted, fontSize: 18 },
   row: { color: C.text, fontSize: F.size.sm, paddingHorizontal: S.md, paddingBottom: 3 },
-  warn: { color: '#ff7043', fontSize: 12, paddingHorizontal: S.md, marginTop: 2 },
-  node: { backgroundColor: '#1a2744', borderRadius: 8, padding: 8, marginHorizontal: S.md, marginBottom: 4 },
+  warn: { color: C.red, fontSize: 12, paddingHorizontal: S.md, marginTop: 2 },
+  node: { backgroundColor: C.bgElevated, borderRadius: 8, padding: 8, marginHorizontal: S.md, marginBottom: 4 },
   nodeLocked: { opacity: 0.35 },
   nodeText: { color: C.text, fontSize: 13 },
-  smallBtn: { marginTop: 4, backgroundColor: '#1565c0', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start' },
-  smallBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-  shiftChip: { backgroundColor: '#1e2a3a', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6, flex: 1, alignItems: 'center' },
-  shiftChipActive: { backgroundColor: '#1565c0' },
+  smallBtn: { marginTop: 4, backgroundColor: C.blue, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start' },
+  smallBtnText: { color: C.white, fontSize: 11, fontWeight: 'bold' },
+  shiftChip: { backgroundColor: C.bgElevated, borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6, flex: 1, alignItems: 'center' },
+  shiftChipActive: { backgroundColor: C.blue },
   shiftChipText: { color: C.text, fontSize: 11 },
-  fireBtn: { backgroundColor: '#b71c1c', borderRadius: R.lg, padding: S.md, margin: S.md, alignItems: 'center' },
-  fireBtnText: { color: '#fff', fontWeight: 'bold', fontSize: F.size.md },
+  fireBtn: { backgroundColor: C.redDark, borderRadius: R.lg, padding: S.md, margin: S.md, alignItems: 'center' },
+  fireBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
 });
 
 // ── Staff tab ─────────────────────────────────────────────────────────────────
@@ -195,14 +195,14 @@ function StaffTab() {
                   <SatBar value={w.satisfaction} />
                 </View>
                 <View style={[st.cardRow, { marginTop: 4, gap: 6 }]}>
-                  <Text style={{ color: '#888', fontSize: 10 }}>
+                  <Text style={{ color: C.textMuted, fontSize: 10 }}>
                     {w.shiftPreference === 'night' ? '🌙 Night' : w.shiftPreference === 'twilight' ? '🌅 Twilight' : w.shiftPreference === 'any' ? '⚡ Any' : '☀️ Day'}
                   </Text>
                   <Text style={{ color: fatigueColor(w.fatigueLevel ?? 0), fontSize: 10 }}>
                     😴 {Math.round(w.fatigueLevel ?? 0)}% fatigue
                   </Text>
                   {(w.consecutiveNightShifts ?? 0) >= 3 && (
-                    <Text style={{ color: '#ef5350', fontSize: 10 }}>
+                    <Text style={{ color: C.red, fontSize: 10 }}>
                       ⚠️ {w.consecutiveNightShifts} nights
                     </Text>
                   )}
@@ -260,7 +260,7 @@ function RequestsTab() {
       {showLog && log.map(req => (
         <View key={req.id} style={[rq.card, { opacity: 0.55 }]}>
           <Text style={rq.msg}>{req.workerName}: {req.message}</Text>
-          <Text style={{ color: '#888', fontSize: 11 }}>→ {req.resolution}</Text>
+          <Text style={{ color: C.textMuted, fontSize: 11 }}>→ {req.resolution}</Text>
         </View>
       ))}
     </ScrollView>
@@ -271,14 +271,14 @@ const rq = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: S.xs },
   icon: { fontSize: 22, marginRight: S.sm },
   name: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
-  urgent: { color: '#ff7043', fontWeight: 'bold', fontSize: 11 },
+  urgent: { color: C.red, fontWeight: 'bold', fontSize: 11 },
   msg: { color: C.text, fontSize: F.size.sm, marginBottom: S.xs },
-  cost: { color: '#ef9a9a', fontSize: 12 },
-  consequence: { color: '#ffcc80', fontSize: 11, fontStyle: 'italic' },
+  cost: { color: C.red, fontSize: 12 },
+  consequence: { color: C.amber, fontSize: 11, fontStyle: 'italic' },
   btns: { flexDirection: 'row', gap: 8, marginTop: S.sm },
-  approve: { flex: 1, backgroundColor: '#2e7d32', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
-  deny: { flex: 1, backgroundColor: '#b71c1c', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
-  btnText: { color: '#fff', fontWeight: 'bold', fontSize: F.size.sm },
+  approve: { flex: 1, backgroundColor: C.greenDark, borderRadius: R.md, padding: S.sm, alignItems: 'center' },
+  deny: { flex: 1, backgroundColor: C.redDark, borderRadius: R.md, padding: S.sm, alignItems: 'center' },
+  btnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.sm },
 });
 
 // ── Hire tab ──────────────────────────────────────────────────────────────────
@@ -377,7 +377,7 @@ function HireTab() {
                     ))
                 }
                 <TouchableOpacity onPress={() => closePosting(posting.id)}>
-                  <Text style={[st.cardSub, { color: '#ef9a9a', marginTop: S.xs }]}>Cancel posting</Text>
+                  <Text style={[st.cardSub, { color: C.red, marginTop: S.xs }]}>Cancel posting</Text>
                 </TouchableOpacity>
               </View>
             );
@@ -389,20 +389,20 @@ function HireTab() {
   );
 }
 const hr = StyleSheet.create({
-  chip: { backgroundColor: '#1e2a3a', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6, marginRight: 6 },
-  chipSelected: { backgroundColor: '#1565c0' },
+  chip: { backgroundColor: C.bgElevated, borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 6, marginRight: 6 },
+  chipSelected: { backgroundColor: C.blue },
   chipText: { color: C.text, fontSize: 12 },
   contractRow: { flexDirection: 'row', gap: 8, marginBottom: S.sm },
-  contractChip: { flex: 1, backgroundColor: '#1e2a3a', borderRadius: R.md, padding: S.sm, alignItems: 'center' },
+  contractChip: { flex: 1, backgroundColor: C.bgElevated, borderRadius: R.md, padding: S.sm, alignItems: 'center' },
   wageRow: { flexDirection: 'row', gap: 8, marginBottom: S.sm },
-  wageBtn: { backgroundColor: '#1e2a3a', borderRadius: R.md, paddingHorizontal: 16, paddingVertical: 8 },
+  wageBtn: { backgroundColor: C.bgElevated, borderRadius: R.md, paddingHorizontal: 16, paddingVertical: 8 },
   wageBtnText: { color: C.text, fontWeight: 'bold' },
-  postBtn: { backgroundColor: '#1565c0', borderRadius: R.md, padding: S.sm, alignItems: 'center', marginTop: S.sm },
-  postBtnDisabled: { backgroundColor: '#333' },
-  postBtnText: { color: '#fff', fontWeight: 'bold' },
-  applicantRow: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#0d1a2a', borderRadius: 8, padding: S.sm, marginBottom: 4, marginTop: 4 },
-  hireBtn: { backgroundColor: '#1565c0', borderRadius: R.md, paddingHorizontal: 12, paddingVertical: 8, marginLeft: S.sm, alignSelf: 'flex-start' },
-  hireBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  postBtn: { backgroundColor: C.blue, borderRadius: R.md, padding: S.sm, alignItems: 'center', marginTop: S.sm },
+  postBtnDisabled: { backgroundColor: C.bgElevated },
+  postBtnText: { color: C.white, fontWeight: 'bold' },
+  applicantRow: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: C.bgDeep, borderRadius: 8, padding: S.sm, marginBottom: 4, marginTop: 4 },
+  hireBtn: { backgroundColor: C.blue, borderRadius: R.md, paddingHorizontal: 12, paddingVertical: 8, marginLeft: S.sm, alignSelf: 'flex-start' },
+  hireBtnText: { color: C.white, fontWeight: 'bold', fontSize: 12 },
 });
 
 // ── Main screen ───────────────────────────────────────────────────────────────
@@ -420,6 +420,9 @@ export default function TrabajadoresScreen() {
 
   return (
     <View style={st.container}>
+      <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider }}>
+        <Text style={{ color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy }}>Workers</Text>
+      </View>
       <SubTabBar tabs={tabs} active={tab} onSelect={(t: string) => setTab(t as Tab)} />
       <View style={{ flex: 1 }}>
         {tab === 'staff' && <StaffTab />}
@@ -433,13 +436,13 @@ export default function TrabajadoresScreen() {
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   section: { paddingHorizontal: S.md, paddingTop: S.sm },
-  sectionLabel: { color: '#aaa', fontSize: F.size.md, fontWeight: 'bold', paddingHorizontal: S.md, paddingTop: S.lg, paddingBottom: 6 },
+  sectionLabel: { color: C.textMuted, fontSize: F.size.md, fontWeight: 'bold', paddingHorizontal: S.md, paddingTop: S.lg, paddingBottom: 6 },
   stat: { color: C.text, fontSize: F.size.sm, paddingBottom: 4 },
-  empty: { color: '#555', padding: S.lg },
-  label: { color: '#aaa', fontSize: 12, marginBottom: 4 },
+  empty: { color: C.textFaint, padding: S.lg },
+  label: { color: C.textMuted, fontSize: 12, marginBottom: 4 },
   card: { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.sm, marginHorizontal: S.md },
   cardRow: { flexDirection: 'row', alignItems: 'center' },
   cardIcon: { fontSize: 26, marginRight: S.md },
   cardName: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
-  cardSub: { color: '#888', fontSize: 11, marginTop: 1 },
+  cardSub: { color: C.textMuted, fontSize: 11, marginTop: 1 },
 });

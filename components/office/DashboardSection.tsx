@@ -109,7 +109,7 @@ function DashboardSection() {
                   <Text style={{ color: C.text, fontSize: 11 }}>{Math.round(progress * 100)}%</Text>
                 </View>
                 <View style={{ height: 4, backgroundColor: '#0d1117', borderRadius: 2, marginTop: 3 }}>
-                  <View style={{ height: 4, width: `${Math.round(progress * 100)}%` as any, backgroundColor: progress >= 1 ? '#4caf50' : theme.accent, borderRadius: 2 }} />
+                  <View style={{ height: 4, width: `${Math.round(progress * 100)}%` as any, backgroundColor: progress >= 1 ? C.green : theme.accent, borderRadius: 2 }} />
                 </View>
               </View>
             );

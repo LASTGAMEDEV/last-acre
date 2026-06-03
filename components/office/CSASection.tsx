@@ -127,7 +127,7 @@ export default function CSASection() {
 }
 
 function satisfactionColor(val: number): string {
-  if (val >= 75) return '#4caf50';
+  if (val >= 75) return C.green;
   if (val >= 50) return '#ffa726';
   return '#ef5350';
 }
@@ -141,10 +141,10 @@ const csa = StyleSheet.create({
   warn: { fontSize: F.size.sm, color: '#ef5350' },
   badge: { fontSize: F.size.sm, fontWeight: '600' },
   toggleBtn: { backgroundColor: '#333', borderRadius: R.sm, padding: S.sm, flex: 1, alignItems: 'center' },
-  seasonActive: { backgroundColor: '#2e7d32' },
+  seasonActive: { backgroundColor: C.greenDark },
   toggleText: { color: '#fff', fontWeight: '600', fontSize: F.size.sm },
   chip: { backgroundColor: '#333', borderRadius: R.sm, padding: S.sm, minWidth: 50, alignItems: 'center' },
-  chipActive: { backgroundColor: '#2e7d32' },
+  chipActive: { backgroundColor: C.greenDark },
   chipText: { color: C.text, fontSize: F.size.sm },
   subRow: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border, gap: 4 },
   barBg: { height: 6, backgroundColor: '#333', borderRadius: 3, marginTop: 4 },

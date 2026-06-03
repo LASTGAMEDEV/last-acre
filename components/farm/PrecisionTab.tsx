@@ -44,7 +44,7 @@ export default function PrecisionTab() {
         const pending = state.pendingAnalyses.find((pa: any) => pa.parcelId === parcel.id);
         const trend = getYieldTrend(parcel.yieldHistory ?? []);
         const trendEmoji = trend === 'rising' ? '↑' : trend === 'declining' ? '↓' : trend === 'underperforming' ? '⚠️' : '→';
-        const trendColor = trend === 'rising' ? '#4caf50' : trend === 'declining' || trend === 'underperforming' ? '#ef5350' : '#aaa';
+        const trendColor = trend === 'rising' ? C.green : trend === 'declining' || trend === 'underperforming' ? '#ef5350' : '#aaa';
 
         return (
           <View key={parcel.id} style={styles.card}>
@@ -117,7 +117,7 @@ export default function PrecisionTab() {
                   const max = Math.max(...(parcel.yieldHistory ?? []).slice(-4).map((hh: any) => hh.kgPerHa));
                   const hPct = max > 0 ? (h.kgPerHa / max) * 100 : 0;
                   return (
-                    <View key={i} style={{ flex: 1, backgroundColor: '#4caf50', height: `${Math.max(10, hPct)}%`, borderRadius: 2 }} />
+                    <View key={i} style={{ flex: 1, backgroundColor: C.green, height: `${Math.max(10, hPct)}%`, borderRadius: 2 }} />
                   );
                 })}
               </View>
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   label: { color: C.textMuted, fontSize: F.size.md },
   value: { color: C.text, fontSize: F.size.md, fontWeight: F.weight.medium },
-  good: { color: '#4caf50' },
+  good: { color: C.green },
   warning: { color: '#ff9800' },
   danger: { color: '#ef5350' },
   hint: { color: C.textFaint, fontSize: F.size.sm, marginTop: S.xs },
