@@ -2,6 +2,7 @@
 
 This file is the single entry point for ClawdBot to understand all designed features.
 Full spec files live in `docs/superpowers/specs/`. Plans (step-by-step for Kimi) live in `docs/superpowers/plans/`.
+New mechanics and future extensions that are not specs yet live in `brain/PROJECTS/farm-tycoon/ideas.md`.
 
 When Claude Code writes a new spec, it adds a summary entry here.
 
