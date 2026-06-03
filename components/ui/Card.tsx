@@ -15,7 +15,7 @@ const CARD_COLORS = {
   dangerBg:    '#1a0808',
   dangerBorder:'#5a1a1a',
   successBg:   '#081a0a',
-  successBorder:'#1a5a1a',
+  successBorder:C.greenDark,
   warningBg:   '#1a1200',
   warningBorder:'#5a3a00',
   infoBg:      '#080f1a',

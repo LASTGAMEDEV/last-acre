@@ -204,7 +204,7 @@ function SettingsSection() {
           <Switch
             value={soundEnabled}
             onValueChange={setSoundEnabled}
-            trackColor={{ false: '#333', true: '#4caf50' }}
+            trackColor={{ false: '#333', true: C.green }}
             thumbColor={C.white}
           />
         </View>
@@ -216,7 +216,7 @@ function SettingsSection() {
           <Switch
             value={hapticEnabled}
             onValueChange={setHapticEnabled}
-            trackColor={{ false: '#333', true: '#4caf50' }}
+            trackColor={{ false: '#333', true: C.green }}
             thumbColor={C.white}
           />
         </View>
@@ -228,7 +228,7 @@ function SettingsSection() {
           <Switch
             value={musicEnabled}
             onValueChange={setMusicEnabled}
-            trackColor={{ false: '#333', true: '#4caf50' }}
+            trackColor={{ false: '#333', true: C.green }}
             thumbColor={C.white}
           />
         </View>
@@ -273,7 +273,7 @@ function SettingsSection() {
           </View>
         ) : (
           <View>
-            <Text style={{ color: '#a5d6a7', fontSize: 12, marginBottom: 10 }}>
+            <Text style={{ color: C.greenSoft, fontSize: 12, marginBottom: 10 }}>
               🎉 Year 3 complete! You can prestige now.{'\n'}
               Next level: +5% revenue bonus · +${((prestige + 1) * 2000).toLocaleString()} starting cash.
             </Text>

@@ -2,12 +2,13 @@ import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useGameStore } from '../store/useGameStore';
 import { MILESTONES } from '../data/milestones';
+import { C } from '../constants/theme';
 
 function getGrade(totalRevenue: number, milestonesCount: number): { letter: string; color: string; label: string } {
   if (totalRevenue >= 500_000 && milestonesCount >= 15) return { letter: 'S', color: '#ff9800', label: 'Legendary Farmer' };
   if (totalRevenue >= 200_000 && milestonesCount >= 10) return { letter: 'A', color: '#9c27b0', label: 'Elite Farmer' };
   if (totalRevenue >= 75_000  && milestonesCount >= 5)  return { letter: 'B', color: '#2196f3', label: 'Established Farmer' };
-  if (totalRevenue >= 20_000)                           return { letter: 'C', color: '#4caf50', label: 'Growing Farmer' };
+  if (totalRevenue >= 20_000)                           return { letter: 'C', color: C.green, label: 'Growing Farmer' };
   return { letter: 'D', color: '#9e9e9e', label: 'Rookie Farmer' };
 }
 
@@ -143,14 +144,14 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#1e1e3a' },
   rowLabel: { color: '#888', fontSize: 13 },
   rowValue: { color: '#ccc', fontSize: 13, fontWeight: 'bold' },
-  rowValueHighlight: { color: '#81c784', fontSize: 15 },
+  rowValueHighlight: { color: C.green, fontSize: 15 },
 
   milestoneGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, gap: 4, maxWidth: '48%' },
-  chipDone: { backgroundColor: '#1b3a1b' },
+  chipDone: { backgroundColor: C.bgElevated },
   chipMissed: { backgroundColor: '#1a1a2e', opacity: 0.4 },
   chipIcon: { fontSize: 12 },
-  chipText: { color: '#81c784', fontSize: 11, fontWeight: 'bold', flexShrink: 1 },
+  chipText: { color: C.green, fontSize: 11, fontWeight: 'bold', flexShrink: 1 },
   chipTextMissed: { color: '#555' },
 
   continueBtn: { backgroundColor: '#c8860a', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 8 },

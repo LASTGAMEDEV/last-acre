@@ -37,14 +37,14 @@ function HenilAndBuildingsSection() {
                 const daysLeft = batch.readyDay - day;
                 const hayYield = Math.floor(batch.wetGrassKg * 0.625);
                 return (
-                  <View key={batch.batchId} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1a2a1a' }}>
+                  <View key={batch.batchId} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: C.bgCard }}>
                     <Text style={{ color: '#ccc', fontSize: 12 }}>
                       {batch.wetGrassKg.toLocaleString()} kg grass
                     </Text>
-                    <Text style={{ color: '#66bb6a', fontSize: 12 }}>
+                    <Text style={{ color: C.green, fontSize: 12 }}>
                       → {hayYield.toLocaleString()} kg hay
                     </Text>
-                    <Text style={{ color: daysLeft <= 1 ? '#66bb6a' : C.textMuted, fontSize: 12 }}>
+                    <Text style={{ color: daysLeft <= 1 ? C.green : C.textMuted, fontSize: 12 }}>
                       {daysLeft === 0 ? 'Ready!' : `${daysLeft}d left`}
                     </Text>
                   </View>
@@ -54,7 +54,7 @@ function HenilAndBuildingsSection() {
               <TouchableOpacity
                 style={{
                   marginTop: 10,
-                  backgroundColor: canStartBatch ? '#1b5e20' : C.bg,
+                  backgroundColor: canStartBatch ? C.greenDark : C.bg,
                   borderRadius: 6, padding: 10, alignItems: 'center',
                   opacity: canStartBatch ? 1 : 0.5,
                 }}
@@ -151,7 +151,7 @@ function AnimalQualitySection({
           <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 4 }}>Milk Grade</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
             {dairyEntries.map(([typeId, grade]) => {
-              const badgeColor = grade === 'A' ? '#4caf50' : grade === 'B' ? '#ffa726' : '#f44336';
+              const badgeColor = grade === 'A' ? C.green : grade === 'B' ? '#ffa726' : '#f44336';
               return (
                 <View
                   key={typeId}
@@ -175,7 +175,7 @@ function AnimalQualitySection({
         <View>
           <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 4 }}>Welfare Score</Text>
           {welfareEntries.map(([typeId, score]) => {
-            const barColor = score >= 80 ? '#4caf50' : score >= 60 ? '#ffa726' : '#f44336';
+            const barColor = score >= 80 ? C.green : score >= 60 ? '#ffa726' : '#f44336';
             const label = SPECIES_LABELS[typeId] ?? typeId;
             return (
               <View key={typeId} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
@@ -290,11 +290,11 @@ function SilageSection({
 }) {
   if (silageCapacity <= 0) return null;
   const fillPct = Math.min(1, silageLevel / silageCapacity);
-  const barColor = fillPct >= 0.9 ? '#4caf50' : fillPct >= 0.5 ? '#8bc34a' : '#ff9800';
+  const barColor = fillPct >= 0.9 ? C.green : fillPct >= 0.5 ? C.green : '#ff9800';
   const space = silageCapacity - silageLevel;
   const canFill = grassInStock > 0 && space > 0;
   return (
-    <View style={{ backgroundColor: '#1a2e1a', borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
+    <View style={{ backgroundColor: C.bgCard, borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
       <Text style={{ color: C.white, fontWeight: 'bold', fontSize: 13 }}>🌿 Silage Pit</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
         <View style={{ flex: 1, backgroundColor: '#333', borderRadius: 4, height: 8, marginRight: 8 }}>
@@ -306,7 +306,7 @@ function SilageSection({
       </View>
       {canFill && (
         <TouchableOpacity
-          style={{ backgroundColor: '#388e3c', borderRadius: 6, padding: 8, marginTop: 8, alignItems: 'center' }}
+          style={{ backgroundColor: C.greenDark, borderRadius: 6, padding: 8, marginTop: 8, alignItems: 'center' }}
           onPress={() => fillSilagePit(Math.floor(Math.min(grassInStock, space)))}
         >
           <Text style={{ color: C.white, fontSize: 12 }}>
@@ -318,7 +318,7 @@ function SilageSection({
         <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 6 }}>No grass in stock to fill pit</Text>
       )}
       {space <= 0 && (
-        <Text style={{ color: '#4caf50', fontSize: 11, marginTop: 6 }}>Pit full — spread or wait for winter feed draw</Text>
+        <Text style={{ color: C.green, fontSize: 11, marginTop: 6 }}>Pit full — spread or wait for winter feed draw</Text>
       )}
     </View>
   );
@@ -341,7 +341,7 @@ function BiogasToggle({
         </Text>
       </View>
       <TouchableOpacity
-        style={{ backgroundColor: biogasMode === 'income' ? '#1565c0' : '#2e7d32', borderRadius: 6, padding: 8, minWidth: 70, alignItems: 'center' }}
+        style={{ backgroundColor: biogasMode === 'income' ? '#1565c0' : C.greenDark, borderRadius: 6, padding: 8, minWidth: 70, alignItems: 'center' }}
         onPress={() => setBiogasMode(biogasMode === 'income' ? 'fuel' : 'income')}
       >
         <Text style={{ color: C.white, fontSize: 11, fontWeight: 'bold' }}>
@@ -366,7 +366,7 @@ function SlurrySection({
 }) {
   if (slurryCapacity <= 0) return null;
   const fillPct = Math.min(1, slurryLevel / slurryCapacity);
-  const barColor = fillPct >= 0.9 ? '#f44336' : fillPct >= 0.7 ? '#ff9800' : '#4caf50';
+  const barColor = fillPct >= 0.9 ? '#f44336' : fillPct >= 0.7 ? '#ff9800' : C.green;
   return (
     <View style={{ backgroundColor: C.bg, borderRadius: 8, padding: 12, marginHorizontal: 8, marginBottom: 8 }}>
       <Text style={{ color: C.white, fontWeight: 'bold', fontSize: 13 }}>Slurry Tank</Text>
@@ -380,7 +380,7 @@ function SlurrySection({
       </View>
       {hasSlurryTanker && slurryLevel > 0 && (
         <TouchableOpacity
-          style={{ backgroundColor: '#2e7d32', borderRadius: 6, padding: 8, marginTop: 8, alignItems: 'center' }}
+          style={{ backgroundColor: C.greenDark, borderRadius: 6, padding: 8, marginTop: 8, alignItems: 'center' }}
           onPress={spreadSlurry}
         >
           <Text style={{ color: C.white, fontSize: 12 }}>Spread on Fields (+1 fertility all owned parcels)</Text>

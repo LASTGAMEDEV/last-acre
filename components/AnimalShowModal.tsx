@@ -4,6 +4,7 @@ import { useGameStore } from '../store/useGameStore';
 import { ANIMAL_TYPES } from '../data/animalTypes';
 import { geneScore, isMature, OwnedAnimal } from '../engine/animals';
 import { getSeason } from '../engine/climate';
+import { C } from '../constants/theme';
 
 const ENTRY_FEE = 250;
 const PRIZE_TABLE = ['$2,500', '$1,000', '$500'];
@@ -78,7 +79,7 @@ export default function AnimalShowModal({ visible, onClose }: Props) {
                 const grade = gradeFromScore(score);
                 const gradeColor =
                   grade === 'S' ? '#ffd700' :
-                  grade === 'A' ? '#81c784' :
+                  grade === 'A' ? C.green :
                   grade === 'B' ? '#64b5f6' :
                   grade === 'C' ? '#aaa' : '#ef9a9a';
                 return (
@@ -120,24 +121,24 @@ export default function AnimalShowModal({ visible, onClose }: Props) {
 
 const s = StyleSheet.create({
   overlay:          { flex: 1, backgroundColor: '#000a', justifyContent: 'flex-end' },
-  sheet:            { backgroundColor: '#0f1e0f', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, maxHeight: '85%' },
+  sheet:            { backgroundColor: C.bgDeep, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, maxHeight: '85%' },
   header:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   title:            { color: '#ffd700', fontSize: 16, fontWeight: 'bold', flex: 1 },
   closeBtn:         { padding: 4 },
   closeText:        { color: '#888', fontSize: 18 },
   deadline:         { color: '#ffb74d', fontSize: 12, marginBottom: 2 },
-  prizeRow:         { color: '#81c784', fontSize: 12, marginBottom: 2 },
+  prizeRow:         { color: C.green, fontSize: 12, marginBottom: 2 },
   feeNote:          { color: '#666', fontSize: 11, marginBottom: 12 },
   sectionLabel:     { color: '#aaa', fontSize: 12, fontWeight: 'bold', marginBottom: 8 },
   empty:            { color: '#555', fontSize: 13, textAlign: 'center', marginVertical: 24 },
   list:             { flexShrink: 1 },
-  animalRow:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a2a1a', borderRadius: 8, padding: 10, marginBottom: 8 },
+  animalRow:        { flexDirection: 'row', alignItems: 'center', backgroundColor: C.bgCard, borderRadius: 8, padding: 10, marginBottom: 8 },
   animalRowEntered: { borderWidth: 1, borderColor: '#ffd70066' },
   animalInfo:       { flex: 1 },
   animalName:       { color: '#e8d5a3', fontSize: 13, fontWeight: 'bold' },
   animalScore:      { color: '#aaa', fontSize: 11, marginTop: 2 },
   animalTraits:     { color: '#666', fontSize: 10, marginTop: 1 },
-  enterBtn:         { backgroundColor: '#2e7d32', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  enterBtn:         { backgroundColor: C.greenDark, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
   enterBtnDisabled: { backgroundColor: '#333' },
   enterText:        { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   withdrawBtn:      { backgroundColor: '#4a2000', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },

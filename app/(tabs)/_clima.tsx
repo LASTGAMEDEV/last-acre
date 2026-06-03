@@ -29,7 +29,7 @@ const SEASON_LABELS: Record<Season, string> = {
 const SEASON_ORDER: Season[] = ['spring', 'summer', 'autumn', 'winter'];
 
 const TIER_COLORS: Record<CropTier, string> = {
-  D: '#9e9e9e', C: '#4caf50', B: '#2196f3', A: '#9c27b0', S: '#ff9800',
+  D: '#9e9e9e', C: C.green, B: '#2196f3', A: '#9c27b0', S: '#ff9800',
 };
 
 function CalendarCell({ status, isCurrentSeason }: { status: SeasonStatus; isCurrentSeason: boolean }) {

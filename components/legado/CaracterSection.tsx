@@ -20,7 +20,7 @@ export default function CaracterSection() {
   const age = farmerAge(farmer, calYear);
   const generation = dynasty.ancestors.length + 1;
   const healthPct = Math.max(0, Math.min(100, farmer.health));
-  const healthColor = healthPct >= 60 ? '#4caf50' : healthPct >= 30 ? '#ff9800' : '#ef5350';
+  const healthColor = healthPct >= 60 ? C.green : healthPct >= 30 ? '#ff9800' : '#ef5350';
 
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -113,12 +113,12 @@ const styles = StyleSheet.create({
   barFill: { height: '100%', borderRadius: 4 },
   skillRow: { marginBottom: 8 },
   note: { color: C.textFaint, fontSize: 10, marginTop: 8, fontStyle: 'italic' },
-  knowledgeEntry: { backgroundColor: '#0d1a0d', borderRadius: R.sm, padding: 10, marginBottom: 6 },
-  knowledgeName: { color: '#a5d6a7', fontWeight: 'bold', fontSize: F.size.sm },
+  knowledgeEntry: { backgroundColor: C.bg, borderRadius: R.sm, padding: 10, marginBottom: 6 },
+  knowledgeName: { color: C.greenSoft, fontWeight: 'bold', fontSize: F.size.sm },
   knowledgeDesc: { color: C.textMuted, fontSize: 11, marginTop: 2 },
   emptyNote: { color: C.textFaint, fontSize: F.size.sm, fontStyle: 'italic', marginBottom: 10 },
-  mentorCard: { borderColor: '#a5d6a744', borderWidth: 1 },
-  mentorTitle: { color: '#a5d6a7', fontWeight: 'bold', fontSize: F.size.md },
+  mentorCard: { borderColor: C.greenSoft + '44', borderWidth: 1 },
+  mentorTitle: { color: C.greenSoft, fontWeight: 'bold', fontSize: F.size.md },
   handoffCard: { borderColor: '#ef535044', borderWidth: 1 },
   handoffBtn: { backgroundColor: '#3a0a0a', borderRadius: R.md, paddingVertical: 12, alignItems: 'center', marginTop: 10 },
   handoffBtnText: { color: '#ef5350', fontWeight: 'bold', fontSize: F.size.md },

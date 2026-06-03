@@ -92,7 +92,7 @@ function RationDesigner({ animalType, onBack }: { animalType: any; onBack: () =>
   pastureKg *= seasonPastureMult;
 
   const analysis = analyzeRation(ration, animalType, { ...state.inventory, ...state.animalInventory, silage: state.silageLevel ?? 0 }, pastureKg);
-  const tierColor = analysis.tier === 'deficient' ? '#ef5350' : analysis.tier === 'adequate' ? '#ff9800' : analysis.tier === 'optimal' ? '#4caf50' : '#2196f3';
+  const tierColor = analysis.tier === 'deficient' ? '#ef5350' : analysis.tier === 'adequate' ? '#ff9800' : analysis.tier === 'optimal' ? C.green : '#2196f3';
 
   const setPct = (id: string, pct: number) => {
     setIngredients(prev => ({ ...prev, [id]: Math.max(0, Math.min(100, pct)) }));
@@ -162,7 +162,7 @@ function RationDesigner({ animalType, onBack }: { animalType: any; onBack: () =>
           return (
             <View key={ing.id} style={styles.inputRow}>
               <Text style={[styles.label, { flex: 1 }]}>{ing.name}</Text>
-              <Text style={[styles.label, { color: inStock >= needed ? '#4caf50' : '#ef5350', fontSize: F.size.xs }]}>
+              <Text style={[styles.label, { color: inStock >= needed ? C.green : '#ef5350', fontSize: F.size.xs }]}>
                 {inStock >= needed ? '✓' : '✗'} {Math.round(inStock)} kg
               </Text>
               <TextInput

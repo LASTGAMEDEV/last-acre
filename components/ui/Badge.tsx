@@ -11,7 +11,7 @@ interface BadgeProps {
 }
 
 const VARIANT: Record<BadgeVariant, { bg: string; text: string; border: string }> = {
-  success: { bg: '#0f2a14', text: C.greenSoft,  border: C.greenDark },
+  success: { bg: C.bgDeep, text: C.greenSoft,  border: C.greenDark },
   warning: { bg: '#2a1a00', text: C.amberSoft,  border: C.amberDark },
   danger:  { bg: '#2a0808', text: '#fca5a5',    border: C.redDark },
   info:    { bg: '#08152a', text: '#93c5fd',    border: '#1e3a5a' },

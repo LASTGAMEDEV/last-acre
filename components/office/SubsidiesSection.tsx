@@ -21,7 +21,7 @@ export default function SubsidiesSection() {
 
   function Badge({ ok, label }: { ok: boolean; label: string }) {
     return (
-      <View style={[ss.badge, { backgroundColor: ok ? '#1b5e20' : '#5c1a1a' }]}>
+      <View style={[ss.badge, { backgroundColor: ok ? C.greenDark : '#5c1a1a' }]}>
         <Text style={ss.badgeText}>{ok ? '✅' : '❌'} {label}</Text>
       </View>
     );
@@ -40,7 +40,7 @@ export default function SubsidiesSection() {
           <Badge ok={noburn} label="No straw burn" />
         </View>
         {greeningQualified ? (
-          <Text style={[ss.statusText, { color: '#66bb6a' }]}>✅ Greening qualified (+30%)</Text>
+          <Text style={[ss.statusText, { color: C.green }]}>✅ Greening qualified (+30%)</Text>
         ) : (
           <Text style={[ss.statusText, { color: '#ef5350' }]}>
             ⚠️ Missing: {[

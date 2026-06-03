@@ -12,7 +12,7 @@ function CompetitorsSection() {
   const NPC_MAP_OWNER = NPC_FARM_GROUP;
 
   function wealthColor(wealth: number): string {
-    if (wealth < 10000) return '#66bb6a';
+    if (wealth < 10000) return C.green;
     if (wealth < 30000) return '#ffb74d';
     return '#ef5350';
   }
@@ -55,7 +55,7 @@ function CompetitorsSection() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text style={{ color: C.text, fontSize: 14, fontWeight: 'bold' }}>{farm.name}</Text>
-                  <View style={{ backgroundColor: farm.tier === 3 ? '#c62828' : farm.tier === 2 ? '#f57f17' : '#1b5e20', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <View style={{ backgroundColor: farm.tier === 3 ? '#c62828' : farm.tier === 2 ? '#f57f17' : C.greenDark, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
                     <Text style={{ color: C.white, fontSize: 10, fontWeight: 'bold' }}>Tier {farm.tier}</Text>
                   </View>
                 </View>
@@ -120,7 +120,7 @@ function CompetitorsSection() {
                   </View>
                   <View style={{ flex: 1, backgroundColor: '#0d1117', borderRadius: 6, padding: 8 }}>
                     <Text style={{ color: C.textMuted, fontSize: 9 }}>TIER</Text>
-                    <Text style={{ color: farm.tier === 3 ? '#ef5350' : farm.tier === 2 ? '#ffb74d' : '#66bb6a', fontSize: 13, fontWeight: 'bold' }}>
+                    <Text style={{ color: farm.tier === 3 ? '#ef5350' : farm.tier === 2 ? '#ffb74d' : C.green, fontSize: 13, fontWeight: 'bold' }}>
                       {farm.tier === 3 ? 'Dominant' : farm.tier === 2 ? 'Growing' : 'Small'}
                     </Text>
                   </View>
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   balanceRow: { flexDirection: 'row', alignItems: 'center' },
   balanceItem: { flex: 1, alignItems: 'center' },
   balanceLabel: { color: C.textMuted, fontSize: 11, marginBottom: 2 },
-  balanceMoney: { color: '#4caf50', fontSize: 26, fontWeight: 'bold' },
+  balanceMoney: { color: C.green, fontSize: 26, fontWeight: 'bold' },
   balanceSavings: { color: '#64b5f6', fontSize: 26, fontWeight: 'bold' },
   balanceDivider: { width: 1, height: 40, backgroundColor: '#1a3a6a', marginHorizontal: S.md },
 
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   repFill: { height: 6, borderRadius: 3 },
   // Cooperative
   coopCard: { backgroundColor: C.bgCard, borderRadius: R.lg, marginHorizontal: S.md, marginBottom: S.sm, padding: 14 },
-  coopActive: { color: '#81c784', fontSize: F.size.md, fontWeight: 'bold', marginBottom: S.xs },
+  coopActive: { color: C.green, fontSize: F.size.md, fontWeight: 'bold', marginBottom: S.xs },
   coopDetail: { color: C.textMuted, fontSize: F.size.sm, marginBottom: 6 },
   joinBtn: { backgroundColor: '#1565c0', borderRadius: R.md, padding: 10, alignItems: 'center', marginTop: S.xs },
   joinBtnDisabled: { backgroundColor: '#333', opacity: 0.5 },
@@ -208,11 +208,11 @@ const styles = StyleSheet.create({
   healthBarBg: { height: 6, backgroundColor: '#333', borderRadius: 3, marginVertical: 6 },
   healthBarFill: { height: 6, borderRadius: 3 },
   equipRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  coopDeliverBtn: { backgroundColor: '#1b5e20', borderRadius: 6, padding: 8, marginBottom: 4 },
-  coopDeliverBtnText: { color: '#a5d6a7', fontSize: 13, fontWeight: 'bold' },
+  coopDeliverBtn: { backgroundColor: C.greenDark, borderRadius: 6, padding: 8, marginBottom: 4 },
+  coopDeliverBtnText: { color: C.greenSoft, fontSize: 13, fontWeight: 'bold' },
   bookBtn: { backgroundColor: '#0d47a1', borderRadius: 6, padding: 6 },
   bookBtnText: { color: '#90caf9', fontSize: 11 },
-  voteYesBtn: { flex: 1, backgroundColor: '#1b5e20', borderRadius: 6, padding: 8, alignItems: 'center' as const },
+  voteYesBtn: { flex: 1, backgroundColor: C.greenDark, borderRadius: 6, padding: 8, alignItems: 'center' as const },
   voteNoBtn: { flex: 1, backgroundColor: '#7f1d1d', borderRadius: 6, padding: 8, alignItems: 'center' as const },
   voteBtnText: { color: '#ffffff', fontWeight: 'bold', fontSize: 13 },
   shareInput: { backgroundColor: '#1a1a2e', color: '#ffffff', borderRadius: 6, padding: 8, marginBottom: 8, fontSize: 15 },
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   termChip: { backgroundColor: '#0d1117', borderRadius: R.md, paddingHorizontal: S.lg, paddingVertical: 6 },
   termChipActive: { backgroundColor: '#1565c0' },
   termChipText: { color: C.textMuted, fontWeight: 'bold', fontSize: F.size.md },
-  openFutureBtn: { backgroundColor: '#2e7d32', borderRadius: R.md, padding: 10, alignItems: 'center' },
+  openFutureBtn: { backgroundColor: C.greenDark, borderRadius: R.md, padding: 10, alignItems: 'center' },
   futureChip: { backgroundColor: '#0d1117', borderRadius: R.md, paddingHorizontal: 10, paddingVertical: 5, marginRight: 6 },
   futureChipActive: { backgroundColor: '#1565c0' },
   futureChipText: { color: C.textMuted, fontSize: 11 },
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
   loanSummaryLabel: { color: C.textMuted, fontSize: F.size.sm },
   loanSummaryValue: { color: '#aaa', fontSize: F.size.sm },
   eligibilityBox: { borderRadius: R.md, padding: 10, marginTop: S.sm, marginBottom: 6 },
-  eligOk: { backgroundColor: '#1b5e20' },
+  eligOk: { backgroundColor: C.greenDark },
   eligNo: { backgroundColor: '#4a1515' },
   eligibilityText: { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
   requestBtn: { backgroundColor: '#1565c0', borderRadius: R.md, padding: S.md, alignItems: 'center', marginTop: S.xs },
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   loanDetail: { minWidth: '40%' },
   loanDetailLabel: { color: C.textFaint, fontSize: F.size.xs },
   loanDetailValue: { color: '#ccc', fontSize: F.size.md, fontWeight: 'bold' },
-  payBtn: { backgroundColor: '#2e7d32', borderRadius: R.md, padding: 9, alignItems: 'center' },
+  payBtn: { backgroundColor: C.greenDark, borderRadius: R.md, padding: 9, alignItems: 'center' },
   deliverBtn: { backgroundColor: '#1565c0', borderRadius: R.md, padding: 9, alignItems: 'center', marginTop: S.sm },
   payBtnDisabled: { backgroundColor: '#333' },
   payBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
@@ -325,13 +325,13 @@ const styles = StyleSheet.create({
   contractTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
   contractDetail: { color: '#aaa', fontSize: F.size.sm, marginTop: 2 },
   progressBar: { height: 6, backgroundColor: '#0d1117', borderRadius: 3, marginTop: S.sm, marginBottom: S.xs },
-  progressFill: { height: 6, backgroundColor: '#4caf50', borderRadius: 3 },
+  progressFill: { height: 6, backgroundColor: C.green, borderRadius: 3 },
   progressLabel: { color: C.textFaint, fontSize: F.size.xs },
   offerCard: { backgroundColor: '#1b3a4b', borderRadius: R.md, padding: S.md, marginBottom: 10 },
   offerName: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: S.xs },
   offerDetail: { color: '#aaa', fontSize: F.size.sm, marginBottom: 2 },
   offerBtns: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  acceptBtn: { flex: 1, backgroundColor: '#2e7d32', borderRadius: R.md, padding: 9, alignItems: 'center' },
+  acceptBtn: { flex: 1, backgroundColor: C.greenDark, borderRadius: R.md, padding: 9, alignItems: 'center' },
   acceptBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
   declineBtn: { flex: 1, backgroundColor: '#4a1515', borderRadius: R.md, padding: 9, alignItems: 'center', borderWidth: 1, borderColor: '#7f2020' },
   declineBtnText: { color: '#ef9a9a', fontWeight: 'bold', fontSize: F.size.md },
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   milestoneInfo: { flex: 1, marginLeft: S.sm },
   milestoneTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
   milestoneDesc: { color: C.textFaint, fontSize: 11, marginTop: 1 },
-  milestoneDone: { color: '#4caf50', fontWeight: 'bold', fontSize: F.size.xl, marginLeft: S.sm },
+  milestoneDone: { color: C.green, fontWeight: 'bold', fontSize: F.size.xl, marginLeft: S.sm },
   screenTitle: {
     color: C.text,
     fontSize: F.size.xl,

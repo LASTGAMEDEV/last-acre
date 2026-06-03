@@ -3,9 +3,10 @@ import { Animated, Text, TouchableOpacity, StyleSheet, View } from 'react-native
 import { useGameStore } from '../store/useGameStore';
 import * as Haptics from 'expo-haptics';
 import { playSound } from '../engine/sounds';
+import { C } from '../constants/theme';
 
 const N = 20;
-const COLORS = ['#FFD700', '#FF6B6B', '#4ECDC4', '#66BB6A', '#DDA0DD', '#FF9800', '#64B5F6', '#FFEAA7'];
+const COLORS = ['#FFD700', '#FF6B6B', '#4ECDC4', C.green, '#DDA0DD', '#FF9800', '#64B5F6', '#FFEAA7'];
 
 type Particle = {
   x: Animated.Value;
@@ -144,14 +145,14 @@ const styles = StyleSheet.create({
   cardInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1a3a00',
+    backgroundColor: C.bgDeep,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#4caf50',
+    borderColor: C.green,
     gap: 10,
-    shadowColor: '#4caf50',
+    shadowColor: C.green,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.7,
     shadowRadius: 12,
@@ -159,5 +160,5 @@ const styles = StyleSheet.create({
   },
   icon:   { fontSize: 22 },
   title:  { color: '#e8d5a3', fontWeight: 'bold', fontSize: 14, flex: 1 },
-  reward: { color: '#4caf50', fontWeight: 'bold', fontSize: 14 },
+  reward: { color: C.green, fontWeight: 'bold', fontSize: 14 },
 });

@@ -28,7 +28,7 @@ export default function ApiaryManagementCard() {
         const capacity = getColmenaCapacity(colmenaId);
         const linkedParcels = state.parcels.filter(p => p.linkedColmenaId === colmenaId);
         const healthPct = Math.round(health * 100);
-        const healthColor = healthPct >= 80 ? '#4caf50' : healthPct >= 50 ? '#ff9800' : '#ef5350';
+        const healthColor = healthPct >= 80 ? C.green : healthPct >= 50 ? '#ff9800' : '#ef5350';
         const healthLabel = healthPct >= 80 ? 'Healthy' : healthPct >= 50 ? 'Pesticide stress' : 'Colony struggling';
 
         return (
@@ -117,13 +117,13 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   label: { color: C.textMuted, fontSize: F.size.sm },
   value: { color: C.text, fontSize: F.size.md, fontWeight: F.weight.medium },
-  good: { color: '#4caf50' },
+  good: { color: C.green },
   warning: { color: '#ff9800', fontSize: F.size.sm },
   healthBar: { height: 6, backgroundColor: '#333', borderRadius: 3, overflow: 'hidden' },
   healthFill: { height: '100%', borderRadius: 3 },
   smallButton: { backgroundColor: C.green, borderRadius: R.md, padding: S.sm, alignItems: 'center', marginTop: S.sm },
   smallButtonText: { color: C.white, fontWeight: F.weight.bold, fontSize: F.size.sm },
   linkRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, gap: S.md },
-  linkRowActive: { borderColor: '#4caf50', borderWidth: 1 },
+  linkRowActive: { borderColor: C.green, borderWidth: 1 },
   linkRowDisabled: { opacity: 0.5 },
 });

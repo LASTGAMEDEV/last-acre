@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { C } from '../../constants/theme';
 
 const ITEMS = [
-  { color: '#286020', label: 'Your fields' },
+  { color: C.greenDark, label: 'Your fields' },
   { color: '#6a1818', label: 'Hacienda Rivera' },
   { color: '#281858', label: 'Granja del Norte' },
   { color: '#906010', label: 'For sale' },
-  { color: '#264818', label: 'Unplanted' },
+  { color: C.bg, label: 'Unplanted' },
   { color: '#1a1810', label: 'Wilderness' },
 ];
 

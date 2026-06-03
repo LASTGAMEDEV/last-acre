@@ -3,6 +3,7 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 import Svg, { Rect, Circle } from 'react-native-svg';
 import { MapField } from '../../types/worldMap';
 import { CANVAS_W, CANVAS_H } from './MapCanvas';
+import { C } from '../../constants/theme';
 
 const MINI_W = 88;
 const MINI_H = 112;
@@ -10,7 +11,7 @@ const SX = MINI_W / CANVAS_W;   // 0.0629
 const SY = MINI_H / CANVAS_H;   // 0.0622
 
 const OWNER_COLOR: Record<string, string> = {
-  player:  '#3a8a28',
+  player:  C.greenDark,
   rivalA:  '#8a1818',
   rivalB:  '#281878',
   forsale: '#8a6010',

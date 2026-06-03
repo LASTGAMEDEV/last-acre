@@ -31,7 +31,7 @@ function CycleVisual() {
 
 function SeasonVisual() {
   const seasons = [
-    { icon: '🌸', name: 'Spring', color: '#a5d6a7' },
+    { icon: '🌸', name: 'Spring', color: C.greenSoft },
     { icon: '☀️', name: 'Summer', color: '#fff176' },
     { icon: '🍂', name: 'Autumn', color: '#ffb74d' },
     { icon: '❄️', name: 'Winter', color: '#90caf9' },
@@ -51,7 +51,7 @@ function SeasonVisual() {
 
 function FertilityVisual() {
   const bars = [
-    { label: 'High 🟢', val: 0.9, color: '#4caf50' },
+    { label: 'High 🟢', val: 0.9, color: C.green },
     { label: 'Med 🟡', val: 0.55, color: '#ffb74d' },
     { label: 'Low 🔴', val: 0.2, color: '#ef5350' },
   ];
@@ -74,9 +74,9 @@ function FertilityVisual() {
 function RotationVisual() {
   return (
     <View style={{ gap: 8 }}>
-      <View style={[vis.rotBox, { borderColor: '#4caf5066', backgroundColor: '#0a2a0a' }]}>
+      <View style={[vis.rotBox, { borderColor: '#4caf5066', backgroundColor: C.bgDeep }]}>
         <Text style={vis.rotIcon}>🌽 → 🌾</Text>
-        <Text style={[vis.rotLabel, { color: '#66bb6a' }]}>✅ +15% Rotation Bonus</Text>
+        <Text style={[vis.rotLabel, { color: C.green }]}>✅ +15% Rotation Bonus</Text>
         <Text style={vis.rotSub}>Different crop = yield boost</Text>
       </View>
       <View style={[vis.rotBox, { borderColor: '#ffb74d66', backgroundColor: '#2a1a00' }]}>
@@ -90,7 +90,7 @@ function RotationVisual() {
 
 function MarketVisual() {
   const items = [
-    { crop: '🌾 Wheat', signal: '🟢 BUY', price: '+18%', color: '#4caf50' },
+    { crop: '🌾 Wheat', signal: '🟢 BUY', price: '+18%', color: C.green },
     { crop: '🌽 Corn',  signal: '🟡 HOLD', price: '+2%',  color: '#ffb74d' },
     { crop: '🍅 Tomato',signal: '🔴 WAIT', price: '-8%',  color: '#ef5350' },
   ];

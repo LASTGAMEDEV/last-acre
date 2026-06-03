@@ -6,6 +6,7 @@ import {
   DELIVERY_DURATION, TRUCK_FUEL_LITRES,
 } from '../store/useGameStore';
 import { MACHINE_TYPES } from '../data/machineTypes';
+import { C } from '../constants/theme';
 
 interface Props {
   visible: boolean;
@@ -217,14 +218,14 @@ const s = StyleSheet.create({
   sectionLabel:        { color: '#aaa', fontSize: 11, fontWeight: 'bold', marginTop: 12, marginBottom: 4, textTransform: 'uppercase' },
   cargoLine:           { color: '#ccc', fontSize: 13, marginBottom: 2 },
   optionRow:           { backgroundColor: '#16213e', borderRadius: 8, padding: 10, marginBottom: 6 },
-  optionSelected:      { borderColor: '#4caf50', borderWidth: 1.5 },
+  optionSelected:      { borderColor: C.green, borderWidth: 1.5 },
   optionText:          { color: '#e0e0e0', fontSize: 13 },
   unavailable:         { color: '#ef5350', fontSize: 12, marginBottom: 6 },
-  fuelRow:             { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#1a2a1a' },
+  fuelRow:             { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.bgCard },
   fuelLabel:           { color: '#aaa', fontSize: 13 },
-  fuelValue:           { color: '#66bb6a', fontSize: 13, fontWeight: 'bold' },
+  fuelValue:           { color: C.green, fontSize: 13, fontWeight: 'bold' },
   actions:             { marginTop: 16, gap: 8 },
-  dispatchBtn:         { backgroundColor: '#1b5e20', borderRadius: 8, padding: 14, alignItems: 'center' },
+  dispatchBtn:         { backgroundColor: C.greenDark, borderRadius: 8, padding: 14, alignItems: 'center' },
   dispatchBtnDisabled: { opacity: 0.4 },
   dispatchBtnText:     { color: '#fff', fontWeight: 'bold', fontSize: 15 },
   contractorBtn:       { backgroundColor: '#1a1a2e', borderRadius: 8, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#333' },

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { HistoricalEvent } from '../data/historicalEvents';
 import { gameDayToDisplayDate } from '../engine/calendarUtils';
+import { C } from '../constants/theme';
 
 type Props = {
   event: HistoricalEvent | null;
@@ -58,10 +59,10 @@ export default function NewspaperModal({ event, currentDay, onDismiss }: Props) 
           )}
 
           {event.unlocks && event.unlocks.length > 0 && (
-            <View style={[styles.effectBox, { borderColor: '#27ae60', backgroundColor: '#e8f5e9' }]}>
-              <Text style={[styles.effectTitle, { color: '#27ae60' }]}>NOW AVAILABLE</Text>
+            <View style={[styles.effectBox, { borderColor: C.green, backgroundColor: '#e8f5e9' }]}>
+              <Text style={[styles.effectTitle, { color: C.green }]}>NOW AVAILABLE</Text>
               {event.unlocks.map((u, i) => (
-                <Text key={i} style={[styles.effectLine, { color: '#27ae60' }]}>✓ {u.id.replace(/_/g, ' ')}</Text>
+                <Text key={i} style={[styles.effectLine, { color: C.green }]}>✓ {u.id.replace(/_/g, ' ')}</Text>
               ))}
             </View>
           )}
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   button: {
-    backgroundColor: '#4a7c59',
+    backgroundColor: C.greenDark,
     borderRadius: 4,
     padding: 12,
     alignItems: 'center',

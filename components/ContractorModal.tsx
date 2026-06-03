@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ContractorOperation } from '../engine/machinery';
+import { C } from '../constants/theme';
 
 interface ContractorModalProps {
   visible: boolean;
@@ -92,13 +93,13 @@ const s = StyleSheet.create({
   value:       { color: '#fff', fontSize: 13 },
   totalRow:    { borderTopWidth: 1, borderTopColor: '#333', paddingTop: 10, marginTop: 4 },
   totalLabel:  { color: '#e8d5a3', fontSize: 14, fontWeight: 'bold' },
-  totalValue:  { color: '#81c784', fontSize: 14, fontWeight: 'bold' },
+  totalValue:  { color: C.green, fontSize: 14, fontWeight: 'bold' },
   red:         { color: '#ef5350' },
   warning:     { color: '#ef5350', fontSize: 12, textAlign: 'center', marginBottom: 8 },
   btnRow:      { flexDirection: 'row', gap: 10, marginTop: 12 },
   cancelBtn:   { flex: 1, backgroundColor: '#333', borderRadius: 8, padding: 12, alignItems: 'center' },
   cancelText:  { color: '#aaa', fontWeight: 'bold' },
-  confirmBtn:  { flex: 1, backgroundColor: '#2e7d32', borderRadius: 8, padding: 12, alignItems: 'center' },
+  confirmBtn:  { flex: 1, backgroundColor: C.greenDark, borderRadius: 8, padding: 12, alignItems: 'center' },
   confirmText: { color: '#fff', fontWeight: 'bold' },
-  disabled:    { backgroundColor: '#1b5e20', opacity: 0.5 },
+  disabled:    { backgroundColor: C.greenDark, opacity: 0.5 },
 });

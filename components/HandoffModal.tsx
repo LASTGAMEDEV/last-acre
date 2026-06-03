@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   mentorNote: {
-    color: '#a5d6a7',
+    color: C.greenSoft,
     fontSize: F.size.sm,
     textAlign: 'center',
     marginTop: 10,
