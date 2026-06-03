@@ -183,7 +183,7 @@ function BuildingsTab() {
                         <Text style={styles.ownedBadge}>✓ ×{ownedCount}</Text>
                       )}
                       {alreadyOwned ? (
-                        <Text style={[styles.buildBtnText, { color: '#4caf50' }]}>Owned</Text>
+                        <Text style={[styles.buildBtnText, { color: C.green }]}>Owned</Text>
                       ) : (
                         <TouchableOpacity
                           style={[styles.buildBtn, !canAfford && styles.buildBtnDisabled]}
@@ -218,23 +218,23 @@ function BuildingsTab() {
                   const slotsFull = fitsOwnedBuilding.equipmentSlots.length >= maxSlots;
                   const canAffordEq = money >= eq.cost;
                   return (
-                    <View key={eq.id} style={{ backgroundColor: '#0d1b2a', borderRadius: 8, padding: 12, marginBottom: 8 }}>
+                    <View key={eq.id} style={{ backgroundColor: C.bgDeep, borderRadius: 8, padding: 12, marginBottom: 8 }}>
                       <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 13 }}>{eq.name}</Text>
-                      <Text style={{ color: '#aaa', fontSize: 11, marginVertical: 4 }}>{eq.effectLabel}</Text>
-                      <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 8 }}>
+                      <Text style={{ color: C.textMuted, fontSize: 11, marginVertical: 4 }}>{eq.effectLabel}</Text>
+                      <Text style={{ color: C.textMuted, fontSize: 11, marginBottom: 8 }}>
                         For: {bt2?.name ?? fitsOwnedBuilding.buildingTypeId}
                       </Text>
                       {alreadyInstalled ? (
-                        <Text style={{ color: '#4caf50', fontSize: 12 }}>✓ Installed</Text>
+                        <Text style={{ color: C.green, fontSize: 12 }}>✓ Installed</Text>
                       ) : slotsFull ? (
-                        <Text style={{ color: '#aaa', fontSize: 12 }}>All equipment slots full</Text>
+                        <Text style={{ color: C.textMuted, fontSize: 12 }}>All equipment slots full</Text>
                       ) : (
                         <TouchableOpacity
-                          style={{ backgroundColor: canAffordEq ? '#1e3a5f' : '#2a2a4a', borderRadius: 6, padding: 8, alignItems: 'center' }}
+                          style={{ backgroundColor: canAffordEq ? C.bgElevated : C.bgCard, borderRadius: 6, padding: 8, alignItems: 'center' }}
                           onPress={() => installEquipment(fitsOwnedBuilding.id, eq.id)}
                           disabled={!canAffordEq}
                         >
-                          <Text style={{ color: canAffordEq ? '#90caf9' : '#555', fontSize: 13 }}>
+                          <Text style={{ color: canAffordEq ? C.blue : C.textFaint, fontSize: 13 }}>
                             Install · ${eq.cost.toLocaleString()}
                           </Text>
                         </TouchableOpacity>
@@ -374,19 +374,19 @@ function MachineryTab() {
 }
 
 const mStyles = StyleSheet.create({
-  sectionBar:        { flexGrow: 0, paddingHorizontal: S.md, paddingVertical: S.sm, borderBottomWidth: 1, borderBottomColor: '#333' },
+  sectionBar:        { flexGrow: 0, paddingHorizontal: S.md, paddingVertical: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider },
   sectionBtn:        { paddingHorizontal: 14, paddingVertical: 6, borderRadius: R.xl, marginRight: S.sm, backgroundColor: C.bg },
-  sectionBtnActive:  { backgroundColor: '#2e7d32' },
-  sectionBtnText:    { color: '#aaa', fontSize: F.size.sm },
+  sectionBtnActive:  { backgroundColor: C.greenDark },
+  sectionBtnText:    { color: C.textMuted, fontSize: F.size.sm },
   sectionBtnTextActive: { color: C.white, fontWeight: 'bold' },
   sectionHeader:     { color: C.text, fontSize: F.size.lg, fontWeight: 'bold', marginTop: S.lg, marginBottom: S.sm, paddingHorizontal: S.md },
   card:              { backgroundColor: C.bgCard, borderRadius: 10, margin: S.sm, padding: S.md },
   cardHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   cardName:          { color: C.white, fontWeight: 'bold', fontSize: F.size.lg },
-  ownedPill:         { backgroundColor: '#1b5e20', borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: 2, color: '#81c784', fontSize: 11 },
-  cardDetail:        { color: '#aaa', fontSize: F.size.sm, marginBottom: 3 },
-  buyBtn:            { backgroundColor: '#2e7d32', borderRadius: R.md, padding: 10, alignItems: 'center', marginTop: S.sm },
-  buyBtnDisabled:    { backgroundColor: '#333' },
+  ownedPill:         { backgroundColor: C.greenDark, borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: 2, color: C.textDim, fontSize: 11 },
+  cardDetail:        { color: C.textMuted, fontSize: F.size.sm, marginBottom: 3 },
+  buyBtn:            { backgroundColor: C.greenDark, borderRadius: R.md, padding: 10, alignItems: 'center', marginTop: S.sm },
+  buyBtnDisabled:    { backgroundColor: C.bgElevated },
   buyBtnText:        { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
 });
 
@@ -396,7 +396,9 @@ export default function TiendaScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.screenTitle}>Shop</Text>
+      <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider }}>
+        <Text style={{ color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy }}>Shop</Text>
+      </View>
 
       <SubTabBar
         tabs={[
@@ -432,14 +434,14 @@ const styles = StyleSheet.create({
   tierBadge: { alignSelf: 'flex-start', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2, marginBottom: S.xs },
   tierText: { color: C.white, fontSize: 11, fontWeight: 'bold' },
   cropName: { color: C.text, fontWeight: 'bold', fontSize: F.size.lg, marginBottom: S.xs },
-  detail: { color: '#aaa', fontSize: 11, marginBottom: 1 },
-  plantPanel: { backgroundColor: '#0f3460', padding: S.md, borderTopWidth: 1, borderTopColor: '#333' },
+  detail: { color: C.textMuted, fontSize: 11, marginBottom: 1 },
+  plantPanel: { backgroundColor: C.bgElevated, padding: S.md, borderTopWidth: 1, borderTopColor: C.divider },
   plantTitle: { color: C.text, fontWeight: 'bold', marginBottom: S.sm, fontSize: F.size.md },
   noParcel: { color: C.textMuted },
-  parcelBtn: { backgroundColor: '#2e7d32', borderRadius: R.md, padding: 10, marginRight: S.sm, alignItems: 'center', minWidth: 80 },
-  btnDisabled: { backgroundColor: '#333' },
+  parcelBtn: { backgroundColor: C.greenDark, borderRadius: R.md, padding: 10, marginRight: S.sm, alignItems: 'center', minWidth: 80 },
+  btnDisabled: { backgroundColor: C.bgElevated },
   parcelBtnText: { color: C.white, fontSize: F.size.md, fontWeight: 'bold' },
-  parcelBtnCost: { color: '#a5d6a7', fontSize: 11 },
+  parcelBtnCost: { color: C.textDim, fontSize: 11 },
 
   // Products
   categorySection: { marginBottom: S.lg },
@@ -447,25 +449,25 @@ const styles = StyleSheet.create({
   productCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginHorizontal: 0, marginBottom: 6, flexDirection: 'row', alignItems: 'center' },
   productInfo: { flex: 1, marginRight: S.md },
   productName: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
-  productEffect: { color: '#81c784', fontSize: 11, marginTop: 2 },
+  productEffect: { color: C.textDim, fontSize: 11, marginTop: 2 },
   productPack: { color: C.textFaint, fontSize: 11, marginTop: 3 },
   productRight: { alignItems: 'center', gap: 6 },
-  ownedCount: { color: '#4caf50', fontSize: 11, fontWeight: 'bold' },
-  buyBtn: { backgroundColor: '#1565c0', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: 7 },
-  buyBtnDisabled: { backgroundColor: '#333' },
+  ownedCount: { color: C.green, fontSize: 11, fontWeight: 'bold' },
+  buyBtn: { backgroundColor: C.blue, borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: 7 },
+  buyBtnDisabled: { backgroundColor: C.bgElevated },
   buyBtnText: { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
 
   // Buildings
   buildingGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   buildingCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, margin: 5, width: '47%' },
   buildingName: { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: S.xs },
-  buildingCapacity: { color: '#64b5f6', fontSize: 11, marginBottom: 2 },
-  buildingEffect: { color: '#aaa', fontSize: 11, marginBottom: S.xs },
-  buildingMaint: { color: '#ef9a9a', fontSize: F.size.xs, marginBottom: 6 },
+  buildingCapacity: { color: C.blue, fontSize: 11, marginBottom: 2 },
+  buildingEffect: { color: C.textMuted, fontSize: 11, marginBottom: S.xs },
+  buildingMaint: { color: C.red, fontSize: F.size.xs, marginBottom: 6 },
   buildingFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  ownedBadge: { color: '#81c784', fontSize: 11, fontWeight: 'bold' },
-  buildBtn: { backgroundColor: '#2e7d32', borderRadius: R.sm, paddingHorizontal: S.sm, paddingVertical: 5 },
-  buildBtnDisabled: { backgroundColor: '#333' },
+  ownedBadge: { color: C.textDim, fontSize: 11, fontWeight: 'bold' },
+  buildBtn: { backgroundColor: C.greenDark, borderRadius: R.sm, paddingHorizontal: S.sm, paddingVertical: 5 },
+  buildBtnDisabled: { backgroundColor: C.bgElevated },
   buildBtnText: { color: C.white, fontSize: 11, fontWeight: 'bold' },
   screenTitle: {
     color: C.text,

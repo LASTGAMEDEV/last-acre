@@ -133,11 +133,11 @@ export default function CalendarioScreen() {
 
   const CATEGORY_COLORS: Record<string, string> = {
     contract:  '#1565c0',
-    loan:      '#b71c1c',
+    loan:      C.redDark,
     futures:   '#4a148c',
     deposit:   '#1b5e20',
     season:    '#e65100',
-    recurring: '#2e7d32',
+    recurring: C.greenDark,
   };
 
   function EntryCard({ entry }: { entry: CalendarEntry }) {
@@ -151,7 +151,7 @@ export default function CalendarioScreen() {
           <Text style={[styles.cardTitle, entry.urgent && styles.cardTitleUrgent]}>{entry.title}</Text>
           <Text style={styles.cardDetail}>{entry.detail}</Text>
         </View>
-        <View style={[styles.badge, { backgroundColor: entry.daysLeft < 0 ? '#b71c1c' : entry.urgent ? '#bf360c' : '#1e2a3a' }]}>
+        <View style={[styles.badge, { backgroundColor: entry.daysLeft < 0 ? C.redDark : entry.urgent ? '#bf360c' : C.bgElevated }]}>
           <Text style={styles.badgeDays}>
             {entry.daysLeft < 0 ? `${Math.abs(entry.daysLeft)}d overdue` : entry.daysLeft === 0 ? 'Today' : `${entry.daysLeft}d`}
           </Text>
@@ -162,7 +162,9 @@ export default function CalendarioScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.screenTitle}>Calendar</Text>
+      <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider }}>
+        <Text style={{ color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy }}>Calendar</Text>
+      </View>
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.dayLabel}>Day {day} — {getSeason(day).charAt(0).toUpperCase() + getSeason(day).slice(1)}</Text>
 
@@ -190,18 +192,10 @@ export default function CalendarioScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  screenTitle: {
-    color: C.text,
-    fontSize: F.size.xl,
-    fontWeight: F.weight.bold,
-    paddingHorizontal: S.md,
-    paddingTop: S.sm,
-    paddingBottom: S.xs,
-  },
   scroll: { flex: 1, paddingHorizontal: S.md },
   dayLabel: { color: C.textMuted, fontSize: F.size.sm, marginTop: S.sm, marginBottom: S.xs },
-  sectionLabel: { color: '#555', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginTop: S.md, marginBottom: 6 },
-  empty: { color: '#555', padding: 20, textAlign: 'center' },
+  sectionLabel: { color: C.textFaint, fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginTop: S.md, marginBottom: 6 },
+  empty: { color: C.textFaint, padding: 20, textAlign: 'center' },
 
   card: {
     flexDirection: 'row',
@@ -212,12 +206,12 @@ const styles = StyleSheet.create({
     marginBottom: S.sm,
     borderLeftWidth: 3,
   },
-  cardUrgent: { backgroundColor: '#1a1010' },
+  cardUrgent: { backgroundColor: C.bgDeep },
   cardLeft: { marginRight: 10 },
   cardIcon: { fontSize: 20 },
   cardBody: { flex: 1 },
   cardTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
-  cardTitleUrgent: { color: '#ef9a9a' },
+  cardTitleUrgent: { color: C.red },
   cardDetail: { color: C.textMuted, fontSize: 11, marginTop: 2 },
   badge: { borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: S.xs, marginLeft: S.sm, alignItems: 'center', minWidth: 56 },
   badgeDays: { color: C.white, fontSize: 11, fontWeight: 'bold' },

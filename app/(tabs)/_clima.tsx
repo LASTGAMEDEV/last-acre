@@ -38,7 +38,7 @@ function CalendarCell({ status, isCurrentSeason }: { status: SeasonStatus; isCur
   return (
     <View style={[
       styles.cell,
-      { backgroundColor: status === 'avoid' ? '#111827' : bg },
+      { backgroundColor: status === 'avoid' ? C.bg : bg },
       isCurrentSeason && styles.cellCurrent,
     ]}>
       <Text style={styles.cellIcon}>{icon}</Text>
@@ -61,7 +61,9 @@ export default function ClimaScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={styles.screenTitle}>Weather</Text>
+      <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider }}>
+        <Text style={{ color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy }}>Weather</Text>
+      </View>
 
       {/* Today */}
       <View style={styles.todayCard}>
@@ -140,7 +142,7 @@ export default function ClimaScreen() {
       <View style={styles.legend}>
         {(['plant', 'harvest', 'both', 'grow', 'avoid'] as SeasonStatus[]).map(s => (
           <View key={s} style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: s === 'avoid' ? '#333' : STATUS_COLORS[s] }]} />
+            <View style={[styles.legendDot, { backgroundColor: s === 'avoid' ? C.border : STATUS_COLORS[s] }]} />
             <Text style={styles.legendText}>{STATUS_ICONS[s]} {STATUS_LABELS[s]}</Text>
           </View>
         ))}
@@ -211,17 +213,9 @@ export default function ClimaScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  screenTitle: {
-    color: C.text,
-    fontSize: F.size.xl,
-    fontWeight: F.weight.bold,
-    paddingHorizontal: S.md,
-    paddingTop: S.sm,
-    paddingBottom: S.xs,
-  },
   header: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: S.lg, marginBottom: S.xs },
   title: { fontSize: F.size.title, fontWeight: 'bold', color: C.text },
-  season: { fontSize: F.size.lg, color: '#81c784' },
+  season: { fontSize: F.size.lg, color: C.textDim },
   dayLabel: { color: C.textMuted, fontSize: F.size.md, paddingHorizontal: S.lg, marginBottom: 10 },
   sectionLabel: { color: C.textMuted, fontSize: F.size.md, paddingHorizontal: S.lg, marginBottom: 6, marginTop: 10 },
 
@@ -230,15 +224,15 @@ const styles = StyleSheet.create({
   todayLabel: { color: C.textMuted, fontSize: F.size.sm, marginBottom: S.xs },
   todayIcon: { fontSize: 48 },
   todayEvent: { color: C.text, fontSize: F.size.xl, fontWeight: 'bold', textTransform: 'capitalize', marginTop: 6 },
-  todayMod: { color: '#aaa', fontSize: F.size.md, marginTop: 2 },
-  noWeather: { color: '#555', fontSize: F.size.md },
+  todayMod: { color: C.textMuted, fontSize: F.size.md, marginTop: 2 },
+  noWeather: { color: C.textFaint, fontSize: F.size.md },
 
   // Forecast
   forecastList: { paddingHorizontal: S.sm },
   forecastCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: 10, marginRight: S.sm, alignItems: 'center', width: 78 },
   forecastDay: { color: C.textMuted, fontSize: F.size.xs, marginBottom: S.xs },
   forecastIcon: { fontSize: 26 },
-  forecastMod: { color: '#aaa', fontSize: F.size.xs, marginTop: S.xs },
+  forecastMod: { color: C.textMuted, fontSize: F.size.xs, marginTop: S.xs },
   forecastCardFrost: {
     borderColor: C.red,
     borderWidth: 1.5,
@@ -265,9 +259,9 @@ const styles = StyleSheet.create({
 
   // Filter tabs
   filterRow: { marginBottom: S.sm },
-  filterTab: { borderRadius: 20, paddingHorizontal: S.md, paddingVertical: 6, backgroundColor: C.bgCard, borderWidth: 1, borderColor: '#333' },
-  filterTabActive: { backgroundColor: '#0f3460', borderColor: C.text },
-  filterTabCurrent: { borderColor: '#81c784' },
+  filterTab: { borderRadius: 20, paddingHorizontal: S.md, paddingVertical: 6, backgroundColor: C.bgCard, borderWidth: 1, borderColor: C.border },
+  filterTabActive: { backgroundColor: C.bgElevated, borderColor: C.text },
+  filterTabCurrent: { borderColor: C.textDim },
   filterTabText: { color: C.textFaint, fontSize: F.size.sm },
   filterTabTextActive: { color: C.text, fontWeight: 'bold' },
 
@@ -278,25 +272,25 @@ const styles = StyleSheet.create({
   legendText: { color: C.textFaint, fontSize: F.size.xs },
 
   // Calendar grid
-  calendarWrap: { marginHorizontal: 10, backgroundColor: '#0d1117', borderRadius: 10, overflow: 'hidden' },
+  calendarWrap: { marginHorizontal: 10, backgroundColor: C.bgDeep, borderRadius: 10, overflow: 'hidden' },
   calendarRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: C.divider },
   calendarCropCol: { width: 110, paddingVertical: S.sm, paddingHorizontal: S.sm, flexDirection: 'row', alignItems: 'center', gap: 6 },
   tierDot: { width: 7, height: 7, borderRadius: R.xs, flexShrink: 0 },
-  calendarCropName: { color: '#aaa', fontSize: 11, flex: 1 },
-  calendarSeasonHeader: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: S.sm, backgroundColor: '#111827' },
-  calendarSeasonHeaderCurrent: { backgroundColor: '#0f3460' },
-  calendarSeasonText: { color: '#555', fontSize: F.size.xs, fontWeight: 'bold' },
+  calendarCropName: { color: C.textMuted, fontSize: 11, flex: 1 },
+  calendarSeasonHeader: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: S.sm, backgroundColor: C.bg },
+  calendarSeasonHeaderCurrent: { backgroundColor: C.bgElevated },
+  calendarSeasonText: { color: C.textFaint, fontSize: F.size.xs, fontWeight: 'bold' },
   calendarSeasonTextCurrent: { color: C.text },
   calendarCellWrap: { flex: 1, padding: 3 },
   cell: { borderRadius: R.xs, alignItems: 'center', justifyContent: 'center', paddingVertical: 5 },
   cellCurrent: { borderWidth: 1, borderColor: C.text + '50' },
   cellIcon: { fontSize: F.size.md },
-  noCalendar: { color: '#555', padding: S.lg, textAlign: 'center' },
+  noCalendar: { color: C.textFaint, padding: S.lg, textAlign: 'center' },
 
   // Notes
   notesCard: { backgroundColor: C.bgCard, borderRadius: R.lg, margin: S.md, padding: 14 },
   notesTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: 10 },
   noteRow: { flexDirection: 'row', gap: 10, marginBottom: 10, alignItems: 'flex-start' },
-  noteCropName: { color: '#ccc', fontWeight: 'bold', fontSize: F.size.sm },
+  noteCropName: { color: C.text, fontWeight: 'bold', fontSize: F.size.sm },
   noteText: { color: C.textFaint, fontSize: 11, marginTop: 1 },
 });
