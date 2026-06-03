@@ -65,6 +65,7 @@ ClawdBot (plan with user)
 
 | Feature | Spec | Status |
 |---------|------|--------|
+| Full-Scale Adaptive Guide | `docs/superpowers/specs/2026-06-03-full-scale-adaptive-guide-design.md` | 📝 Ready to build |
 | Annual Farm Planning | `docs/superpowers/specs/2026-06-03-annual-farm-planning-design.md` | 📝 Ready to build |
 | Precision Agriculture | `docs/superpowers/specs/2026-05-10-precision-agriculture-design.md` | 📝 Ready to build |
 | Pollination System | `docs/superpowers/specs/2026-05-10-pollination-system-design.md` | 📝 Ready to build |

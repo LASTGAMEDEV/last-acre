@@ -39,6 +39,14 @@ Status meanings:
 - **First version:** Office-based advisor-generated yearly plan with soft goals, forecasts, recommendations, progress tracking, and year-end review.
 - **Notes:** Missed goals have no downside. Completed goals can award legacy and morale-style rewards.
 
+### Full-Scale Adaptive Guide
+- **Status:** specced
+- **Spec:** `docs/superpowers/specs/2026-06-03-full-scale-adaptive-guide-design.md`
+- **Theme:** guide, onboarding, UI, visuals, era-aware help
+- **Why it matters:** Gives lost players a reliable way to understand every object and system, then return to play with a clear next action.
+- **First version:** Compiled searchable guide, object-level info buttons, long-press shortcuts, era-aware and farm-state-aware entries, diagrams, and category-level generated illustrations.
+- **Notes:** Advisor-aware guide entries are deferred until Annual Farm Planning exists.
+
 ---
 
 ## Deferred From Annual Farm Planning V1
@@ -128,6 +136,13 @@ These ideas are good candidates, but they are intentionally outside the first An
 - **Why it matters:** Makes advisor styles feel like relationships, not filters.
 - **First version:** Advisor trust increases when their recommended goals are completed.
 - **Notes:** Keep as cosmetic/soft reward at first.
+
+### Advisor-Aware Guide Entries
+- **Status:** promising
+- **Theme:** guide, advisors, planning, onboarding
+- **Why it matters:** Helps the guide explain systems through the player's current strategy instead of generic advice.
+- **First version:** When Annual Farm Planning exists, guide entries can show an "Advisor angle" section tied to the active advisor style and current annual goals.
+- **Notes:** Deferred from the first full-scale guide build. V1 guide should be era-aware and farm-state-aware only; advisor-aware guidance can return once the planner is implemented and stable.
 
 ### Famous Farming Strategy Templates
 - **Status:** raw idea
