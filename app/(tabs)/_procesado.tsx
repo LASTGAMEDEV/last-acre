@@ -8,7 +8,7 @@ import GuideButton from '../../components/GuideButton';
 import {
   PROCESSING_RECIPES, PROCESSED_ITEM_DEFS, ProcessingRecipe,
   qualityLabel, qualityColor,
-  PROCESSING_BUILDING_CONFIGS, getProcessingBuildingConfig,
+  PROCESSING_BUILDING_CONFIGS,
 } from '../../data/processingTypes';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
@@ -57,7 +57,7 @@ function inputStock(
 
 export default function ProcesadoScreen() {
   const {
-    buildings, inventory, animalInventory, processedInventory, activeBatches, day,
+    inventory, animalInventory, processedInventory, activeBatches, day,
     processProduct, sellProcessed, processingBuildings, workers, money,
     buyProcessingBuilding, upgradeProcessingBuilding,
     assignWorkerToProcessingBuilding, unassignWorkerFromProcessingBuilding,

@@ -7,15 +7,12 @@ import { CSACommitment } from '../../engine/csa';
 export default function CSASection() {
   const {
     csaActive, csaSubscribers, csaCommitment, csaSeasonStart, csaWeeklyLog,
-    day, money, toggleCSA, setCSACommitment,
+    toggleCSA, setCSACommitment,
   } = useGameStore();
 
   const subscribers = csaSubscribers ?? [];
   const weeklyLog = csaWeeklyLog ?? [];
   const latestWeek = weeklyLog[weeklyLog.length - 1];
-  const currentSeasonDay = Math.floor(day / 90);
-  const seasonName = ['🌱 Spring', '☀️ Summer', '🍂 Autumn', '❄️ Winter'][currentSeasonDay % 4] ?? 'Season';
-
   const totalSatisfaction = subscribers.length > 0
     ? subscribers.reduce((sum, s) => sum + (s.satisfaction ?? 100), 0) / subscribers.length
     : 0;

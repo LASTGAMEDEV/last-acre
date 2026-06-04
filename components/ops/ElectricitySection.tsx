@@ -13,7 +13,7 @@ import {
   nextGridTier,
 } from '../../engine/electricity';
 import { getSeason } from '../../engine/climate';
-import { C, S, F, R } from '../../constants/theme';
+import { C, S, F } from '../../constants/theme';
 
 function ElectricitySection() {
   const { electricity, buildings, animals, workers, day, money,

@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
-import { useGameStore, AuctionListing, AuctionCategory } from '../../store/useGameStore';
+import { useGameStore, AuctionListing, AuctionCategory , OwnedMachine } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import HintCard from '../../components/HintCard';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
-import { geneScore } from '../../engine/animals';
-import { OwnedAnimal } from '../../engine/animals';
+import { geneScore , OwnedAnimal } from '../../engine/animals';
+
 import { BREED_TYPES, BreedRarity } from '../../data/breedTypes';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
-import { OwnedMachine } from '../../store/useGameStore';
+
 
 const SUBASTA_COLORS = {
   rarityCommon:    '#607d8b',

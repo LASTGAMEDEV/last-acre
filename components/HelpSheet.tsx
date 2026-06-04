@@ -16,7 +16,7 @@ export default function HelpSheet({ title, body, buttonSize = 14 }: HelpSheetPro
       slideAnim.setValue(300);
       Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
     }
-  }, [visible]);
+  }, [visible, slideAnim]);
 
   const open = () => setVisible(true);
 

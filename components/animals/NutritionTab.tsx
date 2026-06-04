@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet } from 
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
-import { analyzeRation, generateDefaultRation, FEED_NUTRITION } from '../../engine/nutrition';
+import { analyzeRation, generateDefaultRation } from '../../engine/nutrition';
 import { getSeason } from '../../engine/climate';
 
 const INGREDIENTS = [

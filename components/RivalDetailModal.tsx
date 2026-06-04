@@ -29,7 +29,7 @@ export default function RivalDetailModal({ group, onClose }: Props) {
         Animated.spring(cardY, { toValue: 0, tension: 60, friction: 10, useNativeDriver: true }),
       ]).start();
     }
-  }, [visible]);
+  }, [visible, backdropOpacity, cardY]);
 
   if (!group) return null;
 

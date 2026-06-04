@@ -14,7 +14,7 @@ import CSASection from '../../components/office/CSASection';
 import Encyclopedia from '../../components/Encyclopedia';
 import SettingsSection from '../../components/office/SettingsSection';
 import SubTabBar from '../../components/SubTabBar';
-import { C, F, R, S } from '../../constants/theme';
+import { C, F, S } from '../../constants/theme';
 
 type OfficeTab = 'dashboard' | 'banking' | 'insurance' | 'coop' | 'rivals' | 'reputation' | 'achievements' | 'subsidies' | 'certifications' | 'land' | 'csa' | 'guide' | 'settings';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useGameStore, ProductionBuildingState } from '../../store/useGameStore';
 import { BUILDING_TYPES, PRODUCTION_EQUIPMENT } from '../../data/buildingTypes';
 import { C } from '../../constants/theme';
@@ -11,7 +11,6 @@ function ProductionBuildingsSection() {
     money,
     assignWorkerToBuilding,
     unassignWorkerFromBuilding,
-    installEquipment,
     performDeepClean,
   } = useGameStore();
 

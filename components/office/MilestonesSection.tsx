@@ -6,7 +6,7 @@ import { MILESTONES } from '../../data/milestones';
 
 function SeasonGoalsSection() {
   const {
-    seasonGoals, seasonGoalSeason, money, seasonStartMoney, seasonStartRevenue,
+    seasonGoals, seasonGoalSeason, seasonStartRevenue,
     totalRevenue, seasonHarvestCount, parcels, claimSeasonGoalReward,
   } = useGameStore();
 

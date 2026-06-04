@@ -1,4 +1,4 @@
-import { LandParcel } from '../store/useGameStore';
+import type { LandParcel } from '../types/domain/land';
 import { CROP_TYPES } from '../data/cropTypes';
 import { getSeason } from './climate';
 import { pollinatorStripCount } from './hedgerows';

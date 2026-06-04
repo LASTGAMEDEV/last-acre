@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useGameStore } from '../store/useGameStore';
 import { C, F, R, S } from '../constants/theme';
-
-const { width: SW } = Dimensions.get('window');
 
 // ── Visual demo components ─────────────────────────────────────────────────────
 
@@ -269,7 +267,7 @@ export default function TutorialModal() {
     // Fade in on step change
     fadeAnim.setValue(0);
     Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
-  }, [step]);
+  }, [step, fadeAnim]);
 
   if (tutorialSeen) return null;
 

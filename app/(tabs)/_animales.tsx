@@ -3,8 +3,8 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView, Alert }
 import AnimalShowModal from '../../components/AnimalShowModal';
 import HintCard from '../../components/HintCard';
 import DispatchModal from '../../components/DispatchModal';
-import { useGameStore } from '../../store/useGameStore';
-import { DeliveryCargo, LIVESTOCK_TRAILER_IDS, ProductionBuildingState } from '../../store/useGameStore';
+import { useGameStore , DeliveryCargo, LIVESTOCK_TRAILER_IDS } from '../../store/useGameStore';
+
 import { C, S, F, R } from '../../constants/theme';
 import SubTabBar from '../../components/SubTabBar';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
@@ -18,70 +18,6 @@ import { BREED_TYPES } from '../../data/breedTypes';
 import { ENCLOSURE_BUILDINGS } from '../../constants/enclosures';
 import HelpSheet from '../../components/HelpSheet';
 import GuideButton from '../../components/GuideButton';
-import { DAIRY_SPECIES } from '../../engine/productionBuildings';
-
-function WelfareBadge({ score }: { score: number | undefined }) {
-  if (score === undefined) return null;
-  const color = score >= 80 ? C.green : score >= 60 ? C.amber : C.red;
-  const label = score >= 80 ? 'Good' : score >= 60 ? 'Fair' : 'Poor';
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
-      <Text style={{ color, fontSize: 11, fontWeight: 'bold' }}>Welfare {score} — {label}</Text>
-    </View>
-  );
-}
-
-function BuildingStatusLine({
-  animalTypeId,
-  productionBuildings,
-}: {
-  animalTypeId: string;
-  productionBuildings: ProductionBuildingState[];
-}) {
-  const pb = productionBuildings.find(b => b.animalTypeId === animalTypeId);
-  if (!pb) {
-    return (
-      <Text style={{ color: C.amber, fontSize: 11 }}>
-        🏗 No production building — contractor covering (12% fee)
-      </Text>
-    );
-  }
-  const bt = BUILDING_TYPES.find(b => b.id === pb.buildingTypeId);
-  const manned = pb.assignedWorkerIds.length > 0;
-  const certEmoji = pb.certificationTier === 'organic' ? '🌿' : pb.certificationTier === 'certified' ? '✅' : '';
-  return (
-    <View style={{ gap: 2 }}>
-      <Text style={{ color: C.textDim, fontSize: 11 }}>
-        🏛 {bt?.name ?? pb.buildingTypeId} {certEmoji}
-        {!manned ? ' ⚠ Unmanned' : ''}
-      </Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-        <Text style={{ color: C.textMuted, fontSize: 11 }}>Hygiene</Text>
-        <View style={{ flex: 1, height: 4, backgroundColor: C.bgDeep, borderRadius: 2, maxWidth: 80 }}>
-          <View style={{
-            width: `${pb.hygiene}%` as any,
-            height: 4,
-            borderRadius: 2,
-            backgroundColor: pb.hygiene >= 60 ? C.green : pb.hygiene >= 40 ? C.amber : C.red,
-          }} />
-        </View>
-        <Text style={{ color: C.textMuted, fontSize: 11 }}>{Math.round(pb.hygiene)}%</Text>
-      </View>
-    </View>
-  );
-}
-
-function MilkGradeBadge({ animalTypeId, milkGrades }: { animalTypeId: string; milkGrades: Record<string, 'A' | 'B' | 'C'> }) {
-  if (!DAIRY_SPECIES.has(animalTypeId)) return null;
-  const grade = milkGrades[animalTypeId] ?? 'B';
-  const color = grade === 'A' ? C.green : grade === 'B' ? C.amber : C.red;
-  return (
-    <Text style={{ color, fontSize: 11, fontWeight: 'bold' }}>
-      Milk Grade {grade}{grade === 'C' ? ' ⚠ city/export blocked' : ''}
-    </Text>
-  );
-}
 
 function QuarantineBadge({ animal, day }: { animal: OwnedAnimal; day: number }) {
   if (!animal.quarantineUntilDay || animal.quarantineUntilDay <= day) return null;
@@ -169,11 +105,8 @@ export default function AnimalesScreen() {
     showWindowOpen, showResults,
     workers, grainMissedDays, hayMissedDays, feedAnimals, inventory, animalsManuallyFed,
     trailers, deliveryJobs,
-    productionBuildings, animalWelfareScores, milkGrades,
     designateAsSire, removeFromSirePen, sirePenAnimalIds,
-    linkParcelToColmena,
   } = useGameStore();
-  const fairMult = activeFair ? (1 - activeFair.discount) : 1.0;
   const hasAnimalWorker = (workers ?? []).some(
     (w: any) => w.role === 'livestock_hand' || w.role === 'veterinarian'
   );
@@ -604,8 +537,6 @@ export default function AnimalesScreen() {
                       <Text style={genStyles.panelTitle}>🌳 Lineage</Text>
                       {(() => {
                         const findAnimal = (id: string) => animals.find((a: OwnedAnimal) => a.id === id);
-                        const mother = item.parentIds ? findAnimal(item.parentIds[0]) : undefined;
-                        const father = item.parentIds ? findAnimal(item.parentIds[1]) : undefined;
                         const gp = item.grandparentIds;
 
                         if (!item.parentIds) {

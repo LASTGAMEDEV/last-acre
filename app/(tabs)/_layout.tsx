@@ -1,4 +1,4 @@
-﻿import { Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
@@ -20,7 +20,7 @@ import HistoricalToast from '../../components/HistoricalToast';
 import { clearPendingDisplayEvent } from '../../engine/timeline';
 
 export default function TabLayout() {
-  const { day, parcels, loans, contracts, seasonGoals, musicEnabled, soundEnabled } = useGameStore();
+  const { day, parcels, loans, contracts, musicEnabled, soundEnabled } = useGameStore();
   const timeline = useGameStore(s => s.timeline);
   const setTimeline = useGameStore(s => s.setTimeline);
   const season = getSeason(day);
@@ -37,7 +37,7 @@ export default function TabLayout() {
     } else {
       stopSeasonMusic();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [season, soundEnabled, musicEnabled]);
 
   // Badge counts
