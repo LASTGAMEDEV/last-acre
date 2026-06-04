@@ -2405,7 +2405,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
               : 0;
             // Renewals
             const renewed = updatedCSASubscribers.filter(sub => Math.random() < renewalProbability(sub.satisfaction));
-            const newSubsCount = computeNewSubscribers(avgSat, state.reputation ?? 50, hasOrganic, renewed.length, state.nearSettlement);
+            const newSubsCount = computeNewSubscribers(avgSat, state.legacyReputation ?? 50, hasOrganic, renewed.length, state.nearSettlement);
             const newSubs: CSASubscriber[] = Array.from({ length: newSubsCount }).map((_, i) => ({
               id: `csa_sub_${newDay}_${i}`,
               name: `Subscriber ${renewed.length + i + 1}`,
@@ -2504,7 +2504,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
         // ── Spring lease offer refresh ──────────────────────────────────────
         let updatedAvailableLeases = state.availableLeases ?? [];
         if (season === 'spring' && prevSeason === 'winter') {
-          updatedAvailableLeases = generateAvailableLeases(newDay, state.reputation ?? 50);
+          updatedAvailableLeases = generateAvailableLeases(newDay, state.legacyReputation ?? 50);
         }
 
         // Time deposit maturity payouts
@@ -3405,7 +3405,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
         }
 
         // Reputation: passive gain every 30 days, penalties for failures/defaults
-        let reputation = state.reputation ?? 50;
+        let reputation = state.legacyReputation ?? 50;
         if (newDay % 30 === 0) reputation = Math.min(100, reputation + 1);
         // Count runoff fines for reputation penalty
         const runoffFineCount = summary.filter(s => s.id.startsWith('runoff_fine_')).length;
@@ -4594,7 +4594,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
 
         // -- Selling Channels tick ------------------------------------------------
         let sellingRevenue = 0;
-        let newReputation = state.reputation ?? 0;
+        let newReputation = state.legacyReputation ?? 0;
         let newReputationHistory = [...(state.reputationHistory ?? [])];
         let newAwardHistory = [...state.awardHistory];
         let newProductAwardBonuses = { ...state.productAwardBonuses };
@@ -4844,7 +4844,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
           coopStates: updatedCoopStates,
           workers: finalWorkers,
           pendingRequests: newPendingRequests,
-          reputation: newReputation,
+          legacyReputation: newReputation,
           reputationHistory: newReputationHistory,
           farmShop: state.farmShop,
           restaurantContracts: newRestaurantContracts,

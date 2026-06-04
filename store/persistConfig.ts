@@ -60,6 +60,8 @@ export function partializeGameState(state: GameState) {
           toggleOnlineShop, setOnlineAllocation, toggleFarmCafe,
           assignCafeWorker, unassignCafeWorker, enterAgriculturalShow,
           performHandoff, earnKnowledge, triggerVoluntaryHandoff,
+          makeLifeEventChoice, setFamilyMemberRole, initiateCoOwnershipAction,
+          applyFrictionChoiceAction, resolveBuyoutAction, completeGameSetup,
           ...dataState
         } = state;
         return {

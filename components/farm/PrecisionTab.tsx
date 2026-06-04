@@ -7,7 +7,7 @@ import { getScoreLabel, getYieldTrend } from '../../engine/precision';
 export default function PrecisionTab() {
   const state = useGameStore();
   const [showYieldMap, setShowYieldMap] = useState(false);
-  const unlocked = (state.reputation ?? 0) >= 65;
+  const unlocked = (state.legacyReputation ?? 0) >= 65;
 
   const ownedParcels = state.parcels.filter(p => p.owned);
 
@@ -16,7 +16,7 @@ export default function PrecisionTab() {
       <View style={styles.center}>
         <Text style={styles.lockedTitle}>🔒 Precision Agriculture</Text>
         <Text style={styles.lockedText}>Unlock at reputation 65</Text>
-        <Text style={styles.lockedSub}>Current: {Math.round(state.reputation ?? 0)}</Text>
+        <Text style={styles.lockedSub}>Current: {Math.round(state.legacyReputation ?? 0)}</Text>
       </View>
     );
   }

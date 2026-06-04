@@ -236,6 +236,7 @@ import { createMachineryActions } from './actions/machineryActions';
 import { createProcessingActions } from './actions/processingActions';
 import { createAuctionActions } from './actions/auctionActions';
 import { createElectricityActions } from './actions/electricityActions';
+import { createFamilyActions } from '../features/family/familyActions';
 import { advanceGameDay } from '../simulation/advanceDay';
 export { DELIVERY_DURATION, TRUCK_FUEL_LITRES } from './actions/machineryActions';
 
@@ -395,6 +396,7 @@ export const useGameStore = create<GameState>()(
       ...createProcessingActions(set, get),
       ...createAuctionActions(set, get),
       ...createElectricityActions(set, get),
+      ...createFamilyActions(set, get),
 
       advanceDay: () => advanceGameDay(set, get),
       advanceDays: (n: number) => {
@@ -498,7 +500,7 @@ export const useGameStore = create<GameState>()(
         const { CONTRACT_TEMPLATES } = require('../engine/contracts');
         const template = CONTRACT_TEMPLATES.find((t: any) => t.id === templateId);
         if (!template) return;
-        if (template.minReputation && (state.reputation ?? 50) < template.minReputation) return;
+        if (template.minReputation && (state.legacyReputation ?? 50) < template.minReputation) return;
         const price = state.prices.find(p => p.cropId === template.cropId);
         if (!price) return;
         const amount = template.amountRange[0] + Math.floor(Math.random() * (template.amountRange[1] - template.amountRange[0]));
@@ -647,7 +649,7 @@ export const useGameStore = create<GameState>()(
           contracts: state.contracts.map(c =>
             c.id === contractId ? { ...c, delivered: newDelivered, completed } : c
           ),
-          reputation: completed ? Math.min(100, (state.reputation ?? 50) + 5) : (state.reputation ?? 50),
+          legacyReputation: completed ? Math.min(100, (state.legacyReputation ?? 50) + 5) : (state.legacyReputation ?? 50),
         });
       },
 
@@ -1055,7 +1057,7 @@ export const useGameStore = create<GameState>()(
           cooperative: state.cooperative,
           autoSell: state.autoSell,
           prestige: (state.prestige ?? 0) + 1,
-          reputation: Math.min(100, (state.reputation ?? 50) + 10),
+          legacyReputation: Math.min(100, (state.legacyReputation ?? 50) + 10),
           yearEndShown: false,
         });
       },
@@ -1216,7 +1218,7 @@ export const useGameStore = create<GameState>()(
           set({
             productAwardBonuses: { ...state.productAwardBonuses, [productId]: newBonus },
             awardHistory: [...state.awardHistory, { day: state.day, productId, showName: 'County Show', award }],
-            reputation: Math.min(100, state.reputation + (award === 'gold' ? 5 : award === 'silver' ? 3 : 1)),
+            legacyReputation: Math.min(100, state.legacyReputation + (award === 'gold' ? 5 : award === 'silver' ? 3 : 1)),
           });
         }
       },

@@ -43,6 +43,9 @@ import type { DeliveryJob, HarvestJob, MachineRepair, OwnedAttachment, OwnedMach
 import type { HenilBatch, IncubationBatch, ProductionBuildingState } from '../types/domain/processing';
 import type { DaySummaryEvent, FairEvent, FieldEvent, GameEvent } from '../types/domain/uiEvents';
 import type { HybridJob, SeedEntry } from '../types/domain/crops';
+import { INITIAL_FAMILY_STATE } from '../features/family/familyTypes';
+import { INITIAL_REPUTATION_STATE } from '../features/reputation/reputationTypes';
+import { INITIAL_NEIGHBOR_STATE } from '../features/neighbors/neighborEngine';
 const FIELD_NAMES: string[] = [
   'North Meadow',   'South Ridge',    'East Valley',    'West Creek',     'Upper Hill',
   'Lower Hollow',   'Far Acre',       'Near Grove',     'Back Pasture',   'Long Field',
@@ -258,7 +261,7 @@ export function makeInitialState() {
     wells: [] as Well[],
     gridWaterActive: false,
     gridWaterDailyRate: 1.20,
-    reputation: 50,
+    legacyReputation: 50,
     nearSettlement: true,
     soundBarriers: false,
     activeSchedule: undefined,
@@ -280,6 +283,11 @@ export function makeInitialState() {
     timeline: INITIAL_TIMELINE_STATE,
     dynasty: INITIAL_DYNASTY_STATE,
     dynastyAuctionWins: 0,
+    family: INITIAL_FAMILY_STATE,
+    reputation: INITIAL_REPUTATION_STATE,
+    neighbors: INITIAL_NEIGHBOR_STATE,
+    pendingLandOpportunities: [],
+    gameSetupComplete: false,
     machineRepairs: [] as MachineRepair[],
     npcFarms: initNpcFarms(),
     rivalNews: [] as RivalNewsItem[],

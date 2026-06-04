@@ -43,6 +43,10 @@ import type {
 } from './machinery';
 import type { HenilBatch, IncubationBatch, ProductionBuildingState } from './processing';
 import type { DaySummaryEvent, FairEvent, FieldEvent, GameEvent } from './uiEvents';
+import type { FamilyState } from '../../features/family/familyTypes';
+import type { FamilyActions } from '../../features/family/familyActions';
+import type { ReputationState } from '../../features/reputation/reputationTypes';
+import type { NeighborState, NeighborLandOpportunity } from '../../features/neighbors/neighborTypes';
 
 export interface GameState {
   day: number;
@@ -120,7 +124,7 @@ export interface GameState {
   wells: Well[];
   gridWaterActive: boolean;
   gridWaterDailyRate: number;
-  reputation: number;
+  legacyReputation: number;
   nearSettlement: boolean;
   soundBarriers: boolean;
   activeSchedule?: {
@@ -143,6 +147,12 @@ export interface GameState {
   timeline: TimelineState;
   dynasty: DynastyState;
   dynastyAuctionWins: number;
+  // Phase 3 — Living History
+  family: FamilyState;
+  reputation: ReputationState;
+  neighbors: NeighborState;
+  pendingLandOpportunities: NeighborLandOpportunity[];
+  gameSetupComplete: boolean;
   machineRepairs: MachineRepair[];
   attachments: OwnedAttachment[];
   trailers: OwnedTrailer[];
@@ -445,4 +455,11 @@ export interface GameState {
   assignCafeWorker: (workerId: string) => void;
   unassignCafeWorker: (workerId: string) => void;
   enterAgriculturalShow: (productId: string, batchId: string) => void;
+  // Phase 3 — Family actions (FamilyActions)
+  makeLifeEventChoice: FamilyActions['makeLifeEventChoice'];
+  setFamilyMemberRole: FamilyActions['setFamilyMemberRole'];
+  initiateCoOwnershipAction: FamilyActions['initiateCoOwnershipAction'];
+  applyFrictionChoiceAction: FamilyActions['applyFrictionChoiceAction'];
+  resolveBuyoutAction: FamilyActions['resolveBuyoutAction'];
+  completeGameSetup: FamilyActions['completeGameSetup'];
 }
