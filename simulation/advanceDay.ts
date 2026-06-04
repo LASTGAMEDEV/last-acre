@@ -222,6 +222,11 @@ import type { ProductionBuildingState, HenilBatch, IncubationBatch } from '../ty
 import type { ElectricityState } from '../types/domain/electricity';
 import type { GameEvent, FairEvent, FieldEvent, DaySummaryEvent } from '../types/domain/uiEvents';
 import type { GameState } from '../types/domain/gameState';
+import type { TickContext } from './tickContext';
+import { getTickState, patchTickState } from './tickContext';
+import { familyTick }     from '../features/family/familyTick';
+import { reputationTick } from '../features/reputation/reputationTick';
+import { neighborTick }   from '../features/neighbors/neighborTick';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
 function getDailyMaintenance(machines: OwnedMachine[], buildings: string[]): number {
@@ -386,6 +391,24 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
             };
           }
         }
+
+        // ── Phase 3 Ticks ─────────────────────────────────────────────────────
+        // Build a TickContext seeded with already-computed values, run Phase 3 ticks,
+        // then extract their state patches for inclusion in the final set() call.
+        let phase3Ctx: TickContext = {
+          previousState: state,
+          pendingState: {
+            day:      newDay,
+            timeline: newTimeline,
+            dynasty:  newDynasty,
+          },
+          newDay,
+          summary: [],
+        };
+        phase3Ctx = familyTick(phase3Ctx);
+        phase3Ctx = reputationTick(phase3Ctx);
+        phase3Ctx = neighborTick(phase3Ctx);
+        const phase3Patch = phase3Ctx.pendingState;
 
         const season = getSeason(newDay);
         const rawWorkerBonuses = getWorkerBonuses(state.workers ?? []);
@@ -4695,6 +4718,10 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
           day: newDay,
           timeline: newTimeline,
           dynasty: newDynasty,
+          ...(phase3Patch.family               !== undefined ? { family:                    phase3Patch.family }               : {}),
+          ...(phase3Patch.reputation           !== undefined ? { reputation:                phase3Patch.reputation }           : {}),
+          ...(phase3Patch.neighbors            !== undefined ? { neighbors:                 phase3Patch.neighbors }            : {}),
+          ...(phase3Patch.pendingLandOpportunities !== undefined ? { pendingLandOpportunities: phase3Patch.pendingLandOpportunities } : {}),
           wells: updatedWells,
           aquiferLevel: newAquifer,
           showWindowOpen,
