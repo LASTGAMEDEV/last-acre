@@ -2,12 +2,29 @@ import { createJSONStorage } from 'zustand/middleware';
 import { defaultCommitment } from '../engine/csa';
 import { SOIL_DEFAULTS } from '../engine/crops';
 import { INITIAL_DYNASTY_STATE } from '../engine/dynasty';
+import { INITIAL_FAMILY_STATE } from '../features/family/familyTypes';
+import { INITIAL_REPUTATION_STATE } from '../features/reputation/reputationTypes';
+import { INITIAL_NEIGHBOR_STATE } from '../features/neighbors/neighborEngine';
 import type { GameState } from '../types/domain/gameState';
 
-export const SAVE_STORAGE_KEY = 'granja-tycoon-save-v12';
-export const SAVE_VERSION = 8;
+export const SAVE_STORAGE_KEY = 'granja-tycoon-save-v13';
+export const SAVE_VERSION = 9;
 
 export function migrateGameState(persistedState: unknown): unknown {
+  const s = persistedState as Record<string, unknown>;
+  if (!s) return persistedState;
+  // v12 → v13: add Phase 3 state slices; rename reputation number → legacyReputation
+  if (s.legacyReputation === undefined && typeof s.reputation === 'number') {
+    s.legacyReputation = s.reputation;
+  }
+  if (!s.family)                   s.family = INITIAL_FAMILY_STATE;
+  if (!s.neighbors)                s.neighbors = INITIAL_NEIGHBOR_STATE;
+  if (!s.pendingLandOpportunities) s.pendingLandOpportunities = [];
+  if (s.gameSetupComplete === undefined) s.gameSetupComplete = true; // existing saves already set up
+  // reputation field is now ReputationState — init fresh if it was a number
+  if (typeof s.reputation === 'number' || !s.reputation) {
+    s.reputation = INITIAL_REPUTATION_STATE;
+  }
   return persistedState;
 }
 
@@ -87,6 +104,13 @@ export function repairHydratedState(state: GameState | undefined): void {
         state.sirePenAnimalIds     = state.sirePenAnimalIds ?? [];
         state.dynasty              = state.dynasty ?? INITIAL_DYNASTY_STATE;
         state.dynastyAuctionWins   = state.dynastyAuctionWins ?? 0;
+        state.family               = state.family ?? INITIAL_FAMILY_STATE;
+        state.neighbors            = state.neighbors ?? INITIAL_NEIGHBOR_STATE;
+        state.pendingLandOpportunities = state.pendingLandOpportunities ?? [];
+        if (state.gameSetupComplete === undefined) state.gameSetupComplete = true;
+        if (!state.reputation || typeof (state.reputation as unknown) === 'number') {
+          state.reputation = INITIAL_REPUTATION_STATE;
+        }
         state.slurryCapacity       = (b.includes('bld_slurry_tank_s') ? 5000 : 0) +
                                       (b.includes('bld_slurry_tank_m') ? 15000 : 0) +
                                       (b.includes('bld_slurry_tank_l') ? 40000 : 0);
