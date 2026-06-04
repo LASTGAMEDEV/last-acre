@@ -1013,15 +1013,12 @@ git commit -m "feat(phase3): add family action factory"
 // features/family/familyTick.ts
 
 import type { GameTick } from '../../simulation/tickContext';
+import { getTickState, patchTickState } from '../../simulation/tickContext';
 import { gameDayToCalendarYear } from '../../engine/calendarUtils';
 import { advanceFamilyDay, maybeGenerateFrictionEvent } from './familyEngine';
 
 export const familyTick: GameTick = (ctx) => {
-  // Read merged state defensively — works with or without pendingState on TickContext
-  const state = (ctx as any).pendingState
-    ? { ...ctx.state, ...(ctx as any).pendingState }
-    : ctx.state;
-
+  const state      = getTickState(ctx);
   const calYear    = gameDayToCalendarYear(ctx.newDay);
   const prevCalYear = gameDayToCalendarYear(ctx.newDay - 1);
   const isNewYear  = calYear > prevCalYear;
@@ -1042,12 +1039,7 @@ export const familyTick: GameTick = (ctx) => {
     familyFinal = withFriction;
   }
 
-  const pendingState = (ctx as any).pendingState ?? {};
-
-  return {
-    ...ctx,
-    pendingState: { ...pendingState, family: familyFinal },
-  } as typeof ctx;
+  return patchTickState(ctx, { family: familyFinal });
 };
 ```
 
@@ -1225,23 +1217,22 @@ export function getTierEffects(tier: ReputationTier): TierEffects {
 // features/reputation/reputationTick.ts
 
 import type { GameTick } from '../../simulation/tickContext';
+import { getTickState, patchTickState } from '../../simulation/tickContext';
 import { advanceReputationWeek } from './reputationEngine';
 
 export const reputationTick: GameTick = (ctx) => {
   if (ctx.newDay % 7 !== 0) return ctx;
 
-  const state = (ctx as any).pendingState
-    ? { ...ctx.state, ...(ctx as any).pendingState }
-    : ctx.state;
+  const state = getTickState(ctx);
 
-  const animals     = (state.animals ?? []) as any[];
-  const parcels     = (state.parcels ?? []) as any[];
-  const loans       = (state.loans   ?? []) as any[];
-  const owned       = parcels.filter((p: any) => p.owned);
-  const totalHa     = owned.reduce((s: number, p: any) => s + (p.hectares ?? 0), 0);
-  const organicHa   = owned.filter((p: any) => p.organicStatus === 'organic').reduce((s: number, p: any) => s + (p.hectares ?? 0), 0);
-  const storage     = (state as any).storageItems ?? [];
-  const totalDebt   = loans.filter((l: any) => !l.paid).reduce((s: number, l: any) => s + (l.amount ?? 0), 0);
+  const animals      = (state.animals ?? []) as any[];
+  const parcels      = (state.parcels ?? []) as any[];
+  const loans        = (state.loans   ?? []) as any[];
+  const owned        = parcels.filter((p: any) => p.owned);
+  const totalHa      = owned.reduce((s: number, p: any) => s + (p.hectares ?? 0), 0);
+  const organicHa    = owned.filter((p: any) => p.organicStatus === 'organic').reduce((s: number, p: any) => s + (p.hectares ?? 0), 0);
+  const storage      = (state as any).storageItems ?? [];
+  const totalDebt    = loans.filter((l: any) => !l.paid).reduce((s: number, l: any) => s + (l.amount ?? 0), 0);
   const annualIncome = totalHa * 40;
 
   const newReputation = advanceReputationWeek(state.reputation, {
@@ -1256,8 +1247,7 @@ export const reputationTick: GameTick = (ctx) => {
     communityStandingDelta: state.reputation.communityStandingDelta,
   });
 
-  const pendingState = (ctx as any).pendingState ?? {};
-  return { ...ctx, pendingState: { ...pendingState, reputation: newReputation } } as typeof ctx;
+  return patchTickState(ctx, { reputation: newReputation });
 };
 ```
 
@@ -1486,6 +1476,7 @@ export function updateNeighborRelationship(
 // features/neighbors/neighborTick.ts
 
 import type { GameTick } from '../../simulation/tickContext';
+import { getTickState, patchTickState } from '../../simulation/tickContext';
 import { gameDayToCalendarYear } from '../../engine/calendarUtils';
 import { advanceNeighborYear } from './neighborEngine';
 
@@ -1494,9 +1485,7 @@ export const neighborTick: GameTick = (ctx) => {
   const prevCalYear = gameDayToCalendarYear(ctx.newDay - 1);
   if (calYear === prevCalYear) return ctx;  // only runs on year rollover
 
-  const state = (ctx as any).pendingState
-    ? { ...ctx.state, ...(ctx as any).pendingState }
-    : ctx.state;
+  const state = getTickState(ctx);
 
   const { neighbors: newNeighbors, landOpportunities } = advanceNeighborYear(
     state.neighbors,
@@ -1511,11 +1500,7 @@ export const neighborTick: GameTick = (ctx) => {
     ...landOpportunities,
   ];
 
-  const pendingState = (ctx as any).pendingState ?? {};
-  return {
-    ...ctx,
-    pendingState: { ...pendingState, neighbors: newNeighbors, pendingLandOpportunities: merged },
-  } as typeof ctx;
+  return patchTickState(ctx, { neighbors: newNeighbors, pendingLandOpportunities: merged });
 };
 ```
 
@@ -1680,44 +1665,73 @@ git commit -m "feat(phase3): bump save key to v13, wire family actions into stor
 
 ---
 
-## Task 11: Wire Ticks into the Simulation Pipeline (`simulation/advanceDay.ts`)
+## Task 11: Wire Ticks into `advanceGameDay` (`simulation/advanceDay.ts`)
 
 **Files:**
 - Modify: `simulation/advanceDay.ts`
 
-- [ ] **Step 1: Add tick imports**
+**Context:** `advanceGameDay` is a plain function — no `DAILY_TICKS` array exists yet. Wire the three Phase 3 ticks by constructing a `TickContext` inside `advanceGameDay`, running them in sequence, and merging their `pendingState` into the existing `set()` call.
 
-Find the existing tick imports in `simulation/advanceDay.ts`. Add:
+- [ ] **Step 1: Add imports at the top of `simulation/advanceDay.ts`**
+
+Find the existing import block. Add:
 
 ```typescript
+import { TickContext, getTickState, patchTickState } from './tickContext';
 import { familyTick }     from '../features/family/familyTick';
 import { reputationTick } from '../features/reputation/reputationTick';
 import { neighborTick }   from '../features/neighbors/neighborTick';
 ```
 
-- [ ] **Step 2: Insert ticks into DAILY_TICKS**
+- [ ] **Step 2: Find the dynasty block end in `advanceGameDay`**
 
-Find the `DAILY_TICKS` array. Insert the three new ticks after `timelineTick` and before `weatherTick`:
-
-```typescript
-const DAILY_TICKS: GameTick[] = [
-  timelineTick,
-  familyTick,      // Phase 3
-  reputationTick,  // Phase 3
-  neighborTick,    // Phase 3
-  weatherTick,
-  marketTick,
-  // ... rest unchanged
-];
+```bash
+grep -n "newDynasty\|INITIAL_DYNASTY_STATE" granja-tycoon/simulation/advanceDay.ts | tail -10
 ```
 
-- [ ] **Step 3: Verify TypeScript**
+Identify the last line that sets `newDynasty` (after the `isNewYear` block closes).
+
+- [ ] **Step 3: Add Phase 3 tick runner immediately after the dynasty block**
+
+```typescript
+        // ── Phase 3 Ticks ─────────────────────────────────────────────────────
+        // Construct a TickContext seeded with today's already-computed values,
+        // run the three Phase 3 ticks, then extract their state patches below.
+        let phase3Ctx: TickContext = {
+          previousState: state,
+          pendingState: {
+            day:      newDay,
+            timeline: newTimeline,
+            dynasty:  newDynasty,
+          },
+          newDay,
+          summary: [],
+        };
+        phase3Ctx = familyTick(phase3Ctx);
+        phase3Ctx = reputationTick(phase3Ctx);
+        phase3Ctx = neighborTick(phase3Ctx);
+        const phase3Patch = phase3Ctx.pendingState;
+```
+
+- [ ] **Step 4: Merge phase3Patch into the final `set()` call**
+
+Find the large `set({...})` call at the end of `advanceGameDay` (the one that contains `day: newDay`, `timeline: newTimeline`, `dynasty: newDynasty`). Add the Phase 3 fields to it:
+
+```typescript
+          // Phase 3 state — spread from tick pipeline output
+          ...(phase3Patch.family               ? { family:                    phase3Patch.family }               : {}),
+          ...(phase3Patch.reputation           ? { reputation:                phase3Patch.reputation }           : {}),
+          ...(phase3Patch.neighbors            ? { neighbors:                 phase3Patch.neighbors }            : {}),
+          ...(phase3Patch.pendingLandOpportunities ? { pendingLandOpportunities: phase3Patch.pendingLandOpportunities } : {}),
+```
+
+- [ ] **Step 5: Verify TypeScript**
 ```bash
 cd granja-tycoon && npx tsc --noEmit 2>&1 | head -20
 ```
 Expected: no errors.
 
-- [ ] **Step 4: Smoke test**
+- [ ] **Step 6: Smoke test**
 
 ```bash
 cd granja-tycoon && npx expo start --web
@@ -1726,14 +1740,14 @@ cd granja-tycoon && npx expo start --web
 Open app. Advance to day 365. In browser console, inspect the Zustand store:
 
 - `family.pendingLifeEvents` — empty array or one event
-- `reputation.score` — non-zero (check after 7 days)
-- `neighbors.caldwells.cash` — non-zero, different from starting value
+- `reputation.score` — non-zero after 7 days
+- `neighbors.caldwells.cash` — different from starting value after 360 days
 - `gameSetupComplete` — false (starting screen not built yet)
 
 - [ ] **Commit**
 ```bash
 git add simulation/advanceDay.ts
-git commit -m "feat(phase3): add family, reputation, and neighbor ticks to daily pipeline"
+git commit -m "feat(phase3): wire family, reputation, and neighbor ticks into advanceGameDay"
 ```
 
 ---
