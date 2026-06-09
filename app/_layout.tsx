@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import HandoffModal from '../components/HandoffModal';
+import StartingScreen from '../components/StartingScreen';
+import { useGameStore } from '../store/useGameStore';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -13,6 +15,11 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const gameSetupComplete = useGameStore(s => s.gameSetupComplete);
+
+  if (!gameSetupComplete) {
+    return <StartingScreen />;
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
