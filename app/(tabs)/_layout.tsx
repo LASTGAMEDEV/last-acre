@@ -17,6 +17,7 @@ import FirstMission from '../../components/FirstMission';
 import CustomTabBar from '../../components/CustomTabBar';
 import NewspaperModal from '../../components/NewspaperModal';
 import HistoricalToast from '../../components/HistoricalToast';
+import LifeEventModal from '../../components/LifeEventModal';
 import { clearPendingDisplayEvent } from '../../engine/timeline';
 
 export default function TabLayout() {
@@ -95,6 +96,7 @@ export default function TabLayout() {
       <TutorialModal />
       <YearEndModal />
       <BankruptModal />
+      <LifeEventModal />
 
       {/* Historical event UI — major events use modal, minor use toast */}
       {pendingEvent?.tier === 'major' && (
