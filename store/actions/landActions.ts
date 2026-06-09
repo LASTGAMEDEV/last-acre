@@ -241,7 +241,7 @@ export const createLandActions: ActionFactory<LandActions> = (set, get) => ({
 
   orderSoilAnalysis: (parcelId) => {
     const state = get();
-    if (state.reputation < 65) return;
+    if (state.legacyReputation < 65) return;
     const parcel = state.parcels.find(p => p.id === parcelId);
     if (!parcel || !parcel.owned) return;
     const delay = state.soilLabBuilt ? 1 : 3;
