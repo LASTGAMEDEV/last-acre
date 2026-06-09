@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { CSACommitment } from '../../engine/csa';
+import GuideButton from '../GuideButton';
 
 export default function CSASection() {
   const {
@@ -32,7 +33,10 @@ export default function CSASection() {
 
       {/* Toggle */}
       <View style={csa.card}>
-        <Text style={csa.cardTitle}>Program Status</Text>
+        <View style={csa.cardHeader}>
+          <Text style={csa.cardTitle}>Program Status</Text>
+          <GuideButton entryId="system_csa" compact />
+        </View>
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
           <TouchableOpacity
             style={[csa.toggleBtn, csaActive && csa.seasonActive]}
@@ -132,6 +136,7 @@ function satisfactionColor(val: number): string {
 const csa = StyleSheet.create({
   header: { fontSize: F.size.xl, fontWeight: 'bold', color: C.text, marginBottom: S.sm },
   card: { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, gap: 6 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: S.sm },
   cardTitle: { fontSize: F.size.md, fontWeight: '600', color: C.text },
   row: { fontSize: F.size.sm, color: C.text },
   muted: { fontSize: F.size.sm, color: C.textMuted },

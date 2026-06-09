@@ -83,6 +83,7 @@ function BankingSection() {
                 title="Credit Score"
                 body="Your credit score determines how much you can borrow and at what interest rate. It's based on your rolling income over recent days, your existing debt, and how reliably you've repaid past loans."
                 buttonSize={12}
+                entryId="system_banking_credit"
               />
             </View>
             <Text style={[styles.creditScore, { color: rating.color }]}>{creditScore}</Text>

@@ -5,6 +5,7 @@ import type { Worker, WorkerRole, ContractType } from '../../data/workerTypes';
 import { WORKER_ROLE_CONFIG } from '../../data/workerTypes';
 import { C, S, F, R } from '../../constants/theme';
 import SubTabBar from '../../components/SubTabBar';
+import GuideButton from '../../components/GuideButton';
 
 type Tab = 'staff' | 'requests' | 'hire';
 
@@ -174,7 +175,10 @@ function StaffTab() {
         </View>
       )}
 
-      <Text style={st.sectionLabel}>Active Staff ({list.length})</Text>
+      <View style={st.labelRow}>
+        <Text style={st.sectionLabel}>Active Staff ({list.length})</Text>
+        <GuideButton entryId="system_workers" compact />
+      </View>
       {list.length === 0
         ? <Text style={st.empty}>No staff hired. Use the Hire tab to post vacancies.</Text>
         : list.map(w => {
@@ -435,6 +439,7 @@ export default function TrabajadoresScreen() {
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   section: { paddingHorizontal: S.md, paddingTop: S.sm },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: S.md },
   sectionLabel: { color: C.textMuted, fontSize: F.size.md, fontWeight: 'bold', paddingHorizontal: S.md, paddingTop: S.lg, paddingBottom: 6 },
   stat: { color: C.text, fontSize: F.size.sm, paddingBottom: 4 },
   empty: { color: C.textFaint, padding: S.lg },

@@ -346,6 +346,7 @@ export default function MarketPricesSection() {
                         title="Sell Pressure"
                         body="Selling a large quantity of a crop at once drives the market price down temporarily. Spreading sales over several days or selling smaller amounts avoids the penalty. The pressure lifts after a few days."
                         buttonSize={12}
+                        entryId="system_market_prices"
                       />
                       <GuideButton entryId="system_market_prices" compact />
                     </View>

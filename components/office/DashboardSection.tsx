@@ -5,6 +5,7 @@ import { getSeason } from '../../engine/climate';
 import { SEASON_THEME, C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
+import GuideButton from '../GuideButton';
 
 function DashboardSection() {
   const {
@@ -35,10 +36,25 @@ function DashboardSection() {
   const seasonEarned = Math.max(0, (totalRevenue ?? 0) - (seasonStartRevenue ?? 0));
   const activeGoals = seasonGoals.filter(g => !g.claimed);
 
-  function Card({ title, value, color, sub }: { title: string; value: string; color?: string; sub?: string }) {
+  function Card({
+    title,
+    value,
+    color,
+    sub,
+    guideEntryId,
+  }: {
+    title: string;
+    value: string;
+    color?: string;
+    sub?: string;
+    guideEntryId?: string;
+  }) {
     return (
       <View style={dash.card}>
-        <Text style={dash.cardLabel}>{title}</Text>
+        <View style={dash.cardHeader}>
+          <Text style={dash.cardLabel}>{title}</Text>
+          {guideEntryId && <GuideButton entryId={guideEntryId} compact />}
+        </View>
         <Text style={[dash.cardValue, color ? { color } : {}]}>{value}</Text>
         {sub ? <Text style={dash.cardSub}>{sub}</Text> : null}
       </View>
@@ -50,6 +66,10 @@ function DashboardSection() {
       {/* Warnings row */}
       {(urgentLoans.length > 0 || urgentContracts.length > 0) && (
         <View style={[dash.warnBanner]}>
+          <View style={dash.warnHeader}>
+            <Text style={dash.warnTitle}>Attention needed</Text>
+            <GuideButton entryId={urgentLoans.length > 0 ? 'system_banking_credit' : 'system_contracts'} compact />
+          </View>
           {urgentLoans.map(l => (
             <Text key={l.id} style={dash.warnText}>⚠️ Loan ${ Math.round(l.totalOwed).toLocaleString()} due in {l.payoffDay - day}d</Text>
           ))}
@@ -148,6 +168,7 @@ function DashboardSection() {
 const dash = StyleSheet.create({
   row:       { flexDirection: 'row', gap: 8 },
   card:      { flex: 1, backgroundColor: C.bgCard, borderRadius: 10, padding: S.md },
+  cardHeader:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: S.sm },
   cardLabel: { color: C.textMuted, fontSize: 9, fontWeight: 'bold', letterSpacing: 0.5, marginBottom: S.xs },
   cardValue: { color: C.text, fontSize: F.size.xxl, fontWeight: 'bold' },
   cardSub:   { color: '#555', fontSize: F.size.xs, marginTop: 2 },
@@ -158,6 +179,8 @@ const dash = StyleSheet.create({
   netWorthSub:       { color: '#555', fontSize: F.size.xs },
   netWorthDot:       { color: '#333', fontSize: F.size.xs },
   warnBanner:{ backgroundColor: '#3a1a00', borderRadius: R.md, padding: 10, gap: 4 },
+  warnHeader:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: S.sm },
+  warnTitle: { color: '#ffb74d', fontSize: 12, fontWeight: 'bold' },
   warnText:  { color: '#ffb74d', fontSize: 11, fontWeight: 'bold' },
   goalsCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md },
   goalsTitle:{ color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },

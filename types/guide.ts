@@ -71,7 +71,13 @@ export interface GuideContextInput {
   ownedCropSeedIds?: string[];
   ownedAnimalTypeIds?: string[];
   loansTotalOwed?: number;
+  urgentLoanCount?: number;
+  urgentContractCount?: number;
   activeContractCount?: number;
+  readyCropCount?: number;
+  lowAnimalWelfareCount?: number;
+  brokenMachineCount?: number;
+  expiringStorageBatchCount?: number;
   selectedParcelSoil?: {
     nitrogen?: number;
     phosphorus?: number;

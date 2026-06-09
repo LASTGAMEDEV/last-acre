@@ -14,6 +14,7 @@ import {
 } from '../../engine/electricity';
 import { getSeason } from '../../engine/climate';
 import { C, S, F } from '../../constants/theme';
+import GuideButton from '../GuideButton';
 
 function ElectricitySection() {
   const { electricity, buildings, animals, workers, day, money,
@@ -62,9 +63,12 @@ function ElectricitySection() {
       )}
 
       <View style={{ backgroundColor: '#f3f4f6', borderRadius: 8, padding: 10, marginBottom: 8 }}>
-        <Text style={{ fontWeight: '600', marginBottom: 4 }}>
-          Generation: {totalGen.toFixed(1)} kW / Demand: {totalDemand.toFixed(1)} kW
-        </Text>
+        <View style={elStyles.cardHeader}>
+          <Text style={{ fontWeight: '600', marginBottom: 4, flex: 1 }}>
+            Generation: {totalGen.toFixed(1)} kW / Demand: {totalDemand.toFixed(1)} kW
+          </Text>
+          <GuideButton entryId="system_electricity" compact />
+        </View>
         <View style={{ height: 12, backgroundColor: '#e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
           <View style={{ height: '100%', width: `${Math.min(100, pct)}%` as any, backgroundColor: genBarColor, borderRadius: 6 }} />
         </View>
@@ -304,6 +308,7 @@ const elStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   cardTitle: { fontWeight: '600', fontSize: 14, color: '#111827' },
   cardSub:   { fontSize: 12, color: '#6b7280', marginTop: 2 },
   btn: {

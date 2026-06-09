@@ -442,6 +442,7 @@ export default function AnimalesScreen() {
                           title="Gene Grade"
                           body="Each gene is scored D (weak) to S (exceptional). The overall grade is the average of all four genes. Higher grades mean more production, disease resistance, faster growth, or better sell price. Breed selectively to improve grades over generations."
                           buttonSize={12}
+                          entryId="system_animal_genetics"
                         />
                       </View>
                       <View style={[genStyles.gradeBadge, { backgroundColor: avgColor + '33', borderColor: avgColor }]}>

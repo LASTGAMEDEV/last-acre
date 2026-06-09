@@ -116,7 +116,7 @@ export default function ProcesadoScreen() {
           )}
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 4 }}>
             <GuideButton entryId="system_processing" compact />
-            <HelpSheet title="Processing" body="Processing takes in-game days. Each building needs a worker. Higher building tiers unlock more recipes and raise quality ceilings. Stage 4 products age and improve over time." />
+            <HelpSheet title="Processing" body="Processing takes in-game days. Each building needs a worker. Higher building tiers unlock more recipes and raise quality ceilings. Stage 4 products age and improve over time." entryId="system_processing" />
             <Text style={{ color: C.textFaint, fontSize: 11, marginLeft: 6 }}>How does processing work?</Text>
           </View>
 

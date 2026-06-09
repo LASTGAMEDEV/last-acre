@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, Animated, StyleSheet, Pressable } from 'react-native';
+import GuideButton from './GuideButton';
 
 interface HelpSheetProps {
   title: string;
   body: string;
   buttonSize?: number;
+  entryId?: string;
 }
 
-export default function HelpSheet({ title, body, buttonSize = 14 }: HelpSheetProps) {
+export default function HelpSheet({ title, body, buttonSize = 14, entryId }: HelpSheetProps) {
   const [visible, setVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(300)).current;
 
@@ -23,6 +25,10 @@ export default function HelpSheet({ title, body, buttonSize = 14 }: HelpSheetPro
   const close = () => {
     Animated.timing(slideAnim, { toValue: 300, duration: 200, useNativeDriver: true }).start(() => setVisible(false));
   };
+
+  if (entryId) {
+    return <GuideButton entryId={entryId} compact />;
+  }
 
   return (
     <>

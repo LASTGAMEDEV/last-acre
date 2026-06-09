@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { getGuideEntry, GUIDE_ENTRIES } from '../data/guideEntries';
+import { CROP_TYPES } from '../data/cropTypes';
 import { buildGuideContext, getEraSection, getFarmStatePanel } from '../engine/guideContext';
 import { useGameStore } from '../store/useGameStore';
 import { C, F, R, S, MIN_TOUCH } from '../constants/theme';
@@ -28,17 +29,38 @@ const TONE_TO_BADGE: Record<string, BadgeVariant> = {
 
 function useGuideContext() {
   const store = useGameStore();
-  return useMemo(() => buildGuideContext({
-    day: store.day,
-    money: store.money,
-    inventory: store.inventory,
-    buildings: store.buildings,
-    ownedCropSeedIds: (store.seedVault ?? []).map(seed => seed.cropId),
-    ownedAnimalTypeIds: [...new Set((store.animals ?? []).map(animal => animal.typeId))],
-    loansTotalOwed: (store.loans ?? []).filter(loan => !loan.paid).reduce((sum, loan) => sum + loan.totalOwed, 0),
-    activeContractCount: (store.contracts ?? []).filter(contract => !contract.completed && !contract.failed).length,
-    selectedParcelSoil: null,
-  }), [store]);
+  return useMemo(() => {
+    const activeLoans = (store.loans ?? []).filter(loan => !loan.paid);
+    const activeContracts = (store.contracts ?? []).filter(contract => !contract.completed && !contract.failed);
+    const readyCropCount = (store.parcels ?? []).filter(parcel => {
+      if (!parcel.owned || !parcel.plantedCrop) return false;
+      const cropType = CROP_TYPES.find(crop => crop.id === parcel.plantedCrop!.cropId);
+      return !!cropType && store.day >= parcel.plantedCrop.plantedDay + cropType.growthDays;
+    }).length;
+    const lowAnimalWelfareCount = Object.values(store.animalWelfareScores ?? {}).filter(score => score < 55).length;
+    const brokenMachineCount = (store.machineRepairs ?? []).filter(repair => repair.readyDay === null || repair.readyDay >= store.day).length;
+    const expiringStorageBatchCount = (store.inventoryBatches ?? []).filter(batch =>
+      batch.infested || batch.quality === 'low' || batch.quality === 'damaged' || batch.quality === 'condemned'
+    ).length;
+
+    return buildGuideContext({
+      day: store.day,
+      money: store.money,
+      inventory: store.inventory,
+      buildings: store.buildings,
+      ownedCropSeedIds: (store.seedVault ?? []).map(seed => seed.cropId),
+      ownedAnimalTypeIds: [...new Set((store.animals ?? []).map(animal => animal.typeId))],
+      loansTotalOwed: activeLoans.reduce((sum, loan) => sum + loan.totalOwed, 0),
+      urgentLoanCount: activeLoans.filter(loan => loan.payoffDay - store.day <= 7 && loan.payoffDay >= store.day).length,
+      activeContractCount: activeContracts.length,
+      urgentContractCount: activeContracts.filter(contract => contract.deadlineDay - store.day <= 7 && contract.deadlineDay >= store.day).length,
+      readyCropCount,
+      lowAnimalWelfareCount,
+      brokenMachineCount,
+      expiringStorageBatchCount,
+      selectedParcelSoil: null,
+    });
+  }, [store]);
 }
 
 function GuideVisualPanel({ entry }: { entry: NonNullable<ReturnType<typeof getGuideEntry>> }) {

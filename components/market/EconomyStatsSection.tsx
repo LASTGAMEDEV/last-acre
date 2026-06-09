@@ -297,6 +297,7 @@ export default function EconomyStatsSection() {
               <HelpSheet
                 title="Futures Trading"
                 body="A futures contract locks in today's price for a crop you'll deliver later. Useful when prices are high but your harvest isn't ready yet. If you can't deliver the agreed quantity, you pay a penalty."
+                entryId="system_futures_trading"
               />
             </View>
             <Text style={styles.futuresSectionLabel}>Select Crop</Text>

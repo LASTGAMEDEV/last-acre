@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, useWindowDimensions } from 'react-native';
 import { GUIDE_CATEGORY_LABELS, GUIDE_CATEGORY_ORDER, GUIDE_ENTRIES, searchGuideEntries } from '../data/guideEntries';
-import { buildGuideContext, getEraSection, getFarmStatePanel } from '../engine/guideContext';
+import { CROP_TYPES } from '../data/cropTypes';
+import { buildGuideContext, getEraSection, getFarmStatePanel, getSuggestedGuideEntries } from '../engine/guideContext';
 import { useGameStore } from '../store/useGameStore';
-import type { GuideCategory, GuideEntry, GuideVisualRef } from '../types/guide';
+import type { GuideCategory, GuideContext, GuideEntry, GuideVisualRef } from '../types/guide';
 import { C, F, R, S } from '../constants/theme';
 import Card from './ui/Card';
 import Badge, { BadgeVariant } from './ui/Badge';
@@ -76,28 +77,76 @@ function EntryPreview({ entry, selected, onPress }: { entry: GuideEntry; selecte
   );
 }
 
+function SuggestedGuide({
+  entries,
+  onSelectEntry,
+}: {
+  entries: GuideEntry[];
+  onSelectEntry: (id: string) => void;
+}) {
+  if (entries.length === 0) return null;
+
+  return (
+    <Card variant="info" style={styles.suggestedCard}>
+      <Text style={styles.panelTitle}>Useful right now</Text>
+      <Text style={styles.panelSub}>Picked from your current farm state.</Text>
+      <View style={styles.suggestedList}>
+        {entries.map(entry => (
+          <TouchableOpacity key={entry.id} style={styles.suggestedBtn} onPress={() => onSelectEntry(entry.id)}>
+            <Text style={styles.suggestedTitle}>{entry.title}</Text>
+            <Text style={styles.suggestedMeta}>{GUIDE_CATEGORY_LABELS[entry.category]}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </Card>
+  );
+}
+
+function CommonProblemsPanel({
+  entries,
+  onSelectEntry,
+  onShowAll,
+}: {
+  entries: GuideEntry[];
+  onSelectEntry: (id: string) => void;
+  onShowAll: () => void;
+}) {
+  const problems = entries.filter(entry => entry.category === 'common_problems').slice(0, 6);
+  if (problems.length === 0) return null;
+
+  return (
+    <Card variant="warning" style={styles.problemCard}>
+      <View style={styles.problemHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.panelTitle}>Common Problems</Text>
+          <Text style={styles.panelSub}>Start here when you know the symptom, not the system.</Text>
+        </View>
+        <TouchableOpacity style={styles.showAllBtn} onPress={onShowAll}>
+          <Text style={styles.showAllText}>Show all</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.problemGrid}>
+        {problems.map(entry => (
+          <TouchableOpacity key={entry.id} style={styles.problemBtn} onPress={() => onSelectEntry(entry.id)}>
+            <Text style={styles.problemText}>{entry.title}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </Card>
+  );
+}
+
 function EntryDetail({
   entry,
   entriesById,
   onSelectEntry,
+  context,
 }: {
   entry: GuideEntry;
   entriesById: Map<string, GuideEntry>;
   onSelectEntry: (id: string) => void;
+  context: GuideContext;
 }) {
-  const store = useGameStore();
-  const context = buildGuideContext({
-    day: store.day,
-    money: store.money,
-    inventory: store.inventory,
-    buildings: store.buildings,
-    ownedCropSeedIds: (store.seedVault ?? []).map(seed => seed.cropId),
-    ownedAnimalTypeIds: [...new Set((store.animals ?? []).map(animal => animal.typeId))],
-    loansTotalOwed: (store.loans ?? []).filter(loan => !loan.paid).reduce((sum, loan) => sum + loan.totalOwed, 0),
-    activeContractCount: (store.contracts ?? []).filter(contract => !contract.completed && !contract.failed).length,
-    selectedParcelSoil: null,
-  });
-
   const eraSection = getEraSection(entry, context);
   const farmPanel = getFarmStatePanel(entry, context);
 
@@ -194,20 +243,68 @@ export default function Encyclopedia() {
   const [category, setCategory] = useState<CategoryFilter>(ALL_CATEGORIES);
   const [selectedId, setSelectedId] = useState<string>(GUIDE_ENTRIES[0]?.id ?? '');
   const { width } = useWindowDimensions();
+  const store = useGameStore();
   const compact = width < 760;
+
+  const readyCropCount = (store.parcels ?? []).filter(parcel => {
+    if (!parcel.owned || !parcel.plantedCrop) return false;
+    const cropType = CROP_TYPES.find(crop => crop.id === parcel.plantedCrop!.cropId);
+    return !!cropType && store.day >= parcel.plantedCrop.plantedDay + cropType.growthDays;
+  }).length;
+  const activeLoans = (store.loans ?? []).filter(loan => !loan.paid && !loan.defaulted);
+  const urgentLoanCount = activeLoans.filter(loan => loan.payoffDay - store.day <= 7 && loan.payoffDay >= store.day).length;
+  const activeContracts = (store.contracts ?? []).filter(contract => !contract.completed && !contract.failed);
+  const urgentContractCount = activeContracts.filter(contract => contract.deadlineDay - store.day <= 7 && contract.deadlineDay >= store.day).length;
+  const lowAnimalWelfareCount = Object.values(store.animalWelfareScores ?? {}).filter(score => score < 55).length;
+  const brokenMachineCount = (store.machineRepairs ?? []).filter(repair => repair.readyDay === null || repair.readyDay >= store.day).length;
+  const expiringStorageBatchCount = (store.inventoryBatches ?? []).filter(batch =>
+    batch.infested || batch.quality === 'low' || batch.quality === 'damaged' || batch.quality === 'condemned'
+  ).length;
+
+  const context = buildGuideContext({
+    day: store.day,
+    money: store.money,
+    inventory: store.inventory,
+    buildings: store.buildings,
+    ownedCropSeedIds: (store.seedVault ?? []).map(seed => seed.cropId),
+    ownedAnimalTypeIds: [...new Set((store.animals ?? []).map(animal => animal.typeId))],
+    loansTotalOwed: activeLoans.reduce((sum, loan) => sum + loan.totalOwed, 0),
+    urgentLoanCount,
+    urgentContractCount,
+    activeContractCount: activeContracts.length,
+    readyCropCount,
+    lowAnimalWelfareCount,
+    brokenMachineCount,
+    expiringStorageBatchCount,
+    selectedParcelSoil: null,
+  });
 
   const entriesById = useMemo(() => new Map(GUIDE_ENTRIES.map(entry => [entry.id, entry])), []);
   const filtered = useMemo(
     () => searchGuideEntries(query, category === ALL_CATEGORIES ? undefined : category),
     [query, category],
   );
+  const suggested = getSuggestedGuideEntries(context, GUIDE_ENTRIES);
   const selected = entriesById.get(selectedId) ?? filtered[0] ?? GUIDE_ENTRIES[0];
+
+  function selectEntry(id: string) {
+    setSelectedId(id);
+  }
+
+  function showCommonProblems() {
+    setCategory('common_problems');
+    setQuery('');
+    const firstProblem = GUIDE_ENTRIES.find(entry => entry.category === 'common_problems');
+    if (firstProblem) setSelectedId(firstProblem.id);
+  }
 
   return (
     <View style={[styles.container, compact && styles.containerCompact]}>
       <View style={[styles.sidebar, compact && styles.sidebarCompact]}>
         <Text style={styles.title}>Guide</Text>
         <Text style={styles.subtitle}>Search the farm, then jump back into work with a next action.</Text>
+        <SuggestedGuide entries={suggested} onSelectEntry={selectEntry} />
+        <CommonProblemsPanel entries={GUIDE_ENTRIES} onSelectEntry={selectEntry} onShowAll={showCommonProblems} />
         <TextInput
           style={styles.search}
           value={query}
@@ -238,7 +335,7 @@ export default function Encyclopedia() {
               key={entry.id}
               entry={entry}
               selected={entry.id === selected?.id}
-              onPress={() => setSelectedId(entry.id)}
+              onPress={() => selectEntry(entry.id)}
             />
           ))}
           {filtered.length === 0 && (
@@ -251,7 +348,7 @@ export default function Encyclopedia() {
       </View>
 
       <View style={[styles.detailPane, compact && styles.detailPaneCompact]}>
-        {selected && <EntryDetail entry={selected} entriesById={entriesById} onSelectEntry={setSelectedId} />}
+        {selected && <EntryDetail entry={selected} entriesById={entriesById} onSelectEntry={selectEntry} context={context} />}
       </View>
     </View>
   );
@@ -276,6 +373,20 @@ const styles = StyleSheet.create({
     paddingVertical: S.sm,
     marginBottom: S.sm,
   },
+  suggestedCard: { marginBottom: S.sm },
+  problemCard: { marginBottom: S.sm },
+  panelTitle: { color: C.text, fontSize: F.size.md, fontWeight: F.weight.heavy },
+  panelSub: { color: C.textMuted, fontSize: F.size.xs, lineHeight: 16, marginTop: 2 },
+  suggestedList: { gap: S.xs, marginTop: S.sm },
+  suggestedBtn: { backgroundColor: C.bgInput, borderColor: C.border, borderWidth: 1, borderRadius: R.md, padding: S.sm },
+  suggestedTitle: { color: C.text, fontSize: F.size.sm, fontWeight: F.weight.bold },
+  suggestedMeta: { color: C.amberSoft, fontSize: F.size.xs, marginTop: 2 },
+  problemHeader: { flexDirection: 'row', gap: S.sm, alignItems: 'flex-start' },
+  showAllBtn: { backgroundColor: C.bgInput, borderColor: C.border, borderWidth: 1, borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: 6 },
+  showAllText: { color: C.text, fontSize: F.size.xs, fontWeight: F.weight.bold },
+  problemGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: S.xs, marginTop: S.sm },
+  problemBtn: { backgroundColor: C.bgInput, borderRadius: R.md, borderWidth: 1, borderColor: C.border, paddingHorizontal: S.sm, paddingVertical: 7 },
+  problemText: { color: C.text, fontSize: F.size.xs, fontWeight: F.weight.bold },
   categoryScroll: { maxHeight: 42, marginBottom: S.sm },
   categoryChip: {
     backgroundColor: C.bgCard,

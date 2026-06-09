@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { useGameStore, Well } from '../../store/useGameStore';
 import { PUMP_SPECS, wellFlowRate } from '../../engine/water';
 import { C, S, F, R } from '../../constants/theme';
+import GuideButton from '../../components/GuideButton';
 
 function AquiferBar({ level }: { level: number }) {
   const color = level >= 50 ? C.green : level >= 20 ? C.amber : C.red;
@@ -78,12 +79,19 @@ export default function AguaScreen() {
   return (
     <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
       <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider }}>
-        <Text style={{ color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy }}>Water</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: S.sm }}>
+          <Text style={{ color: C.text, fontSize: F.size.xxl, fontWeight: F.weight.heavy }}>Water</Text>
+          <GuideButton entryId="system_water_irrigation" compact />
+        </View>
       </View>
       <View style={{ padding: S.md, paddingTop: S.lg }}>
 
         {/* Aquifer */}
         <View style={[st.card, { marginBottom: S.md }]}>
+          <View style={st.cardHeader}>
+            <Text style={st.cardTitle}>Aquifer</Text>
+            <GuideButton entryId="system_water_irrigation" compact />
+          </View>
           <AquiferBar level={aquiferLevel ?? 75} />
         </View>
 
@@ -119,6 +127,8 @@ export default function AguaScreen() {
 
 const st = StyleSheet.create({
   card: { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.md, marginBottom: S.sm },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: S.sm },
+  cardTitle: { color: C.text, fontSize: F.size.md, fontWeight: 'bold' },
   btn:  { backgroundColor: C.green, borderRadius: R.md, padding: S.sm, alignItems: 'center' },
   btnText: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
 });

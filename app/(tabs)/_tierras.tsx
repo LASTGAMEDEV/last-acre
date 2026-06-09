@@ -1019,6 +1019,7 @@ export default function TierrasScreen() {
                 <HelpSheet
                   title="Soil Type"
                   body="Each soil type favours different crops. Loamy soil gives balanced yields, sandy soil suits drought-tolerant crops, clay soil suits root vegetables, and chalky soil suits specialty crops. Matching crop to soil gives up to +20% yield."
+                  entryId="system_soil_health"
                 />
               )}
             </View>
@@ -1103,6 +1104,7 @@ export default function TierrasScreen() {
                       <HelpSheet
                         title="Crop Rotation"
                         body="Planting a different crop than the previous one gives a +15% yield bonus. Rotating also slows fertility loss over time. Try to avoid planting the same high-drain crop twice in a row."
+                        entryId="system_crop_rotation"
                       />
                     </View>
                     <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>Different crop from last harvest · you get a yield boost.</Text>

@@ -172,6 +172,7 @@ export default function SeedLabScreen() {
           title="Seed Lab"
           body="The Seed Lab lets you hybridize two seed batches to breed offspring with combined genes. Higher-generation seeds have better yield, drought resistance, and quality. Requires a Seed Lab building."
           buttonSize={12}
+          entryId="system_seed_lab"
         />
       </View>
       <View style={slStyles.card}>
