@@ -126,7 +126,7 @@ export default function EconomyStatsSection() {
     cancelMarketOrder,
     buyers,
     recurringContracts,
-    reputation,
+    legacyReputation: reputation,
     signRecurringContract,
     deliverToRecurringContract,
     cancelRecurringContract,

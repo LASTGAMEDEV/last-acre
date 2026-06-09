@@ -4,7 +4,7 @@
  * No imports from the store — all inputs passed as arguments.
  */
 
-import { ProductionBuildingState } from '../store/useGameStore';
+import type { ProductionBuildingState } from '../types/domain/processing';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 

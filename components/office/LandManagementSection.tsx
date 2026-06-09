@@ -5,13 +5,11 @@ import { C, S, F, R } from '../../constants/theme';
 
 export default function LandManagementSection() {
   const {
-    activeLeases, availableLeases, parcels, day, money,
+    activeLeases, availableLeases, parcels, day,
     signLease, cancelLease,
   } = useGameStore();
 
   const active = (activeLeases ?? []).filter(l => l.status === 'active');
-  const expired = (activeLeases ?? []).filter(l => l.status !== 'active');
-
   return (
     <ScrollView contentContainerStyle={{ padding: S.md, gap: 12 }} showsVerticalScrollIndicator={false}>
       <Text style={ls.header}>🗺️ Land Management</Text>

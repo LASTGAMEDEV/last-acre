@@ -5,6 +5,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { useGameStore } from '../../store/useGameStore';
+import { SAVE_STORAGE_KEY } from '../../store/persistConfig';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 
@@ -24,7 +25,7 @@ function SettingsSection() {
 
   async function exportSave() {
     try {
-      const raw = await AsyncStorage.getItem('granja-tycoon-save-v12');
+      const raw = await AsyncStorage.getItem(SAVE_STORAGE_KEY);
       if (!raw) {
         Alert.alert('Export Failed', 'No save data found.');
         return;
@@ -82,7 +83,7 @@ function SettingsSection() {
                 Alert.alert('Import Failed', 'Save file is missing required fields (day, money).');
                 return;
               }
-              await AsyncStorage.setItem('granja-tycoon-save-v12', raw);
+              await AsyncStorage.setItem(SAVE_STORAGE_KEY, raw);
               Alert.alert('Import Successful', 'Save imported. Please restart the app to load your save.');
             } catch (e) {
               Alert.alert('Import Failed', String(e));

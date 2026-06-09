@@ -1,6 +1,6 @@
 import { CropType } from '../data/cropTypes';
 import { degradationYieldModifier } from './soilDegradation';
-import type { LandParcel } from '../store/useGameStore';
+import type { LandParcel } from '../types/domain/land';
 
 export type SoilType = 'loamy' | 'sandy' | 'clay' | 'chalky';
 

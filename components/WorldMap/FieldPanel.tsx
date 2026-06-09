@@ -51,7 +51,7 @@ export default function FieldPanel({ field, parcel, day, money, npcFarms, mapFie
 
   React.useEffect(() => {
     translateY.value = withTiming(field ? 0 : 300, { duration: 260 });
-  }, [field]);
+  }, [field, translateY]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],

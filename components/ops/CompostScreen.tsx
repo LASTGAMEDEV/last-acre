@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet } from 
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { computeCompostQuality, getCompostGrade } from '../../engine/composting';
+import { BUILDING_TYPES } from '../../data/buildingTypes';
 
 export default function CompostScreen() {
   const state = useGameStore();
@@ -11,7 +12,7 @@ export default function CompostScreen() {
 
   const batchCapacity = (state.buildings ?? []).reduce((sum, bId) => {
     if (bId.startsWith('bld_compost_bay')) {
-      const bt = require('../../data/buildingTypes').BUILDING_TYPES.find((b: any) => b.id === bId);
+      const bt = BUILDING_TYPES.find(b => b.id === bId);
       return sum + (bt?.capacity ?? 0);
     }
     return sum;

@@ -16,8 +16,6 @@ function DashboardSection() {
   const theme = SEASON_THEME[season];
 
   const ownedParcels = parcels.filter(p => p.owned);
-  const cropsReady = ownedParcels.filter(p => p.plantedCrop).length; // simplified
-
   // Net worth
   const inventoryValue = CROP_TYPES.reduce((sum, crop) => {
     const qty = inventory[crop.id] ?? 0;

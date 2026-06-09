@@ -1,5 +1,5 @@
 import React from 'react';
-import { Svg, Path, Rect, Ellipse, Circle, Text } from 'react-native-svg';
+import { Svg, Path, Rect, Circle, Text } from 'react-native-svg';
 import MapPatterns from './mapPatterns';
 import MapFieldComponent from './MapField';
 import { MapField } from '../../types/worldMap';

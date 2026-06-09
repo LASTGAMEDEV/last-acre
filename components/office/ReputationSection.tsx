@@ -6,8 +6,8 @@ import { CROP_TYPES, CropType } from '../../data/cropTypes';
 import { PROCESSED_ITEM_DEFS } from '../../data/processingTypes';
 
 function ReputationSection() {
-  const { reputation, prices, futures, prestige, openFuture, awardHistory, productAwardBonuses } = useGameStore();
-  const rep = reputation ?? 50;
+  const { legacyReputation, prices, futures, prestige, openFuture, awardHistory, productAwardBonuses } = useGameStore();
+  const rep = legacyReputation ?? 50;
   const repColor = rep >= 80 ? C.green : rep >= 60 ? '#ffb74d' : rep >= 40 ? C.text : '#f44336';
   const repTier = rep >= 80 ? 'Excellent' : rep >= 65 ? 'Good' : rep >= 40 ? 'Average' : 'Poor';
 

@@ -1,12 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import { useGameStore } from '../store/useGameStore';
 import { getSeason } from '../engine/climate';
-import { SEASON_THEME, C, F, S } from '../constants/theme';
-
-const SCREEN_W = Dimensions.get('window').width;
+import { SEASON_THEME, C, F } from '../constants/theme';
+import { CROP_TYPES } from '../data/cropTypes';
 
 const TAB_META: Record<string, { icon: string; label: string }> = {
   farm:   { icon: '🌾', label: 'Farm' },
@@ -29,9 +28,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
   const cropsReady = parcels.filter(p => {
     if (!p.owned || !p.plantedCrop) return false;
-    const ct = (require('../data/cropTypes').CROP_TYPES as any[]).find(
-      (c: any) => c.id === p.plantedCrop!.cropId
-    );
+    const ct = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
     return ct && day >= p.plantedCrop.plantedDay + ct.growthDays;
   }).length;
 

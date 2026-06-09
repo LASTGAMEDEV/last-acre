@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { playSound } from '../../engine/sounds';
@@ -10,8 +10,8 @@ import { CROP_TYPES, PlantingSeason } from '../../data/cropTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { getSeason } from '../../engine/climate';
-import { getSoilModifier, SoilStats, SOIL_DEFAULTS, computeSoilYieldModifier } from '../../engine/crops';
-import { wellFlowRate, PUMP_SPECS, pipeCost } from '../../engine/water';
+import { getSoilModifier, SOIL_DEFAULTS, computeSoilYieldModifier } from '../../engine/crops';
+import { wellFlowRate, pipeCost } from '../../engine/water';
 import { PRODUCT_TYPES } from '../../data/productTypes';
 import { PEST_CONFIG } from '../../engine/pests';
 import ContractorModal from '../../components/ContractorModal';
@@ -326,7 +326,7 @@ export default function TierrasScreen() {
     fieldEvents, resolveFieldEvent, productInventory,
     clearWeeds, fertilizeCrop, installGreenhouse, removeGreenhouse, installIrrigation,
     seedVault, selectSeedForParcel,
-    tractorJobs, harvestJobs, assignJob, assignHarvestJob, hireContractor,
+    tractorJobs, harvestJobs, hireContractor,
     cureDisease, treatPest, plantCropBatch, hapticEnabled,
     applySoilAmendment, plantCoverCrop,
   } = useGameStore();
@@ -481,7 +481,6 @@ export default function TierrasScreen() {
 
   const fungicideIds = PRODUCT_TYPES.filter(p => p.category === 'fungicide' && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
   const insecticideIds = PRODUCT_TYPES.filter(p => p.category === 'insecticide' && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
-  const nematicideIds = PRODUCT_TYPES.filter(p => p.category === 'nematicide' && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
   const herbicideIds = PRODUCT_TYPES.filter(p => p.category === 'herbicide' && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
   const fertilizerIds = PRODUCT_TYPES.filter(p => (p.category === 'fertilizer_solid' || p.category === 'fertilizer_liquid') && (productInventory[p.id] ?? 0) > 0).map(p => p.id);
 
@@ -489,7 +488,6 @@ export default function TierrasScreen() {
     const ready = isReady(parcel);
     const fieldEvent = getEventForParcel(parcel.id);
     const cropType = parcel.plantedCrop ? CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId) : null;
-    const storageFull = totalInventory >= siloCapacity;
 
     return (
       <View key={parcel.id} style={styles.card}>
@@ -830,7 +828,6 @@ export default function TierrasScreen() {
             const cropType = p.plantedCrop ? CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId) : null;
             const storageFull = totalInventory >= siloCapacity;
             const canAfford = money >= p.pricePerHa * p.hectares;
-            const cost = Math.round(p.pricePerHa * p.hectares);
             return (
               <View style={styles.mapPanel}>
                 {/* Header */}
@@ -1097,7 +1094,6 @@ export default function TierrasScreen() {
             {selectedCropId && plantingParcel && (() => {
               const lastId = plantingParcel.lastCropId;
               const willRotate = lastId !== undefined && lastId !== selectedCropId;
-              const noRotate = lastId !== undefined && lastId === selectedCropId;
               if (!lastId) return null; // first planting, no advice needed
               if (willRotate) {
                 return (

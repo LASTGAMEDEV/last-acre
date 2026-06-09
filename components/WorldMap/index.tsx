@@ -7,7 +7,7 @@ import { useGameStore } from '../../store/useGameStore';
 import MapCanvas, { CANVAS_W, CANVAS_H } from './MapCanvas';
 import FieldPanel from './FieldPanel';
 import MiniMap from './MiniMap';
-import { useMapGestures, MIN_ZOOM, MAX_ZOOM, centreOnPoint } from './useMapGestures';
+import { useMapGestures, MIN_ZOOM, centreOnPoint } from './useMapGestures';
 import MapLegend from './MapLegend';
 import RivalDetailModal from '../RivalDetailModal';
 
@@ -39,7 +39,7 @@ export default function WorldMap() {
   const initX    = firstOpen.x;
   const initY    = firstOpen.y;
 
-  const { translateX, translateY, scale, composed, animStyle, jumpTo } =
+  const { composed, animStyle, jumpTo } =
     useMapGestures({
       screenW: W,
       screenH: H,

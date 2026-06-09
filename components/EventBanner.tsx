@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { useGameStore, GameEvent } from '../store/useGameStore';
-import { MachineRepair } from '../store/useGameStore';
+import { useGameStore, GameEvent , MachineRepair } from '../store/useGameStore';
+
 import { C } from '../constants/theme';
 
 function severityColor(type: string): string {

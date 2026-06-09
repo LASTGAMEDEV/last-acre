@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { playSound } from '../../engine/sounds';
-import Svg, { Polyline, Line, Text as SvgText, Rect, G, Circle } from 'react-native-svg';
+import Svg, { Polyline, Line, Text as SvgText, Rect, Circle } from 'react-native-svg';
 import { useGameStore, DeliveryCargo, COLD_CARGO_IDS, BULK_LIQUID_IDS } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';

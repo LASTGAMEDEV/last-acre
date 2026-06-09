@@ -193,6 +193,19 @@ To keep them in sync:
 
 ## What NOT to Do
 
+## Approved Architecture Stabilization Exception
+
+The normal rule is: do not rewrite or restructure `advanceDay()`.
+
+Exception: if the active plan is `docs/superpowers/plans/2026-06-03-game-architecture-restructure.md`, agents may extract `advanceDay()` into simulation modules as long as:
+
+- gameplay behavior is preserved
+- `partialize` is preserved
+- the save key is not changed unless stored state shape changes
+- TypeScript passes after every task
+- no new gameplay features are added during the restructure
+- extracted ticks keep the same execution order as the original method
+
 - Do not rewrite or restructure dvanceDay() — only append new blocks to it.
   It is 6000+ lines containing years of bugfixes. Adding a new system means adding
   a new clearly-labelled block at the appropriate point. Never touch existing blocks.

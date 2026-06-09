@@ -7,7 +7,7 @@ import ElectricitySection from '../../components/ops/ElectricitySection';
 import SeedLabScreen from '../../components/ops/SeedLabScreen';
 import CompostScreen from '../../components/ops/CompostScreen';
 import SubTabBar from '../../components/SubTabBar';
-import { C, F, R, S } from '../../constants/theme';
+import { C, F, S } from '../../constants/theme';
 
 type OpsTab = 'machinery' | 'workers' | 'processing' | 'compost' | 'power' | 'seedlab';
 

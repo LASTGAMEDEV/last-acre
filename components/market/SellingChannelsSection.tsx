@@ -56,7 +56,7 @@ function Stepper({
 
 export default function SellingChannelsSection() {
   const {
-    reputation,
+    legacyReputation: reputation,
     farmShop,
     onlineShopActive,
     onlineShopAllocations,

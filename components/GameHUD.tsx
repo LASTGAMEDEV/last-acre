@@ -43,6 +43,16 @@ const EVENT_TEXT_COLORS: Record<string, string> = { heat_wave: C.amberSoft, floo
 const EVENT_ICONS: Record<string, string> = { heat_wave: '🌡️', flood: '🌊', frost: '❄️' };
 const EVENT_NAMES: Record<string, string> = { heat_wave: 'Heat Wave', flood: 'Flood', frost: 'Frost' };
 
+function repBadgeColor(tier: string): string {
+  switch (tier) {
+    case 'legendary':  return '#5d4a00';
+    case 'renowned':   return '#1a3a2a';
+    case 'respected':  return '#1a2e1a';
+    case 'local':      return '#1a2a1a';
+    default:           return '#1a1a1a';
+  }
+}
+
 export default function GameHUD() {
   const router = useRouter();
   const {
@@ -52,6 +62,7 @@ export default function GameHUD() {
     coopMemberships,
     dynasty,
   } = useGameStore();
+  const reputation = useGameStore(s => s.reputation);
 
   const season = getSeason(day);
   const calYear = gameDayToCalendarYear(day);
@@ -124,6 +135,10 @@ export default function GameHUD() {
           )}
           <View style={styles.yearBadge}>
             <Text style={styles.yearText}>{calYear}</Text>
+          </View>
+          {/* Reputation tier badge */}
+          <View style={[hudStyles.repBadge, { backgroundColor: repBadgeColor(reputation.tier) }]}>
+            <Text style={hudStyles.repText}>{reputation.tier.toUpperCase()}</Text>
           </View>
           <TouchableOpacity style={hudStyles.farmerChip} onPress={() => router.push('/(tabs)/legado')}>
             <Text style={hudStyles.farmerName}>{farmer.firstName} · {age}y</Text>
@@ -303,4 +318,6 @@ const hudStyles = StyleSheet.create({
   farmerName: { color: C.greenSoft, fontSize: 9, fontWeight: 'bold' },
   healthBarTrack: { width: 36, height: 5, backgroundColor: C.bgDeep, borderRadius: 3, overflow: 'hidden' },
   healthBarFill: { height: '100%', borderRadius: 3 },
+  repBadge: { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2, marginLeft: 4 },
+  repText:  { color: '#4a7c59', fontSize: 8, fontWeight: 'bold', letterSpacing: 1 },
 });

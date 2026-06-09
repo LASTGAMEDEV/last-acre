@@ -1,4 +1,4 @@
-import type { LandParcel } from '../store/useGameStore';
+import type { LandParcel } from '../types/domain/land';
 import { Season } from './climate';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

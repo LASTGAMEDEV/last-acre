@@ -1,11 +1,10 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import type { Worker, WorkerRole, ContractType } from '../../data/workerTypes';
 import { WORKER_ROLE_CONFIG } from '../../data/workerTypes';
 import { C, S, F, R } from '../../constants/theme';
 import SubTabBar from '../../components/SubTabBar';
-import { WINDOW_LABELS, TimeWindow } from '../../engine/nightOps';
 
 type Tab = 'staff' | 'requests' | 'hire';
 

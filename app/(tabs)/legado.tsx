@@ -1,15 +1,20 @@
+// app/(tabs)/legado.tsx
 import React, { useState } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import ArbolSection from '../../components/legado/ArbolSection';
-import CaracterSection from '../../components/legado/CaracterSection';
+import { View, StyleSheet } from 'react-native';
 import SubTabBar from '../../components/SubTabBar';
-import { C, F } from '../../constants/theme';
+import CaracterSection from '../../components/legado/CaracterSection';
+import ArbolSection from '../../components/legado/ArbolSection';
+import FamiliaSection from '../../components/legado/FamiliaSection';
+import CronicaSection from '../../components/legado/CronicaSection';
+import { C } from '../../constants/theme';
 
-type LegadoTab = 'caracter' | 'arbol';
+type LegadoTab = 'caracter' | 'arbol' | 'familia' | 'cronica';
 
 const TABS: { id: LegadoTab; label: string }[] = [
-  { id: 'caracter', label: 'Caracter' },
-  { id: 'arbol', label: 'Arbol' },
+  { id: 'caracter', label: '👤 Carácter' },
+  { id: 'arbol',    label: '🌳 Árbol' },
+  { id: 'familia',  label: '👨‍👩‍👧 Familia' },
+  { id: 'cronica',  label: '📜 Crónica' },
 ];
 
 export default function LegadoScreen() {
@@ -17,18 +22,15 @@ export default function LegadoScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Legacy</Text>
-      </View>
       <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as LegadoTab)} />
       {tab === 'caracter' && <CaracterSection />}
-      {tab === 'arbol' && <ArbolSection />}
+      {tab === 'arbol'    && <ArbolSection />}
+      {tab === 'familia'  && <FamiliaSection />}
+      {tab === 'cronica'  && <CronicaSection />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: C.bg },
-  header:      { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, backgroundColor: C.bg },
-  headerTitle: { color: C.text, fontSize: F.size.title, fontWeight: 'bold' },
+  container: { flex: 1, backgroundColor: C.bg },
 });

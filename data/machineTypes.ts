@@ -11,6 +11,10 @@ export interface MachineType {
   compatibleTrailerSizes?: ('small' | 'medium' | 'large')[];  // trucks only
   compatibleTruckTypeIds?: string[];  // trailers: which truck ids can tow this
   unlockId?: string;           // historical unlock gate
+  requires?: {
+    minHa?: number;
+    minTier?: 'D' | 'C' | 'B' | 'A';
+  };
 }
 
 export const MACHINE_TYPES: MachineType[] = [
