@@ -113,8 +113,7 @@ function MemberCard({ member, onSetRole }: {
 }
 
 export default function FamiliaSection() {
-  const { day, family, coOwner, setFamilyMemberRole } = useGameStore(s => ({
-    day:               s.day,
+  const { family, coOwner, setFamilyMemberRole } = useGameStore(s => ({
     family:            s.family,
     coOwner:           s.family.coOwner,
     setFamilyMemberRole: s.setFamilyMemberRole,

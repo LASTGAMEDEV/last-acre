@@ -18,7 +18,11 @@ export default function RootLayout() {
   const gameSetupComplete = useGameStore(s => s.gameSetupComplete);
 
   if (!gameSetupComplete) {
-    return <StartingScreen />;
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <StartingScreen />
+      </GestureHandlerRootView>
+    );
   }
 
   return (

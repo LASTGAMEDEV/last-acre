@@ -85,7 +85,7 @@ export default function CronicaSection() {
             <Text style={cr.decadeLabel}>THE {decade}s</Text>
             <View style={cr.decadeGroup}>
               {entries.map((entry, i) => (
-                <View key={i} style={cr.entry}>
+                <View key={`${entry.year}-${entry.kind}-${i}`} style={cr.entry}>
                   <View style={cr.entryLeft}>
                     <Text style={cr.entryYear}>{entry.year}</Text>
                     <View style={[cr.entryDot, { backgroundColor: entry.kind === 'world' ? '#2d4060' : '#2a4a2a' }]} />
