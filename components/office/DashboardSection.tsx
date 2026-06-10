@@ -2,21 +2,25 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { getSeason } from '../../engine/climate';
+import { isReady } from '../../engine/crops';
 import { SEASON_THEME, C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import GuideButton from '../GuideButton';
 
+type Priority = { icon: string; label: string; severity: 'critical' | 'warning' | 'action' };
+
 function DashboardSection() {
   const {
     money, savings, day, loans, contracts, seasonGoals, seasonHarvestCount,
     seasonStartRevenue, totalRevenue, parcels, animals, npcFarms, salesLog,
-    personalRecords, inventory, prices,
+    personalRecords, inventory, prices, animalWelfareScores, reputation,
   } = useGameStore();
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
 
   const ownedParcels = parcels.filter(p => p.owned);
+
   // Net worth
   const inventoryValue = CROP_TYPES.reduce((sum, crop) => {
     const qty = inventory[crop.id] ?? 0;
@@ -25,9 +29,10 @@ function DashboardSection() {
   }, 0);
   const animalValue = animals.reduce((sum, a) => {
     const type = ANIMAL_TYPES.find(t => t.id === a.typeId);
-    return sum + (type?.buyCost ?? 0) * 0.6; // resale ~60%
+    return sum + (type?.buyCost ?? 0) * 0.6;
   }, 0);
   const netWorth = money + savings.balance + inventoryValue + animalValue;
+
   const urgentLoans = loans.filter(l => !l.paid && !l.defaulted && l.payoffDay - day <= 7 && l.payoffDay >= day);
   const urgentContracts = contracts.filter(c => !c.completed && !c.failed && c.deadlineDay - day <= 7 && c.deadlineDay >= day);
   const rev7 = salesLog.filter(s => s.day >= day - 7).reduce((a, s) => a + s.amount, 0);
@@ -35,6 +40,88 @@ function DashboardSection() {
   const topRival = [...(npcFarms ?? [])].sort((a, b) => b.wealth - a.wealth)[0];
   const seasonEarned = Math.max(0, (totalRevenue ?? 0) - (seasonStartRevenue ?? 0));
   const activeGoals = seasonGoals.filter(g => !g.claimed);
+
+  // ── Today's Priorities ────────────────────────────────────────────────────
+  const priorities: Priority[] = [];
+
+  // Crops ready to harvest
+  const readyParcels = ownedParcels.filter(p => {
+    if (!p.plantedCrop) return false;
+    const cropType = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
+    return cropType ? isReady(p.plantedCrop, cropType, day) : false;
+  });
+  if (readyParcels.length > 0) {
+    const names = [...new Set(readyParcels.map(p => {
+      const ct = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
+      return ct?.name ?? p.plantedCrop!.cropId;
+    }))];
+    priorities.push({
+      icon: '🌾',
+      label: `${readyParcels.length} plot${readyParcels.length > 1 ? 's' : ''} ready to harvest (${names.slice(0, 2).join(', ')}${names.length > 2 ? '…' : ''})`,
+      severity: 'action',
+    });
+  }
+
+  // Loans due
+  urgentLoans.forEach(l => {
+    const daysLeft = l.payoffDay - day;
+    priorities.push({
+      icon: '🏦',
+      label: `Loan $${Math.round(l.totalOwed).toLocaleString()} due in ${daysLeft}d`,
+      severity: daysLeft <= 3 ? 'critical' : 'warning',
+    });
+  });
+
+  // Contracts at risk
+  urgentContracts.forEach(c => {
+    const daysLeft = c.deadlineDay - day;
+    priorities.push({
+      icon: '📋',
+      label: `Contract deadline in ${daysLeft}d`,
+      severity: daysLeft <= 3 ? 'critical' : 'warning',
+    });
+  });
+
+  // Diseased plots
+  const diseasedParcels = ownedParcels.filter(p => p.diseased);
+  if (diseasedParcels.length > 0) {
+    priorities.push({
+      icon: '🦠',
+      label: `${diseasedParcels.length} plot${diseasedParcels.length > 1 ? 's' : ''} diseased — treat or harvest soon`,
+      severity: 'critical',
+    });
+  }
+
+  // Low animal welfare
+  const welfareScores = animalWelfareScores ?? {};
+  const lowWelfareSpecies = Object.entries(welfareScores).filter(([, score]) => (score as number) < 60);
+  lowWelfareSpecies.forEach(([typeId, score]) => {
+    const animalType = ANIMAL_TYPES.find(a => a.id === typeId);
+    const name = animalType?.name ?? typeId;
+    priorities.push({
+      icon: '🐄',
+      label: `${name} welfare low (${Math.round(score as number)}%) — check feed & housing`,
+      severity: (score as number) < 40 ? 'critical' : 'warning',
+    });
+  });
+
+  // Sort: critical first, then warning, then action
+  const ORDER: Record<Priority['severity'], number> = { critical: 0, warning: 1, action: 2 };
+  priorities.sort((a, b) => ORDER[a.severity] - ORDER[b.severity]);
+
+  // ── Farm Health score ─────────────────────────────────────────────────────
+  const totalDebt = loans.filter(l => !l.paid && !l.defaulted).reduce((s, l) => s + l.totalOwed, 0);
+  const cashScore = Math.min(money / 10000, 1) * 25;
+  const debtScore = totalDebt === 0 ? 25 : Math.max(0, 1 - totalDebt / (money + savings.balance + 1)) * 25;
+  const avgFertility = ownedParcels.length > 0
+    ? ownedParcels.reduce((s, p) => s + p.fertility, 0) / ownedParcels.length
+    : 25;
+  const soilScore = (avgFertility / 25) * 25;
+  const welfareList = Object.values(welfareScores) as number[];
+  const welfareScore = welfareList.length === 0 ? 25 : (welfareList.reduce((s, v) => s + v, 0) / welfareList.length / 100) * 25;
+  const repScore = ((reputation?.score ?? 0) / 100) * 25;
+  const farmHealth = Math.round(cashScore + debtScore + soilScore + welfareScore + repScore);
+  const healthColor = farmHealth >= 75 ? '#4caf50' : farmHealth >= 50 ? '#f59e0b' : farmHealth >= 30 ? '#f97316' : '#ef4444';
 
   function Card({
     title,
@@ -63,21 +150,22 @@ function DashboardSection() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 12, gap: 10 }} showsVerticalScrollIndicator={false}>
-      {/* Warnings row */}
-      {(urgentLoans.length > 0 || urgentContracts.length > 0) && (
-        <View style={[dash.warnBanner]}>
-          <View style={dash.warnHeader}>
-            <Text style={dash.warnTitle}>Attention needed</Text>
-            <GuideButton entryId={urgentLoans.length > 0 ? 'system_banking_credit' : 'system_contracts'} compact />
-          </View>
-          {urgentLoans.map(l => (
-            <Text key={l.id} style={dash.warnText}>⚠️ Loan ${ Math.round(l.totalOwed).toLocaleString()} due in {l.payoffDay - day}d</Text>
-          ))}
-          {urgentContracts.map(c => (
-            <Text key={c.id} style={dash.warnText}>⚠️ Contract deadline in {c.deadlineDay - day}d</Text>
-          ))}
-        </View>
-      )}
+      {/* Today's Priorities */}
+      <View style={dash.prioritiesCard}>
+        <Text style={dash.prioritiesTitle}>Today's Priorities</Text>
+        {priorities.length === 0 ? (
+          <Text style={dash.allClear}>✅ All clear — nothing urgent today</Text>
+        ) : (
+          priorities.map((p, i) => (
+            <View key={i} style={[dash.priorityRow, i > 0 && { borderTopWidth: 1, borderTopColor: '#1a1f2e' }]}>
+              <View style={[dash.priorityDot, { backgroundColor: p.severity === 'critical' ? '#ef4444' : p.severity === 'warning' ? '#f59e0b' : '#22c55e' }]} />
+              <Text style={[dash.priorityText, { color: p.severity === 'critical' ? '#fca5a5' : p.severity === 'warning' ? '#fcd34d' : '#86efac' }]}>
+                {p.icon} {p.label}
+              </Text>
+            </View>
+          ))
+        )}
+      </View>
 
       {/* Finances row */}
       <View style={dash.row}>
@@ -96,6 +184,34 @@ function DashboardSection() {
           <Text style={dash.netWorthDot}>·</Text>
           <Text style={dash.netWorthSub}>Stock ${Math.round(inventoryValue).toLocaleString()}</Text>
           {animalValue > 0 && <><Text style={dash.netWorthDot}>·</Text><Text style={dash.netWorthSub}>Animals ${Math.round(animalValue).toLocaleString()}</Text></>}
+        </View>
+      </View>
+
+      {/* Farm Health */}
+      <View style={dash.healthCard}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: S.sm }}>
+          <Text style={dash.goalsTitle}>🌿 Farm Health</Text>
+          <Text style={[dash.healthScore, { color: healthColor }]}>{farmHealth}/100</Text>
+        </View>
+        <View style={dash.healthBar}>
+          <View style={[dash.healthFill, { width: `${farmHealth}%` as any, backgroundColor: healthColor }]} />
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, marginTop: S.sm }}>
+          {[
+            { label: 'Cash', score: cashScore },
+            { label: 'Debt', score: debtScore },
+            { label: 'Soil', score: soilScore },
+            { label: 'Welfare', score: welfareScore },
+            { label: 'Rep', score: repScore },
+          ].map(({ label, score }) => {
+            const pct = Math.round((score / 25) * 100);
+            const col = pct >= 75 ? '#4caf50' : pct >= 50 ? '#f59e0b' : '#ef4444';
+            return (
+              <View key={label} style={dash.healthPill}>
+                <Text style={[dash.healthPillText, { color: col }]}>{label} {pct}%</Text>
+              </View>
+            );
+          })}
         </View>
       </View>
 
@@ -178,13 +294,23 @@ const dash = StyleSheet.create({
   netWorthBreakdown: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: S.xs, alignItems: 'center' },
   netWorthSub:       { color: '#555', fontSize: F.size.xs },
   netWorthDot:       { color: '#333', fontSize: F.size.xs },
-  warnBanner:{ backgroundColor: '#3a1a00', borderRadius: R.md, padding: 10, gap: 4 },
-  warnHeader:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: S.sm },
-  warnTitle: { color: '#ffb74d', fontSize: 12, fontWeight: 'bold' },
-  warnText:  { color: '#ffb74d', fontSize: 11, fontWeight: 'bold' },
   goalsCard: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md },
   goalsTitle:{ color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
   rivalCard: { backgroundColor: '#1a1030', borderRadius: 10, padding: S.md, borderWidth: 1, borderColor: '#ef9a9a33' },
+  // Today's Priorities
+  prioritiesCard:  { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, gap: 0 },
+  prioritiesTitle: { color: C.text, fontSize: F.size.sm, fontWeight: 'bold', marginBottom: S.sm },
+  allClear:        { color: '#4caf50', fontSize: F.size.sm },
+  priorityRow:     { flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingVertical: 6 },
+  priorityDot:     { width: 7, height: 7, borderRadius: 4, flexShrink: 0 },
+  priorityText:    { fontSize: F.size.sm, flexShrink: 1 },
+  // Farm Health
+  healthCard:      { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md },
+  healthScore:     { fontSize: F.size.xl, fontWeight: 'bold' },
+  healthBar:       { height: 6, backgroundColor: '#1a1f2e', borderRadius: 3, overflow: 'hidden' },
+  healthFill:      { height: 6, borderRadius: 3 },
+  healthPill:      { backgroundColor: '#1a1f2e', borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 3 },
+  healthPillText:  { fontSize: F.size.xs, fontWeight: 'bold' },
 });
 
 export default DashboardSection;
