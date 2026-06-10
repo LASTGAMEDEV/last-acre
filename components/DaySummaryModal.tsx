@@ -25,6 +25,45 @@ const SEVERITY_TEXT: Record<DaySummaryEvent['severity'], string> = {
   danger:  '#ef9a9a',
 };
 
+type EventCategory = 'Urgent' | 'Money' | 'Fields' | 'Animals' | 'Market' | 'Weather' | 'Farm';
+
+const CATEGORY_ICONS: Record<EventCategory, string> = {
+  Urgent:  '🚨',
+  Money:   '💰',
+  Fields:  '🌾',
+  Animals: '🐄',
+  Market:  '📊',
+  Weather: '☀️',
+  Farm:    '🔧',
+};
+
+function inferCategory(event: DaySummaryEvent): EventCategory {
+  if (event.severity === 'danger') return 'Urgent';
+  const id = event.id;
+  if (id.startsWith('loan_') || id.startsWith('default_') || id.startsWith('interest') ||
+      id.startsWith('cap_') || id.startsWith('subsidy') || id.startsWith('aes_') ||
+      id.startsWith('disposal_fee') || id.startsWith('auction_won') || id.startsWith('auction_sold'))
+    return 'Money';
+  if (id.startsWith('crops_ready') || id.startsWith('crop_') || id.startsWith('fire') ||
+      id.startsWith('disease') || id.startsWith('field_') || id.startsWith('organic_') ||
+      id.startsWith('hedgerow') || id.startsWith('pest_') || id.startsWith('season_change') ||
+      id.startsWith('seasonal_event') || id.startsWith('event_end'))
+    return 'Fields';
+  if (id.startsWith('animal') || id.startsWith('hatch_') || id.startsWith('bee_') ||
+      id.startsWith('swarm_') || id.startsWith('preg_') || id.startsWith('show_') ||
+      id.startsWith('apiary_'))
+    return 'Animals';
+  if (id.startsWith('news') || id.startsWith('rival') || id.startsWith('contract_') ||
+      id.startsWith('auction_new') || id.startsWith('auction_lost') || id.startsWith('auction_unsold') ||
+      id.startsWith('animal_auction'))
+    return 'Market';
+  if (id.startsWith('weather') || id.startsWith('event_') || id.startsWith('fair'))
+    return 'Weather';
+  return 'Farm';
+}
+
+const CATEGORY_ORDER: EventCategory[] = ['Urgent', 'Money', 'Fields', 'Animals', 'Market', 'Weather', 'Farm'];
+
 export default function DaySummaryModal() {
   const { day, daySummary, clearDaySummary } = useGameStore();
 
@@ -65,31 +104,48 @@ export default function DaySummaryModal() {
           <Text style={styles.headerTitle}>Day Summary</Text>
         </View>
 
-        {/* Events */}
+        {/* Events grouped by category */}
         <ScrollView
           style={styles.list}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         >
-          {(daySummary ?? []).map(event => (
-            <View
-              key={event.id}
-              style={[
-                styles.eventRow,
-                { backgroundColor: SEVERITY_COLORS[event.severity], borderLeftColor: SEVERITY_BORDER[event.severity] },
-              ]}
-            >
-              <Text style={styles.eventIcon}>{event.icon}</Text>
-              <View style={styles.eventText}>
-                <Text style={[styles.eventTitle, { color: SEVERITY_TEXT[event.severity] }]}>
-                  {event.title}
-                </Text>
-                {event.detail ? (
-                  <Text style={styles.eventDetail}>{event.detail}</Text>
-                ) : null}
+          {(() => {
+            const events = daySummary ?? [];
+            if (events.length === 0) {
+              return <Text style={styles.emptyText}>Quiet day — nothing notable happened.</Text>;
+            }
+            const grouped: Partial<Record<EventCategory, DaySummaryEvent[]>> = {};
+            for (const ev of events) {
+              const cat = inferCategory(ev);
+              if (!grouped[cat]) grouped[cat] = [];
+              grouped[cat]!.push(ev);
+            }
+            return CATEGORY_ORDER.filter(cat => grouped[cat]?.length).map(cat => (
+              <View key={cat} style={styles.categoryBlock}>
+                <Text style={styles.categoryHeader}>{CATEGORY_ICONS[cat]} {cat}</Text>
+                {grouped[cat]!.map(event => (
+                  <View
+                    key={event.id}
+                    style={[
+                      styles.eventRow,
+                      { backgroundColor: SEVERITY_COLORS[event.severity], borderLeftColor: SEVERITY_BORDER[event.severity] },
+                    ]}
+                  >
+                    <Text style={styles.eventIcon}>{event.icon}</Text>
+                    <View style={styles.eventText}>
+                      <Text style={[styles.eventTitle, { color: SEVERITY_TEXT[event.severity] }]}>
+                        {event.title}
+                      </Text>
+                      {event.detail ? (
+                        <Text style={styles.eventDetail}>{event.detail}</Text>
+                      ) : null}
+                    </View>
+                  </View>
+                ))}
               </View>
-            </View>
-          ))}
+            ));
+          })()}
         </ScrollView>
 
         {/* Dismiss */}
@@ -174,6 +230,27 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 11,
     marginTop: 2,
+  },
+  categoryBlock: {
+    gap: 6,
+    marginBottom: 4,
+  },
+  categoryHeader: {
+    color: '#c8860a',
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    paddingBottom: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1e3a5f',
+    marginBottom: 2,
+  },
+  emptyText: {
+    color: '#888',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 20,
   },
   btn: {
     backgroundColor: '#c8860a',
