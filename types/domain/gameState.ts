@@ -98,6 +98,7 @@ export interface GameState {
   nextAnimalAuctionDay: number;
   pendingPickup: AuctionPickup[];
   daySummary: DaySummaryEvent[] | null;
+  prevDayMoney?: number;
   insurances: InsurancePolicy[];
   insuranceClaims: InsuranceClaim[];
   processedInventory: ProcessedItem[];

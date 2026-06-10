@@ -65,7 +65,7 @@ function inferCategory(event: DaySummaryEvent): EventCategory {
 const CATEGORY_ORDER: EventCategory[] = ['Urgent', 'Money', 'Fields', 'Animals', 'Market', 'Weather', 'Farm'];
 
 export default function DaySummaryModal() {
-  const { day, daySummary, clearDaySummary } = useGameStore();
+  const { day, daySummary, clearDaySummary, money, prevDayMoney } = useGameStore();
 
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const cardY = useRef(new Animated.Value(500)).current;
@@ -102,6 +102,15 @@ export default function DaySummaryModal() {
         <View style={styles.header}>
           <Text style={styles.dayLabel}>DAY {day}</Text>
           <Text style={styles.headerTitle}>Day Summary</Text>
+          {prevDayMoney !== undefined && (() => {
+            const delta = Math.round(money - prevDayMoney);
+            const pos = delta >= 0;
+            return (
+              <Text style={[styles.moneyDelta, { color: pos ? '#4caf50' : '#ef5350' }]}>
+                {pos ? '+' : ''}${delta.toLocaleString()} cash today
+              </Text>
+            );
+          })()}
         </View>
 
         {/* Events grouped by category */}
@@ -251,6 +260,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     marginTop: 20,
+  },
+  moneyDelta: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginTop: 4,
   },
   btn: {
     backgroundColor: '#c8860a',

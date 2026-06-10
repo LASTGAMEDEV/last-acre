@@ -4758,6 +4758,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
           animals: [...animals, ...auctionAnimalAdditions],
           machines: [...(state.machines ?? []), ...auctionMachineAdditions],
           daySummary: summary,
+          prevDayMoney: state.money,
           timeDeposits,
           insuranceClaims: [...state.insuranceClaims, ...newClaims].slice(-100),
           contracts,

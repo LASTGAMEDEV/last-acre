@@ -655,21 +655,40 @@ export default function TierrasScreen() {
 
           if (ready) {
             const harvestCostVal = getContractorCost('harvest', parcel.hectares);
+            // Yield factor chips
+            const soilMod = computeSoilYieldModifier(parcel.soil ?? SOIL_DEFAULTS);
+            const factors: { label: string; mod: number }[] = [
+              { label: 'Soil', mod: soilMod },
+            ];
+            if (parcel.irrigated) factors.push({ label: 'Irrigated', mod: 1.20 });
+            if (parcel.lastCropId && parcel.plantedCrop && parcel.lastCropId !== parcel.plantedCrop.cropId) factors.push({ label: 'Rotation', mod: 1.15 });
+            if (parcel.diseased) factors.push({ label: 'Disease', mod: 0.80 });
+            if (parcel.hasWeeds) factors.push({ label: 'Weeds', mod: 0.85 });
+            if (parcel.plantedCrop?.frostDamage && parcel.plantedCrop.frostDamage > 0) factors.push({ label: 'Frost', mod: Math.max(0.1, 1 - parcel.plantedCrop.frostDamage) });
             return (
-              <TouchableOpacity
-                style={[localStyles.opBtn, localStyles.opBtnRed]}
-                onPress={() => {
-                  if (ownedCombines.length > 0) {
-                    harvestCrop(parcel.id);
-                    playSound('harvest');
-                    if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  } else {
-                    setContractorModal({ visible: true, operation: 'harvest', parcelIds: [parcel.id], totalHa: parcel.hectares, totalCost: harvestCostVal });
-                  }
-                }}
-              >
-                <Text style={localStyles.opBtnText}>Harvest</Text>
-              </TouchableOpacity>
+              <View>
+                <View style={localStyles.yieldFactors}>
+                  {factors.map(f => (
+                    <Text key={f.label} style={[localStyles.yieldChip, { color: f.mod >= 1 ? '#86efac' : '#fca5a5' }]}>
+                      {f.label} {f.mod >= 1 ? '+' : ''}{Math.round((f.mod - 1) * 100)}%
+                    </Text>
+                  ))}
+                </View>
+                <TouchableOpacity
+                  style={[localStyles.opBtn, localStyles.opBtnRed]}
+                  onPress={() => {
+                    if (ownedCombines.length > 0) {
+                      harvestCrop(parcel.id);
+                      playSound('harvest');
+                      if (hapticEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    } else {
+                      setContractorModal({ visible: true, operation: 'harvest', parcelIds: [parcel.id], totalHa: parcel.hectares, totalCost: harvestCostVal });
+                    }
+                  }}
+                >
+                  <Text style={localStyles.opBtnText}>Harvest</Text>
+                </TouchableOpacity>
+              </View>
             );
           }
 
@@ -1626,6 +1645,8 @@ const localStyles = StyleSheet.create({
   opBtnYellow:    { backgroundColor: '#e65100' },
   opBtnRed:       { backgroundColor: C.redDark },
   opBtnText:      { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
+  yieldFactors:   { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: S.sm },
+  yieldChip:      { fontSize: F.size.xs, fontWeight: 'bold', backgroundColor: '#0d1a2e', borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 2 },
   progressRow:    { backgroundColor: C.bg, borderRadius: R.md, padding: S.sm, marginTop: S.sm },
   progressText:   { color: '#ffb74d', fontSize: F.size.sm, textAlign: 'center' },
   batchPlantBtn:  { backgroundColor: C.bgCard, borderRadius: R.md, padding: 10, alignItems: 'center', marginHorizontal: S.md, marginTop: 6 },
