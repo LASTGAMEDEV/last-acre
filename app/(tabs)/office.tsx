@@ -14,12 +14,14 @@ import LandManagementSection from '../../components/office/LandManagementSection
 import CSASection from '../../components/office/CSASection';
 import Encyclopedia from '../../components/Encyclopedia';
 import SettingsSection from '../../components/office/SettingsSection';
+import FinancialReportSection from '../../components/office/FinancialReportSection';
 import SubTabBar from '../../components/SubTabBar';
 import { C, F, S } from '../../constants/theme';
 
 type OfficeTab =
   | 'dashboard'
   | 'planner'
+  | 'reports'
   | 'banking'
   | 'insurance'
   | 'coop'
@@ -36,6 +38,7 @@ type OfficeTab =
 const TABS: { id: OfficeTab; label: string }[] = [
   { id: 'dashboard',      label: 'Dashboard' },
   { id: 'planner',        label: 'Plan' },
+  { id: 'reports',        label: 'Reports' },
   { id: 'banking',        label: 'Banking' },
   { id: 'insurance',      label: 'Insurance' },
   { id: 'coop',           label: 'Co-op' },
@@ -61,6 +64,7 @@ export default function OfficeScreen() {
       <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as OfficeTab)} />
       {tab === 'dashboard'      && <DashboardSection />}
       {tab === 'planner'        && <AnnualPlanningSection />}
+      {tab === 'reports'        && <FinancialReportSection />}
       {tab === 'banking'        && <BankingSection />}
       {tab === 'insurance'      && <InsuranceSection />}
       {tab === 'coop'           && <CoopSection />}

@@ -41,7 +41,7 @@ export interface FamilyActions {
   initiateCoOwnershipAction: (siblingId: string, playerShare: number) => void;
   applyFrictionChoiceAction: (choiceId: string) => void;
   resolveBuyoutAction: (choiceId: 'buy_them_out' | 'sell_to_them' | 'renegotiate') => void;
-  completeGameSetup: (farmName: string, farmerFirstName: string, backstory: 'first_gen' | 'inherited' | 'established') => void;
+  completeGameSetup: (farmName: string, farmerFirstName: string, backstory: 'first_gen' | 'inherited' | 'established', farmStyle?: 'crop_focus' | 'livestock' | 'market_trader' | 'balanced') => void;
 }
 
 export const createFamilyActions: ActionFactory<FamilyActions> = (set, get) => ({
@@ -116,16 +116,39 @@ export const createFamilyActions: ActionFactory<FamilyActions> = (set, get) => (
     });
   },
 
-  completeGameSetup: (farmName, farmerFirstName, backstory) => {
+  completeGameSetup: (farmName, farmerFirstName, backstory, farmStyle = 'balanced') => {
     const assets = {
       first_gen:   { money: 8000,  repScore: 5  + Math.floor(Math.random() * 11) },
       inherited:   { money: 22000, repScore: 20 + Math.floor(Math.random() * 16) },
       established: { money: 45000, repScore: 35 + Math.floor(Math.random() * 21) },
     }[backstory];
 
+    // Style bonus: extra cash or starting livestock
+    const styleBonus: { money: number; animals: import('../../engine/animals').OwnedAnimal[] } = { money: 0, animals: [] };
+    if (farmStyle === 'crop_focus') {
+      styleBonus.money = 1500;
+    } else if (farmStyle === 'livestock') {
+      styleBonus.money = -500;
+      for (let i = 0; i < 4; i++) {
+        styleBonus.animals.push({
+          id: `starter_hen_${i}`,
+          typeId: 'gallina',
+          sex: 'female',
+          bornDay: -90,
+          lastProductionDay: 0,
+          lastBreedDay: 0,
+          sick: false,
+        } as import('../../engine/animals').OwnedAnimal);
+      }
+    } else if (farmStyle === 'market_trader') {
+      styleBonus.money = 2500;
+    }
+
     set(state => ({
       farmName,
-      money: assets.money,
+      farmStyle,
+      money: assets.money + styleBonus.money,
+      animals: [...state.animals, ...styleBonus.animals],
       reputation: {
         ...state.reputation,
         score: assets.repScore,

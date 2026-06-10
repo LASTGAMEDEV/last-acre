@@ -7,11 +7,19 @@ import { useGameStore } from '../store/useGameStore';
 import { C, F, S, R } from '../constants/theme';
 
 type Backstory = 'first_gen' | 'inherited' | 'established';
+type FarmStyle = 'crop_focus' | 'livestock' | 'market_trader' | 'balanced';
 
 const BACKSTORY_OPTIONS: { id: Backstory; title: string; desc: string; detail: string }[] = [
   { id: 'first_gen',   title: 'First Generation', desc: 'Start from scratch',    detail: '$8k · 20 ha · No debt' },
   { id: 'inherited',   title: 'Inherited Farm',   desc: 'Modest existing setup', detail: '$22k · 50 ha · Some debt' },
   { id: 'established', title: 'Established',      desc: 'Going concern',         detail: '$45k · 100 ha · Leveraged' },
+];
+
+const STYLE_OPTIONS: { id: FarmStyle; icon: string; title: string; desc: string; bonus: string }[] = [
+  { id: 'crop_focus',     icon: '🌾', title: 'Crop Farm',        desc: 'Fields & harvests', bonus: '+$1,500 seed budget' },
+  { id: 'livestock',      icon: '🐔', title: 'Livestock Farm',   desc: 'Animals first',     bonus: '4 starter hens' },
+  { id: 'market_trader',  icon: '📊', title: 'Market Trader',    desc: 'Buy low, sell high', bonus: '+$2,500 trading cash' },
+  { id: 'balanced',       icon: '🏡', title: 'Balanced Farm',    desc: 'A bit of everything', bonus: 'Standard start' },
 ];
 
 export default function StartingScreen() {
@@ -20,13 +28,14 @@ export default function StartingScreen() {
   const [farmName,     setFarmName]     = useState('');
   const [farmerName,   setFarmerName]   = useState('');
   const [backstory,    setBackstory]    = useState<Backstory>('first_gen');
+  const [farmStyle,    setFarmStyle]    = useState<FarmStyle>('balanced');
   const [error,        setError]        = useState('');
 
   function handleBegin() {
     if (!farmName.trim())   return setError('Enter a farm name to continue.');
     if (!farmerName.trim()) return setError('Enter your farmer name to continue.');
     setError('');
-    completeGameSetup(farmName.trim(), farmerName.trim(), backstory);
+    completeGameSetup(farmName.trim(), farmerName.trim(), backstory, farmStyle);
   }
 
   return (
@@ -61,6 +70,25 @@ export default function StartingScreen() {
                 <Text style={[ss.bsTitle, backstory === opt.id && ss.bsTitleActive]}>{opt.title}</Text>
                 <Text style={ss.bsDesc}>{opt.desc}</Text>
                 <Text style={ss.bsDetail}>{opt.detail}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={ss.field}>
+          <Text style={ss.fieldLabel}>FARM FOCUS</Text>
+          <View style={ss.styleGrid}>
+            {STYLE_OPTIONS.map(opt => (
+              <TouchableOpacity
+                key={opt.id}
+                style={[ss.styleChip, farmStyle === opt.id && ss.styleChipActive]}
+                onPress={() => setFarmStyle(opt.id)}
+                activeOpacity={0.8}
+              >
+                <Text style={ss.styleIcon}>{opt.icon}</Text>
+                <Text style={[ss.styleTitle, farmStyle === opt.id && ss.styleTitleActive]}>{opt.title}</Text>
+                <Text style={ss.styleDesc}>{opt.desc}</Text>
+                <Text style={[ss.styleBonus, farmStyle === opt.id && ss.styleBonusActive]}>{opt.bonus}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -104,6 +132,15 @@ const ss = StyleSheet.create({
   bsTitleActive: { color: '#a5d6a7' },
   bsDesc:        { color: '#2a4a2a', fontSize: 9, textAlign: 'center', marginTop: 3 },
   bsDetail:      { color: '#1a3a1a', fontSize: 8, textAlign: 'center', marginTop: 2 },
+  styleGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  styleChip:        { flexBasis: '48%', flexGrow: 1, backgroundColor: '#0f1a0f', borderWidth: 1, borderColor: '#1e3a1e', borderRadius: R.md, padding: 10, alignItems: 'center', gap: 2 },
+  styleChipActive:  { backgroundColor: '#1a2e1a', borderColor: '#4a7c59' },
+  styleIcon:        { fontSize: 22, marginBottom: 2 },
+  styleTitle:       { color: '#4a6a4a', fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
+  styleTitleActive: { color: '#a5d6a7' },
+  styleDesc:        { color: '#2a4a2a', fontSize: 9, textAlign: 'center' },
+  styleBonus:       { color: '#1a3a1a', fontSize: 8, textAlign: 'center', marginTop: 2 },
+  styleBonusActive: { color: '#4a7c59' },
   error:         { color: '#ef5350', fontSize: F.size.sm, textAlign: 'center' },
   beginBtn:      { backgroundColor: '#4a7c59', borderRadius: R.md, paddingVertical: 14, alignItems: 'center', marginTop: S.sm },
   beginText:     { color: '#fff', fontSize: F.size.md, fontWeight: 'bold', letterSpacing: 1 },

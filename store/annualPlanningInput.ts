@@ -67,7 +67,7 @@ export function buildAnnualPlanningInput(state: GameState): AnnualPlanningInput 
     buildingCount: (state.buildings ?? []).length,
     processingBuildingCount,
     csaActive: state.csaActive ?? false,
-    coopMember: !!state.cooperative?.member || Object.values(state.coopMemberships ?? {}).some(membership => (membership?.shares ?? 0) > 0),
+    coopMember: Object.values(state.coopMemberships ?? {}).some(membership => (membership?.shares ?? 0) > 0),
     neighbourPressure,
     recentRevenue,
     completedContracts: (state.contracts ?? []).filter(contract => contract.completed).length,

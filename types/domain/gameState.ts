@@ -214,6 +214,7 @@ export interface GameState {
   };
   seasonalEvent: { type: 'heat_wave' | 'flood' | 'frost'; startDay: number; endsDay: number; severity: number } | null;
   farmName: string;
+  farmStyle: 'crop_focus' | 'livestock' | 'market_trader' | 'balanced';
   fuel: number;
   fuelPrice: number;
   priceAlerts: PriceAlert[];

@@ -14,7 +14,7 @@ function DashboardSection() {
   const {
     money, savings, day, loans, contracts, seasonGoals, seasonHarvestCount,
     seasonStartRevenue, totalRevenue, parcels, animals, npcFarms, salesLog,
-    personalRecords, inventory, prices, animalWelfareScores, reputation,
+    personalRecords, inventory, prices, animalWelfareScores, reputation, farmStyle,
   } = useGameStore();
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
@@ -109,6 +109,84 @@ function DashboardSection() {
   const ORDER: Record<Priority['severity'], number> = { critical: 0, warning: 1, action: 2 };
   priorities.sort((a, b) => ORDER[a.severity] - ORDER[b.severity]);
 
+  // ── Farm Identity ─────────────────────────────────────────────────────────
+  const organicParcelCount = ownedParcels.filter(p => p.organicStatus === 'organic').length;
+  const animalRev90   = salesLog.filter(s => s.day >= day - 90 && s.category === 'animals').reduce((a, s) => a + s.amount, 0);
+  const cropRev90     = salesLog.filter(s => s.day >= day - 90 && s.category === 'crops').reduce((a, s) => a + s.amount, 0);
+  const processedRev90 = salesLog.filter(s => s.day >= day - 90 && s.category === 'processed').reduce((a, s) => a + s.amount, 0);
+  const isOrganicFarm = organicParcelCount > 0 && organicParcelCount >= Math.ceil(ownedParcels.length * 0.5);
+  let farmTypeLabel = 'Farm';
+  if (farmStyle === 'livestock' && day < 365)          farmTypeLabel = 'Livestock Farm';
+  else if (farmStyle === 'crop_focus' && day < 365)    farmTypeLabel = 'Crop Farm';
+  else if (farmStyle === 'market_trader' && day < 365) farmTypeLabel = 'Trading Farm';
+  else if (ownedParcels.length === 0)                                                  farmTypeLabel = 'Starting Farm';
+  else if (animals.length >= 20 && animalRev90 > cropRev90 * 1.2)                     farmTypeLabel = 'Livestock Operation';
+  else if (animals.length >= 5 && animalRev90 >= cropRev90 * 0.5 && cropRev90 > 0)   farmTypeLabel = 'Mixed Farm';
+  else if (processedRev90 > 0 && processedRev90 >= cropRev90 + animalRev90)           farmTypeLabel = 'Processing Specialist';
+  else                                                                                  farmTypeLabel = 'Grain Farm';
+  const farmIdentity = (isOrganicFarm ? 'Organic ' : '') + farmTypeLabel;
+
+  // ── Opportunity & tip cards ───────────────────────────────────────────────
+  type OpCard = { icon: string; title: string; detail: string; kind: 'opportunity' | 'tip' | 'warning' };
+  const opCards: OpCard[] = [];
+
+  CROP_TYPES.forEach(crop => {
+    const qty = inventory[crop.id] ?? 0;
+    if (qty <= 0) return;
+    const currentPrice = prices.find(p => p.cropId === crop.id)?.price ?? crop.basePrice;
+    if (currentPrice >= crop.basePrice * 1.25) {
+      opCards.push({
+        icon: '📈',
+        title: `${crop.name} prices are high`,
+        detail: `$${currentPrice.toFixed(2)} (+${Math.round((currentPrice / crop.basePrice - 1) * 100)}%) — ${qty.toLocaleString()} units in stock.`,
+        kind: 'opportunity',
+      });
+    }
+  });
+
+  const idleParcels = ownedParcels.filter(p => !p.plantedCrop);
+  if (idleParcels.length > 0) {
+    opCards.push({
+      icon: '🌱',
+      title: `${idleParcels.length} idle plot${idleParcels.length > 1 ? 's' : ''} ready to plant`,
+      detail: `${idleParcels.length > 1 ? 'These' : 'This'} can be planted this ${season}.`,
+      kind: 'tip',
+    });
+  }
+
+  if (animals.length >= 5) {
+    const feedIds = ['grass', 'alfalfa', 'corn', 'barley', 'oats', 'sorghum'];
+    const feedUnits = feedIds.reduce((sum, id) => sum + (inventory[id] ?? 0), 0);
+    if (feedUnits < 1000) {
+      opCards.push({
+        icon: '🌾',
+        title: 'Feed reserves critically low',
+        detail: `Only ${feedUnits.toLocaleString()} kg stored for ${animals.length} animals — plant feed crops or buy from market.`,
+        kind: 'warning',
+      });
+    }
+  }
+
+  const isNewPlayer = day < 120 && (personalRecords?.totalHarvests ?? 0) < 5;
+  if (isNewPlayer && idleParcels.length > 0) {
+    const candidates = CROP_TYPES.filter(c => c.seasons.includes(season) && (c.tier === 'D' || c.tier === 'C'));
+    const rec = candidates.find(c => c.growthDays <= 90) ?? candidates[0];
+    if (rec) {
+      opCards.push({
+        icon: '💡',
+        title: `Beginner tip: plant ${rec.name} this ${season}`,
+        detail: `${rec.growthDays}-day growth, low input cost ($${rec.seedCost}/ha seed). Great first-harvest crop.`,
+        kind: 'tip',
+      });
+    }
+  }
+
+  // ── Recent sales ─────────────────────────────────────────────────────────
+  const recentSales = salesLog
+    .filter(s => s.day >= day - 14 && s.amount > 0)
+    .sort((a, b) => b.day - a.day)
+    .slice(0, 5);
+
   // ── Farm Health score ─────────────────────────────────────────────────────
   const totalDebt = loans.filter(l => !l.paid && !l.defaulted).reduce((s, l) => s + l.totalOwed, 0);
   const cashScore = Math.min(money / 10000, 1) * 25;
@@ -150,6 +228,13 @@ function DashboardSection() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 12, gap: 10 }} showsVerticalScrollIndicator={false}>
+      {/* Farm Identity */}
+      <View style={dash.identityRow}>
+        <Text style={dash.identityText}>🏡 {farmIdentity}</Text>
+        {isOrganicFarm && <View style={dash.organicBadge}><Text style={dash.organicBadgeText}>🌿 Organic</Text></View>}
+        <Text style={dash.identityDay}>Day {day}</Text>
+      </View>
+
       {/* Today's Priorities */}
       <View style={dash.prioritiesCard}>
         <Text style={dash.prioritiesTitle}>Today's Priorities</Text>
@@ -259,6 +344,39 @@ function DashboardSection() {
         </View>
       )}
 
+      {/* Opportunities & Tips */}
+      {opCards.length > 0 && (
+        <View style={dash.opCard}>
+          <Text style={dash.goalsTitle}>💡 Opportunities & Tips</Text>
+          {opCards.map((op, i) => (
+            <View key={i} style={[dash.opRow, i > 0 && { borderTopWidth: 1, borderTopColor: '#1a1f2e' }]}>
+              <Text style={dash.opIcon}>{op.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[dash.opTitle, { color: op.kind === 'opportunity' ? '#4caf50' : op.kind === 'warning' ? '#f59e0b' : '#64b5f6' }]}>
+                  {op.title}
+                </Text>
+                <Text style={dash.opDetail}>{op.detail}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Recent Sales Timeline */}
+      {recentSales.length > 0 && (
+        <View style={dash.goalsCard}>
+          <Text style={dash.goalsTitle}>📅 Recent Sales</Text>
+          {recentSales.map((s, i) => (
+            <View key={i} style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, i > 0 && { marginTop: 5 }]}>
+              <Text style={{ color: C.textMuted, fontSize: 11, textTransform: 'capitalize' }}>
+                {s.category ?? 'sale'} · Day {s.day}
+              </Text>
+              <Text style={{ color: '#4caf50', fontSize: 11, fontWeight: 'bold' }}>+${Math.round(s.amount).toLocaleString()}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* Records peek */}
       <View style={dash.goalsCard}>
         <Text style={dash.goalsTitle}>📊 Personal Bests</Text>
@@ -304,6 +422,18 @@ const dash = StyleSheet.create({
   priorityRow:     { flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingVertical: 6 },
   priorityDot:     { width: 7, height: 7, borderRadius: 4, flexShrink: 0 },
   priorityText:    { fontSize: F.size.sm, flexShrink: 1 },
+  // Farm Identity
+  identityRow:      { flexDirection: 'row', alignItems: 'center', gap: S.sm, backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md },
+  identityText:     { flex: 1, color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+  identityDay:      { color: C.textMuted, fontSize: F.size.xs },
+  organicBadge:     { backgroundColor: '#0f2a1a', borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: '#1e5a30' },
+  organicBadgeText: { color: '#4caf50', fontSize: F.size.xs, fontWeight: 'bold' },
+  // Opportunity cards
+  opCard:   { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, gap: 0 },
+  opRow:    { flexDirection: 'row', alignItems: 'flex-start', gap: S.sm, paddingVertical: 7 },
+  opIcon:   { fontSize: 18, lineHeight: 22 },
+  opTitle:  { fontSize: F.size.sm, fontWeight: 'bold', marginBottom: 1 },
+  opDetail: { color: C.textMuted, fontSize: F.size.xs, lineHeight: 16 },
   // Farm Health
   healthCard:      { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md },
   healthScore:     { fontSize: F.size.xl, fontWeight: 'bold' },
