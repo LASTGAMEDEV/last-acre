@@ -227,6 +227,8 @@ import { getTickState, patchTickState } from './tickContext';
 import { familyTick }     from '../features/family/familyTick';
 import { reputationTick } from '../features/reputation/reputationTick';
 import { neighborTick }   from '../features/neighbors/neighborTick';
+import { advanceAnnualPlanningForDay } from '../engine/annualPlanning';
+import { buildAnnualPlanningInput } from '../store/annualPlanningInput';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
 function getDailyMaintenance(machines: OwnedMachine[], buildings: string[]): number {
@@ -4897,5 +4899,40 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
         }
         if (tillCompletedThisDay && !get().dayOneChecklist.tilled) {
           get().markDayOneStep('tilled');
+        }
+        const afterPlanningState = get();
+        const planningTick = advanceAnnualPlanningForDay(
+          buildAnnualPlanningInput(afterPlanningState),
+          afterPlanningState.annualPlanning,
+        );
+        const annualPlanningPatch = planningTick.next && !('goals' in planningTick.next)
+          ? planningTick.next
+          : afterPlanningState.annualPlanning;
+        const annualReward = planningTick.reward;
+        const hasAnnualReward = annualReward.legacyReputation > 0 || annualReward.workerMorale > 0;
+        if (annualPlanningPatch !== afterPlanningState.annualPlanning || hasAnnualReward) {
+          set({
+            annualPlanning: annualPlanningPatch,
+            legacyReputation: hasAnnualReward
+              ? Math.min(100, (afterPlanningState.legacyReputation ?? 0) + annualReward.legacyReputation)
+              : afterPlanningState.legacyReputation,
+            workers: hasAnnualReward && annualReward.workerMorale > 0
+              ? (afterPlanningState.workers ?? []).map(worker => ({
+                  ...worker,
+                  satisfaction: Math.min(100, (worker.satisfaction ?? 0) + annualReward.workerMorale),
+                }))
+              : afterPlanningState.workers,
+            daySummary: planningTick.review
+              ? [
+                  ...(afterPlanningState.daySummary ?? []),
+                  {
+                    id: `annual_plan_review_${planningTick.review.year}`,
+                    icon: '📋',
+                    title: `Annual plan review ready: ${planningTick.review.completedGoals.length} goals completed`,
+                    severity: 'info',
+                  },
+                ]
+              : afterPlanningState.daySummary,
+          });
         }
 }

@@ -238,6 +238,15 @@ import { createAuctionActions } from './actions/auctionActions';
 import { createElectricityActions } from './actions/electricityActions';
 import { createFamilyActions } from '../features/family/familyActions';
 import { advanceGameDay } from '../simulation/advanceDay';
+import {
+  adjustAnnualPlanGoalTarget,
+  approveAnnualPlanDraft,
+  generateAnnualPlanDraft,
+  recommendAdvisor,
+  replaceAnnualPlanGoal as replaceAnnualPlanGoalInDraft,
+  updateAnnualPlanProgress,
+} from '../engine/annualPlanning';
+import { buildAnnualPlanningInput } from './annualPlanningInput';
 export { DELIVERY_DURATION, TRUCK_FUEL_LITRES } from './actions/machineryActions';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
@@ -409,6 +418,111 @@ export const useGameStore = create<GameState>()(
             set({ daySummary: null });
           }
         }
+      },
+
+      generateAnnualPlan: (advisor) => {
+        const state = get();
+        const input = buildAnnualPlanningInput(state);
+        const selectedAdvisor = advisor ?? recommendAdvisor(input);
+        const draft = generateAnnualPlanDraft(input, selectedAdvisor);
+        set({
+          annualPlanning: {
+            activeYear: input.calendarYear,
+            status: 'draft',
+            selectedAdvisor,
+            draft,
+            active: undefined,
+            review: undefined,
+            dismissedRecommendationIds: [],
+          },
+        });
+      },
+
+      replaceAnnualPlanGoal: (goalId) => {
+        const state = get();
+        const planning = state.annualPlanning;
+        if (!planning?.draft) return;
+        const input = buildAnnualPlanningInput(state);
+        const draft = replaceAnnualPlanGoalInDraft(input, planning.draft, goalId);
+        set({
+          annualPlanning: {
+            ...planning,
+            draft,
+          },
+        });
+      },
+
+      removeAnnualPlanGoal: (goalId) => {
+        const planning = get().annualPlanning;
+        if (!planning?.draft) return;
+        const goal = planning.draft.goals.find(item => item.id === goalId);
+        if (!goal || goal.required || planning.draft.goals.length <= 4) return;
+        set({
+          annualPlanning: {
+            ...planning,
+            draft: {
+              ...planning.draft,
+              goals: planning.draft.goals.filter(item => item.id !== goalId),
+            },
+          },
+        });
+      },
+
+      adjustAnnualPlanGoal: (goalId, target) => {
+        const state = get();
+        const planning = state.annualPlanning;
+        if (planning?.draft) {
+          set({ annualPlanning: { ...planning, draft: adjustAnnualPlanGoalTarget(planning.draft, goalId, target) } });
+          return;
+        }
+        if (planning?.active) {
+          const input = buildAnnualPlanningInput(state);
+          const active = adjustAnnualPlanGoalTarget(planning.active, goalId, target);
+          set({ annualPlanning: { ...planning, active: updateAnnualPlanProgress(input, active) } });
+        }
+      },
+
+      approveAnnualPlan: () => {
+        const state = get();
+        const planning = state.annualPlanning;
+        if (!planning?.draft) return;
+        const input = buildAnnualPlanningInput(state);
+        const active = approveAnnualPlanDraft(input, planning.draft);
+        set({
+          annualPlanning: {
+            ...planning,
+            activeYear: input.calendarYear,
+            status: 'active',
+            active,
+            draft: undefined,
+            review: undefined,
+            dismissedRecommendationIds: [],
+          },
+        });
+      },
+
+      dismissAnnualPlanRecommendation: (id) => {
+        const planning = get().annualPlanning;
+        if (!planning || planning.dismissedRecommendationIds.includes(id)) return;
+        set({
+          annualPlanning: {
+            ...planning,
+            dismissedRecommendationIds: [...planning.dismissedRecommendationIds, id],
+          },
+        });
+      },
+
+      completeAnnualPlanReview: () => {
+        const state = get();
+        const input = buildAnnualPlanningInput(state);
+        set({
+          annualPlanning: {
+            activeYear: input.calendarYear,
+            status: 'none',
+            selectedAdvisor: recommendAdvisor(input),
+            dismissedRecommendationIds: [],
+          },
+        });
       },
 
       setTimeline: (tl: TimelineState) => {

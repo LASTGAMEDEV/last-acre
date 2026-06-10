@@ -47,6 +47,7 @@ import type { FamilyState } from '../../features/family/familyTypes';
 import type { FamilyActions } from '../../features/family/familyActions';
 import type { ReputationState } from '../../features/reputation/reputationTypes';
 import type { NeighborState, NeighborLandOpportunity } from '../../features/neighbors/neighborTypes';
+import type { AdvisorStyle, AnnualPlanningState } from './annualPlanning';
 
 export interface GameState {
   day: number;
@@ -153,6 +154,7 @@ export interface GameState {
   neighbors: NeighborState;
   pendingLandOpportunities: NeighborLandOpportunity[];
   gameSetupComplete: boolean;
+  annualPlanning: AnnualPlanningState;
   machineRepairs: MachineRepair[];
   attachments: OwnedAttachment[];
   trailers: OwnedTrailer[];
@@ -462,4 +464,11 @@ export interface GameState {
   applyFrictionChoiceAction: FamilyActions['applyFrictionChoiceAction'];
   resolveBuyoutAction: FamilyActions['resolveBuyoutAction'];
   completeGameSetup: FamilyActions['completeGameSetup'];
+  generateAnnualPlan: (advisor: AdvisorStyle) => void;
+  replaceAnnualPlanGoal: (goalId: string) => void;
+  removeAnnualPlanGoal: (goalId: string) => void;
+  adjustAnnualPlanGoal: (goalId: string, target: number) => void;
+  approveAnnualPlan: () => void;
+  dismissAnnualPlanRecommendation: (id: string) => void;
+  completeAnnualPlanReview: () => void;
 }

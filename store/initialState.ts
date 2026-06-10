@@ -46,6 +46,7 @@ import type { HybridJob, SeedEntry } from '../types/domain/crops';
 import { INITIAL_FAMILY_STATE } from '../features/family/familyTypes';
 import { INITIAL_REPUTATION_STATE } from '../features/reputation/reputationTypes';
 import { INITIAL_NEIGHBOR_STATE } from '../features/neighbors/neighborEngine';
+import { createInitialAnnualPlanningState } from '../engine/annualPlanning';
 const FIELD_NAMES: string[] = [
   'North Meadow',   'South Ridge',    'East Valley',    'West Creek',     'Upper Hill',
   'Lower Hollow',   'Far Acre',       'Near Grove',     'Back Pasture',   'Long Field',
@@ -399,5 +400,6 @@ export function makeInitialState() {
     farmCafeWorkerIds: [],
     awardHistory: [],
     productAwardBonuses: {},
+    annualPlanning: createInitialAnnualPlanningState(1970),
   };
 }

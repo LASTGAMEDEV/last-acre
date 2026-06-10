@@ -5,10 +5,11 @@ import { INITIAL_DYNASTY_STATE } from '../engine/dynasty';
 import { INITIAL_FAMILY_STATE } from '../features/family/familyTypes';
 import { INITIAL_REPUTATION_STATE } from '../features/reputation/reputationTypes';
 import { INITIAL_NEIGHBOR_STATE } from '../features/neighbors/neighborEngine';
+import { createInitialAnnualPlanningState } from '../engine/annualPlanning';
 import type { GameState } from '../types/domain/gameState';
 
-export const SAVE_STORAGE_KEY = 'granja-tycoon-save-v13';
-export const SAVE_VERSION = 9;
+export const SAVE_STORAGE_KEY = 'granja-tycoon-save-v14';
+export const SAVE_VERSION = 10;
 
 export function migrateGameState(persistedState: unknown): unknown {
   const s = persistedState as Record<string, unknown>;
@@ -21,6 +22,7 @@ export function migrateGameState(persistedState: unknown): unknown {
   if (!s.neighbors)                s.neighbors = INITIAL_NEIGHBOR_STATE;
   if (!s.pendingLandOpportunities) s.pendingLandOpportunities = [];
   if (s.gameSetupComplete === undefined) s.gameSetupComplete = true; // existing saves already set up
+  if (!s.annualPlanning) s.annualPlanning = createInitialAnnualPlanningState(typeof s.day === 'number' ? 1970 + Math.floor((s.day - 1) / 365) : 1970);
   // reputation field is now ReputationState — init fresh if it was a number
   if (typeof s.reputation === 'number' || !s.reputation) {
     s.reputation = INITIAL_REPUTATION_STATE;
@@ -79,6 +81,8 @@ export function partializeGameState(state: GameState) {
           performHandoff, earnKnowledge, triggerVoluntaryHandoff,
           makeLifeEventChoice, setFamilyMemberRole, initiateCoOwnershipAction,
           applyFrictionChoiceAction, resolveBuyoutAction, completeGameSetup,
+          generateAnnualPlan, replaceAnnualPlanGoal, removeAnnualPlanGoal, adjustAnnualPlanGoal,
+          approveAnnualPlan, dismissAnnualPlanRecommendation, completeAnnualPlanReview,
           ...dataState
         } = state;
         return {
@@ -108,6 +112,7 @@ export function repairHydratedState(state: GameState | undefined): void {
         state.neighbors            = state.neighbors ?? INITIAL_NEIGHBOR_STATE;
         state.pendingLandOpportunities = state.pendingLandOpportunities ?? [];
         if (state.gameSetupComplete === undefined) state.gameSetupComplete = true;
+        state.annualPlanning = state.annualPlanning ?? createInitialAnnualPlanningState(1970 + Math.floor(((state.day ?? 1) - 1) / 365));
         if (!state.reputation || typeof (state.reputation as unknown) === 'number') {
           state.reputation = INITIAL_REPUTATION_STATE;
         }
