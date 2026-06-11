@@ -135,6 +135,43 @@ export default function ProcesadoScreen() {
           {(processedInventory ?? []).length === 0 && (
             <HintCard id="hint_processing" title="Process crops for higher margins" body="Raw crops sell at base price, but processed goods sell for 2–5× more. Build a processing building, assign a worker, and queue a recipe." />
           )}
+
+          {/* Processing status summary */}
+          {(processingBuildings ?? []).length > 0 && (() => {
+            const statusRows = (processingBuildings ?? []).map(pb => {
+              const config = PROCESSING_BUILDING_CONFIGS.find(c => c.buildingTypeId === pb.buildingTypeId);
+              const activeBatch = (activeBatches ?? []).find(b => b.buildingId === pb.id && b.completionDay > day);
+              const readyBatch = (activeBatches ?? []).find(b => b.buildingId === pb.id && b.completionDay <= day);
+              const noWorkers = pb.assignedWorkerIds.length === 0;
+              const hasStock = PROCESSING_RECIPES
+                .filter(r => r.buildingTypeId === pb.buildingTypeId && pb.tier >= r.minBuildingTier)
+                .some(r => inputStock(r, inventory, animalInventory, processedInventory ?? []) > 0);
+
+              let status: 'processing' | 'ready' | 'idle' | 'no_workers' | 'no_stock';
+              let statusColor: string;
+              let statusText: string;
+              if (readyBatch) { status = 'ready'; statusColor = '#4caf50'; statusText = '✅ Ready'; }
+              else if (activeBatch) {
+                const pct = Math.round(((activeBatch.completionDay - activeBatch.startDay - (activeBatch.completionDay - day)) / (activeBatch.completionDay - activeBatch.startDay)) * 100);
+                status = 'processing'; statusColor = '#64b5f6'; statusText = `⚙ ${pct}% · ${activeBatch.completionDay - day}d`;
+              } else if (noWorkers) { status = 'no_workers'; statusColor = '#ef5350'; statusText = '⚠ No worker'; }
+              else if (!hasStock) { status = 'no_stock'; statusColor = '#f59e0b'; statusText = '📦 No input stock'; }
+              else { status = 'idle'; statusColor = '#888'; statusText = '— Idle'; }
+              return { pb, config, statusText, statusColor };
+            });
+            return (
+              <View style={{ backgroundColor: C.bgCard, borderRadius: 10, marginHorizontal: 12, marginBottom: 8, padding: 10 }}>
+                <Text style={{ color: C.text, fontSize: 12, fontWeight: 'bold', marginBottom: 6 }}>🏭 Processing Status</Text>
+                {statusRows.map(({ pb, config, statusText, statusColor }) => (
+                  <View key={pb.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4, borderTopWidth: 1, borderTopColor: '#1a2a1a' }}>
+                    <Text style={{ color: C.textMuted, fontSize: 11, flex: 1 }}>{config?.name ?? pb.buildingTypeId} (T{pb.tier})</Text>
+                    <Text style={{ color: statusColor, fontSize: 11, fontWeight: 'bold' }}>{statusText}</Text>
+                  </View>
+                ))}
+              </View>
+            );
+          })()}
+
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 4 }}>
             <GuideButton entryId="system_processing" compact />
             <HelpSheet title="Processing" body="Processing takes in-game days. Each building needs a worker. Higher building tiers unlock more recipes and raise quality ceilings. Stage 4 products age and improve over time." entryId="system_processing" />

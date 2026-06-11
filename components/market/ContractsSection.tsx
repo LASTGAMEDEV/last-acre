@@ -10,10 +10,23 @@ import { GUIDE_ENTRY_IDS } from '../../data/guideEntries';
 function ContractsSection() {
   const { contracts, prices, inventory, day, acceptContract, declineContract, deliverCrop, declinedTemplates, counterOfferContract } = useGameStore();
   const [negotiatingId, setNegotiatingId] = React.useState<string | null>(null);
+  const [pinnedIds, setPinnedIds] = React.useState<Set<string>>(new Set());
 
-  const activeContracts = contracts.filter(c => !c.completed && !c.failed);
+  function togglePin(id: string) {
+    setPinnedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  const allActive = contracts.filter(c => !c.completed && !c.failed);
+  const activeContracts = [
+    ...allActive.filter(c => pinnedIds.has(c.id)),
+    ...allActive.filter(c => !pinnedIds.has(c.id)),
+  ];
   const availableTemplates = CONTRACT_TEMPLATES.filter(
-    t => !activeContracts.some(c => c.templateId === t.id) && !declinedTemplates.includes(t.id)
+    t => !allActive.some(c => c.templateId === t.id) && !declinedTemplates.includes(t.id)
   );
 
   return (
@@ -31,12 +44,19 @@ function ContractsSection() {
           const inStock = Math.round(inventory[c.cropId] ?? 0);
           const remaining = c.amount - c.delivered;
           const canDeliver = inStock > 0 && remaining > 0;
+          const pinned = pinnedIds.has(c.id);
+          const daysLeft = c.deadlineDay - day;
+          const urgent = daysLeft <= 7 && daysLeft >= 0;
           return (
-            <View key={c.id} style={[styles.contractCard, overdue && styles.loanCardOverdue]}>
+            <View key={c.id} style={[styles.contractCard, overdue && styles.loanCardOverdue, pinned && { borderLeftWidth: 3, borderLeftColor: '#ffa726' }]}>
               <View style={styles.loanCardHeader}>
+                <TouchableOpacity onPress={() => togglePin(c.id)} style={{ marginRight: 6 }}>
+                  <Text style={{ fontSize: 16, opacity: pinned ? 1 : 0.3 }}>📌</Text>
+                </TouchableOpacity>
                 <Text style={styles.contractTitle}>{crop?.name}</Text>
                 {crop && <GuideButton entryId={GUIDE_ENTRY_IDS.crop(crop.id)} compact />}
                 {overdue && <Text style={styles.overdueTag}>OVERDUE</Text>}
+                {urgent && !overdue && <Text style={[styles.overdueTag, { backgroundColor: '#7f3200', color: '#ffb74d' }]}>⏰ {daysLeft}d</Text>}
               </View>
               <Text style={styles.contractDetail}>
                 {c.amount.toLocaleString()} {unit} · ${c.pricePerUnit.toFixed(2)}/{unit}

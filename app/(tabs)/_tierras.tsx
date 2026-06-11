@@ -64,48 +64,97 @@ function SoilTab({ parcel, onAmendment, onCoverCrop }: {
 }) {
   const soil = parcel.soil ?? SOIL_DEFAULTS;
   const modifier = computeSoilYieldModifier(soil);
+  const modPct = Math.round((modifier - 1) * 100);
+  const modColor = modifier >= 1.0 ? '#4caf50' : modifier >= 0.85 ? '#f59e0b' : '#ef5350';
 
-  const stats: { label: string; value: number; min: number; max: number; invert?: boolean; unit?: string }[] = [
-    { label: 'Nitrogen',       value: soil.nitrogen,      min: 0,   max: 100 },
-    { label: 'Organic Matter', value: soil.organicMatter,  min: 0,   max: 10,  unit: '%' },
-    { label: 'Compaction',     value: soil.compaction,     min: 0,   max: 100, invert: true },
-    { label: 'pH',             value: soil.pH,             min: 4.0, max: 8.5 },
-    { label: 'Microbial Life', value: soil.microbialLife,  min: 0,   max: 100 },
+  // Build diagnoses for issues
+  type DiagIssue = { icon: string; text: string; severity: 'critical' | 'warning' | 'ok' };
+  const issues: DiagIssue[] = [];
+  if (soil.nitrogen < 35) issues.push({ icon: '🌿', text: 'Nitrogen critically low — plant clover cover crop or apply N fertiliser', severity: 'critical' });
+  else if (soil.nitrogen < 55) issues.push({ icon: '🌿', text: 'Nitrogen below optimal — consider clover cover crop', severity: 'warning' });
+  if (soil.pH < 5.5) issues.push({ icon: '🪨', text: `pH ${soil.pH.toFixed(1)} is too acidic — apply lime to raise pH`, severity: 'critical' });
+  else if (soil.pH > 7.5) issues.push({ icon: '🟡', text: `pH ${soil.pH.toFixed(1)} is too alkaline — apply sulfur to lower pH`, severity: 'warning' });
+  if (soil.compaction > 60) issues.push({ icon: '⚙️', text: 'Heavy compaction — run subsoiler or plant deep-root cover crop', severity: 'critical' });
+  else if (soil.compaction > 40) issues.push({ icon: '⚙️', text: 'Moderate compaction — consider subsoiler pass', severity: 'warning' });
+  if (soil.organicMatter < 2.5) issues.push({ icon: '🍂', text: 'Organic matter very low — add compost or plant buckwheat cover crop', severity: 'critical' });
+  else if (soil.organicMatter < 4.0) issues.push({ icon: '🍂', text: 'Organic matter below optimal — add compost or rotate with cover crops', severity: 'warning' });
+  if (soil.phosphorus < 35) issues.push({ icon: '🔴', text: 'Phosphorus deficient — apply phosphorus fertiliser', severity: 'critical' });
+  else if (soil.phosphorus < 50) issues.push({ icon: '🔴', text: 'Phosphorus low — apply P amendment', severity: 'warning' });
+  if (soil.potassium < 35) issues.push({ icon: '🟠', text: 'Potassium deficient — apply potash or wood ash', severity: 'critical' });
+  else if (soil.potassium < 50) issues.push({ icon: '🟠', text: 'Potassium below optimal', severity: 'warning' });
+  if (soil.drainage < 35) issues.push({ icon: '💧', text: 'Poor drainage — risk of waterlogging, consider drainage tile', severity: 'warning' });
+  if (soil.microbialLife < 35) issues.push({ icon: '🦠', text: 'Low microbial activity — avoid chemical use, add compost', severity: 'warning' });
+  if (issues.length === 0) issues.push({ icon: '✅', text: 'Soil is in good health — no critical issues', severity: 'ok' });
+
+  const stats: { label: string; value: number; min: number; max: number; invert?: boolean; unit?: string; optLow?: number; optHigh?: number }[] = [
+    { label: 'Nitrogen',       value: soil.nitrogen,      min: 0,   max: 100,  optLow: 60, optHigh: 80 },
+    { label: 'Phosphorus',     value: soil.phosphorus,    min: 0,   max: 100,  optLow: 50, optHigh: 80 },
+    { label: 'Potassium',      value: soil.potassium,     min: 0,   max: 100,  optLow: 50, optHigh: 80 },
+    { label: 'Organic Matter', value: soil.organicMatter, min: 0,   max: 10,   optLow: 4,  optHigh: 7,  unit: '%' },
+    { label: 'pH',             value: soil.pH,            min: 4.0, max: 8.5,  optLow: 6.0, optHigh: 7.0 },
+    { label: 'Compaction',     value: soil.compaction,    min: 0,   max: 100,  invert: true },
+    { label: 'Microbial Life', value: soil.microbialLife, min: 0,   max: 100,  optLow: 60, optHigh: 100 },
+    { label: 'Drainage',       value: soil.drainage,      min: 0,   max: 100,  optLow: 60, optHigh: 100 },
   ];
 
   return (
-    <View style={{ padding: S.md }}>
-      <Text style={{ color: C.textMuted, fontSize: F.size.xs, marginBottom: S.sm }}>
-        Yield modifier: {modifier >= 1 ? '+' : ''}{Math.round((modifier - 1) * 100)}%
-      </Text>
-
-      {stats.map((st) => {
-        const pct = Math.max(0, Math.min(1, (st.value - st.min) / (st.max - st.min)));
-        const barPct = st.invert ? 1 - pct : pct;
-        const color = soilStatColor(st.value, st.min, st.max, st.invert);
-        return (
-          <View key={st.label} style={{ marginBottom: S.sm }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ color: C.textMuted, fontSize: F.size.xs }}>{st.label}</Text>
-              <Text style={{ color: C.text, fontSize: F.size.xs }}>
-                {st.value.toFixed(st.unit === '%' ? 1 : 0)}{st.unit ?? ''}
-              </Text>
-            </View>
-            <View style={{ height: 6, backgroundColor: C.bgCard, borderRadius: 3, marginTop: 3 }}>
-              <View style={{ width: `${barPct * 100}%` as any, height: 6, borderRadius: 3, backgroundColor: color }} />
-            </View>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: S.md }}>
+      {/* Diagnosis header */}
+      <View style={{ backgroundColor: '#0d1f0d', borderRadius: 10, padding: 10, marginBottom: S.md, borderWidth: 1, borderColor: modColor + '44' }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <Text style={{ color: C.text, fontSize: 13, fontWeight: 'bold' }}>🔬 Soil Diagnosis</Text>
+          <Text style={{ color: modColor, fontSize: 13, fontWeight: 'bold' }}>
+            {modPct >= 0 ? '+' : ''}{modPct}% yield
+          </Text>
+        </View>
+        {issues.map((issue, i) => (
+          <View key={i} style={{ flexDirection: 'row', gap: 6, marginTop: i > 0 ? 4 : 0 }}>
+            <Text style={{ fontSize: 12 }}>{issue.icon}</Text>
+            <Text style={{
+              fontSize: 11,
+              flex: 1,
+              color: issue.severity === 'critical' ? '#ef9a9a' : issue.severity === 'warning' ? '#ffe082' : '#a5d6a7',
+            }}>
+              {issue.text}
+            </Text>
           </View>
-        );
-      })}
+        ))}
+      </View>
 
-      <Text style={{ color: C.textMuted, fontSize: F.size.xs, marginTop: S.md, marginBottom: S.xs, fontWeight: '600' }}>
+      {/* Stat bars — 2-column layout */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: S.md }}>
+        {stats.map((st) => {
+          const pct = Math.max(0, Math.min(1, (st.value - st.min) / (st.max - st.min)));
+          const barPct = st.invert ? 1 - pct : pct;
+          const color = soilStatColor(st.value, st.min, st.max, st.invert);
+          const optRange = st.optLow != null && st.optHigh != null
+            ? `${st.optLow}–${st.optHigh}${st.unit ?? ''} opt.`
+            : undefined;
+          return (
+            <View key={st.label} style={{ width: '47%' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ color: C.textMuted, fontSize: 10 }}>{st.label}</Text>
+                <Text style={{ color, fontSize: 10, fontWeight: 'bold' }}>
+                  {st.value.toFixed(st.unit === '%' ? 1 : st.label === 'pH' ? 1 : 0)}{st.unit ?? ''}
+                </Text>
+              </View>
+              <View style={{ height: 5, backgroundColor: C.bgDeep, borderRadius: 3, marginTop: 2 }}>
+                <View style={{ width: `${barPct * 100}%` as any, height: 5, borderRadius: 3, backgroundColor: color }} />
+              </View>
+              {optRange && <Text style={{ color: '#444', fontSize: 9, marginTop: 1 }}>{optRange}</Text>}
+            </View>
+          );
+        })}
+      </View>
+
+      <Text style={{ color: C.textMuted, fontSize: F.size.xs, marginBottom: S.xs, fontWeight: '600' }}>
         Amendments
       </Text>
-      <View style={{ flexDirection: 'row', gap: S.sm }}>
+      <View style={{ flexDirection: 'row', gap: S.sm, marginBottom: S.md }}>
         {[
-          { id: 'lime' as const,      label: '🪨 Lime',    hint: 'pH +0.5 · €120' },
-          { id: 'sulfur' as const,    label: '🟡 Sulfur',  hint: 'pH −0.5 · €100' },
-          { id: 'subsoiler' as const, label: '⚙️ Subsoil', hint: 'Compact −18 · €200' },
+          { id: 'lime' as const,      label: '🪨 Lime',    hint: 'pH +0.5 · $120' },
+          { id: 'sulfur' as const,    label: '🟡 Sulfur',  hint: 'pH −0.5 · $100' },
+          { id: 'subsoiler' as const, label: '⚙️ Subsoil', hint: 'Compact −18 · $200' },
         ].map((a) => (
           <TouchableOpacity
             key={a.id}
@@ -120,7 +169,7 @@ function SoilTab({ parcel, onAmendment, onCoverCrop }: {
 
       {!parcel.plantedCrop && (
         <>
-          <Text style={{ color: C.textMuted, fontSize: F.size.xs, marginTop: S.md, marginBottom: S.xs, fontWeight: '600' }}>
+          <Text style={{ color: C.textMuted, fontSize: F.size.xs, marginBottom: S.xs, fontWeight: '600' }}>
             Cover Crops
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
@@ -142,7 +191,7 @@ function SoilTab({ parcel, onAmendment, onCoverCrop }: {
           </View>
         </>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -355,6 +404,15 @@ export default function TierrasScreen() {
   const [fieldFilter, setFieldFilter] = useState<FieldFilter>('all');
   type FieldSort = 'default' | 'size_desc' | 'size_asc' | 'fertility' | 'days_left';
   const [fieldSort, setFieldSort] = useState<FieldSort>('default');
+  const [favoriteCrops, setFavoriteCrops] = useState<Set<string>>(new Set());
+
+  function toggleFavoriteCrop(cropId: string) {
+    setFavoriteCrops(prev => {
+      const next = new Set(prev);
+      if (next.has(cropId)) next.delete(cropId); else next.add(cropId);
+      return next;
+    });
+  }
 
   const owned = parcels.filter(p => p.owned);
   const available = parcels.filter(p => !p.owned);
@@ -490,32 +548,48 @@ export default function TierrasScreen() {
     const ready = isReady(parcel);
     const fieldEvent = getEventForParcel(parcel.id);
     const cropType = parcel.plantedCrop ? CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId) : null;
+    const soilMod = computeSoilYieldModifier(parcel.soil ?? SOIL_DEFAULTS);
+    const soilPct = Math.round(soilMod * 100);
+    const soilColor = soilPct >= 100 ? '#4caf50' : soilPct >= 85 ? '#f59e0b' : '#ef5350';
+
+    // State icons strip
+    const stateIcons: string[] = [];
+    if (ready) stateIcons.push('🌾');
+    if (parcel.diseased) stateIcons.push('🦠');
+    if (parcel.pestState?.detectedDay) stateIcons.push('🐛');
+    if (parcel.hasWeeds) stateIcons.push('🌿');
+    if (parcel.irrigated) stateIcons.push('💧');
+    if (parcel.greenhouse) stateIcons.push('🏠');
+    if (parcel.organicStatus === 'organic') stateIcons.push('✅');
+    else if (parcel.organicStatus && parcel.organicStatus !== 'conventional') stateIcons.push('🔄');
+    if (parcel.precisionApplied) stateIcons.push('🎯');
+    if (fieldEvent) stateIcons.push('⚠️');
 
     return (
       <View key={parcel.id} style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={{ flex: 1 }}>
             <Text style={styles.cardTitle}>{parcel.name}</Text>
-            <Text style={styles.cardSub}>{parcel.hectares} ha</Text>
+            <Text style={styles.cardSub}>{parcel.hectares} ha{parcel.soilType ? ` · ${SOIL_ICONS[parcel.soilType]} ${parcel.soilType}` : ''}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.fertility}>♦ {parcel.fertility}/25</Text>
-            {parcel.soilType && (
-              <Text style={styles.soilBadge}>{SOIL_ICONS[parcel.soilType]} {parcel.soilType}</Text>
-            )}
+            <Text style={[styles.fertility, { color: soilColor, fontWeight: 'bold' }]}>
+              🌱 {soilPct}%
+            </Text>
+            <Text style={{ color: C.textMuted, fontSize: 9, marginTop: 1 }}>soil health</Text>
           </View>
         </View>
 
-        {/* Organic / lease / tillage badges */}
+        {/* State icons strip */}
+        {stateIcons.length > 0 && (
+          <Text style={{ fontSize: 14, letterSpacing: 2, marginBottom: 4 }}>{stateIcons.join('')}</Text>
+        )}
+
+        {/* Organic / tillage / waterway badges */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 4 }}>
-          {parcel.organicStatus && parcel.organicStatus !== 'conventional' && (
-            <Text style={[styles.badge, { color: parcel.organicStatus === 'organic' ? C.green : '#ffa726' }]}>
-              {parcel.organicStatus === 'organic' ? '🌿 Organic' : `🔄 ${parcel.organicStatus.replace('_', ' ')}`}
-            </Text>
-          )}
           {parcel.tillageSystem && parcel.tillageSystem !== 'conventional' && (
             <Text style={[styles.badge, { color: '#64b5f6' }]}>
-              {parcel.tillageSystem === 'notill' ? '🚜 No-till' : '⚙️ Reduced'}
+              {parcel.tillageSystem === 'notill' ? '🚜 No-till' : '⚙️ Reduced till'}
             </Text>
           )}
           {parcel.waterwayAdjacent && (
@@ -1155,6 +1229,28 @@ export default function TierrasScreen() {
               );
             })()}
 
+            {favoriteCrops.size > 0 && (() => {
+              const favList = CROP_TYPES.filter(c => favoriteCrops.has(c.id) && (!!plantingParcel?.greenhouse || c.seasons.includes(currentSeason as any)));
+              if (favList.length === 0) return null;
+              return (
+                <View style={{ marginBottom: 6 }}>
+                  <Text style={{ color: '#ffa726', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>⭐ FAVORITES</Text>
+                  <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                    {favList.map(crop => (
+                      <TouchableOpacity
+                        key={crop.id}
+                        style={[{ backgroundColor: selectedCropId === crop.id ? '#1a3020' : '#1a1800', borderRadius: 8, padding: 6, borderWidth: 1, borderColor: selectedCropId === crop.id ? '#4caf50' : '#ffa72633' }]}
+                        onPress={() => { setSelectedCropId(crop.id); setSelectedSeedId(null); }}
+                      >
+                        <Text style={{ color: '#ffe082', fontSize: 11, fontWeight: 'bold' }}>{crop.name}</Text>
+                        <Text style={{ color: C.textMuted, fontSize: 9 }}>${crop.seedCost}/ha seed</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              );
+            })()}
+
             <ScrollView style={styles.cropList} showsVerticalScrollIndicator={false}>
               {CROP_TYPES.map(crop => {
                 const isGreenhouse = !!plantingParcel?.greenhouse;
@@ -1169,6 +1265,7 @@ export default function TierrasScreen() {
                 const currentPrice = prices.find(p => p.cropId === crop.id)?.price ?? crop.basePrice;
                 const estGross = crop.baseYield * ha * soilMod * (rotation ? 1.15 : 1.0) * currentPrice;
                 const estProfit = estGross - seedCost;
+                const isFav = favoriteCrops.has(crop.id);
                 return (
                   <TouchableOpacity
                     key={crop.id}
@@ -1211,11 +1308,19 @@ export default function TierrasScreen() {
                         </Text>
                       )}
                     </View>
-                    {inSeason && (
-                      <Text style={[styles.cropOptionCost, !canAfford && { color: '#f44336' }]}>
-                        ${Math.round(seedCost).toLocaleString()}
-                      </Text>
-                    )}
+                    <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                      {inSeason && (
+                        <Text style={[styles.cropOptionCost, !canAfford && { color: '#f44336' }]}>
+                          ${Math.round(seedCost).toLocaleString()}
+                        </Text>
+                      )}
+                      <TouchableOpacity
+                        onPress={(e) => { e.stopPropagation?.(); toggleFavoriteCrop(crop.id); }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text style={{ fontSize: 14, opacity: isFav ? 1 : 0.25 }}>⭐</Text>
+                      </TouchableOpacity>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
