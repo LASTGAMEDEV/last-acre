@@ -6,6 +6,7 @@ import BankingSection from '../../components/office/BankingSection';
 import InsuranceSection from '../../components/office/InsuranceSection';
 import CoopSection from '../../components/office/CoopSection';
 import CompetitorsSection from '../../components/office/CompetitorsSection';
+import NeighborFarmsSection from '../../components/office/NeighborFarmsSection';
 import ReputationSection from '../../components/office/ReputationSection';
 import AchievementsSection from '../../components/office/AchievementsSection';
 import SubsidiesSection from '../../components/office/SubsidiesSection';
@@ -26,6 +27,7 @@ type OfficeTab =
   | 'insurance'
   | 'coop'
   | 'rivals'
+  | 'neighbors'
   | 'reputation'
   | 'achievements'
   | 'subsidies'
@@ -43,6 +45,7 @@ const TABS: { id: OfficeTab; label: string }[] = [
   { id: 'insurance',      label: 'Insurance' },
   { id: 'coop',           label: 'Co-op' },
   { id: 'rivals',         label: 'Rivals' },
+  { id: 'neighbors',      label: 'Neighbors' },
   { id: 'reputation',     label: 'Reputation' },
   { id: 'achievements',   label: 'Achievements' },
   { id: 'subsidies',      label: 'Subsidies' },
@@ -69,6 +72,7 @@ export default function OfficeScreen() {
       {tab === 'insurance'      && <InsuranceSection />}
       {tab === 'coop'           && <CoopSection />}
       {tab === 'rivals'         && <CompetitorsSection />}
+      {tab === 'neighbors'      && <NeighborFarmsSection />}
       {tab === 'reputation'     && <ReputationSection />}
       {tab === 'achievements'   && <AchievementsSection />}
       {tab === 'subsidies'      && <SubsidiesSection />}
