@@ -21,6 +21,7 @@ export interface BankingActions {
   renegotiateLoan: (loanId: string, extraDays: number) => void;
   takeBankruptcyLoan: () => void;
   clearBankruptcy: () => void;
+  takeFamilyLoan: () => void;
 }
 
 export const createBankingActions: ActionFactory<BankingActions> = (set, get) => ({
@@ -146,5 +147,29 @@ export const createBankingActions: ActionFactory<BankingActions> = (set, get) =>
 
   clearBankruptcy: () => {
     set({ bankrupt: false });
+  },
+
+  takeFamilyLoan: () => {
+    const state = get();
+    const principal = 10_000;
+    const termDays = 180;
+    const loan: Loan = {
+      id: `family_loan_${state.day}`,
+      label: '👨‍👩‍👧 Family Emergency Loan',
+      principal,
+      rate: 0,
+      termDays,
+      startDay: state.day,
+      payoffDay: state.day + termDays,
+      totalOwed: principal,
+      paid: false,
+      defaulted: false,
+    };
+    set({
+      money: state.money + principal,
+      loans: [...state.loans, loan],
+      familyLoanUsedDay: state.day,
+      bankrupt: false,
+    });
   },
 });

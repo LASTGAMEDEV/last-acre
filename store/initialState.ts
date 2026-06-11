@@ -276,6 +276,7 @@ export function makeInitialState() {
     jobPostings: [] as WorkerJobPosting[],
     employerReputation: 50,
     bankrupt: false,
+    familyLoanUsedDay: null as number | null,
     sellPressures: [] as { cropId: string; modifier: number; expiresDay: number }[],
     breedingPairs: {} as Record<string, string>,
     seedVault: [] as SeedEntry[],

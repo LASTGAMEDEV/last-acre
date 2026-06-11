@@ -145,6 +145,7 @@ export interface GameState {
   jobPostings: WorkerJobPosting[];
   employerReputation: number;
   bankrupt: boolean;
+  familyLoanUsedDay: number | null;
   sellPressures: { cropId: string; modifier: number; expiresDay: number }[];
   breedingPairs: Record<string, string>;
   activeEvents: GameEvent[];
@@ -372,6 +373,7 @@ export interface GameState {
   renegotiateLoan: (loanId: string, extraDays: 30 | 60 | 90) => void;
   takeBankruptcyLoan: () => void;
   clearBankruptcy: () => void;
+  takeFamilyLoan: () => void;
   setBreedingPair: (femaleId: string, maleId: string) => void;
   clearBreedingPair: (femaleId: string) => void;
   startHybridization: (cropId: string, parentAId: string, parentBId: string) => void;

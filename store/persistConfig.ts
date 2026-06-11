@@ -57,7 +57,7 @@ export function partializeGameState(state: GameState) {
           joinCoop, leaveCoop, deliverToCoop, voteAGM, submitCounterProposal, bookCoopEquipment,
           harvestAllReady, collectAllProduction, setAutoSell, startNewSeason,
           hireWorker, fireWorker, installIrrigation,
-          renegotiateLoan, takeBankruptcyLoan, clearBankruptcy,
+          renegotiateLoan, takeBankruptcyLoan, clearBankruptcy, takeFamilyLoan,
           setBreedingPair, clearBreedingPair,
           enterAnimalShow, withdrawAnimalShow,
           dismissHint,

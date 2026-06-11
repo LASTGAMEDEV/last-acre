@@ -37,6 +37,7 @@ function BankingSection() {
     money, loans, savings, timeDeposits, salesLog, loanHistory, day,
     requestLoan, repayLoan, depositSavings, withdrawSavings,
     openTimeDeposit, closeTimeDeposit, resetGame, renegotiateLoan,
+    familyLoanUsedDay, takeFamilyLoan,
   } = useGameStore();
 
   const [loanAmount, setLoanAmount]   = useState('');
@@ -125,6 +126,48 @@ function BankingSection() {
           <Text style={styles.scoreBarTick}>850</Text>
         </View>
       </View>
+
+      {/* Family Emergency Loan */}
+      {(() => {
+        const COOLDOWN = 1080; // 3 game years
+        const lastUsed = familyLoanUsedDay ?? null;
+        const cooldownLeft = lastUsed !== null ? Math.max(0, COOLDOWN - (day - lastUsed)) : 0;
+        const isCashCrisis = money < 2000;
+        const hasDefaulted = loans.some(l => l.defaulted && !l.paid);
+        const eligible = (isCashCrisis || hasDefaulted) && cooldownLeft === 0;
+        if (!eligible && cooldownLeft === 0 && !isCashCrisis && !hasDefaulted) return null;
+        return (
+          <View style={[styles.section, { borderColor: '#c8860a55', borderWidth: 1 }]}>
+            <Text style={[styles.sectionTitle, { color: '#ffa726' }]}>👨‍👩‍👧 Family Emergency Loan</Text>
+            <Text style={{ color: C.textMuted, fontSize: F.size.sm, marginBottom: 10, lineHeight: 18 }}>
+              Your family offers an interest-free loan of $10,000 — no questions asked. Repay within 180 days to protect the relationship.
+            </Text>
+            {cooldownLeft > 0 ? (
+              <Text style={{ color: '#888', fontSize: F.size.sm }}>
+                Available again in {cooldownLeft} days (used {lastUsed !== null ? `on day ${lastUsed}` : ''})
+              </Text>
+            ) : eligible ? (
+              <TouchableOpacity
+                style={{ backgroundColor: '#c8860a', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
+                onPress={() => Alert.alert(
+                  '👨‍👩‍👧 Family Loan',
+                  'Your family will lend you $10,000 at 0% interest, due in 180 days.\n\nThis can only be used once every 3 years.',
+                  [
+                    { text: 'Not now', style: 'cancel' },
+                    { text: 'Accept $10,000', onPress: takeFamilyLoan },
+                  ]
+                )}
+              >
+                <Text style={{ color: C.white, fontWeight: 'bold', fontSize: F.size.md }}>Accept $10,000 · 0% interest · 180 days</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={{ color: '#888', fontSize: F.size.sm }}>
+                Available when cash is below $2,000 or a loan is in default.
+              </Text>
+            )}
+          </View>
+        );
+      })()}
 
       {/* Custom loan form */}
       <View style={styles.section}>
