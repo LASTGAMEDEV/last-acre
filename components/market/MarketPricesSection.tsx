@@ -104,6 +104,8 @@ export default function MarketPricesSection() {
     hapticEnabled,
     inventoryReserves,
     setInventoryReserve,
+    activeShocks,
+    priceMomentum,
   } = useGameStore();
 
   const [selectedCrop, setSelectedCrop] = useState<string>(CROP_TYPES[0].id);
@@ -291,6 +293,84 @@ export default function MarketPricesSection() {
               <Text style={[styles.statValue, { color: C.textMuted }]}>${selected.basePrice.toFixed(2)}</Text>
             </View>
           </View>
+
+          {/* Price Drivers */}
+          {(() => {
+            const drivers: { icon: string; text: string; color: string }[] = [];
+
+            // Seasonal factor
+            if (isPeakSeason) {
+              drivers.push({ icon: '🌾', text: `Peak harvest season — supply high, prices soft`, color: '#ffa726' });
+            } else {
+              const offPct = Math.round(((current - selected.basePrice) / selected.basePrice) * 100);
+              if (offPct > 5) {
+                drivers.push({ icon: '📈', text: `Off-season: +${offPct}% above base price`, color: C.green });
+              } else if (offPct < -5) {
+                drivers.push({ icon: '📉', text: `Off-season: ${offPct}% below base price`, color: '#ef5350' });
+              }
+            }
+
+            // Active shocks for this crop or global
+            for (const shock of (activeShocks ?? []).filter(s => s.commodityId === selectedCrop || s.commodityId === null)) {
+              const pct = Math.round(Math.abs(shock.magnitude) * 100);
+              const dir = shock.magnitude > 0 ? '+' : '-';
+              drivers.push({
+                icon: '⚡',
+                text: `Market shock ${dir}${pct}% · ${shock.remainingDays}d remaining`,
+                color: shock.magnitude > 0 ? C.green : '#ef5350',
+              });
+            }
+
+            // News events for this crop or global
+            for (const ev of (newsEvents ?? []).filter(e => e.cropId === selectedCrop || e.cropId === null)) {
+              const pct = Math.round(Math.abs(ev.modifier - 1) * 100);
+              const up = ev.modifier > 1;
+              const label = ev.description.length > 38 ? ev.description.slice(0, 38) + '…' : ev.description;
+              drivers.push({
+                icon: '📰',
+                text: `${label} (${up ? '+' : '-'}${pct}% · ${ev.daysRemaining}d)`,
+                color: up ? C.green : '#ef5350',
+              });
+            }
+
+            // Active sell pressure this crop
+            const pressure = (sellPressures ?? []).find(sp => sp.cropId === selectedCrop);
+            if (pressure) {
+              const pressPct = Math.round((1 - pressure.modifier) * 100);
+              drivers.push({
+                icon: '📦',
+                text: `Your sell pressure -${pressPct}% · expires day ${pressure.expiresDay}`,
+                color: '#ffb74d',
+              });
+            }
+
+            // Momentum
+            const mom = (priceMomentum ?? {})[selectedCrop] ?? 0;
+            if (Math.abs(mom) > 0.01) {
+              const mPct = Math.round(Math.abs(mom) * 100);
+              drivers.push({
+                icon: mom > 0 ? '↗' : '↘',
+                text: `${mom > 0 ? 'Rising' : 'Falling'} momentum ${mPct}%/day`,
+                color: mom > 0 ? C.green : '#ef9a9a',
+              });
+            }
+
+            if (drivers.length === 0) {
+              drivers.push({ icon: '⚖️', text: 'No major price factors active', color: '#555' });
+            }
+
+            return (
+              <View style={styles.driversPanel}>
+                <Text style={styles.driversPanelTitle}>💡 Why this price?</Text>
+                {drivers.map((d, i) => (
+                  <View key={i} style={styles.driverRow}>
+                    <Text style={{ fontSize: 11 }}>{d.icon}</Text>
+                    <Text style={[styles.driverText, { color: d.color }]}>{d.text}</Text>
+                  </View>
+                ))}
+              </View>
+            );
+          })()}
 
           {/* Sell signal */}
           <View style={[styles.signalPanel, { borderLeftColor: sellSignal.color }]}>
@@ -611,6 +691,11 @@ const styles = StyleSheet.create({
   invSellText: { color: C.green, fontSize: 11, fontWeight: 'bold' },
   spoilageWarn: { backgroundColor: '#2a1400', borderRadius: R.sm, padding: S.sm, marginBottom: 6, borderLeftWidth: 3, borderLeftColor: '#ff7043' },
   spoilageWarnText: { color: '#ff8a65', fontSize: 11 },
+
+  driversPanel: { marginTop: S.sm, backgroundColor: C.bgCard, borderRadius: R.md, padding: 10 },
+  driversPanelTitle: { color: '#555', fontSize: 9, fontWeight: 'bold', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+  driverRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginBottom: 3 },
+  driverText: { flex: 1, fontSize: 11 },
 
   sellPressureWarn: { color: '#ffb74d', fontSize: 11, marginBottom: 6, textAlign: 'center' },
   sellPressureActive: { color: '#ef9a9a', fontSize: 11, marginBottom: 6, textAlign: 'center' },
