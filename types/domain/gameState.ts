@@ -381,6 +381,7 @@ export interface GameState {
   clearBreedingPair: (femaleId: string) => void;
   startHybridization: (cropId: string, parentAId: string, parentBId: string) => void;
   selectSeedForParcel: (parcelId: string, seedEntryId: string | null) => void;
+  scheduleMaintenance: (machineId: string) => void;
   startRepair: (machineId: string) => void;
   buyAttachment: (typeId: string) => void;
   buyTrailer: (typeId: string) => void;

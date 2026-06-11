@@ -42,6 +42,7 @@ function hasSecadero(buildings: string[]): boolean {
 }
 
 export interface MachineryActions {
+  scheduleMaintenance: (machineId: string) => void;
   startRepair: (machineId: string) => void;
   buyMachine: (typeId: string) => void;
   buyAttachment: (typeId: string) => void;
@@ -67,6 +68,29 @@ export interface MachineryActions {
 }
 
 export const createMachineryActions: ActionFactory<MachineryActions> = (set, get) => ({
+  scheduleMaintenance: (machineId) => {
+    const state = get();
+    const machine = (state.machines ?? []).find(m => m.id === machineId);
+    if (!machine) return;
+    const alreadyPending = (state.machineRepairs ?? []).some(r => r.machineId === machineId && r.startDay === null);
+    if (alreadyPending) return;
+    const mt = MACHINE_TYPES.find(t => t.id === machine.typeId);
+    const baseRepairCost = Math.round((mt?.cost ?? 5000) * 0.25);
+    const cond = machine.condition ?? 100;
+    const wearFactor = Math.max(0, (90 - cond) / 90);
+    const maintenanceCost = Math.max(500, Math.round(baseRepairCost * 0.4 + baseRepairCost * 0.6 * wearFactor));
+    if (state.money < maintenanceCost) return;
+    const newRepair = {
+      id: `repair_maint_${machineId}_${state.day}`,
+      machineId,
+      startDay: null,
+      readyDay: null,
+      cost: maintenanceCost,
+      insurancePaid: 0,
+    };
+    set({ machineRepairs: [...(state.machineRepairs ?? []), newRepair] });
+  },
+
   startRepair: (machineId) => {
     const state = get();
     const repair = (state.machineRepairs ?? []).find(

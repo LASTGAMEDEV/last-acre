@@ -12,7 +12,7 @@ type MachineryTab = 'fleet' | 'attachments' | 'jobs' | 'deliveries';
 
 // ── Fleet Tab ────────────────────────────────────────────────────────────────
 function FleetTab() {
-  const { machines, trailers, tractorJobs, harvestJobs, machineRepairs, day, fuel, buyFuel, buildings, money, listings, fuelPrice, startRepair } = useGameStore();
+  const { machines, trailers, tractorJobs, harvestJobs, machineRepairs, day, fuel, buyFuel, buildings, money, listings, fuelPrice, startRepair, scheduleMaintenance } = useGameStore();
   const fuelCapacity = (buildings ?? []).reduce((cap: number, id: string) => {
     if (id === 'bld_fuel_tank_s') return cap + 500;
     if (id === 'bld_fuel_tank_l') return cap + 2000;
@@ -27,6 +27,9 @@ function FleetTab() {
     (tractorJobs ?? []).find((j: TractorJob) => j.tractorId === tractorId);
   const getJobForCombine = (combineId: string): HarvestJob | undefined =>
     (harvestJobs ?? []).find((j: HarvestJob) => j.combineId === combineId);
+
+  const activeTractorIds = new Set((tractorJobs ?? []).filter((j: TractorJob) => j.completesDay > day).map((j: TractorJob) => j.tractorId));
+  const activeCombineIds = new Set((harvestJobs ?? []).filter((j: HarvestJob) => j.completesDay > day).map((j: HarvestJob) => j.combineId));
 
   const tractors   = (machines ?? []).filter((m: OwnedMachine) => MACHINE_TYPES.find(t => t.id === m.typeId)?.category === 'tractor');
   const combines   = (machines ?? []).filter((m: OwnedMachine) => MACHINE_TYPES.find(t => t.id === m.typeId)?.category === 'harvester');
@@ -43,6 +46,14 @@ function FleetTab() {
     const cond = m.condition ?? 100;
     const condColor = cond >= 70 ? '#81c784' : cond >= 35 ? '#ffb74d' : '#ef5350';
     const condLabel = cond >= 70 ? 'Good' : cond >= 35 ? 'Worn' : 'Critical';
+    const isActive = activeTractorIds.has(m.id) || activeCombineIds.has(m.id);
+    const dailyDrain = isActive ? 0.3 : 0.05;
+    const daysUntilCritical = cond > 35 ? Math.floor((cond - 35) / dailyDrain) : 0;
+    const daysUntilZero = cond > 0 ? Math.floor(cond / dailyDrain) : 0;
+    const breakdownRisk = cond < 35 ? 'imminent' : cond < 60 ? 'high' : cond < 75 ? 'moderate' : 'low';
+    const mt2 = MACHINE_TYPES.find(t => t.id === m.typeId);
+    const maintenanceCost = Math.max(500, Math.round((mt2?.cost ?? 5000) * 0.25 * (0.4 + 0.6 * Math.max(0, (90 - cond) / 90))));
+    const hasPendingRepair = !!repair;
     return (
       <View key={m.id} style={s.machineCard}>
         <View style={s.machineTitleRow}>
@@ -57,13 +68,36 @@ function FleetTab() {
           </View>
           <Text style={[s.condPct, { color: condColor }]}>{Math.round(cond)}% {condLabel}</Text>
         </View>
+        {/* Breakdown risk forecast */}
+        {cond < 90 && !hasPendingRepair && (
+          <View style={s.riskRow}>
+            <Text style={s.riskIcon}>
+              {breakdownRisk === 'imminent' ? '🔴' : breakdownRisk === 'high' ? '🟠' : breakdownRisk === 'moderate' ? '🟡' : '🟢'}
+            </Text>
+            <Text style={[s.riskText, { color: condColor }]}>
+              {cond < 35
+                ? `Critical — breakdown imminent`
+                : `~${daysUntilCritical}d until critical${isActive ? ' (active)' : ''} · ${daysUntilZero}d until failure`}
+            </Text>
+          </View>
+        )}
         {repair && (
           <Text style={s.repairBadge}>
-            {repair.startDay === null ? '⚠️ Broken' : `🔧 Repairing · ready day ${repair.readyDay}`}
+            {repair.startDay === null ? `⏳ Maintenance queued · $${Math.max(0, repair.cost - repair.insurancePaid).toLocaleString()}` : `🔧 Repairing · ready day ${repair.readyDay}`}
           </Text>
         )}
         {cond < 35 && !repair && (
           <Text style={s.condWarning}>⚠️ Low condition — schedule a repair soon</Text>
+        )}
+        {/* Schedule maintenance button */}
+        {cond < 70 && !hasPendingRepair && (
+          <TouchableOpacity
+            style={[s.maintBtn, money < maintenanceCost && s.maintBtnDisabled]}
+            onPress={() => scheduleMaintenance(m.id)}
+            disabled={money < maintenanceCost}
+          >
+            <Text style={s.maintBtnText}>🔧 Schedule Maintenance · ${maintenanceCost.toLocaleString()}</Text>
+          </TouchableOpacity>
         )}
         {isListed ? (
           <View style={s.escrowBadge}>
@@ -436,6 +470,12 @@ const s = StyleSheet.create({
   condFill:     { height: 5, borderRadius: 3 },
   condPct:      { fontSize: 10, fontWeight: 'bold', width: 72, textAlign: 'right' },
   condWarning:  { color: '#ef5350', fontSize: 10, marginBottom: 4 },
+  riskRow:      { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
+  riskIcon:     { fontSize: 10 },
+  riskText:     { fontSize: 10, flex: 1 },
+  maintBtn:     { backgroundColor: '#1a2a3a', borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#2a4a6a', alignSelf: 'flex-start', marginTop: 4 },
+  maintBtnDisabled: { opacity: 0.4 },
+  maintBtnText: { color: '#64b5f6', fontSize: 11, fontWeight: 'bold' },
   empty:        { color: C.textFaint, fontSize: F.size.md, textAlign: 'center', marginTop: 40, paddingHorizontal: 20 },
   hitchRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: S.sm },
   smallBtn:     { backgroundColor: C.bgElevated, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6 },

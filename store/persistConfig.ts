@@ -86,6 +86,7 @@ export function partializeGameState(state: GameState) {
           approveAnnualPlan, dismissAnnualPlanRecommendation, completeAnnualPlanReview,
           resolveChoiceEvent,
           visitNeighbor, sendNeighborGift, helpNeighborHarvest,
+          scheduleMaintenance,
           ...dataState
         } = state;
         return {
