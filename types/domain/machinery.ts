@@ -11,6 +11,7 @@ export interface OwnedMachine {
   id: string;
   typeId: string;
   purchasedDay: number;
+  condition?: number; // 0–100, defaults to 100
 }
 
 export interface OwnedAttachment {

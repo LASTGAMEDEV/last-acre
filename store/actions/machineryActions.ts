@@ -106,7 +106,7 @@ export const createMachineryActions: ActionFactory<MachineryActions> = (set, get
         if (!hasLevel) return;
       }
     }
-    const newMachine: OwnedMachine = { id: `machine_${Date.now()}`, typeId, purchasedDay: state.day };
+    const newMachine: OwnedMachine = { id: `machine_${Date.now()}`, typeId, purchasedDay: state.day, condition: 100 };
     set({ money: state.money - cost, machines: [...state.machines, newMachine] });
   },
 

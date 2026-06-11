@@ -1785,9 +1785,11 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
 
         let machineRepairs: MachineRepair[] = [...(state.machineRepairs ?? [])];
 
-        // Complete any repairs that are ready
+        // Complete any repairs that are ready and restore condition
+        const repairedMachineIds = new Set<string>();
         machineRepairs = machineRepairs.filter(r => {
           if (r.readyDay !== null && newDay >= r.readyDay) {
+            repairedMachineIds.add(r.machineId);
             summary.push({
               id: `repair_done_${r.machineId}`,
               icon: '🔧',
@@ -1798,6 +1800,16 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
             return false;
           }
           return true;
+        });
+
+        // Drain machine condition daily; restore repaired machines to 90
+        const activeTractorIds = new Set((state.tractorJobs ?? []).filter(j => j.completesDay > newDay).map(j => j.tractorId));
+        const activeCombineIds = new Set((state.harvestJobs ?? []).filter(j => j.completesDay > newDay).map(j => j.combineId));
+        const updatedMachines = (state.machines ?? []).map(m => {
+          if (repairedMachineIds.has(m.id)) return { ...m, condition: 90 };
+          const cur = m.condition ?? 100;
+          const drain = activeTractorIds.has(m.id) || activeCombineIds.has(m.id) ? 0.3 : 0.05;
+          return { ...m, condition: Math.max(0, parseFloat((cur - drain).toFixed(2))) };
         });
 
         // Roll for a new random event (8% chance)
@@ -4756,7 +4768,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
           dynastyAuctionWins: (state.dynastyAuctionWins ?? 0) + dynastyAuctionWinsDelta,
           nextAnimalAuctionDay,
           animals: [...animals, ...auctionAnimalAdditions],
-          machines: [...(state.machines ?? []), ...auctionMachineAdditions],
+          machines: [...updatedMachines, ...auctionMachineAdditions],
           daySummary: summary,
           prevDayMoney: state.money,
           timeDeposits,

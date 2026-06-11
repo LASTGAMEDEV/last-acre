@@ -40,16 +40,30 @@ function FleetTab() {
     const isListed = (listings ?? []).some(
       l => l.category === 'machinery' && l.machineId === m.id && !l.resolved
     );
+    const cond = m.condition ?? 100;
+    const condColor = cond >= 70 ? '#81c784' : cond >= 35 ? '#ffb74d' : '#ef5350';
+    const condLabel = cond >= 70 ? 'Good' : cond >= 35 ? 'Worn' : 'Critical';
     return (
       <View key={m.id} style={s.machineCard}>
         <View style={s.machineTitleRow}>
           <Text style={s.machineName}>{mt.name}</Text>
           <GuideButton entryId={GUIDE_ENTRY_IDS.machine(mt.id)} compact />
         </View>
+        {/* Condition bar */}
+        <View style={s.condRow}>
+          <Text style={s.condLabel}>Condition</Text>
+          <View style={s.condTrack}>
+            <View style={[s.condFill, { width: `${cond}%` as any, backgroundColor: condColor }]} />
+          </View>
+          <Text style={[s.condPct, { color: condColor }]}>{Math.round(cond)}% {condLabel}</Text>
+        </View>
         {repair && (
           <Text style={s.repairBadge}>
             {repair.startDay === null ? '⚠️ Broken' : `🔧 Repairing · ready day ${repair.readyDay}`}
           </Text>
+        )}
+        {cond < 35 && !repair && (
+          <Text style={s.condWarning}>⚠️ Low condition — schedule a repair soon</Text>
         )}
         {isListed ? (
           <View style={s.escrowBadge}>
@@ -383,6 +397,12 @@ const s = StyleSheet.create({
   repairBadge:  { color: C.red, fontSize: F.size.sm, marginBottom: 2 },
   jobBadge:     { color: C.amber, fontSize: F.size.sm },
   idleBadge:    { color: C.textDim, fontSize: F.size.sm },
+  condRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: S.xs },
+  condLabel:    { color: C.textMuted, fontSize: 10, width: 60 },
+  condTrack:    { flex: 1, height: 5, backgroundColor: C.bgDeep, borderRadius: 3, overflow: 'hidden' },
+  condFill:     { height: 5, borderRadius: 3 },
+  condPct:      { fontSize: 10, fontWeight: 'bold', width: 72, textAlign: 'right' },
+  condWarning:  { color: '#ef5350', fontSize: 10, marginBottom: 4 },
   empty:        { color: C.textFaint, fontSize: F.size.md, textAlign: 'center', marginTop: 40, paddingHorizontal: 20 },
   hitchRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: S.sm },
   smallBtn:     { backgroundColor: C.bgElevated, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6 },
