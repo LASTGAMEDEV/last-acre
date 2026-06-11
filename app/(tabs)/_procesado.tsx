@@ -14,6 +14,27 @@ import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 
+function calcInputCost(
+  recipe: ProcessingRecipe,
+  batches: number,
+  prices: { cropId: string; price: number }[],
+  animalPrices: Record<string, number>,
+): number {
+  return recipe.inputs.reduce((sum, input) => {
+    let unitPrice = 0;
+    if (input.source === 'crop') {
+      const crop = CROP_TYPES.find(c => c.id === input.itemId);
+      unitPrice = prices.find(p => p.cropId === input.itemId)?.price ?? crop?.basePrice ?? 0;
+    } else if (input.source === 'animal') {
+      const product = ANIMAL_PRODUCTS.find(p => p.productType === input.itemId);
+      unitPrice = animalPrices[input.itemId] ?? product?.basePrice ?? 0;
+    } else if (input.source === 'processed') {
+      unitPrice = PROCESSED_ITEM_DEFS.find(d => d.id === input.itemId)?.basePrice ?? 0;
+    }
+    return sum + input.quantity * batches * unitPrice;
+  }, 0);
+}
+
 const STAGE_LABELS: Record<number, string> = {
   1: 'Stage 1 — Basic Equipment',
   2: 'Stage 2 — Processing Rooms',
@@ -61,7 +82,7 @@ export default function ProcesadoScreen() {
     processProduct, sellProcessed, processingBuildings, workers, money,
     buyProcessingBuilding, upgradeProcessingBuilding,
     assignWorkerToProcessingBuilding, unassignWorkerFromProcessingBuilding,
-    installColdStorage,
+    installColdStorage, prices, animalPrices,
   } = useGameStore();
 
   const [activeTab, setActiveTab] = useState<TabId>('recipes');
@@ -203,6 +224,9 @@ export default function ProcesadoScreen() {
                             const def = PROCESSED_ITEM_DEFS.find(d => d.id === recipe.outputItemId);
                             const tierMult = ownedBuilding ? { 1: 1, 2: 2, 3: 4 }[ownedBuilding.tier] ?? 1 : 1;
                             const outputValue = def ? Math.round(recipe.baseOutputQuantity * b * tierMult * def.basePrice * 0.8) : 0;
+                            const inputCost = Math.round(calcInputCost(recipe, b, prices ?? [], animalPrices ?? {}));
+                            const profit = outputValue - inputCost;
+                            const profitColor = profit > 0 ? '#4caf50' : profit < 0 ? '#ef5350' : '#888';
                             const tierLocked = isOwned && ownedBuilding.tier < recipe.minBuildingTier;
 
                             return (
@@ -228,6 +252,17 @@ export default function ProcesadoScreen() {
                                     <Text style={styles.outputValue}>~${outputValue.toLocaleString()}</Text>
                                   </View>
                                 </View>
+                                {inputCost > 0 && (
+                                  <View style={styles.profitRow}>
+                                    <Text style={styles.profitLabel}>Cost ~${inputCost.toLocaleString()}</Text>
+                                    <Text style={[styles.profitValue, { color: profitColor }]}>
+                                      {profit >= 0 ? '+' : ''}${profit.toLocaleString()} margin
+                                    </Text>
+                                  </View>
+                                )}
+                                {isOwned && max > 0 && max < 3 && (
+                                  <Text style={styles.stockWarn}>⚠ Only {max} batch{max !== 1 ? 'es' : ''} of input available</Text>
+                                )}
 
                                 <View style={styles.batchRow}>
                                   <TouchableOpacity style={styles.batchBtn} onPress={() => setBatchCounts(p => ({ ...p, [recipe.id]: Math.max(1, b - 1) }))} disabled={!isOwned}>
@@ -411,6 +446,10 @@ const styles = StyleSheet.create({
   outputPill: { backgroundColor: C.bgElevated, borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 3 },
   outputPillText: { color: C.textDim, fontSize: 11, fontWeight: 'bold' },
   outputValue: { color: C.amber, fontSize: 11, marginTop: 2 },
+  profitRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, backgroundColor: C.bgDeep, borderRadius: R.xs, paddingHorizontal: 8, paddingVertical: 3 },
+  profitLabel: { color: C.textFaint, fontSize: 10 },
+  profitValue: { fontSize: 10, fontWeight: 'bold' },
+  stockWarn:   { color: '#f59e0b', fontSize: 10, marginTop: 3 },
 
   batchRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   batchBtn: { backgroundColor: C.divider, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6 },
