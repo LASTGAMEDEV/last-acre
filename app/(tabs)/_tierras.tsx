@@ -684,8 +684,23 @@ export default function TierrasScreen() {
             if (parcel.diseased) factors.push({ label: 'Disease', mod: 0.80 });
             if (parcel.hasWeeds) factors.push({ label: 'Weeds', mod: 0.85 });
             if (parcel.plantedCrop?.frostDamage && parcel.plantedCrop.frostDamage > 0) factors.push({ label: 'Frost', mod: Math.max(0.1, 1 - parcel.plantedCrop.frostDamage) });
+            if (parcel.organicStatus === 'organic') factors.push({ label: 'Organic', mod: 1.10 });
+            if (parcel.precisionApplied) factors.push({ label: 'Precision', mod: 1.05 });
+            // Estimated yield
+            const cropId = parcel.plantedCrop?.cropId;
+            const cropTypeDef = cropId ? CROP_TYPES.find(c => c.id === cropId) : undefined;
+            const combinedMod = factors.reduce((m, f) => m * f.mod, 1.0);
+            const estKg = cropTypeDef ? Math.round(cropTypeDef.baseYield * parcel.hectares * combinedMod) : 0;
+            const marketPrice = cropId ? (prices.find(p => p.cropId === cropId)?.price ?? cropTypeDef?.basePrice ?? 0) : 0;
+            const estRevenue = Math.round(estKg * marketPrice);
             return (
               <View>
+                {estKg > 0 && (
+                  <View style={localStyles.yieldEstRow}>
+                    <Text style={localStyles.yieldEstLabel}>Est. yield</Text>
+                    <Text style={localStyles.yieldEstValue}>~{estKg.toLocaleString()} {cropTypeDef?.unit ?? 'kg'} · ~${estRevenue.toLocaleString()}</Text>
+                  </View>
+                )}
                 <View style={localStyles.yieldFactors}>
                   {factors.map(f => (
                     <Text key={f.label} style={[localStyles.yieldChip, { color: f.mod >= 1 ? '#86efac' : '#fca5a5' }]}>
@@ -1707,6 +1722,9 @@ const localStyles = StyleSheet.create({
   opBtnYellow:    { backgroundColor: '#e65100' },
   opBtnRed:       { backgroundColor: C.redDark },
   opBtnText:      { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
+  yieldEstRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#0d1a2e', borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 4, marginTop: S.xs },
+  yieldEstLabel:  { color: '#90caf9', fontSize: 10 },
+  yieldEstValue:  { color: '#4caf50', fontSize: 10, fontWeight: 'bold' },
   yieldFactors:   { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: S.sm },
   yieldChip:      { fontSize: F.size.xs, fontWeight: 'bold', backgroundColor: '#0d1a2e', borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 2 },
   historyRow:     { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginBottom: 4 },
