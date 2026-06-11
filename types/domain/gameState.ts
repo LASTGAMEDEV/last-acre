@@ -45,6 +45,7 @@ import type { HenilBatch, IncubationBatch, ProductionBuildingState } from './pro
 import type { DaySummaryEvent, FairEvent, FieldEvent, GameEvent } from './uiEvents';
 import type { FamilyState } from '../../features/family/familyTypes';
 import type { FamilyActions } from '../../features/family/familyActions';
+import type { NeighborActions } from '../../store/actions/neighborActions';
 import type { ReputationState } from '../../features/reputation/reputationTypes';
 import type { NeighborState, NeighborLandOpportunity } from '../../features/neighbors/neighborTypes';
 import type { AdvisorStyle, AnnualPlanningState } from './annualPlanning';
@@ -158,6 +159,7 @@ export interface GameState {
   reputation: ReputationState;
   neighbors: NeighborState;
   pendingLandOpportunities: NeighborLandOpportunity[];
+  neighborActionCooldowns: Record<string, number>;
   gameSetupComplete: boolean;
   annualPlanning: AnnualPlanningState;
   machineRepairs: MachineRepair[];
@@ -485,4 +487,8 @@ export interface GameState {
   pendingChoiceEvent: ChoiceEventTemplate | null;
   firedChoiceEventIds: string[];
   resolveChoiceEvent: (optionIndex: number) => void;
+  // Neighbor relationship actions
+  visitNeighbor: NeighborActions['visitNeighbor'];
+  sendNeighborGift: NeighborActions['sendNeighborGift'];
+  helpNeighborHarvest: NeighborActions['helpNeighborHarvest'];
 }

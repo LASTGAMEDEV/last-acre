@@ -238,6 +238,7 @@ import { createAuctionActions } from './actions/auctionActions';
 import { createElectricityActions } from './actions/electricityActions';
 import { createFamilyActions } from '../features/family/familyActions';
 import { createChoiceEventActions } from './actions/choiceEventActions';
+import { createNeighborActions } from './actions/neighborActions';
 import { advanceGameDay } from '../simulation/advanceDay';
 import {
   adjustAnnualPlanGoalTarget,
@@ -408,6 +409,7 @@ export const useGameStore = create<GameState>()(
       ...createElectricityActions(set, get),
       ...createFamilyActions(set, get),
       ...createChoiceEventActions(set, get),
+      ...createNeighborActions(set, get),
 
       advanceDay: () => advanceGameDay(set, get),
       advanceDays: (n: number) => {

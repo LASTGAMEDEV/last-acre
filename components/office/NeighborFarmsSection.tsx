@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { NEIGHBOR_PROFILES, NEIGHBOR_IDS } from '../../data/neighborData';
@@ -29,8 +29,19 @@ function RelBar({ value }: { value: number }) {
   );
 }
 
+const GIFT_OPTIONS = [
+  { label: 'Small gift', amount: 50,  rel: 6 },
+  { label: 'Nice gift',  amount: 200, rel: 12 },
+  { label: 'Big gift',   amount: 500, rel: 20 },
+];
+
 export default function NeighborFarmsSection() {
-  const { neighbors, pendingLandOpportunities = [], day } = useGameStore();
+  const {
+    neighbors, pendingLandOpportunities = [], day, money,
+    neighborActionCooldowns = {},
+    visitNeighbor, sendNeighborGift, helpNeighborHarvest,
+  } = useGameStore();
+  const [giftModal, setGiftModal] = useState<NeighborId | null>(null);
 
   if (!neighbors) {
     return (
@@ -45,7 +56,8 @@ export default function NeighborFarmsSection() {
   const hasOpportunities = pendingLandOpportunities.length > 0;
 
   return (
-    <ScrollView contentContainerStyle={nf.container} showsVerticalScrollIndicator={false}>
+    <>
+    <ScrollView contentContainerStyle={nf.container} showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
 
       {/* Land opportunities banner */}
       {hasOpportunities && (
@@ -151,11 +163,87 @@ export default function NeighborFarmsSection() {
             {status === 'bankrupt' && (
               <Text style={nf.dangerLine}>🔴 Bankrupt — watch for auction or fire sale</Text>
             )}
+
+            {/* Relationship actions */}
+            {status !== 'bankrupt' && status !== 'sold' && (() => {
+              const visitKey  = `${id}_visit`;
+              const giftKey   = `${id}_gift`;
+              const helpKey   = `${id}_help`;
+              const visitLeft = Math.max(0, 14 - (day - (neighborActionCooldowns[visitKey] ?? 0)));
+              const giftLeft  = Math.max(0, 30 - (day - (neighborActionCooldowns[giftKey] ?? 0)));
+              const helpLeft  = Math.max(0, 60 - (day - (neighborActionCooldowns[helpKey] ?? 0)));
+              return (
+                <View style={nf.actionRow}>
+                  <TouchableOpacity
+                    style={[nf.actionBtn, visitLeft > 0 && nf.actionBtnDisabled]}
+                    disabled={visitLeft > 0}
+                    onPress={() => visitNeighbor(id)}
+                  >
+                    <Text style={nf.actionBtnIcon}>👋</Text>
+                    <Text style={[nf.actionBtnLabel, visitLeft > 0 && nf.actionBtnLabelDisabled]}>
+                      {visitLeft > 0 ? `Visit (${visitLeft}d)` : 'Visit +4'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[nf.actionBtn, giftLeft > 0 && nf.actionBtnDisabled]}
+                    disabled={giftLeft > 0}
+                    onPress={() => setGiftModal(id)}
+                  >
+                    <Text style={nf.actionBtnIcon}>🎁</Text>
+                    <Text style={[nf.actionBtnLabel, giftLeft > 0 && nf.actionBtnLabelDisabled]}>
+                      {giftLeft > 0 ? `Gift (${giftLeft}d)` : 'Gift…'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {(status === 'struggling') && (
+                    <TouchableOpacity
+                      style={[nf.actionBtn, nf.actionBtnHelp, helpLeft > 0 && nf.actionBtnDisabled]}
+                      disabled={helpLeft > 0}
+                      onPress={() => helpNeighborHarvest(id)}
+                    >
+                      <Text style={nf.actionBtnIcon}>🌾</Text>
+                      <Text style={[nf.actionBtnLabel, helpLeft > 0 && nf.actionBtnLabelDisabled]}>
+                        {helpLeft > 0 ? `Help (${helpLeft}d)` : 'Help +15'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })()}
           </View>
         );
       })}
 
     </ScrollView>
+
+    {/* Gift modal */}
+      <Modal visible={giftModal !== null} transparent animationType="fade" onRequestClose={() => setGiftModal(null)}>
+        <View style={nf.modalOverlay}>
+          <View style={nf.modalBox}>
+            <Text style={nf.modalTitle}>🎁 Send a Gift</Text>
+            {giftModal && <Text style={nf.modalSub}>To {NEIGHBOR_PROFILES[giftModal]?.displayName}</Text>}
+            {GIFT_OPTIONS.map(opt => (
+              <TouchableOpacity
+                key={opt.amount}
+                style={[nf.modalOption, money < opt.amount && nf.modalOptionDisabled]}
+                disabled={money < opt.amount}
+                onPress={() => {
+                  if (giftModal) sendNeighborGift(giftModal, opt.amount);
+                  setGiftModal(null);
+                }}
+              >
+                <Text style={nf.modalOptionLabel}>{opt.label}</Text>
+                <Text style={nf.modalOptionMeta}>${opt.amount} · +{opt.rel} relationship</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity onPress={() => setGiftModal(null)} style={nf.modalCancel}>
+              <Text style={nf.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -203,4 +291,25 @@ const nf = StyleSheet.create({
   emptyIcon:      { fontSize: 40 },
   emptyTitle:     { color: C.text, fontSize: F.size.lg, fontWeight: 'bold' },
   emptyDetail:    { color: C.textMuted, fontSize: F.size.sm, textAlign: 'center' },
+
+  // Relationship actions
+  actionRow:            { flexDirection: 'row', gap: S.xs, flexWrap: 'wrap', marginTop: S.xs },
+  actionBtn:            { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.bgDeep, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#334' },
+  actionBtnHelp:        { borderColor: '#2e5c28' },
+  actionBtnDisabled:    { opacity: 0.45 },
+  actionBtnIcon:        { fontSize: 13 },
+  actionBtnLabel:       { color: C.text, fontSize: 11, fontWeight: 'bold' },
+  actionBtnLabelDisabled: { color: C.textFaint },
+
+  // Gift modal
+  modalOverlay:     { flex: 1, backgroundColor: '#000000aa', justifyContent: 'center', alignItems: 'center', padding: S.xl },
+  modalBox:         { backgroundColor: C.bgCard, borderRadius: R.lg, padding: S.lg, width: '100%', maxWidth: 340, gap: S.sm },
+  modalTitle:       { color: C.text, fontSize: F.size.lg, fontWeight: 'bold' },
+  modalSub:         { color: C.textMuted, fontSize: F.size.sm, marginBottom: S.xs },
+  modalOption:      { backgroundColor: C.bgDeep, borderRadius: R.md, padding: S.md, borderWidth: 1, borderColor: '#334' },
+  modalOptionDisabled: { opacity: 0.4 },
+  modalOptionLabel: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  modalOptionMeta:  { color: C.textMuted, fontSize: F.size.sm, marginTop: 2 },
+  modalCancel:      { alignItems: 'center', paddingVertical: S.sm },
+  modalCancelText:  { color: C.textMuted, fontSize: F.size.sm },
 });

@@ -292,6 +292,7 @@ export function makeInitialState() {
     reputation: INITIAL_REPUTATION_STATE,
     neighbors: INITIAL_NEIGHBOR_STATE,
     pendingLandOpportunities: [],
+    neighborActionCooldowns: {} as Record<string, number>,
     gameSetupComplete: false,
     machineRepairs: [] as MachineRepair[],
     npcFarms: initNpcFarms(),

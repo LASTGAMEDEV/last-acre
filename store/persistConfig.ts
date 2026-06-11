@@ -21,6 +21,7 @@ export function migrateGameState(persistedState: unknown): unknown {
   if (!s.family)                   s.family = INITIAL_FAMILY_STATE;
   if (!s.neighbors)                s.neighbors = INITIAL_NEIGHBOR_STATE;
   if (!s.pendingLandOpportunities) s.pendingLandOpportunities = [];
+  if (!s.neighborActionCooldowns)  s.neighborActionCooldowns = {};
   if (s.gameSetupComplete === undefined) s.gameSetupComplete = true; // existing saves already set up
   if (!s.annualPlanning) s.annualPlanning = createInitialAnnualPlanningState(typeof s.day === 'number' ? 1970 + Math.floor((s.day - 1) / 365) : 1970);
   // reputation field is now ReputationState — init fresh if it was a number
@@ -84,6 +85,7 @@ export function partializeGameState(state: GameState) {
           generateAnnualPlan, replaceAnnualPlanGoal, removeAnnualPlanGoal, adjustAnnualPlanGoal,
           approveAnnualPlan, dismissAnnualPlanRecommendation, completeAnnualPlanReview,
           resolveChoiceEvent,
+          visitNeighbor, sendNeighborGift, helpNeighborHarvest,
           ...dataState
         } = state;
         return {
@@ -112,6 +114,7 @@ export function repairHydratedState(state: GameState | undefined): void {
         state.family               = state.family ?? INITIAL_FAMILY_STATE;
         state.neighbors            = state.neighbors ?? INITIAL_NEIGHBOR_STATE;
         state.pendingLandOpportunities = state.pendingLandOpportunities ?? [];
+        state.neighborActionCooldowns  = state.neighborActionCooldowns ?? {};
         if (state.gameSetupComplete === undefined) state.gameSetupComplete = true;
         state.annualPlanning = state.annualPlanning ?? createInitialAnnualPlanningState(1970 + Math.floor(((state.day ?? 1) - 1) / 365));
         if (!state.reputation || typeof (state.reputation as unknown) === 'number') {
