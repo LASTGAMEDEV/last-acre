@@ -1044,6 +1044,49 @@ export default function TierrasScreen() {
             </View>
 
 
+            {/* Smart crop recommendations */}
+            {(() => {
+              const ha = plantingParcel?.hectares ?? 1;
+              const coopDiscount = cooperative?.member ? 0.90 : 1.0;
+              const topPicks = CROP_TYPES
+                .filter(c => {
+                  const inSeason = !!plantingParcel?.greenhouse || c.seasons.includes(currentSeason as any);
+                  const seedCost = c.seedCost * ha * coopDiscount;
+                  return inSeason && money >= seedCost;
+                })
+                .map(c => {
+                  const seedCost = c.seedCost * ha * coopDiscount;
+                  const rotation = plantingParcel?.lastCropId !== undefined && plantingParcel.lastCropId !== c.id;
+                  const soilMod = getSoilModifier(plantingParcel?.soilType, c.id);
+                  const currentPrice = prices.find(p => p.cropId === c.id)?.price ?? c.basePrice;
+                  const estProfit = c.baseYield * ha * soilMod * (rotation ? 1.15 : 1.0) * currentPrice - seedCost;
+                  const roi = seedCost > 0 ? estProfit / seedCost : 0;
+                  return { crop: c, roi, estProfit, rotation };
+                })
+                .sort((a, b) => b.roi - a.roi)
+                .slice(0, 3);
+              if (topPicks.length === 0) return null;
+              const medals = ['🥇', '🥈', '🥉'];
+              return (
+                <View style={{ marginBottom: 8, backgroundColor: '#0f1a0a', borderRadius: 8, padding: 8 }}>
+                  <Text style={{ color: '#4a7c59', fontSize: 10, fontWeight: 'bold', letterSpacing: 1, marginBottom: 6 }}>🎯 BEST PICKS FOR THIS PARCEL</Text>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    {topPicks.map(({ crop, estProfit, rotation }, i) => (
+                      <TouchableOpacity
+                        key={crop.id}
+                        style={{ flex: 1, backgroundColor: selectedCropId === crop.id ? '#1a3020' : '#131a14', borderRadius: 6, padding: 8, borderWidth: 1, borderColor: i === 0 ? '#4a7c59' : '#1a2a1a' }}
+                        onPress={() => { setSelectedCropId(crop.id); setSelectedSeedId(null); }}
+                      >
+                        <Text style={{ color: i === 0 ? '#a5d6a7' : C.textDim, fontSize: 11, fontWeight: 'bold' }}>{medals[i]} {crop.name}</Text>
+                        <Text style={{ color: C.green, fontSize: 10, marginTop: 2 }}>+${Math.round(estProfit).toLocaleString()}</Text>
+                        {rotation && <Text style={{ color: '#9ccc65', fontSize: 9, marginTop: 1 }}>🔄 rotation bonus</Text>}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              );
+            })()}
+
             <ScrollView style={styles.cropList} showsVerticalScrollIndicator={false}>
               {CROP_TYPES.map(crop => {
                 const isGreenhouse = !!plantingParcel?.greenhouse;

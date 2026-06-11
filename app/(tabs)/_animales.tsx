@@ -106,6 +106,7 @@ export default function AnimalesScreen() {
     workers, grainMissedDays, hayMissedDays, feedAnimals, inventory, animalsManuallyFed,
     trailers, deliveryJobs,
     designateAsSire, removeFromSirePen, sirePenAnimalIds,
+    animalWelfareScores,
   } = useGameStore();
   const hasAnimalWorker = (workers ?? []).some(
     (w: any) => w.role === 'livestock_hand' || w.role === 'veterinarian'
@@ -319,6 +320,46 @@ export default function AnimalesScreen() {
           <Text style={styles.batchCollectText}>🧺 Collect All Production</Text>
         </TouchableOpacity>
       )}
+
+      {/* Herd group summary */}
+      {animals.length > 0 && (() => {
+        const groups: Record<string, { count: number; sick: number; mature: number }> = {};
+        animals.forEach(a => {
+          if (!groups[a.typeId]) groups[a.typeId] = { count: 0, sick: 0, mature: 0 };
+          groups[a.typeId].count++;
+          if (a.sick) groups[a.typeId].sick++;
+          const type = ANIMAL_TYPES.find(t => t.id === a.typeId);
+          if (type && day - a.bornDay >= type.maturityDays) groups[a.typeId].mature++;
+        });
+        return (
+          <View style={{ backgroundColor: C.bgCard, borderRadius: 10, marginHorizontal: 8, marginBottom: 8, padding: 12 }}>
+            <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>🐾 Herd Overview</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {Object.entries(groups).map(([typeId, g]) => {
+                const type = ANIMAL_TYPES.find(t => t.id === typeId);
+                if (!type) return null;
+                const welfare = (animalWelfareScores ?? {})[typeId] as number | undefined;
+                const welfareColor = welfare == null ? C.textMuted : welfare >= 70 ? C.green : welfare >= 40 ? C.amber : C.red;
+                const productEmoji = type.productionType === 'eggs' ? '🥚' : type.productionType === 'milk' ? '🥛' : type.productionType === 'wool' ? '🧶' : type.productionType === 'honey' ? '🍯' : type.productionType === 'meat' ? '🥩' : '🐾';
+                return (
+                  <View key={typeId} style={{ backgroundColor: C.bgElevated, borderRadius: 8, padding: 10, minWidth: 100, flex: 1 }}>
+                    <Text style={{ color: C.text, fontSize: 12, fontWeight: 'bold' }}>{productEmoji} {type.name}</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 11 }}>{g.count} total · {g.mature} mature</Text>
+                    {welfare != null && (
+                      <Text style={{ color: welfareColor, fontSize: 11, fontWeight: 'bold', marginTop: 2 }}>
+                        Welfare {Math.round(welfare)}%
+                      </Text>
+                    )}
+                    {g.sick > 0 && (
+                      <Text style={{ color: C.red, fontSize: 11, marginTop: 2 }}>🤒 {g.sick} sick</Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        );
+      })()}
 
       {/* Owned animals */}
       <Text style={styles.sectionLabel}>My animals ({animals.length})</Text>
