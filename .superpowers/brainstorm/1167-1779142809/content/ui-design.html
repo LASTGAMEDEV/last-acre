@@ -1,0 +1,110 @@
+<h2>Living History System — UI Design</h2>
+<p class="subtitle">Four new UI components. Scroll down to see all of them.</p>
+
+<!-- 1. PERSISTENT HUD STRIP -->
+<div class="section">
+  <h3>1. Persistent HUD Strip — appears at top of every screen</h3>
+  <p class="subtitle">Year and farmer always visible. Tapping opens the Character screen.</p>
+  <div style="background:#1a2a1a;border-radius:10px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:500px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:36px;height:36px;border-radius:50%;background:#4a7c59;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid #7cb87e">👨‍🌾</div>
+      <div>
+        <div style="color:#7cb87e;font-size:11px;letter-spacing:1px">JAMES HARTWELL · AGE 34</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:2px">
+          <div style="background:#e74c3c;height:6px;border-radius:3px;width:70px;overflow:hidden"><div style="background:#27ae60;height:100%;width:82%"></div></div>
+          <span style="color:#aaa;font-size:10px">Health</span>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center">
+      <div style="color:#f39c12;font-size:22px;font-weight:bold;letter-spacing:2px">1973</div>
+      <div style="color:#7cb87e;font-size:9px;letter-spacing:1px">AUTUMN</div>
+    </div>
+    <div style="text-align:right">
+      <div style="color:#f39c12;font-size:10px">⭐ Respected</div>
+      <div style="color:#aaa;font-size:10px">Hartwell Farm</div>
+      <div style="color:#7cb87e;font-size:10px">Legacy: 2,840</div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. NEWSPAPER MODAL -->
+<div class="section">
+  <h3>2. Newspaper Modal — major events only</h3>
+  <p class="subtitle">Full-screen overlay on major historical events. Player must dismiss to continue.</p>
+  <div style="background:#f5f0e8;border:3px solid #8B7355;border-radius:8px;padding:16px;max-width:420px;font-family:Georgia,serif">
+    <div style="border-bottom:3px double #8B7355;padding-bottom:8px;margin-bottom:12px;text-align:center">
+      <div style="font-size:9px;letter-spacing:3px;color:#8B7355">THE HARTWELL FARM GAZETTE</div>
+      <div style="font-size:10px;color:#666;margin-top:2px">Wednesday, October 17, 1973</div>
+    </div>
+    <div style="font-size:20px;font-weight:bold;text-align:center;line-height:1.2;color:#1a1a1a;margin-bottom:10px">OPEC NATIONS CUT<br>OIL EXPORTS</div>
+    <div style="font-size:11px;color:#333;line-height:1.6;margin-bottom:12px">Arab oil-producing nations announced an embargo on exports today, sending fuel prices surging across global markets. For James Hartwell, the timing couldn't be worse — harvest season is underway and the tractors run on diesel. "We knew it was coming," he said, looking out over the fields. "Doesn't make it easier."</div>
+    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:8px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:bold;color:#856404">FARM IMPACT</div>
+      <div style="font-size:11px;color:#333;margin-top:4px">⛽ Fuel costs +40% — phasing in over 6 weeks<br>📈 Effect duration: approximately 8 months</div>
+    </div>
+    <button style="width:100%;background:#4a7c59;color:#fff;border:none;padding:10px;border-radius:4px;font-family:Georgia,serif;font-size:13px;cursor:pointer">Continue Farming →</button>
+  </div>
+</div>
+
+<!-- 3. LEGADO TAB -->
+<div class="section">
+  <h3>3. Legado Tab — new top-level tab</h3>
+  <p class="subtitle">Contains 4 sub-tabs: Familia, Árbol (family tree), Crónica, Carácter</p>
+  <div style="background:#1a2a1a;border-radius:10px;overflow:hidden;max-width:500px">
+    <div style="display:flex;background:#0f1a0f;border-bottom:1px solid #2d4a2d">
+      <div style="flex:1;padding:10px;text-align:center;color:#7cb87e;font-size:11px;border-bottom:2px solid #7cb87e">👨‍👩‍👧‍👦 Familia</div>
+      <div style="flex:1;padding:10px;text-align:center;color:#aaa;font-size:11px">🌳 Árbol</div>
+      <div style="flex:1;padding:10px;text-align:center;color:#aaa;font-size:11px">📰 Crónica</div>
+      <div style="flex:1;padding:10px;text-align:center;color:#aaa;font-size:11px">👤 Carácter</div>
+    </div>
+    <div style="padding:14px">
+      <div style="color:#7cb87e;font-size:12px;font-weight:bold;margin-bottom:10px">Familia Hartwell</div>
+      <!-- Spouse -->
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#0f1a0f;border-radius:6px;margin-bottom:6px">
+        <div style="font-size:20px">👩</div>
+        <div style="flex:1">
+          <div style="color:#fff;font-size:12px">Maria Hartwell <span style="color:#aaa;font-size:10px">· Age 31 · Spouse</span></div>
+          <div style="color:#7cb87e;font-size:10px">Role: Office Manager · Finance +12%</div>
+        </div>
+        <div style="color:#f39c12;font-size:10px">❤️ 92</div>
+      </div>
+      <!-- Child 1 -->
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#0f1a0f;border-radius:6px;margin-bottom:6px">
+        <div style="font-size:20px">👦</div>
+        <div style="flex:1">
+          <div style="color:#fff;font-size:12px">Thomas Hartwell <span style="color:#aaa;font-size:10px">· Age 8 · Son</span></div>
+          <div style="color:#aaa;font-size:10px">Loves animals · Farm interest growing</div>
+        </div>
+        <div style="color:#aaa;font-size:10px">📚 £640/yr</div>
+      </div>
+      <!-- Child 2 -->
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#0f1a0f;border-radius:6px;margin-bottom:6px">
+        <div style="font-size:20px">👧</div>
+        <div style="flex:1">
+          <div style="color:#fff;font-size:12px">Alice Hartwell <span style="color:#aaa;font-size:10px">· Age 5 · Daughter</span></div>
+          <div style="color:#aaa;font-size:10px">Too young to work · Growing up</div>
+        </div>
+        <div style="color:#aaa;font-size:10px">📚 £320/yr</div>
+      </div>
+      <div style="color:#e74c3c;font-size:10px;text-align:right;margin-top:4px">Family expenses: £1,840 / year</div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. LIFE EVENT DECISION CARD -->
+<div class="section">
+  <h3>4. Life Event Decision Card — personal events with full agency</h3>
+  <p class="subtitle">Pauses the game. Player makes a choice. No right answer — just your story.</p>
+  <div style="background:#1a2a1a;border:2px solid #7cb87e;border-radius:10px;padding:16px;max-width:420px">
+    <div style="color:#f39c12;font-size:10px;letter-spacing:2px;margin-bottom:6px">LIFE EVENT · SPRING 1971</div>
+    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:10px">A chance encounter</div>
+    <div style="color:#ccc;font-size:12px;line-height:1.6;margin-bottom:14px">At the county fair you get talking to a woman named Claire — sharp, funny, grew up on a farm herself. You've spoken twice. She seems interested. So are you.</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button style="background:#4a7c59;color:#fff;border:none;padding:10px 14px;border-radius:6px;text-align:left;font-size:12px;cursor:pointer">💬 Ask her out — see where it leads</button>
+      <button style="background:#2d4a2d;color:#ccc;border:1px solid #4a7c59;padding:10px 14px;border-radius:6px;text-align:left;font-size:12px;cursor:pointer">🌾 The farm comes first right now</button>
+      <button style="background:#2d4a2d;color:#ccc;border:1px solid #4a7c59;padding:10px 14px;border-radius:6px;text-align:left;font-size:12px;cursor:pointer">🤔 Be friendly but keep your distance</button>
+    </div>
+    <div style="color:#666;font-size:10px;margin-top:10px;text-align:center">Your choice shapes your story — no wrong answer</div>
+  </div>
+</div>

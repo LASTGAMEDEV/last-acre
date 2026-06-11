@@ -1,0 +1,40 @@
+<h2>Where does the new content live in the UI?</h2>
+<p class="subtitle">Your current tab structure needs homes for: Character/Life, Family Tree, History/News, and Family Management. Pick the approach that feels right.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>New top-level "Dynasty" tab</h3>
+      <p>Add one new tab alongside Farm, Market, Office, etc. — the Dynasty tab contains sub-tabs for: <strong>Character</strong> (your farmer's profile, health, skills), <strong>Family</strong> (spouse, children, their roles/skills), <strong>Tree</strong> (family tree across generations), and <strong>Chronicle</strong> (historical news feed of events that fired). Everything dynasty-related is in one place.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Clean separation from farm ops</li><li>Obvious home for all new content</li><li>Easy to extend</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>One more top-level tab to navigate</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Expand existing "Office" tab</h3>
+      <p>Office already handles admin/business. Add new sub-tabs inside it: <strong>Character</strong>, <strong>Family</strong>, <strong>Legacy</strong> (family tree), <strong>Chronicle</strong> (news). The office becomes the hub for both business and personal/dynasty management — it makes sense thematically (the farmer's personal office is where family photos and records live).</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>No new top-level tabs</li><li>Thematically coherent</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Office gets crowded</li><li>Dynasty stuff buried inside Office</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Persistent HUD + dedicated screens</h3>
+      <p>Add a persistent "farmer portrait + year + age" strip at the top of every screen. Tapping it opens the Character screen. Family Tree and Chronicle live as their own full screens accessed from the main menu or a new "Life" tab. Historical events surface as a notification banner that slides in over any screen.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Year/age always visible = constant historical immersion</li><li>Events feel like breaking news, not buried in a tab</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>HUD changes affect every screen</li><li>Most complex to build</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

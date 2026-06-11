@@ -11,6 +11,7 @@ import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
 import { sellValue, isMature, canBreed, TRAIT_ICONS, TRAIT_DESC, AnimalGenes, OwnedAnimal, getLactationState, lactationDaysRemaining, dryDaysRemaining, LACTATION_PARAMS, getSeasonMultiplier, GRAIN_CROP_IDS, getBreedDisplayName } from '../../engine/animals';
+import { getSeason } from '../../engine/climate';
 import ApiaryManagementCard from '../../components/animals/ApiaryManagementCard';
 import NutritionTab from '../../components/animals/NutritionTab';
 import { computeHiveHealth, getLinkedParcelCount, getColmenaCapacity } from '../../engine/pollination';
@@ -122,6 +123,9 @@ export default function AnimalesScreen() {
   const [showModalVisible, setShowModalVisible] = useState(false);
   type AnimalTab = 'herd' | 'nutrition' | 'results';
   const [animalTab, setAnimalTab] = useState<AnimalTab>('herd');
+  type HerdSort = 'default' | 'age_asc' | 'age_desc' | 'value_desc' | 'name';
+  const [herdFilter, setHerdFilter] = useState<string>('all'); // 'all' | typeId
+  const [herdSort, setHerdSort] = useState<HerdSort>('default');
   const [liveDispatchVisible, setLiveDispatchVisible] = useState(false);
   const [liveDispatchCargo, setLiveDispatchCargo] = useState<DeliveryCargo[]>([]);
 
@@ -204,26 +208,65 @@ export default function AnimalesScreen() {
       {/* Feed Stock */}
       {hasFeedAnimals && <View style={{ backgroundColor: C.bgCard, borderRadius: 10, marginHorizontal: 8, marginBottom: 8, padding: 12 }}>
         <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 14, marginBottom: 8 }}>Feed Stock</Text>
-        <View style={{ flexDirection: 'row', gap: 16, marginBottom: 8 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: C.textMuted, fontSize: 11 }}>🌾 Grain</Text>
-            <Text style={{ color: grainStock < 5 ? C.red : C.textDim, fontWeight: 'bold' }}>
-              {Math.floor(grainStock).toLocaleString()} kg
-            </Text>
-            {grainMissedDays > 0 && (
-              <Text style={{ color: C.amber, fontSize: 10 }}>⚠ {grainMissedDays}/7 days underfed</Text>
-            )}
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: C.textMuted, fontSize: 11 }}>🌿 Hay</Text>
-            <Text style={{ color: hayStock < 10 ? C.red : C.textDim, fontWeight: 'bold' }}>
-              {Math.floor(hayStock).toLocaleString()} kg
-            </Text>
-            {hayMissedDays > 0 && (
-              <Text style={{ color: C.amber, fontSize: 10 }}>⚠ {hayMissedDays}/7 days underfed</Text>
-            )}
-          </View>
-        </View>
+        {(() => {
+          const dailyGrainDemand = animals.reduce((sum, a) => {
+            const type = ANIMAL_TYPES.find(t => t.id === a.typeId);
+            return sum + (type?.feedType === 'grain' ? (type.feedKgPerDay ?? 0) : 0);
+          }, 0);
+          const dailyHayDemand = animals.reduce((sum, a) => {
+            const type = ANIMAL_TYPES.find(t => t.id === a.typeId);
+            return sum + (type?.feedType === 'hay' ? (type.feedKgPerDay ?? 0) : 0);
+          }, 0);
+          const grainDaysLeft = dailyGrainDemand > 0 ? Math.floor(grainStock / dailyGrainDemand) : null;
+          const hayDaysLeft = dailyHayDemand > 0 ? Math.floor(hayStock / dailyHayDemand) : null;
+          const currentSeason = getSeason(day);
+          const winterApproaching = currentSeason === 'autumn';
+          const winterNeed = 90;
+          return (
+            <View style={{ flexDirection: 'row', gap: 16, marginBottom: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.textMuted, fontSize: 11 }}>🌾 Grain</Text>
+                <Text style={{ color: grainStock < 5 ? C.red : C.textDim, fontWeight: 'bold' }}>
+                  {Math.floor(grainStock).toLocaleString()} kg
+                </Text>
+                {dailyGrainDemand > 0 && (
+                  <Text style={{ color: C.textMuted, fontSize: 10 }}>{dailyGrainDemand.toFixed(1)} kg/day</Text>
+                )}
+                {grainDaysLeft !== null && (
+                  <Text style={{ color: grainDaysLeft < 7 ? C.red : grainDaysLeft < 30 ? C.amber : C.green, fontSize: 10, fontWeight: 'bold', marginTop: 1 }}>
+                    {grainDaysLeft}d remaining
+                  </Text>
+                )}
+                {winterApproaching && grainDaysLeft !== null && grainDaysLeft < winterNeed && dailyGrainDemand > 0 && (
+                  <Text style={{ color: C.amber, fontSize: 10, marginTop: 1 }}>⚠ Winter: need {Math.round(dailyGrainDemand * winterNeed).toLocaleString()} kg</Text>
+                )}
+                {grainMissedDays > 0 && (
+                  <Text style={{ color: C.amber, fontSize: 10 }}>⚠ {grainMissedDays}/7 days underfed</Text>
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.textMuted, fontSize: 11 }}>🌿 Hay</Text>
+                <Text style={{ color: hayStock < 10 ? C.red : C.textDim, fontWeight: 'bold' }}>
+                  {Math.floor(hayStock).toLocaleString()} kg
+                </Text>
+                {dailyHayDemand > 0 && (
+                  <Text style={{ color: C.textMuted, fontSize: 10 }}>{dailyHayDemand.toFixed(1)} kg/day</Text>
+                )}
+                {hayDaysLeft !== null && (
+                  <Text style={{ color: hayDaysLeft < 7 ? C.red : hayDaysLeft < 30 ? C.amber : C.green, fontSize: 10, fontWeight: 'bold', marginTop: 1 }}>
+                    {hayDaysLeft}d remaining
+                  </Text>
+                )}
+                {winterApproaching && hayDaysLeft !== null && hayDaysLeft < winterNeed && dailyHayDemand > 0 && (
+                  <Text style={{ color: C.amber, fontSize: 10, marginTop: 1 }}>⚠ Winter: need {Math.round(dailyHayDemand * winterNeed).toLocaleString()} kg</Text>
+                )}
+                {hayMissedDays > 0 && (
+                  <Text style={{ color: C.amber, fontSize: 10 }}>⚠ {hayMissedDays}/7 days underfed</Text>
+                )}
+              </View>
+            </View>
+          );
+        })()}
         {!hasAnimalWorker && (
           <TouchableOpacity
             style={{ backgroundColor: animalsManuallyFed ? C.greenDark : C.bgElevated, borderRadius: 6, padding: 10, alignItems: 'center', opacity: animalsManuallyFed ? 0.7 : 1 }}
@@ -361,6 +404,61 @@ export default function AnimalesScreen() {
         );
       })()}
 
+      {/* Herd filter / sort controls */}
+      {animals.length > 0 && (() => {
+        const speciesInHerd = [...new Set(animals.map(a => a.typeId))];
+        const sortOptions: { id: HerdSort; label: string }[] = [
+          { id: 'default',    label: 'Default' },
+          { id: 'age_desc',   label: 'Oldest' },
+          { id: 'age_asc',    label: 'Youngest' },
+          { id: 'value_desc', label: 'Most Valuable' },
+          { id: 'name',       label: 'Name' },
+        ];
+        return (
+          <View style={{ marginHorizontal: 8, marginBottom: 6 }}>
+            {/* Species filter chips */}
+            {speciesInHerd.length > 1 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 6 }}>
+                <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 2 }}>
+                  {['all', ...speciesInHerd].map(tid => {
+                    const active = herdFilter === tid;
+                    const typeDef = ANIMAL_TYPES.find(t => t.id === tid);
+                    const label = tid === 'all' ? `All (${animals.length})` : `${typeDef?.name ?? tid} (${animals.filter(a => a.typeId === tid).length})`;
+                    return (
+                      <TouchableOpacity
+                        key={tid}
+                        onPress={() => setHerdFilter(tid)}
+                        style={{ backgroundColor: active ? '#2a4a1a' : C.bgCard, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: active ? C.green : C.border }}
+                      >
+                        <Text style={{ color: active ? C.green : C.textMuted, fontSize: 12, fontWeight: active ? 'bold' : 'normal' }}>{label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            )}
+            {/* Sort selector */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: 2 }}>
+                <Text style={{ color: C.textMuted, fontSize: 11, alignSelf: 'center', marginRight: 2 }}>Sort:</Text>
+                {sortOptions.map(opt => {
+                  const active = herdSort === opt.id;
+                  return (
+                    <TouchableOpacity
+                      key={opt.id}
+                      onPress={() => setHerdSort(opt.id)}
+                      style={{ backgroundColor: active ? '#0d2a3a' : C.bgCard, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, borderColor: active ? C.blue : C.border }}
+                    >
+                      <Text style={{ color: active ? C.blue : C.textMuted, fontSize: 11, fontWeight: active ? 'bold' : 'normal' }}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        );
+      })()}
+
       {/* Owned animals */}
       <Text style={styles.sectionLabel}>My animals ({animals.length})</Text>
       {(() => {
@@ -376,7 +474,25 @@ export default function AnimalesScreen() {
         );
       })()}
       <FlatList
-        data={animals}
+        data={(() => {
+          let list = herdFilter === 'all' ? animals : animals.filter(a => a.typeId === herdFilter);
+          if (herdSort === 'age_desc') list = [...list].sort((a, b) => (a.bornDay - b.bornDay));
+          else if (herdSort === 'age_asc') list = [...list].sort((a, b) => (b.bornDay - a.bornDay));
+          else if (herdSort === 'value_desc') {
+            list = [...list].sort((a, b) => {
+              const ta = ANIMAL_TYPES.find(t => t.id === a.typeId)!;
+              const tb = ANIMAL_TYPES.find(t => t.id === b.typeId)!;
+              return sellValue(b, tb, day) - sellValue(a, ta, day);
+            });
+          } else if (herdSort === 'name') {
+            list = [...list].sort((a, b) => {
+              const na = ANIMAL_TYPES.find(t => t.id === a.typeId)?.name ?? '';
+              const nb = ANIMAL_TYPES.find(t => t.id === b.typeId)?.name ?? '';
+              return na.localeCompare(nb);
+            });
+          }
+          return list;
+        })()}
         keyExtractor={a => a.id}
         horizontal
         showsHorizontalScrollIndicator={false}

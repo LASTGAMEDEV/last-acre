@@ -9,6 +9,13 @@
       "env": {
         "CI": "1"
       }
+    },
+    {
+      "name": "granja-mockup",
+      "cwd": "C:\\Users\\SanGi\\.antigravity\\FArM TYCOON\\granja-tycoon\\mockup",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "4444", "."],
+      "port": 4444
     }
   ]
 }

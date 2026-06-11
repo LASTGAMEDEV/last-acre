@@ -353,6 +353,8 @@ export default function TierrasScreen() {
   const [activeParcelTab, setActiveParcelTab] = useState<'info' | 'soil' | 'water' | 'mgmt'>('info');
   type FieldFilter = 'all' | 'empty' | 'growing' | 'ready' | 'events';
   const [fieldFilter, setFieldFilter] = useState<FieldFilter>('all');
+  type FieldSort = 'default' | 'size_desc' | 'size_asc' | 'fertility' | 'days_left';
+  const [fieldSort, setFieldSort] = useState<FieldSort>('default');
 
   const owned = parcels.filter(p => p.owned);
   const available = parcels.filter(p => !p.owned);
@@ -981,6 +983,26 @@ export default function TierrasScreen() {
             ))}
           </ScrollView>
 
+          {/* Sort bar */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar}>
+            <Text style={{ color: C.textMuted, fontSize: 11, alignSelf: 'center', marginRight: 4 }}>Sort:</Text>
+            {([
+              { id: 'default',   label: 'Default' },
+              { id: 'size_desc', label: 'Largest' },
+              { id: 'size_asc',  label: 'Smallest' },
+              { id: 'fertility', label: 'Fertility' },
+              { id: 'days_left', label: 'Harvest Soon' },
+            ] as { id: FieldSort; label: string }[]).map(s => (
+              <TouchableOpacity
+                key={s.id}
+                style={[styles.filterChip, fieldSort === s.id && styles.filterChipActive, { marginLeft: 4 }]}
+                onPress={() => setFieldSort(s.id)}
+              >
+                <Text style={[styles.filterChipText, fieldSort === s.id && styles.filterChipTextActive]}>{s.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
           {/* Batch harvest */}
           {(() => {
             const readyCount = owned.filter(p => isReady(p)).length;
@@ -1037,15 +1059,27 @@ export default function TierrasScreen() {
 
           <Text style={styles.sectionLabel}>Owned plots ({owned.length})</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hScroll}>
-            {owned
-              .filter(p => {
+            {(() => {
+              let list = owned.filter(p => {
                 if (fieldFilter === 'empty')   return !p.plantedCrop;
                 if (fieldFilter === 'growing') return !!p.plantedCrop && !isReady(p);
                 if (fieldFilter === 'ready')   return isReady(p);
                 if (fieldFilter === 'events')  return !!getEventForParcel(p.id);
                 return true;
-              })
-              .map(p => renderOwnedParcel(p))}
+              });
+              if (fieldSort === 'size_desc') list = [...list].sort((a, b) => b.hectares - a.hectares);
+              else if (fieldSort === 'size_asc') list = [...list].sort((a, b) => a.hectares - b.hectares);
+              else if (fieldSort === 'fertility') list = [...list].sort((a, b) => b.fertility - a.fertility);
+              else if (fieldSort === 'days_left') {
+                list = [...list].sort((a, b) => {
+                  const getCropType = (p: typeof a) => p.plantedCrop ? CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId) : undefined;
+                  const daysLeftA = (() => { const ct = getCropType(a); if (!ct || !a.plantedCrop) return 9999; return Math.max(0, (a.plantedCrop.plantedDay + ct.growthDays) - day); })();
+                  const daysLeftB = (() => { const ct = getCropType(b); if (!ct || !b.plantedCrop) return 9999; return Math.max(0, (b.plantedCrop.plantedDay + ct.growthDays) - day); })();
+                  return daysLeftA - daysLeftB;
+                });
+              }
+              return list.map(p => renderOwnedParcel(p));
+            })()}
             {owned.length === 0 && <Text style={styles.empty}>No plots.</Text>}
           </ScrollView>
 

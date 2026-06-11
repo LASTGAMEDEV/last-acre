@@ -7,6 +7,7 @@ import { SEASON_THEME, C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import GuideButton from '../GuideButton';
+import FarmLegacyCard from './FarmLegacyCard';
 
 type Priority = { icon: string; label: string; severity: 'critical' | 'warning' | 'action' };
 
@@ -15,6 +16,7 @@ function DashboardSection() {
     money, savings, day, loans, contracts, seasonGoals, seasonHarvestCount,
     seasonStartRevenue, totalRevenue, parcels, animals, npcFarms, salesLog,
     personalRecords, inventory, prices, animalWelfareScores, reputation, farmStyle,
+    animalInventory,
   } = useGameStore();
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
@@ -154,15 +156,37 @@ function DashboardSection() {
     });
   }
 
-  if (animals.length >= 5) {
-    const feedIds = ['grass', 'alfalfa', 'corn', 'barley', 'oats', 'sorghum'];
-    const feedUnits = feedIds.reduce((sum, id) => sum + (inventory[id] ?? 0), 0);
-    if (feedUnits < 1000) {
+  if (animals.length >= 2) {
+    const GRAIN_IDS = ['corn', 'barley', 'oats', 'sorghum', 'grass', 'alfalfa'];
+    const grainStock = GRAIN_IDS.reduce((sum, id) => sum + (inventory[id] ?? 0), 0);
+    const hayStock = (animalInventory ?? {})['hay'] ?? 0;
+    const dailyGrainDemand = animals.reduce((sum, a) => {
+      const type = ANIMAL_TYPES.find(t => t.id === a.typeId);
+      return sum + (type?.feedType === 'grain' ? (type.feedKgPerDay ?? 0) : 0);
+    }, 0);
+    const dailyHayDemand = animals.reduce((sum, a) => {
+      const type = ANIMAL_TYPES.find(t => t.id === a.typeId);
+      return sum + (type?.feedType === 'hay' ? (type.feedKgPerDay ?? 0) : 0);
+    }, 0);
+    const grainDaysLeft = dailyGrainDemand > 0 ? Math.floor(grainStock / dailyGrainDemand) : 999;
+    const hayDaysLeft = dailyHayDemand > 0 ? Math.floor(hayStock / dailyHayDemand) : 999;
+    // Warn if critical (< 7 days) or winter is approaching (season === 'autumn' and < 60 days feed)
+    const winterApproaching = season === 'autumn';
+    const winterDaysNeeded = 90;
+    if (dailyGrainDemand > 0 && (grainDaysLeft < 7 || (winterApproaching && grainDaysLeft < winterDaysNeeded))) {
       opCards.push({
         icon: '🌾',
-        title: 'Feed reserves critically low',
-        detail: `Only ${feedUnits.toLocaleString()} kg stored for ${animals.length} animals — plant feed crops or buy from market.`,
-        kind: 'warning',
+        title: grainDaysLeft < 7 ? 'Grain reserves critically low' : 'Grain: not enough for winter',
+        detail: `${grainDaysLeft}d left at ${dailyGrainDemand.toFixed(1)} kg/day. ${winterApproaching ? `Need ~${Math.round(dailyGrainDemand * winterDaysNeeded)} kg for winter.` : 'Buy or grow grain now.'}`,
+        kind: grainDaysLeft < 7 ? 'warning' : 'tip',
+      });
+    }
+    if (dailyHayDemand > 0 && (hayDaysLeft < 7 || (winterApproaching && hayDaysLeft < winterDaysNeeded))) {
+      opCards.push({
+        icon: '🌿',
+        title: hayDaysLeft < 7 ? 'Hay reserves critically low' : 'Hay: not enough for winter',
+        detail: `${hayDaysLeft}d left at ${dailyHayDemand.toFixed(1)} kg/day. ${winterApproaching ? `Need ~${Math.round(dailyHayDemand * winterDaysNeeded)} kg for winter.` : 'Cut hay or buy bales now.'}`,
+        kind: hayDaysLeft < 7 ? 'warning' : 'tip',
       });
     }
   }
@@ -299,6 +323,9 @@ function DashboardSection() {
           })}
         </View>
       </View>
+
+      {/* Farm Legacy / Progression */}
+      <FarmLegacyCard />
 
       {/* Revenue row */}
       <View style={dash.row}>

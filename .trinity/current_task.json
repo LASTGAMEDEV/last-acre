@@ -1,0 +1,8 @@
+{
+  "task": "hello",
+  "mode": "broadcast",
+  "agents": [
+    "kimi"
+  ],
+  "started_at": 1779287773.35616
+}

@@ -1,0 +1,9 @@
+{
+  "agent": "kimi",
+  "state": "working",
+  "task": "hello",
+  "output_file": "",
+  "started_at": 0.0,
+  "finished_at": 0.0,
+  "error_message": ""
+}

@@ -1,0 +1,156 @@
+<style>
+  body { background: #0a0f0a; }
+  .screens { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; padding: 10px 0; }
+  .screen-card { border: 2px solid #1e2e1e; border-radius: 12px; overflow: hidden; width: 300px; cursor: pointer; transition: border-color 0.2s; }
+  .screen-card:hover { border-color: #4a7c59; }
+  .screen-card.selected { border-color: #7cb87e; box-shadow: 0 0 0 3px #4a7c5944; }
+  .screen-label { background: #111; color: #7cb87e; font-size: 11px; font-weight: bold; letter-spacing: 1px; text-align: center; padding: 8px; text-transform: uppercase; }
+
+  /* Option A - Dark minimal */
+  .opt-a { background: #0a0f0a; padding: 20px; font-family: serif; }
+  .opt-a .title { color: #c8860a; font-size: 22px; font-weight: bold; text-align: center; letter-spacing: 3px; margin-bottom: 4px; }
+  .opt-a .subtitle { color: #4a6a4a; font-size: 10px; text-align: center; letter-spacing: 2px; margin-bottom: 20px; }
+  .opt-a .field-label { color: #5a7a5a; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .opt-a .field-input { background: #0f1a0f; border: 1px solid #2a4a2a; border-radius: 4px; padding: 8px 10px; color: #a5d6a7; font-size: 13px; width: 100%; box-sizing: border-box; margin-bottom: 14px; }
+  .opt-a .backstory-row { display: flex; gap: 6px; margin-bottom: 14px; }
+  .opt-a .bs-chip { flex: 1; background: #0f1a0f; border: 1px solid #2a4a2a; border-radius: 4px; padding: 8px 4px; text-align: center; }
+  .opt-a .bs-chip.active { background: #1a2e1a; border-color: #4a7c59; }
+  .opt-a .bs-chip-title { color: #a5d6a7; font-size: 9px; font-weight: bold; display: block; }
+  .opt-a .bs-chip-desc { color: #4a6a4a; font-size: 8px; display: block; margin-top: 2px; }
+  .opt-a .start-btn { background: #4a7c59; border-radius: 4px; padding: 10px; text-align: center; color: #fff; font-size: 12px; font-weight: bold; letter-spacing: 1px; }
+
+  /* Option B - Newspaper / heritage */
+  .opt-b { background: #f5f0e8; padding: 20px; font-family: serif; }
+  .opt-b .title { color: #3a2a1a; font-size: 18px; font-weight: bold; text-align: center; letter-spacing: 2px; margin-bottom: 2px; }
+  .opt-b .rule { height: 2px; background: #8d6e63; margin: 8px 0; }
+  .opt-b .subtitle { color: #8d6e63; font-size: 9px; text-align: center; letter-spacing: 2px; margin-bottom: 16px; }
+  .opt-b .field-label { color: #5d4037; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .opt-b .field-input { background: #fff; border: 1px solid #c5a880; border-radius: 2px; padding: 7px 10px; color: #3a2a1a; font-size: 12px; width: 100%; box-sizing: border-box; margin-bottom: 12px; font-family: serif; }
+  .opt-b .backstory-row { display: flex; gap: 6px; margin-bottom: 12px; }
+  .opt-b .bs-chip { flex: 1; background: #fff; border: 1px solid #c5a880; border-radius: 2px; padding: 7px 4px; text-align: center; }
+  .opt-b .bs-chip.active { background: #f0e8d0; border-color: #8d6e63; }
+  .opt-b .bs-chip-title { color: #3a2a1a; font-size: 9px; font-weight: bold; display: block; }
+  .opt-b .bs-chip-desc { color: #8d6e63; font-size: 7px; display: block; margin-top: 2px; }
+  .opt-b .start-btn { background: #5d4037; border-radius: 2px; padding: 10px; text-align: center; color: #f5f0e8; font-size: 11px; font-weight: bold; letter-spacing: 1px; font-family: serif; }
+
+  /* Option C - Photo background / cinematic */
+  .opt-c { background: linear-gradient(180deg, #0a1a0a 0%, #1a2e0a 60%, #0a1a0a 100%); padding: 20px; font-family: sans-serif; position: relative; }
+  .opt-c::before { content: '🌾'; position: absolute; top: 10px; right: 10px; font-size: 40px; opacity: 0.08; }
+  .opt-c .title { color: #fff; font-size: 20px; font-weight: 900; text-align: center; letter-spacing: 1px; margin-bottom: 2px; }
+  .opt-c .subtitle { color: #7cb87e; font-size: 9px; text-align: center; letter-spacing: 3px; margin-bottom: 18px; text-transform: uppercase; }
+  .opt-c .field-label { color: #7cb87e; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .opt-c .field-input { background: rgba(255,255,255,0.07); border: 1px solid rgba(124,184,126,0.3); border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 13px; width: 100%; box-sizing: border-box; margin-bottom: 14px; }
+  .opt-c .backstory-row { display: flex; gap: 6px; margin-bottom: 14px; }
+  .opt-c .bs-chip { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(124,184,126,0.2); border-radius: 6px; padding: 8px 4px; text-align: center; }
+  .opt-c .bs-chip.active { background: rgba(74,124,89,0.3); border-color: #7cb87e; }
+  .opt-c .bs-chip-title { color: #fff; font-size: 9px; font-weight: bold; display: block; }
+  .opt-c .bs-chip-desc { color: #7cb87e; font-size: 7px; display: block; margin-top: 2px; }
+  .opt-c .start-btn { background: linear-gradient(135deg, #4a7c59, #2d5a3d); border-radius: 6px; padding: 10px; text-align: center; color: #fff; font-size: 12px; font-weight: bold; letter-spacing: 1px; }
+</style>
+
+<h2>Starting Screen — Visual Style</h2>
+<p class="subtitle">Three directions for the new game setup screen. Click to select.</p>
+
+<div class="screens">
+
+  <!-- Option A -->
+  <div class="screen-card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="screen-label">A — Dark / Modern</div>
+    <div class="opt-a">
+      <div class="title">LAST ACRE</div>
+      <div class="subtitle">YOUR DYNASTY BEGINS · 1970</div>
+
+      <div class="field-label">Farm Name</div>
+      <div class="field-input">Hartwell Family Farm</div>
+
+      <div class="field-label">Your Story</div>
+      <div class="backstory-row">
+        <div class="bs-chip active">
+          <span class="bs-chip-title">First Gen</span>
+          <span class="bs-chip-desc">Start from scratch</span>
+        </div>
+        <div class="bs-chip">
+          <span class="bs-chip-title">Inherited</span>
+          <span class="bs-chip-desc">Modest farm</span>
+        </div>
+        <div class="bs-chip">
+          <span class="bs-chip-title">Established</span>
+          <span class="bs-chip-desc">Going concern</span>
+        </div>
+      </div>
+
+      <div class="field-label">Farmer Name</div>
+      <div class="field-input">James Hartwell</div>
+
+      <div class="start-btn">BEGIN YOUR LEGACY →</div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="screen-card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="screen-label">B — Heritage / Newspaper</div>
+    <div class="opt-b">
+      <div class="title">THE FARM GAZETTE</div>
+      <div class="rule"></div>
+      <div class="subtitle">ESTABLISH YOUR DYNASTY · JANUARY 1970</div>
+
+      <div class="field-label">Farm Name</div>
+      <div class="field-input">Hartwell Family Farm</div>
+
+      <div class="field-label">Your Story</div>
+      <div class="backstory-row">
+        <div class="bs-chip active">
+          <span class="bs-chip-title">First Gen</span>
+          <span class="bs-chip-desc">Start from scratch</span>
+        </div>
+        <div class="bs-chip">
+          <span class="bs-chip-title">Inherited</span>
+          <span class="bs-chip-desc">Modest farm</span>
+        </div>
+        <div class="bs-chip">
+          <span class="bs-chip-title">Established</span>
+          <span class="bs-chip-desc">Going concern</span>
+        </div>
+      </div>
+
+      <div class="field-label">Farmer Name</div>
+      <div class="field-input">James Hartwell</div>
+
+      <div class="start-btn">BEGIN YOUR LEGACY</div>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="screen-card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="screen-label">C — Cinematic / Bold</div>
+    <div class="opt-c">
+      <div class="title">LAST ACRE</div>
+      <div class="subtitle">A DYNASTY BEGINS</div>
+
+      <div class="field-label">Farm Name</div>
+      <div class="field-input">Hartwell Family Farm</div>
+
+      <div class="field-label">Your Story</div>
+      <div class="backstory-row">
+        <div class="bs-chip active">
+          <span class="bs-chip-title">First Gen</span>
+          <span class="bs-chip-desc">Start from scratch</span>
+        </div>
+        <div class="bs-chip">
+          <span class="bs-chip-title">Inherited</span>
+          <span class="bs-chip-desc">Modest farm</span>
+        </div>
+        <div class="bs-chip">
+          <span class="bs-chip-title">Established</span>
+          <span class="bs-chip-desc">Going concern</span>
+        </div>
+      </div>
+
+      <div class="field-label">Farmer Name</div>
+      <div class="field-input">James Hartwell</div>
+
+      <div class="start-btn">BEGIN YOUR LEGACY →</div>
+    </div>
+  </div>
+
+</div>

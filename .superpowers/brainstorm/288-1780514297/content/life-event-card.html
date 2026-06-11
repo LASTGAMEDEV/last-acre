@@ -1,0 +1,146 @@
+<style>
+  body { background: #0a0f0a; }
+  .screens { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; padding: 10px 0; }
+  .screen-card { border: 2px solid #1e2e1e; border-radius: 12px; overflow: hidden; width: 300px; cursor: pointer; transition: border-color 0.2s; }
+  .screen-card:hover { border-color: #4a7c59; }
+  .screen-card.selected { border-color: #7cb87e; box-shadow: 0 0 0 3px #4a7c5944; }
+  .screen-label { background: #111; color: #7cb87e; font-size: 11px; font-weight: bold; letter-spacing: 1px; text-align: center; padding: 8px; text-transform: uppercase; }
+
+  /* Option A - Slide-up sheet */
+  .opt-a { background: #0d1a0d; padding: 18px; font-family: sans-serif; }
+  .opt-a .handle { width: 32px; height: 3px; background: #2a4a2a; border-radius: 2px; margin: 0 auto 14px; }
+  .opt-a .year-tag { color: #c8860a; font-size: 9px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .opt-a .event-title { color: #fff; font-size: 15px; font-weight: bold; margin-bottom: 8px; line-height: 1.3; }
+  .opt-a .narrative { color: #7a9a7a; font-size: 11px; line-height: 1.6; margin-bottom: 14px; }
+  .opt-a .choices { display: flex; flex-direction: column; gap: 8px; }
+  .opt-a .choice { background: #0f2010; border: 1px solid #2a4a2a; border-radius: 6px; padding: 10px 12px; }
+  .opt-a .choice-title { color: #a5d6a7; font-size: 12px; font-weight: bold; }
+  .opt-a .choice-desc { color: #4a6a4a; font-size: 10px; margin-top: 2px; }
+  .opt-a .choice.warn { border-color: #c8860a44; background: #1a1200; }
+  .opt-a .choice.warn .choice-title { color: #c8860a; }
+  .opt-a .footer { color: #2a4a2a; font-size: 9px; text-align: center; margin-top: 12px; font-style: italic; }
+
+  /* Option B - Full modal with portrait */
+  .opt-b { background: #0a0f0a; padding: 18px; font-family: sans-serif; }
+  .opt-b .header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .opt-b .portrait { width: 40px; height: 40px; background: #1a2e1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .opt-b .header-text { flex: 1; }
+  .opt-b .year-tag { color: #c8860a; font-size: 9px; font-weight: bold; letter-spacing: 2px; }
+  .opt-b .event-title { color: #fff; font-size: 13px; font-weight: bold; line-height: 1.3; }
+  .opt-b .divider { height: 1px; background: #1e2e1e; margin-bottom: 12px; }
+  .opt-b .narrative { color: #7a9a7a; font-size: 11px; line-height: 1.6; margin-bottom: 14px; }
+  .opt-b .choices { display: flex; flex-direction: column; gap: 7px; }
+  .opt-b .choice { background: #0f1a0f; border: 1px solid #1e2e1e; border-radius: 8px; padding: 9px 12px; display: flex; align-items: center; gap: 8px; }
+  .opt-b .choice-icon { font-size: 16px; }
+  .opt-b .choice-title { color: #c8e6c9; font-size: 11px; font-weight: bold; }
+  .opt-b .choice-desc { color: #4a6a4a; font-size: 9px; margin-top: 1px; }
+  .opt-b .choice.gold { border-color: #c8860a44; }
+  .opt-b .choice.gold .choice-title { color: #c8860a; }
+  .opt-b .queue-badge { background: #1a2010; border: 1px solid #2a4a2a; border-radius: 4px; padding: 4px 8px; font-size: 9px; color: #4a6a4a; text-align: center; margin-top: 10px; }
+
+  /* Option C - Minimal / inline */
+  .opt-c { background: #0d1117; padding: 18px; font-family: sans-serif; }
+  .opt-c .top-strip { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .opt-c .year-tag { color: #c8860a; font-size: 9px; font-weight: bold; letter-spacing: 2px; }
+  .opt-c .dismiss-x { color: #2a4a2a; font-size: 14px; }
+  .opt-c .event-title { color: #e8e8e8; font-size: 16px; font-weight: 900; margin-bottom: 10px; line-height: 1.2; }
+  .opt-c .narrative { color: #6a8a6a; font-size: 11px; line-height: 1.6; margin-bottom: 16px; font-style: italic; }
+  .opt-c .choices { display: flex; flex-direction: column; gap: 6px; }
+  .opt-c .choice { border-radius: 6px; padding: 11px 14px; font-size: 12px; font-weight: bold; }
+  .opt-c .choice-a { background: #1a3a2a; color: #a5d6a7; border: 1px solid #2a5a3a; }
+  .opt-c .choice-b { background: #1a2a3a; color: #90caf9; border: 1px solid #2a3a5a; }
+  .opt-c .choice-c { background: #1a1a1a; color: #888; border: 1px solid #2a2a2a; }
+  .opt-c .footer { color: #2a3a2a; font-size: 9px; text-align: center; margin-top: 12px; }
+</style>
+
+<h2>Life Event Decision Card — Style</h2>
+<p class="subtitle">How the card looks when a personal event fires (e.g. a marriage proposal). Click to select.</p>
+
+<div class="screens">
+
+  <!-- Option A -->
+  <div class="screen-card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="screen-label">A — Slide-up Sheet</div>
+    <div class="opt-a">
+      <div class="handle"></div>
+      <div class="year-tag">SPRING 1978</div>
+      <div class="event-title">Someone catches your eye at the county fair</div>
+      <div class="narrative">You've been talking for an hour. She knows more about soil drainage than most men you've met. You get the feeling this isn't the last time you'll see her.</div>
+      <div class="choices">
+        <div class="choice">
+          <div class="choice-title">Ask to meet again</div>
+          <div class="choice-desc">Begin a relationship</div>
+        </div>
+        <div class="choice">
+          <div class="choice-title">Exchange numbers, see what happens</div>
+          <div class="choice-desc">Slow start, lower commitment</div>
+        </div>
+        <div class="choice warn">
+          <div class="choice-title">Politely decline</div>
+          <div class="choice-desc">Focus on the farm for now</div>
+        </div>
+      </div>
+      <div class="footer">Your choice shapes your story — no wrong answer</div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="screen-card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="screen-label">B — Modal with Portrait</div>
+    <div class="opt-b">
+      <div class="header">
+        <div class="portrait">👨‍🌾</div>
+        <div class="header-text">
+          <div class="year-tag">SPRING 1978</div>
+          <div class="event-title">Someone catches your eye at the county fair</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="narrative">You've been talking for an hour. She knows more about soil drainage than most men you've met. You get the feeling this isn't the last time you'll see her.</div>
+      <div class="choices">
+        <div class="choice">
+          <div class="choice-icon">💚</div>
+          <div>
+            <div class="choice-title">Ask to meet again</div>
+            <div class="choice-desc">Begin a relationship</div>
+          </div>
+        </div>
+        <div class="choice">
+          <div class="choice-icon">🤝</div>
+          <div>
+            <div class="choice-title">Exchange numbers</div>
+            <div class="choice-desc">Slow start, lower commitment</div>
+          </div>
+        </div>
+        <div class="choice gold">
+          <div class="choice-icon">🌾</div>
+          <div>
+            <div class="choice-title">Politely decline</div>
+            <div class="choice-desc">Focus on the farm for now</div>
+          </div>
+        </div>
+      </div>
+      <div class="queue-badge">📋 2 more events waiting</div>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="screen-card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="screen-label">C — Minimal / Bold Text</div>
+    <div class="opt-c">
+      <div class="top-strip">
+        <div class="year-tag">SPRING · 1978</div>
+        <div class="dismiss-x">×</div>
+      </div>
+      <div class="event-title">Someone catches your eye at the county fair.</div>
+      <div class="narrative">"You've been talking for an hour. She knows more about soil drainage than most men you've met."</div>
+      <div class="choices">
+        <div class="choice choice-a">Ask to meet again</div>
+        <div class="choice choice-b">Exchange numbers, see what happens</div>
+        <div class="choice choice-c">Politely decline</div>
+      </div>
+      <div class="footer">Your choice shapes your story — no wrong answer</div>
+    </div>
+  </div>
+
+</div>

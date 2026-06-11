@@ -1,0 +1,62 @@
+{
+  "orchestrator": {
+    "default_mode": "manual",
+    "coordinator": "claude",
+    "strategies": {
+      "manual": {
+        "description": "Interactive tmux mode"
+      },
+      "broadcast": {
+        "description": "Send same task to all agents"
+      },
+      "workflow": {
+        "description": "Execute predefined workflow steps"
+      },
+      "adaptive": {
+        "description": "Coordinator decomposes task dynamically"
+      }
+    }
+  },
+  "workspace": {
+    "enabled": true,
+    "dir_name": ".trinity",
+    "auto_scaffold": true
+  },
+  "tmux": {
+    "session_name": "trinity-granja-tycoon",
+    "dashboard_refresh": 2,
+    "use_status_bar": true
+  },
+  "broadcast": {
+    "confirm_when_busy": true,
+    "per_agent_delay": 0.5,
+    "agent_template": "\n\n---\n[{agent}] {role}\n"
+  },
+  "synthesis": {
+    "enabled": true,
+    "method": "concat",
+    "output_file": ".trinity/shared/consensus.md"
+  },
+  "agents": {
+    "claude": {
+      "category": "architect",
+      "priority": 1
+    },
+    "codex": {
+      "category": "implementer",
+      "priority": 2
+    },
+    "kimi": {
+      "category": "reviewer",
+      "priority": 3
+    },
+    "gemini": {
+      "category": "general",
+      "priority": 4
+    },
+    "aider": {
+      "category": "implementer",
+      "priority": 5
+    }
+  }
+}

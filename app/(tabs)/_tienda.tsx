@@ -264,6 +264,15 @@ function MachineryTab() {
   const { money, machines, attachments, trailers, buyMachine, buyAttachment, buyTrailer } = useGameStore();
   const timeline = useGameStore(s => s.timeline);
   const [section, setSection] = useState<'tractors' | 'combines' | 'trucks' | 'attachments'>('tractors');
+  const [comparing, setComparing] = useState<string[]>([]);
+
+  function toggleCompare(id: string) {
+    setComparing(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length >= 2) return [prev[1], id];
+      return [...prev, id];
+    });
+  }
 
   const tractors    = MACHINE_TYPES.filter(m => m.category === 'tractor' && (!m.unlockId || isHistoricallyUnlocked(timeline, m.unlockId)));
   const combines    = MACHINE_TYPES.filter(m => m.category === 'harvester' && (!m.unlockId || isHistoricallyUnlocked(timeline, m.unlockId)));
@@ -283,30 +292,41 @@ function MachineryTab() {
     { key: 'attachments', label: '⚙️ Attachments' },
   ] as const;
 
-  const renderMachineCard = (m: (typeof MACHINE_TYPES)[0], onBuy: () => void, owned: number) => (
-    <View key={m.id} style={mStyles.card}>
-      <View style={mStyles.cardHeader}>
-        <Text style={mStyles.cardName}>{m.name}</Text>
-        <GuideButton entryId={GUIDE_ENTRY_IDS.machine(m.id)} compact />
-        {owned > 0 && <Text style={mStyles.ownedPill}>Owned: {owned}</Text>}
+  const renderMachineCard = (m: (typeof MACHINE_TYPES)[0], onBuy: () => void, owned: number) => {
+    const inCompare = comparing.includes(m.id);
+    return (
+      <View key={m.id} style={[mStyles.card, inCompare && { borderColor: '#64b5f6', borderWidth: 2 }]}>
+        <View style={mStyles.cardHeader}>
+          <Text style={mStyles.cardName}>{m.name}</Text>
+          <GuideButton entryId={GUIDE_ENTRY_IDS.machine(m.id)} compact />
+          {owned > 0 && <Text style={mStyles.ownedPill}>Owned: {owned}</Text>}
+        </View>
+        <Text style={mStyles.cardDetail}>💰 ${m.cost.toLocaleString()}</Text>
+        <Text style={mStyles.cardDetail}>🔧 ${m.maintenancePerDay}/day maintenance</Text>
+        {m.haPerDay !== undefined && <Text style={mStyles.cardDetail}>⚡ {m.haPerDay} ha/day</Text>}
+        {m.capacityKg !== undefined && (
+          <Text style={mStyles.cardDetail}>
+            📦 {m.capacityKg === 0 ? 'Needs trailer' : `${m.capacityKg.toLocaleString()} kg`}
+          </Text>
+        )}
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+          <TouchableOpacity
+            style={[mStyles.buyBtn, { flex: 1 }, money < m.cost && mStyles.buyBtnDisabled]}
+            onPress={onBuy}
+            disabled={money < m.cost}
+          >
+            <Text style={mStyles.buyBtnText}>{money < m.cost ? "Can't afford" : 'Buy'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[mStyles.buyBtn, { flex: 0, paddingHorizontal: 10, backgroundColor: inCompare ? '#0d2a3a' : '#1a2a1a', borderWidth: 1, borderColor: inCompare ? '#64b5f6' : '#2a3a2a' }]}
+            onPress={() => toggleCompare(m.id)}
+          >
+            <Text style={{ color: inCompare ? '#64b5f6' : '#aaa', fontSize: 11 }}>{inCompare ? '✓ vs' : 'vs'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      <Text style={mStyles.cardDetail}>💰 ${m.cost.toLocaleString()}</Text>
-      <Text style={mStyles.cardDetail}>🔧 ${m.maintenancePerDay}/day maintenance</Text>
-      {m.haPerDay !== undefined && <Text style={mStyles.cardDetail}>⚡ {m.haPerDay} ha/day</Text>}
-      {m.capacityKg !== undefined && (
-        <Text style={mStyles.cardDetail}>
-          📦 {m.capacityKg === 0 ? 'Needs trailer' : `${m.capacityKg.toLocaleString()} kg`}
-        </Text>
-      )}
-      <TouchableOpacity
-        style={[mStyles.buyBtn, money < m.cost && mStyles.buyBtnDisabled]}
-        onPress={onBuy}
-        disabled={money < m.cost}
-      >
-        <Text style={mStyles.buyBtnText}>{money < m.cost ? "Can't afford" : 'Buy'}</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   const renderAttachCard = (a: (typeof ATTACHMENT_TYPES)[0]) => (
     <View key={a.id} style={mStyles.card}>
@@ -363,6 +383,65 @@ function MachineryTab() {
     );
   }
 
+  const comparePanel = comparing.length >= 2 ? (() => {
+    const [idA, idB] = comparing;
+    const mA = MACHINE_TYPES.find(m => m.id === idA);
+    const mB = MACHINE_TYPES.find(m => m.id === idB);
+    if (!mA || !mB) return null;
+
+    type Row = { label: string; a: string; b: string; winner?: 'a' | 'b' | 'tie' };
+    const rows: Row[] = [
+      { label: 'Cost', a: `$${mA.cost.toLocaleString()}`, b: `$${mB.cost.toLocaleString()}`, winner: mA.cost < mB.cost ? 'a' : mB.cost < mA.cost ? 'b' : 'tie' },
+      { label: 'Maintenance', a: `$${mA.maintenancePerDay}/d`, b: `$${mB.maintenancePerDay}/d`, winner: mA.maintenancePerDay < mB.maintenancePerDay ? 'a' : mB.maintenancePerDay < mA.maintenancePerDay ? 'b' : 'tie' },
+    ];
+    if (mA.haPerDay != null || mB.haPerDay != null) {
+      const haA = mA.haPerDay ?? 0;
+      const haB = mB.haPerDay ?? 0;
+      rows.push({ label: 'Ha/day', a: haA > 0 ? `${haA}` : '—', b: haB > 0 ? `${haB}` : '—', winner: haA > haB ? 'a' : haB > haA ? 'b' : 'tie' });
+      if (haA > 0 && haB > 0) {
+        const effA = (haA / (mA.cost / 1000)).toFixed(2);
+        const effB = (haB / (mB.cost / 1000)).toFixed(2);
+        rows.push({ label: 'ha per $1k', a: effA, b: effB, winner: parseFloat(effA) > parseFloat(effB) ? 'a' : parseFloat(effB) > parseFloat(effA) ? 'b' : 'tie' });
+      }
+    }
+    if (mA.capacityKg != null || mB.capacityKg != null) {
+      const capA = mA.capacityKg ?? 0;
+      const capB = mB.capacityKg ?? 0;
+      rows.push({ label: 'Capacity', a: capA === 0 ? 'Needs trailer' : `${capA.toLocaleString()} kg`, b: capB === 0 ? 'Needs trailer' : `${capB.toLocaleString()} kg` });
+    }
+
+    return (
+      <View style={{ backgroundColor: '#0d1a2e', borderRadius: 12, margin: 10, padding: 12, borderWidth: 1, borderColor: '#64b5f644' }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <Text style={{ color: '#64b5f6', fontSize: 12, fontWeight: 'bold', letterSpacing: 0.5 }}>⚖ COMPARISON</Text>
+          <TouchableOpacity onPress={() => setComparing([])}>
+            <Text style={{ color: '#555', fontSize: 11 }}>Clear ×</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+          <View style={{ width: 90 }} />
+          <Text style={{ flex: 1, color: C.text, fontSize: 12, fontWeight: 'bold', textAlign: 'center' }}>{mA.name}</Text>
+          <Text style={{ flex: 1, color: C.text, fontSize: 12, fontWeight: 'bold', textAlign: 'center' }}>{mB.name}</Text>
+        </View>
+        {rows.map(row => (
+          <View key={row.label} style={{ flexDirection: 'row', paddingVertical: 4, borderTopWidth: 1, borderTopColor: '#1a2a3a' }}>
+            <Text style={{ width: 90, color: C.textMuted, fontSize: 11 }}>{row.label}</Text>
+            <Text style={{ flex: 1, color: row.winner === 'a' ? '#4caf50' : C.text, fontSize: 11, textAlign: 'center', fontWeight: row.winner === 'a' ? 'bold' : 'normal' }}>
+              {row.a}{row.winner === 'a' ? ' ✓' : ''}
+            </Text>
+            <Text style={{ flex: 1, color: row.winner === 'b' ? '#4caf50' : C.text, fontSize: 11, textAlign: 'center', fontWeight: row.winner === 'b' ? 'bold' : 'normal' }}>
+              {row.b}{row.winner === 'b' ? ' ✓' : ''}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
+  })() : comparing.length === 1 ? (
+    <View style={{ backgroundColor: '#0d1a2e', borderRadius: 10, margin: 10, padding: 10, borderWidth: 1, borderColor: '#64b5f622' }}>
+      <Text style={{ color: '#64b5f6', fontSize: 11 }}>⚖ Select one more machine to compare</Text>
+    </View>
+  ) : null;
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={mStyles.sectionBar}>
@@ -378,6 +457,7 @@ function MachineryTab() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+      {comparePanel}
       <View style={{ flex: 1 }}>{listData}</View>
     </View>
   );

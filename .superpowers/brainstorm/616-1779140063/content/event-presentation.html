@@ -1,0 +1,53 @@
+<h2>How do historical events appear on screen?</h2>
+<p class="subtitle">When the 1973 oil crisis hits — how does the player experience it?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Newspaper front page</h3>
+      <p>A full-screen modal slides in styled as a newspaper — masthead, bold headline, a short paragraph of narrative text, and the mechanical effect listed below it ("Fuel costs +40% for 6 months"). Player taps "Continue" to dismiss. Used only for major events. Minor events are just a small toast notification.</p>
+      <div style="background:#f5f0e8;border:2px solid #8B7355;padding:12px;margin-top:8px;font-family:Georgia,serif;border-radius:4px">
+        <div style="font-size:10px;letter-spacing:2px;text-align:center;color:#8B7355">THE FARM GAZETTE · October 17, 1973</div>
+        <div style="font-size:16px;font-weight:bold;text-align:center;margin:6px 0;color:#1a1a1a">OIL EMBARGO HITS FUEL SUPPLY</div>
+        <div style="font-size:11px;color:#333">OPEC nations cut exports. Diesel prices surge overnight. Farmers brace for a difficult harvest season...</div>
+        <div style="margin-top:8px;font-size:11px;color:#c0392b;font-weight:bold">⚠ Fuel costs +40% · Duration: 8 months</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Radio broadcast banner</h3>
+      <p>A banner slides down from the top of the screen styled as an old radio/TV broadcast — a small speaker icon, date, and a one-line headline. It stays visible for ~8 seconds then fades. Major events pause the game and show a brief expanded card with narrative + effects. Minor events just scroll by.</p>
+      <div style="background:#1a1a2e;border-left:4px solid #e74c3c;padding:10px 14px;margin-top:8px;border-radius:4px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">📻</span>
+        <div>
+          <div style="color:#e74c3c;font-size:10px;letter-spacing:1px">BREAKING · OCT 1973</div>
+          <div style="color:#fff;font-size:13px;font-weight:bold">OPEC oil embargo — fuel prices surging nationwide</div>
+          <div style="color:#f39c12;font-size:11px">⚠ Fuel costs +40% for 8 months</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Both — tiered by impact</h3>
+      <p>Small events (price shifts, new products, regulations) → radio/TV banner that slides in and fades. Major events (crises, booms, generational milestones) → full newspaper front page modal that demands attention. The player learns to read the signal: banner = manageable, newspaper = this changes everything.</p>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <div style="background:#1a1a2e;border-left:3px solid #27ae60;padding:8px;border-radius:4px;flex:1;min-width:140px">
+          <div style="color:#27ae60;font-size:9px">MINOR EVENT</div>
+          <div style="color:#fff;font-size:11px">📻 New herbicide available in stores</div>
+        </div>
+        <div style="background:#f5f0e8;border:2px solid #8B7355;padding:8px;border-radius:4px;flex:1;min-width:140px;font-family:Georgia,serif">
+          <div style="font-size:9px;color:#8B7355;text-align:center">THE FARM GAZETTE</div>
+          <div style="font-size:12px;font-weight:bold;text-align:center">CRISIS: BANKS FORECLOSING ON FARMS</div>
+          <div style="color:#c0392b;font-size:10px">⚠ Loan rates +6% · Land values -30%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,252 @@
+<style>
+  body { background: #0a0f0a; }
+  .screens { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; padding: 10px 0; }
+  .screen-card { border: 2px solid #1e2e1e; border-radius: 12px; overflow: hidden; width: 300px; cursor: pointer; transition: border-color 0.2s; }
+  .screen-card:hover { border-color: #4a7c59; }
+  .screen-card.selected { border-color: #7cb87e; box-shadow: 0 0 0 3px #4a7c5944; }
+  .screen-label { background: #111; color: #7cb87e; font-size: 11px; font-weight: bold; letter-spacing: 1px; text-align: center; padding: 8px; text-transform: uppercase; }
+
+  /* Option A - Cards list */
+  .opt-a { background: #0a0f0a; padding: 14px; font-family: sans-serif; }
+  .opt-a .cost-banner { background: #1a1200; border: 1px solid #c8860a33; border-radius: 6px; padding: 8px 12px; display: flex; justify-content: space-between; margin-bottom: 12px; }
+  .opt-a .cost-label { color: #6a5a2a; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; }
+  .opt-a .cost-value { color: #c8860a; font-size: 13px; font-weight: bold; }
+  .opt-a .member-card { background: #0f1a0f; border: 1px solid #1e2e1e; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+  .opt-a .member-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .opt-a .member-avatar { width: 32px; height: 32px; background: #1a3a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .opt-a .member-name { color: #fff; font-size: 12px; font-weight: bold; }
+  .opt-a .member-meta { color: #4a6a4a; font-size: 9px; margin-top: 1px; }
+  .opt-a .member-role { background: #0a2a0a; border: 1px solid #2a5a2a; border-radius: 3px; padding: 2px 6px; color: #7cb87e; font-size: 9px; display: inline-block; margin-right: 4px; }
+  .opt-a .rel-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+  .opt-a .rel-label { color: #4a6a4a; font-size: 9px; width: 60px; }
+  .opt-a .rel-track { flex: 1; height: 4px; background: #1a2a1a; border-radius: 2px; overflow: hidden; }
+  .opt-a .rel-fill { height: 100%; border-radius: 2px; background: #4a7c59; }
+  .opt-a .interest-fill { background: #c8860a; }
+
+  /* Option B - Compact list with side indicators */
+  .opt-b { background: #0a0f0a; padding: 14px; font-family: sans-serif; }
+  .opt-b .family-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .opt-b .family-title { color: #a5d6a7; font-size: 13px; font-weight: bold; }
+  .opt-b .cost-pill { background: #1a1200; border: 1px solid #c8860a44; border-radius: 10px; padding: 3px 10px; color: #c8860a; font-size: 10px; font-weight: bold; }
+  .opt-b .member-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #0f1a0f; }
+  .opt-b .member-avatar { width: 36px; height: 36px; background: #1a3a1a; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .opt-b .member-info { flex: 1; min-width: 0; }
+  .opt-b .member-name { color: #e8e8e8; font-size: 11px; font-weight: bold; }
+  .opt-b .member-meta { color: #4a6a4a; font-size: 9px; margin-top: 1px; }
+  .opt-b .member-role { color: #7cb87e; font-size: 9px; }
+  .opt-b .bars { display: flex; flex-direction: column; gap: 3px; width: 50px; }
+  .opt-b .bar-row { display: flex; align-items: center; gap: 4px; }
+  .opt-b .bar-icon { font-size: 7px; }
+  .opt-b .bar-track { flex: 1; height: 3px; background: #1a2a1a; border-radius: 2px; overflow: hidden; }
+  .opt-b .bar-fill-g { height: 100%; background: #4a7c59; border-radius: 2px; }
+  .opt-b .bar-fill-o { height: 100%; background: #c8860a; border-radius: 2px; }
+
+  /* Option C - Grid cards */
+  .opt-c { background: #0a0f0a; padding: 14px; font-family: sans-serif; }
+  .opt-c .cost-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .opt-c .cost-label { color: #4a6a4a; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; }
+  .opt-c .cost-value { color: #c8860a; font-size: 14px; font-weight: 900; }
+  .opt-c .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opt-c .member-card { background: #0f1a0f; border: 1px solid #1e2e1e; border-radius: 8px; padding: 10px; }
+  .opt-c .member-avatar { width: 28px; height: 28px; background: #1a3a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-bottom: 6px; }
+  .opt-c .member-name { color: #fff; font-size: 10px; font-weight: bold; margin-bottom: 2px; }
+  .opt-c .member-meta { color: #4a6a4a; font-size: 8px; margin-bottom: 6px; }
+  .opt-c .mini-role { background: #0a2a0a; border-radius: 3px; padding: 2px 5px; color: #7cb87e; font-size: 8px; display: inline-block; margin-bottom: 6px; }
+  .opt-c .mini-bar-row { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
+  .opt-c .mini-bar-label { color: #3a5a3a; font-size: 7px; width: 12px; }
+  .opt-c .mini-track { flex: 1; height: 3px; background: #1a2a1a; border-radius: 2px; overflow: hidden; }
+  .opt-c .mini-fill-g { height: 100%; background: #4a7c59; border-radius: 2px; }
+  .opt-c .mini-fill-o { height: 100%; background: #c8860a; border-radius: 2px; }
+</style>
+
+<h2>Legado — Familia Sub-tab</h2>
+<p class="subtitle">Shows your spouse and children — roles, relationship, farm interest. Click to select.</p>
+
+<div class="screens">
+
+  <!-- Option A - Card list -->
+  <div class="screen-card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="screen-label">A — Card List</div>
+    <div class="opt-a">
+      <div class="cost-banner">
+        <div>
+          <div class="cost-label">Annual Family Cost</div>
+          <div class="cost-value">$4,200</div>
+        </div>
+        <div style="text-align:right">
+          <div class="cost-label">Members</div>
+          <div class="cost-value" style="font-size:11px;color:#7cb87e">3</div>
+        </div>
+      </div>
+
+      <div class="member-card">
+        <div class="member-header">
+          <div class="member-avatar">👩</div>
+          <div>
+            <div class="member-name">Elena Hartwell</div>
+            <div class="member-meta">Spouse · Age 32 · Married 1976</div>
+          </div>
+        </div>
+        <div><span class="member-role">Office Manager</span></div>
+        <div class="rel-row">
+          <div class="rel-label">Relationship</div>
+          <div class="rel-track"><div class="rel-fill" style="width:78%"></div></div>
+          <div style="color:#7cb87e;font-size:9px">78</div>
+        </div>
+      </div>
+
+      <div class="member-card">
+        <div class="member-header">
+          <div class="member-avatar">👦</div>
+          <div>
+            <div class="member-name">Thomas Hartwell</div>
+            <div class="member-meta">Son · Age 14 · Helping on farm</div>
+          </div>
+        </div>
+        <div class="rel-row">
+          <div class="rel-label">Interest</div>
+          <div class="rel-track"><div class="rel-fill interest-fill" style="width:62%"></div></div>
+          <div style="color:#c8860a;font-size:9px">62</div>
+        </div>
+        <div class="rel-row">
+          <div class="rel-label">Relationship</div>
+          <div class="rel-track"><div class="rel-fill" style="width:85%"></div></div>
+          <div style="color:#7cb87e;font-size:9px">85</div>
+        </div>
+      </div>
+
+      <div class="member-card">
+        <div class="member-header">
+          <div class="member-avatar">👧</div>
+          <div>
+            <div class="member-name">Clara Hartwell</div>
+            <div class="member-meta">Daughter · Age 10</div>
+          </div>
+        </div>
+        <div class="rel-row">
+          <div class="rel-label">Interest</div>
+          <div class="rel-track"><div class="rel-fill interest-fill" style="width:35%"></div></div>
+          <div style="color:#c8860a;font-size:9px">35</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B - Compact rows -->
+  <div class="screen-card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="screen-label">B — Compact Rows</div>
+    <div class="opt-b">
+      <div class="family-header">
+        <div class="family-title">👨‍👩‍👧‍👦 Hartwell Family</div>
+        <div class="cost-pill">$4,200 / yr</div>
+      </div>
+
+      <div class="member-row">
+        <div class="member-avatar">👩</div>
+        <div class="member-info">
+          <div class="member-name">Elena Hartwell</div>
+          <div class="member-meta">Spouse · Age 32</div>
+          <div class="member-role">📋 Office Manager</div>
+        </div>
+        <div class="bars">
+          <div class="bar-row">
+            <div class="bar-icon">💚</div>
+            <div class="bar-track"><div class="bar-fill-g" style="width:78%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="member-row">
+        <div class="member-avatar">👦</div>
+        <div class="member-info">
+          <div class="member-name">Thomas Hartwell</div>
+          <div class="member-meta">Son · Age 14 · Farm helper</div>
+          <div class="member-role">🌱 Growing interest</div>
+        </div>
+        <div class="bars">
+          <div class="bar-row">
+            <div class="bar-icon">💚</div>
+            <div class="bar-track"><div class="bar-fill-g" style="width:85%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-icon">🌾</div>
+            <div class="bar-track"><div class="bar-fill-o" style="width:62%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="member-row">
+        <div class="member-avatar">👧</div>
+        <div class="member-info">
+          <div class="member-name">Clara Hartwell</div>
+          <div class="member-meta">Daughter · Age 10</div>
+          <div class="member-role">🎒 At school</div>
+        </div>
+        <div class="bars">
+          <div class="bar-row">
+            <div class="bar-icon">💚</div>
+            <div class="bar-track"><div class="bar-fill-g" style="width:72%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-icon">🌾</div>
+            <div class="bar-track"><div class="bar-fill-o" style="width:35%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C - Grid -->
+  <div class="screen-card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="screen-label">C — Grid Cards</div>
+    <div class="opt-c">
+      <div class="cost-row">
+        <div class="cost-label">Annual Family Cost</div>
+        <div class="cost-value">$4,200</div>
+      </div>
+      <div class="grid">
+        <div class="member-card">
+          <div class="member-avatar">👩</div>
+          <div class="member-name">Elena</div>
+          <div class="member-meta">Spouse · Age 32</div>
+          <div class="mini-role">Office Mgr</div>
+          <div class="mini-bar-row">
+            <div class="mini-bar-label">💚</div>
+            <div class="mini-track"><div class="mini-fill-g" style="width:78%"></div></div>
+          </div>
+        </div>
+        <div class="member-card">
+          <div class="member-avatar">👦</div>
+          <div class="member-name">Thomas</div>
+          <div class="member-meta">Son · Age 14</div>
+          <div class="mini-role">Farm helper</div>
+          <div class="mini-bar-row">
+            <div class="mini-bar-label">💚</div>
+            <div class="mini-track"><div class="mini-fill-g" style="width:85%"></div></div>
+          </div>
+          <div class="mini-bar-row">
+            <div class="mini-bar-label">🌾</div>
+            <div class="mini-track"><div class="mini-fill-o" style="width:62%"></div></div>
+          </div>
+        </div>
+        <div class="member-card">
+          <div class="member-avatar">👧</div>
+          <div class="member-name">Clara</div>
+          <div class="member-meta">Daughter · Age 10</div>
+          <div class="mini-role">At school</div>
+          <div class="mini-bar-row">
+            <div class="mini-bar-label">🌾</div>
+            <div class="mini-track"><div class="mini-fill-o" style="width:35%"></div></div>
+          </div>
+        </div>
+        <div class="member-card" style="display:flex;align-items:center;justify-content:center;border-style:dashed;opacity:0.4">
+          <div style="text-align:center">
+            <div style="font-size:20px;margin-bottom:4px">➕</div>
+            <div style="color:#4a6a4a;font-size:9px">Expecting</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
