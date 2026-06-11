@@ -29,6 +29,7 @@ export interface SaleRecord {
   day: number;
   amount: number;
   category?: 'crops' | 'animals' | 'processed' | 'contracts';
+  cropId?: string;
 }
 
 export interface LoanRecord {

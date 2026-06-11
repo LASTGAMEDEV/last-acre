@@ -295,7 +295,7 @@ export const createCropActions: ActionFactory<CropActions> = (set, get) => ({
       money: state.money + revenue,
       inventory: { ...state.inventory, [cropId]: inStock - toSell },
       inventoryBatches: remainingBatches,
-      salesLog: [...state.salesLog, { day: state.day, amount: revenue, category: 'crops' }],
+      salesLog: [...state.salesLog, { day: state.day, amount: revenue, category: 'crops', cropId }],
       totalRevenue: state.totalRevenue + revenue,
       sellPressures: newPressures,
       firstMissionStep: state.firstMissionStep === 2 ? 3 : state.firstMissionStep,

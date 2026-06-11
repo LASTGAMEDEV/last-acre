@@ -3409,7 +3409,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
               alertSellIncome += revenue;
               harvestInventory = { ...harvestInventory, [alert.cropId]: 0 };
               const cropName = CROP_TYPES.find(c => c.id === alert.cropId)?.name ?? alert.cropId;
-              alertSalesEntries.push({ day: newDay, amount: revenue, category: 'crops' as const });
+              alertSalesEntries.push({ day: newDay, amount: revenue, category: 'crops' as const, cropId: alert.cropId });
               const dirLabel = alert.direction === 'below' ? '≤' : '≥';
               summary.push({ id: `alert_${alert.id}`, icon: '🎯', title: `Price alert: sold ${qty.toLocaleString()} ${cropName}`, detail: `${dirLabel}$${alert.targetPrice.toFixed(2)} hit · $${revenue.toLocaleString()} total`, severity: 'good' });
             }
@@ -4229,7 +4229,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
           : 0;
         if (gridWaterCost > 0) moneyAfterDrilling -= gridWaterCost;
 
-        const autoSellSalesEntries = autoSellLog.map(s => ({ day: newDay, amount: Math.round(s.revenue), category: 'crops' as const }));
+        const autoSellSalesEntries = autoSellLog.map(s => ({ day: newDay, amount: Math.round(s.revenue), category: 'crops' as const, cropId: s.cropId }));
         const deliverySalesEntries = deliveryRevenue > 0
           ? [{ day: newDay, amount: deliveryRevenue, category: 'crops' as const }]
           : [];

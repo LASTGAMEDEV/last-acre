@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
+import { CROP_TYPES } from '../../data/cropTypes';
 
 const CATEGORY_LABELS: Record<string, string> = {
   crops:     '🌾 Crops',
@@ -90,6 +91,15 @@ export default function FinancialReportSection() {
   // Estimated cash in 30 days
   const projCash = money + avgDailyRev * 30 - outflowNext30;
 
+  // Per-crop revenue (last 90 days)
+  const cropRevMap: Record<string, number> = {};
+  salesLog.filter(s => s.day >= day - 90 && s.category === 'crops' && s.cropId).forEach(s => {
+    cropRevMap[s.cropId!] = (cropRevMap[s.cropId!] ?? 0) + s.amount;
+  });
+  const cropRevEntries = Object.entries(cropRevMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+
   // Loans paid on time
   const loansOnTime = loanHistory.filter(l => l.paidOnTime).length;
   const loansMissed = loanHistory.filter(l => !l.paidOnTime).length;
@@ -154,6 +164,29 @@ export default function FinancialReportSection() {
         </>
       )}
 
+      {cropRevEntries.length > 0 && (
+        <>
+          <SectionHeader title="🌾 Crop Revenue (90 days)" />
+          <Card>
+            {cropRevEntries.map(([cropId, rev], i) => {
+              const crop = CROP_TYPES.find(c => c.id === cropId);
+              const totalCropRev = cropRevEntries.reduce((s, [, v]) => s + v, 0);
+              const pct = totalCropRev > 0 ? Math.round((rev / totalCropRev) * 100) : 0;
+              return (
+                <View key={cropId} style={fr.cropRow}>
+                  <Text style={fr.cropRank}>#{i + 1}</Text>
+                  <Text style={fr.cropName}>{crop?.name ?? cropId}</Text>
+                  <View style={fr.cropBarWrap}>
+                    <View style={[fr.cropBar, { width: `${pct}%` as any }]} />
+                  </View>
+                  <Text style={fr.cropRev}>{fmt(rev)}</Text>
+                </View>
+              );
+            })}
+          </Card>
+        </>
+      )}
+
       <SectionHeader title="📈 Track Record" />
       <Card>
         <StatRow label="Loans paid on time" value={`${loansOnTime}`} color="#4caf50" />
@@ -183,4 +216,10 @@ const fr = StyleSheet.create({
   legendText:   { color: C.textMuted, fontSize: F.size.xs },
   emptyText:    { color: C.textMuted, fontSize: F.size.sm, textAlign: 'center', paddingVertical: S.sm },
   warningText:  { color: '#f59e0b', fontSize: F.size.xs, marginTop: 4 },
+  cropRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 3 },
+  cropRank:     { color: C.textFaint, fontSize: 10, width: 20 },
+  cropName:     { color: C.text, fontSize: F.size.sm, width: 80 },
+  cropBarWrap:  { flex: 1, height: 5, backgroundColor: C.bgDeep, borderRadius: 3, overflow: 'hidden' },
+  cropBar:      { height: 5, backgroundColor: '#c8860a', borderRadius: 3 },
+  cropRev:      { color: '#4caf50', fontSize: F.size.sm, width: 64, textAlign: 'right', fontWeight: 'bold' },
 });
