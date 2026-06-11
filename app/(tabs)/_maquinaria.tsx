@@ -12,7 +12,7 @@ type MachineryTab = 'fleet' | 'attachments' | 'jobs' | 'deliveries';
 
 // ── Fleet Tab ────────────────────────────────────────────────────────────────
 function FleetTab() {
-  const { machines, trailers, tractorJobs, harvestJobs, machineRepairs, day, fuel, buyFuel, buildings, money, listings, fuelPrice } = useGameStore();
+  const { machines, trailers, tractorJobs, harvestJobs, machineRepairs, day, fuel, buyFuel, buildings, money, listings, fuelPrice, startRepair } = useGameStore();
   const fuelCapacity = (buildings ?? []).reduce((cap: number, id: string) => {
     if (id === 'bld_fuel_tank_s') return cap + 500;
     if (id === 'bld_fuel_tank_l') return cap + 2000;
@@ -141,6 +141,39 @@ function FleetTab() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {(() => {
+        const pendingRepairs = (machineRepairs ?? []).filter(r => r.startDay === null);
+        if (pendingRepairs.length === 0) return null;
+        const affordableRepairs = pendingRepairs.filter(r => {
+          const netCost = Math.max(0, r.cost - r.insurancePaid);
+          return money >= netCost;
+        });
+        const totalAffordableCost = affordableRepairs.reduce((sum, r) => sum + Math.max(0, r.cost - r.insurancePaid), 0);
+        const canRepairAll = affordableRepairs.length > 0;
+        return (
+          <View style={s.repairAllCard}>
+            <Text style={s.repairAllTitle}>🔧 Pending Repairs</Text>
+            <Text style={s.repairAllSub}>
+              {pendingRepairs.length} machine{pendingRepairs.length > 1 ? 's' : ''} need repair
+              {affordableRepairs.length < pendingRepairs.length
+                ? ` · ${affordableRepairs.length} affordable`
+                : ''}
+            </Text>
+            <TouchableOpacity
+              style={[s.repairAllBtn, !canRepairAll && s.repairAllBtnDisabled]}
+              onPress={() => { affordableRepairs.forEach(r => startRepair(r.machineId)); }}
+              disabled={!canRepairAll}
+            >
+              <Text style={s.repairAllBtnText}>
+                {canRepairAll
+                  ? `Repair ${affordableRepairs.length === 1 ? '' : `all ${affordableRepairs.length} `}· $${totalAffordableCost.toLocaleString()}`
+                  : "Can't afford any repairs"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })()}
 
       {tractors.length > 0 && (
         <>
@@ -425,4 +458,10 @@ const s = StyleSheet.create({
   fuelBuyBtnSub:      { color: C.green, fontSize: F.size.xs },
   escrowBadge: { backgroundColor: C.bgElevated, borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: 6, alignSelf: 'flex-start', marginTop: 6 },
   escrowText:  { color: C.textFaint, fontSize: 11, fontStyle: 'italic' },
+  repairAllCard: { backgroundColor: '#3a1a1a', borderRadius: 10, margin: S.sm, padding: S.md, borderLeftWidth: 3, borderLeftColor: '#ef5350', gap: 6 },
+  repairAllTitle:{ color: '#ef5350', fontSize: F.size.md, fontWeight: 'bold' },
+  repairAllSub:  { color: C.textMuted, fontSize: F.size.sm },
+  repairAllBtn:  { backgroundColor: '#ef5350', borderRadius: R.md, paddingVertical: 10, alignItems: 'center' },
+  repairAllBtnDisabled: { backgroundColor: C.bgDeep, opacity: 0.5 },
+  repairAllBtnText: { color: '#fff', fontSize: F.size.sm, fontWeight: 'bold' },
 });
