@@ -7,8 +7,49 @@ import { SEASON_THEME, C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
+import { gameDayToCalendarYear } from '../../engine/calendarUtils';
 import GuideButton from '../GuideButton';
 import FarmLegacyCard from './FarmLegacyCard';
+
+type FarmStage = {
+  name: string;
+  icon: string;
+  color: string;
+  yearRange: string;
+  focus: string[];
+};
+
+function getFarmStage(calYear: number): FarmStage {
+  const farmingYears = calYear - 1970;
+  if (farmingYears <= 2) return {
+    name: 'Survival',
+    icon: '🌱',
+    color: '#4caf50',
+    yearRange: 'Years 1–2',
+    focus: ['Stabilize cash flow', 'Plant profitable crops', 'Avoid large loans'],
+  };
+  if (farmingYears <= 5) return {
+    name: 'Growth',
+    icon: '📈',
+    color: '#2196f3',
+    yearRange: 'Years 3–5',
+    focus: ['Expand land holdings', 'Diversify income', 'Build processing'],
+  };
+  if (farmingYears <= 10) return {
+    name: 'Establishment',
+    icon: '🏗️',
+    color: '#9c27b0',
+    yearRange: 'Years 6–10',
+    focus: ['Specialize your farm identity', 'Build reputation', 'Enter premium markets'],
+  };
+  return {
+    name: 'Legacy',
+    icon: '👑',
+    color: '#c8860a',
+    yearRange: 'Year 11+',
+    focus: ['Prepare for succession', 'Optimize for scale', 'Dynasty legacy'],
+  };
+}
 
 type Priority = { icon: string; label: string; severity: 'critical' | 'warning' | 'action' };
 
@@ -21,6 +62,9 @@ function DashboardSection() {
   } = useGameStore();
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
+  const calYear = gameDayToCalendarYear(day);
+  const farmStage = getFarmStage(calYear);
+  const farmingYears = calYear - 1970;
 
   const ownedParcels = parcels.filter(p => p.owned);
 
@@ -359,6 +403,22 @@ function DashboardSection() {
         </View>
       </View>
 
+      {/* Farm Stage / Progression Arc */}
+      <View style={[dash.stageCard, { borderColor: farmStage.color + '55' }]}>
+        <View style={dash.stageHeader}>
+          <Text style={dash.stageIcon}>{farmStage.icon}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[dash.stageName, { color: farmStage.color }]}>{farmStage.name} Stage</Text>
+            <Text style={dash.stageRange}>{farmStage.yearRange} · Year {farmingYears > 0 ? farmingYears : 1} of farming</Text>
+          </View>
+        </View>
+        <View style={dash.stageFocusList}>
+          {farmStage.focus.map((f, i) => (
+            <Text key={i} style={dash.stageFocusItem}>▸ {f}</Text>
+          ))}
+        </View>
+      </View>
+
       {/* Farm Legacy / Progression */}
       <FarmLegacyCard />
 
@@ -496,6 +556,14 @@ const dash = StyleSheet.create({
   opIcon:   { fontSize: 18, lineHeight: 22 },
   opTitle:  { fontSize: F.size.sm, fontWeight: 'bold', marginBottom: 1 },
   opDetail: { color: C.textMuted, fontSize: F.size.xs, lineHeight: 16 },
+  // Farm Stage
+  stageCard:       { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, borderWidth: 1 },
+  stageHeader:     { flexDirection: 'row', alignItems: 'center', gap: S.sm, marginBottom: S.sm },
+  stageIcon:       { fontSize: 22 },
+  stageName:       { fontSize: F.size.md, fontWeight: 'bold' },
+  stageRange:      { color: C.textMuted, fontSize: F.size.xs, marginTop: 1 },
+  stageFocusList:  { gap: 3 },
+  stageFocusItem:  { color: C.textDim, fontSize: F.size.xs },
   // Farm Health
   healthCard:      { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md },
   healthScore:     { fontSize: F.size.xl, fontWeight: 'bold' },

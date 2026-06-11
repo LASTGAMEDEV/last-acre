@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
+import { computeSoilYieldModifier, SOIL_DEFAULTS } from '../../engine/crops';
 import type { LandParcel } from '../../types/domain/land';
 
 const ORGANIC_LABEL: Record<string, string> = {
@@ -46,7 +47,24 @@ function ActiveCropCard({ parcel, day }: { parcel: LandParcel; day: number }) {
   const progress = Math.min(1, (day - plantDay) / (ct?.growthDays ?? 60));
   const daysLeft = Math.max(0, harvestDay - day);
   const progressPct = Math.round(progress * 100);
-  const estRevenue = ct ? Math.round((ct.baseYield * parcel.hectares * ct.basePrice)) : 0;
+
+  // Yield factor breakdown
+  const soil = parcel.soil ?? SOIL_DEFAULTS;
+  const soilMod = computeSoilYieldModifier(soil);
+  const rotation = parcel.cropHistory?.length > 0 && parcel.cropHistory[parcel.cropHistory.length - 1] !== pc.cropId;
+  const rotationMod = rotation ? 1.15 : 1.0;
+  const weedMod = parcel.hasWeeds ? 0.75 : 1.0;
+  const organicMod = parcel.organicStatus === 'organic' ? 1.2 : 1.0;
+  const estYield = ct ? Math.round(ct.baseYield * parcel.hectares * soilMod * rotationMod * weedMod * organicMod) : 0;
+  const estRevenue = ct ? Math.round(estYield * ct.basePrice) : 0;
+  const totalMod = Math.round(soilMod * rotationMod * weedMod * organicMod * 100);
+
+  const factors: { label: string; value: string; color: string }[] = [
+    { label: 'Soil', value: `${Math.round(soilMod * 100)}%`, color: soilMod >= 0.9 ? '#4caf50' : soilMod >= 0.7 ? '#f59e0b' : '#ef5350' },
+    ...(rotation ? [{ label: 'Rotation bonus', value: '+15%', color: '#9ccc65' }] : []),
+    ...(parcel.hasWeeds ? [{ label: 'Weeds', value: '−25%', color: '#ef5350' }] : []),
+    ...(parcel.organicStatus === 'organic' ? [{ label: 'Organic', value: '+20%', color: '#4caf50' }] : []),
+  ];
 
   return (
     <View style={cr.activeCard}>
@@ -63,13 +81,21 @@ function ActiveCropCard({ parcel, day }: { parcel: LandParcel; day: number }) {
         <View style={[cr.progressFill, { width: `${progressPct}%` as any, backgroundColor: progress >= 1 ? '#4caf50' : '#c8860a' }]} />
       </View>
       <View style={cr.activeCardMeta}>
-        <Text style={cr.metaText}>{parcel.hectares.toFixed(1)} ha · est. ${estRevenue.toLocaleString()}</Text>
-        {parcel.organicStatus && parcel.organicStatus !== 'conventional' && (
-          <Text style={[cr.metaText, { color: ORGANIC_COLOR[parcel.organicStatus] ?? '#888' }]}>
-            {ORGANIC_LABEL[parcel.organicStatus] ?? parcel.organicStatus}
-          </Text>
-        )}
+        <Text style={cr.metaText}>{parcel.hectares.toFixed(1)} ha · ~{estYield.toLocaleString()} t · est. ${estRevenue.toLocaleString()}</Text>
+        <Text style={[cr.metaText, { color: totalMod >= 100 ? '#4caf50' : totalMod >= 75 ? '#f59e0b' : '#ef5350' }]}>
+          Yield mult: {totalMod}%
+        </Text>
       </View>
+      {factors.length > 0 && (
+        <View style={cr.factorRow}>
+          {factors.map((f, i) => (
+            <View key={i} style={cr.factorChip}>
+              <Text style={cr.factorLabel}>{f.label}</Text>
+              <Text style={[cr.factorValue, { color: f.color }]}>{f.value}</Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -263,6 +289,10 @@ const cr = StyleSheet.create({
   progressFill:   { height: 5, borderRadius: 3 },
   activeCardMeta: { flexDirection: 'row', justifyContent: 'space-between' },
   metaText:       { color: C.textMuted, fontSize: F.size.xs },
+  factorRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 },
+  factorChip:     { backgroundColor: C.bgDeep, borderRadius: R.sm, paddingHorizontal: 6, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  factorLabel:    { color: C.textFaint, fontSize: 9 },
+  factorValue:    { fontSize: 9, fontWeight: 'bold' },
   // Revenue
   revRow:         { flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: C.divider },
   revRank:        { color: C.textFaint, fontSize: 10, width: 24, paddingTop: 2 },
