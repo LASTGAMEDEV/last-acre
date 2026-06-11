@@ -521,6 +521,25 @@ export default function TierrasScreen() {
           )}
         </View>
 
+        {/* Crop history strip */}
+        {parcel.cropHistory && parcel.cropHistory.length > 0 && (
+          <View style={localStyles.historyRow}>
+            <Text style={localStyles.historyLabel}>History:</Text>
+            {[...parcel.cropHistory].reverse().slice(0, 3).map((cid, i) => {
+              const ct = CROP_TYPES.find(c => c.id === cid);
+              const isLast = i === 0;
+              return (
+                <View key={i} style={[localStyles.historyCrop, isLast && localStyles.historyCropLast]}>
+                  <Text style={localStyles.historyCropText}>{ct?.name ?? cid}</Text>
+                </View>
+              );
+            })}
+            {parcel.plantedCrop && parcel.lastCropId && parcel.plantedCrop.cropId !== parcel.lastCropId && (
+              <Text style={localStyles.rotationBadge}>+15% rotation</Text>
+            )}
+          </View>
+        )}
+
         {/* Greenhouse badge / toggle */}
         {parcel.greenhouse ? (
           <View style={styles.ghRow}>
@@ -1690,6 +1709,12 @@ const localStyles = StyleSheet.create({
   opBtnText:      { color: C.white, fontSize: F.size.sm, fontWeight: 'bold' },
   yieldFactors:   { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: S.sm },
   yieldChip:      { fontSize: F.size.xs, fontWeight: 'bold', backgroundColor: '#0d1a2e', borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 2 },
+  historyRow:     { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginBottom: 4 },
+  historyLabel:   { color: C.textFaint, fontSize: 10 },
+  historyCrop:    { backgroundColor: '#1a1a2e', borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 2 },
+  historyCropLast:{ backgroundColor: '#0f3460' },
+  historyCropText:{ color: C.textMuted, fontSize: 10 },
+  rotationBadge:  { color: '#81c784', fontSize: 10, fontWeight: 'bold', backgroundColor: '#1a3a1a', borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 2 },
   progressRow:    { backgroundColor: C.bg, borderRadius: R.md, padding: S.sm, marginTop: S.sm },
   progressText:   { color: '#ffb74d', fontSize: F.size.sm, textAlign: 'center' },
   batchPlantBtn:  { backgroundColor: C.bgCard, borderRadius: R.md, padding: 10, alignItems: 'center', marginHorizontal: S.md, marginTop: 6 },
