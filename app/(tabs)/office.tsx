@@ -16,6 +16,8 @@ import CSASection from '../../components/office/CSASection';
 import Encyclopedia from '../../components/Encyclopedia';
 import SettingsSection from '../../components/office/SettingsSection';
 import FinancialReportSection from '../../components/office/FinancialReportSection';
+import CropReportSection from '../../components/office/CropReportSection';
+import AnimalReportSection from '../../components/office/AnimalReportSection';
 import SubTabBar from '../../components/SubTabBar';
 import { C, F, S } from '../../constants/theme';
 
@@ -58,6 +60,13 @@ const TABS: { id: OfficeTab; label: string }[] = [
 
 export default function OfficeScreen() {
   const [tab, setTab] = useState<OfficeTab>('dashboard');
+  const [reportSubTab, setReportSubTab] = useState<'financial' | 'crops' | 'animals'>('financial');
+
+  const REPORT_TABS = [
+    { id: 'financial', label: '💰 Finance' },
+    { id: 'crops',     label: '🌾 Crops' },
+    { id: 'animals',   label: '🐾 Animals' },
+  ];
 
   return (
     <View style={styles.container}>
@@ -67,7 +76,14 @@ export default function OfficeScreen() {
       <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as OfficeTab)} />
       {tab === 'dashboard'      && <DashboardSection />}
       {tab === 'planner'        && <AnnualPlanningSection />}
-      {tab === 'reports'        && <FinancialReportSection />}
+      {tab === 'reports'        && (
+        <View style={{ flex: 1 }}>
+          <SubTabBar tabs={REPORT_TABS} active={reportSubTab} onSelect={id => setReportSubTab(id as typeof reportSubTab)} />
+          {reportSubTab === 'financial' && <FinancialReportSection />}
+          {reportSubTab === 'crops'     && <CropReportSection />}
+          {reportSubTab === 'animals'   && <AnimalReportSection />}
+        </View>
+      )}
       {tab === 'banking'        && <BankingSection />}
       {tab === 'insurance'      && <InsuranceSection />}
       {tab === 'coop'           && <CoopSection />}
