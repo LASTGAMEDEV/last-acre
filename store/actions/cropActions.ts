@@ -80,6 +80,7 @@ export interface CropActions {
   setSelectedMarket: (marketId: MarketId) => void;
   openFuture: (cropId: string, quantity: number, termDays: number) => void;
   setAutoSell: (cropId: string, settings: { enabled: boolean; minPrice: number } | null) => void;
+  setInventoryReserve: (cropId: string, qty: number) => void;
 }
 
 export const createCropActions: ActionFactory<CropActions> = (set, get) => ({
@@ -555,5 +556,16 @@ export const createCropActions: ActionFactory<CropActions> = (set, get) => ({
     } else {
       set({ autoSell: { ...state.autoSell, [cropId]: settings } });
     }
+  },
+
+  setInventoryReserve: (cropId, qty) => {
+    const state = get();
+    const next = { ...(state.inventoryReserves ?? {}) };
+    if (qty <= 0) {
+      delete next[cropId];
+    } else {
+      next[cropId] = qty;
+    }
+    set({ inventoryReserves: next });
   },
 });

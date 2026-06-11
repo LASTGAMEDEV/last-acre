@@ -136,6 +136,7 @@ export interface GameState {
     machineryWindow: 'twilight' | 'day' | 'night';
   };
   autoSell: Record<string, { enabled: boolean; minPrice: number }>;
+  inventoryReserves: Record<string, number>;
   prestige: number;
   workers: Worker[];
   consultant: Consultant | null;
@@ -354,6 +355,7 @@ export interface GameState {
   harvestAllReady: () => void;
   collectAllProduction: () => void;
   setAutoSell: (cropId: string, settings: { enabled: boolean; minPrice: number } | null) => void;
+  setInventoryReserve: (cropId: string, qty: number) => void;
   startNewSeason: () => void;
   hireWorker: (typeId: WorkerRole) => void;
   fireWorker: (workerId: string) => void;

@@ -102,6 +102,8 @@ export default function MarketPricesSection() {
     selectedMarket,
     setSelectedMarket,
     hapticEnabled,
+    inventoryReserves,
+    setInventoryReserve,
   } = useGameStore();
 
   const [selectedCrop, setSelectedCrop] = useState<string>(CROP_TYPES[0].id);
@@ -454,14 +456,21 @@ export default function MarketPricesSection() {
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <Text style={styles.sectionTitle}>Stored inventory</Text>
               {stockedCrops.length > 1 && (() => {
-                const totalVal = stockedCrops.reduce((sum, { qty, price }) => sum + sellRevenue(qty, price), 0);
+                const reserves = inventoryReserves ?? {};
+                const sellable = stockedCrops.map(({ crop, qty, price }) => ({
+                  crop, price,
+                  sellQty: Math.max(0, qty - (reserves[crop.id] ?? 0)),
+                })).filter(x => x.sellQty > 0);
+                const totalVal = sellable.reduce((sum, { sellQty, price }) => sum + sellRevenue(sellQty, price), 0);
+                const hasReserves = stockedCrops.some(({ crop }) => (reserves[crop.id] ?? 0) > 0);
+                if (totalVal <= 0) return null;
                 return (
                   <TouchableOpacity
                     style={{ backgroundColor: C.bgCard, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 }}
-                    onPress={() => stockedCrops.forEach(({ crop, qty }) => sellCrop(crop.id, qty))}
+                    onPress={() => sellable.forEach(({ crop, sellQty }) => sellCrop(crop.id, sellQty))}
                   >
                     <Text style={{ color: C.green, fontSize: 11, fontWeight: 'bold' }}>
-                      Sell All · ${Math.round(totalVal).toLocaleString()}
+                      {hasReserves ? 'Sell Above Reserve' : 'Sell All'} · ${Math.round(totalVal).toLocaleString()}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -479,14 +488,34 @@ export default function MarketPricesSection() {
               <Text style={styles.emptyText}>No harvests stored</Text>
             ) : (
               stockedCrops.map(({ crop, qty, price }) => {
-                const val = sellRevenue(qty, price);
+                const reserves = inventoryReserves ?? {};
+                const reserve = reserves[crop.id] ?? 0;
+                const sellQty = Math.max(0, qty - reserve);
+                const val = sellRevenue(sellQty, price);
                 const isSpoiling = price < crop.basePrice * 0.85;
+                const RESERVE_STEPS = [0, 100, 500, 1000, 5000, 10000];
+                const nextReserve = RESERVE_STEPS[RESERVE_STEPS.indexOf(reserve) + 1] ?? 0;
                 return (
                   <TouchableOpacity key={crop.id} style={[styles.invRow, isSpoiling && styles.invRowWarn]} onPress={() => setSelectedCrop(crop.id)}>
                     <View style={[styles.tierDot, { backgroundColor: TIER_COLORS[crop.tier] }]} />
-                    <Text style={styles.invName}>{crop.name}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.invName}>{crop.name}</Text>
+                      {reserve > 0 && (
+                        <Text style={{ color: '#f59e0b', fontSize: 9 }}>keep {reserve.toLocaleString()} {crop.unit}</Text>
+                      )}
+                    </View>
                     <Text style={styles.invQty}>{qty.toLocaleString()} {crop.unit}</Text>
-                    <TouchableOpacity style={styles.invSellBtn} onPress={() => sellCrop(crop.id, qty)}>
+                    <TouchableOpacity
+                      style={{ paddingHorizontal: 6, paddingVertical: 4 }}
+                      onPress={() => setInventoryReserve(crop.id, nextReserve)}
+                    >
+                      <Text style={{ color: reserve > 0 ? '#f59e0b' : C.textFaint, fontSize: 9 }}>🔒{reserve > 0 ? reserve.toLocaleString() : '+'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.invSellBtn, sellQty <= 0 && { opacity: 0.4 }]}
+                      disabled={sellQty <= 0}
+                      onPress={() => sellCrop(crop.id, sellQty)}
+                    >
                       <Text style={styles.invSellText}>${Math.round(val).toLocaleString()}</Text>
                     </TouchableOpacity>
                   </TouchableOpacity>

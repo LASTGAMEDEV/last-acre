@@ -267,6 +267,7 @@ export function makeInitialState() {
     soundBarriers: false,
     activeSchedule: undefined,
     autoSell: {} as Record<string, { enabled: boolean; minPrice: number }>,
+    inventoryReserves: {} as Record<string, number>,
     prestige: 0,
     workers: [] as Worker[],
     consultant: createDefaultConsultant(),

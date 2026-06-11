@@ -1186,6 +1186,33 @@ export default function TierrasScreen() {
             </View>
 
 
+            {/* Repeat last planting shortcut */}
+            {(() => {
+              const lastId = plantingParcel?.lastCropId ?? plantingParcel?.cropHistory?.[plantingParcel.cropHistory.length - 1];
+              if (!lastId) return null;
+              const lastCrop = CROP_TYPES.find(c => c.id === lastId);
+              if (!lastCrop) return null;
+              const inSeason = !!plantingParcel?.greenhouse || lastCrop.seasons.includes(currentSeason as any);
+              const coopDiscount = cooperative?.member ? 0.90 : 1.0;
+              const ha = plantingParcel?.hectares ?? 1;
+              const canAfford = money >= lastCrop.seedCost * ha * coopDiscount;
+              const isSelected = selectedCropId === lastId;
+              return (
+                <TouchableOpacity
+                  disabled={!inSeason || !canAfford}
+                  onPress={() => { setSelectedCropId(lastId); setSelectedSeedId(null); }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: isSelected ? '#0f3460' : '#0d1a2e', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7, marginBottom: 8, borderWidth: 1, borderColor: isSelected ? '#4fc3f7' : '#2a3a5e', opacity: inSeason && canAfford ? 1 : 0.4 }}
+                >
+                  <Text style={{ fontSize: 14 }}>↩</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: inSeason && canAfford ? C.text : C.textMuted, fontSize: 12, fontWeight: 'bold' }}>Repeat: {lastCrop.name}</Text>
+                    <Text style={{ color: C.textFaint, fontSize: 10 }}>{!inSeason ? 'out of season' : !canAfford ? 'insufficient funds' : `${lastCrop.growthDays}d · $${(lastCrop.seedCost * ha * coopDiscount).toLocaleString()} seed`}</Text>
+                  </View>
+                  {isSelected && <Text style={{ color: '#4fc3f7', fontSize: 11, fontWeight: 'bold' }}>Selected</Text>}
+                </TouchableOpacity>
+              );
+            })()}
+
             {/* Smart crop recommendations */}
             {(() => {
               const ha = plantingParcel?.hectares ?? 1;
