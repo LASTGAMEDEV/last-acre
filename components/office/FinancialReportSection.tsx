@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
@@ -55,6 +55,8 @@ function BarChart({ segments }: { segments: { label: string; amount: number; col
 
 export default function FinancialReportSection() {
   const { day, money, savings, loans, contracts, salesLog, totalRevenue, loanHistory } = useGameStore();
+  const [logPeriod, setLogPeriod] = useState<7 | 30 | 90>(30);
+  const [logCategory, setLogCategory] = useState<'all' | 'crops' | 'animals' | 'processed' | 'contracts'>('all');
 
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
@@ -259,6 +261,69 @@ export default function FinancialReportSection() {
         </>
       )}
 
+      {/* ── Sales Log ── */}
+      <SectionHeader title="📜 Sales Log" />
+      <Card>
+        {/* Period filter */}
+        <View style={fr.filterRow}>
+          {([7, 30, 90] as const).map(p => (
+            <TouchableOpacity
+              key={p}
+              style={[fr.filterChip, logPeriod === p && fr.filterChipActive]}
+              onPress={() => setLogPeriod(p)}
+            >
+              <Text style={[fr.filterChipText, logPeriod === p && fr.filterChipTextActive]}>
+                {p}d
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        {/* Category filter */}
+        <View style={fr.filterRow}>
+          {(['all', 'crops', 'animals', 'processed', 'contracts'] as const).map(cat => (
+            <TouchableOpacity
+              key={cat}
+              style={[fr.filterChip, logCategory === cat && fr.filterChipActive]}
+              onPress={() => setLogCategory(cat)}
+            >
+              <Text style={[fr.filterChipText, logCategory === cat && fr.filterChipTextActive]}>
+                {cat === 'all' ? 'All' : CATEGORY_LABELS[cat] ?? cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={fr.divider} />
+        {(() => {
+          const filtered = salesLog
+            .filter(s => s.day >= day - logPeriod)
+            .filter(s => logCategory === 'all' || (s.category ?? 'crops') === logCategory)
+            .sort((a, b) => b.day - a.day)
+            .slice(0, 25);
+          if (filtered.length === 0) return <Text style={fr.emptyText}>No sales in this period.</Text>;
+          const periodTotal = filtered.reduce((s, e) => s + e.amount, 0);
+          return (
+            <>
+              <StatRow label={`${filtered.length} transactions`} value={fmt(periodTotal)} bold color="#4caf50" />
+              <View style={fr.divider} />
+              {filtered.map((sale, i) => {
+                const crop = CROP_TYPES.find(c => c.id === sale.cropId);
+                const catLabel = CATEGORY_LABELS[sale.category ?? 'crops'] ?? '📦';
+                return (
+                  <View key={i} style={fr.logRow}>
+                    <Text style={fr.logDay}>d{sale.day}</Text>
+                    <Text style={fr.logCat}>{catLabel}</Text>
+                    <Text style={fr.logName} numberOfLines={1}>
+                      {crop?.name ?? sale.cropId ?? (sale.category ?? 'Sale')}
+                    </Text>
+                    <Text style={fr.logAmt}>{fmt(sale.amount)}</Text>
+                  </View>
+                );
+              })}
+            </>
+          );
+        })()}
+      </Card>
+
       <SectionHeader title="📈 Track Record" />
       <Card>
         <StatRow label="Loans paid on time" value={`${loansOnTime}`} color="#4caf50" />
@@ -310,4 +375,15 @@ const fr = StyleSheet.create({
   forecastRight:   { width: 90, alignItems: 'flex-end' },
   forecastValue:   { fontSize: F.size.xs, fontWeight: 'bold' },
   forecastOutflow: { color: '#ef5350', fontSize: 9, marginTop: 1 },
+
+  filterRow:         { flexDirection: 'row', flexWrap: 'wrap', gap: S.xs, marginBottom: S.xs },
+  filterChip:        { paddingHorizontal: 10, paddingVertical: 4, borderRadius: R.pill, backgroundColor: C.bgDeep, borderWidth: 1, borderColor: '#334' },
+  filterChipActive:  { backgroundColor: '#0f3460', borderColor: '#1a5fa0' },
+  filterChipText:    { color: C.textMuted, fontSize: 10 },
+  filterChipTextActive: { color: '#90caf9', fontWeight: 'bold' },
+  logRow:            { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 3, borderTopWidth: 1, borderTopColor: C.divider },
+  logDay:            { color: C.textFaint, fontSize: 9, width: 24 },
+  logCat:            { fontSize: 10, width: 20 },
+  logName:           { flex: 1, color: C.text, fontSize: F.size.sm },
+  logAmt:            { color: '#4caf50', fontSize: F.size.sm, fontWeight: 'bold', width: 64, textAlign: 'right' },
 });
