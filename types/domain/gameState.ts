@@ -216,6 +216,7 @@ export interface GameState {
   seasonalEvent: { type: 'heat_wave' | 'flood' | 'frost'; startDay: number; endsDay: number; severity: number } | null;
   farmName: string;
   farmStyle: 'crop_focus' | 'livestock' | 'market_trader' | 'balanced';
+  difficulty: import('../../engine/difficulty').Difficulty;
   fuel: number;
   fuelPrice: number;
   priceAlerts: PriceAlert[];
@@ -233,6 +234,7 @@ export interface GameState {
   setSoundEnabled: (enabled: boolean) => void;
   setHapticEnabled: (enabled: boolean) => void;
   setMusicEnabled: (enabled: boolean) => void;
+  setDifficulty: (d: import('../../engine/difficulty').Difficulty) => void;
   performPrestige: () => void;
   counterOfferContract: (templateId: string, mod: 'price' | 'quantity' | 'deadline') => void;
   upgradeAnimalGene: (animalId: string, gene: keyof AnimalGenes) => void;

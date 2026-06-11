@@ -323,6 +323,7 @@ export function makeInitialState() {
     seasonalEvent: null as { type: 'heat_wave' | 'flood' | 'frost'; startDay: number; endsDay: number; severity: number } | null,
     farmName: 'My Farm',
     farmStyle: 'balanced' as 'crop_focus' | 'livestock' | 'market_trader' | 'balanced',
+    difficulty: 'standard' as import('../engine/difficulty').Difficulty,
     fuel: 200,
     fuelPrice: 1.20,
     fertilizerPrice: 0.35,

@@ -1,4 +1,5 @@
 import type { GameGet, GameSet } from '../store/actions/types';
+import { getDifficultyConfig } from '../engine/difficulty';
 import {
   PlantedCrop, SoilType, getSoilModifier, harvestAmount,
   SoilStats, SOIL_DEFAULTS, advanceSoilStats, SoilTickParams,
@@ -334,6 +335,7 @@ type NPCFarm = NPCFarmRuntime;
 
 export function advanceGameDay(set: GameSet, get: GameGet): void {
         const state = get();
+        const diff = getDifficultyConfig(state.difficulty ?? 'standard');
         const newDay = state.day + 1;
 
         // ── Historical Timeline ───────────────────────────────────────────────
@@ -671,7 +673,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
           seasonalEvent = null;
         }
         // Chance to start new event (3% per day if none active)
-        if (!seasonalEvent && Math.random() < 0.03) {
+        if (!seasonalEvent && Math.random() < 0.03 * diff.disasterFreqMult) {
           const possible = EVENT_BY_SEASON[season] ?? ['heat_wave'];
           const type = possible[Math.floor(Math.random() * possible.length)];
           const severity = 0.5 + Math.random() * 0.5; // 0.5·1.0
@@ -1169,7 +1171,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
         // Weed spread (with 2-day early warning for precision ag)
         let parcels = fallowParcels.map(p => {
           if (p.owned && !p.plantedCrop && !p.hasWeeds && !p.weedDetectedDay) {
-            const weedChance = 0.05 * getWeedMult(p.tillageSystem ?? 'conventional', p.notillSeasons ?? 0, p.weedFlushSeason ?? false);
+            const weedChance = 0.05 * diff.weedChanceMult * getWeedMult(p.tillageSystem ?? 'conventional', p.notillSeasons ?? 0, p.weedFlushSeason ?? false);
             if (Math.random() < weedChance) {
               return { ...p, weedDetectedDay: newDay };
             }
@@ -1221,7 +1223,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
           const climaPlan = INSURANCE_PLANS.find(pl => pl.type === 'clima')!;
           const insured = hasActiveInsurance(state.insurances, 'clima');
           parcels = parcels.map(p => {
-            if (p.plantedCrop && !p.greenhouse && Math.random() < 0.12) {
+            if (p.plantedCrop && !p.greenhouse && Math.random() < 0.12 * diff.weatherDamageMult) {
               destroyedCount++;
               if (insured) {
                 const cropVal = estimateCropValue(p, prices);
@@ -1266,7 +1268,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
         const firePlan = INSURANCE_PLANS.find(pl => pl.type === 'incendio')!;
         const fireInsured = hasActiveInsurance(state.insurances, 'incendio');
         parcels = parcels.map(p => {
-          if (p.owned && p.plantedCrop && !p.greenhouse && Math.random() < 0.003) {
+          if (p.owned && p.plantedCrop && !p.greenhouse && Math.random() < 0.003 * diff.fireChanceMult) {
             fireDestroyedCount++;
             if (fireInsured) {
               const cropVal = estimateCropValue(p, prices);
@@ -1324,6 +1326,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
             );
             // Hedgerow pest control
             chance *= (1 - pestControlForParcel(p.id, state.hedgerows ?? [], newDay));
+            chance *= diff.pestChanceMult;
             if (Math.random() < chance) {
               const pestType = pickPestType(cropType, season);
               pestState = { type: pestType, severity: 0.5 };

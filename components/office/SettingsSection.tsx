@@ -8,6 +8,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { SAVE_STORAGE_KEY } from '../../store/persistConfig';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
+import { getDifficultyConfig, type Difficulty } from '../../engine/difficulty';
 
 function SettingsSection() {
   const {
@@ -17,6 +18,7 @@ function SettingsSection() {
     prestige, performPrestige,
     farmName, setFarmName,
     priceAlerts, prices, addPriceAlert, removePriceAlert,
+    difficulty, setDifficulty,
   } = useGameStore();
 
   const [nameInput, setNameInput] = useState(farmName ?? 'My Farm');
@@ -194,6 +196,33 @@ function SettingsSection() {
         <Text style={[set.rowSub, { marginTop: 4 }]}>Load a previously exported save file. Overwrites current progress.</Text>
       </View>
 
+      {/* Difficulty */}
+      <View style={set.section}>
+        <Text style={set.sectionTitle}>⚖️ Difficulty</Text>
+        <Text style={[set.rowSub, { marginBottom: 10 }]}>
+          {getDifficultyConfig(difficulty ?? 'standard').description}
+        </Text>
+        <View style={set.diffRow}>
+          {(['relaxed', 'standard', 'hard'] as Difficulty[]).map(d => {
+            const cfg = getDifficultyConfig(d);
+            const active = (difficulty ?? 'standard') === d;
+            const COLOR: Record<Difficulty, string> = { relaxed: '#4caf50', standard: '#c8860a', hard: '#ef5350' };
+            return (
+              <TouchableOpacity
+                key={d}
+                style={[set.diffBtn, active && { borderColor: COLOR[d], backgroundColor: COLOR[d] + '22' }]}
+                onPress={() => setDifficulty(d)}
+              >
+                <Text style={[set.diffBtnText, active && { color: COLOR[d], fontWeight: 'bold' }]}>{cfg.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={[set.rowSub, { marginTop: 6 }]}>
+          Changes disaster frequency, weed/pest/fire rates, and weather damage for future days.
+        </Text>
+      </View>
+
       {/* Audio */}
       <View style={set.section}>
         <Text style={set.sectionTitle}>🔊 Audio</Text>
@@ -338,6 +367,9 @@ const set = StyleSheet.create({
   cropChipText:  { color: C.textMuted, fontSize: 11 },
   saveDataBtn:     { backgroundColor: '#0f3460', borderRadius: R.md, paddingVertical: 10, alignItems: 'center', marginTop: S.xs },
   saveDataBtnText: { color: C.text, fontSize: F.size.md, fontWeight: 'bold' },
+  diffRow:         { flexDirection: 'row', gap: 8 },
+  diffBtn:         { flex: 1, borderRadius: R.md, borderWidth: 1, borderColor: '#2a3a5e', paddingVertical: 10, alignItems: 'center', backgroundColor: '#0d1117' },
+  diffBtnText:     { color: C.textMuted, fontSize: F.size.sm },
 });
 
 export default SettingsSection;
