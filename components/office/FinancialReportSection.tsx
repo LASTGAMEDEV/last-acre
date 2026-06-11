@@ -79,17 +79,24 @@ export default function FinancialReportSection() {
   // Outstanding loans
   const activeLoans = loans.filter(l => !l.paid && !l.defaulted);
   const totalDebt = activeLoans.reduce((s, l) => s + l.totalOwed, 0);
+  const loansNext7  = activeLoans.filter(l => l.payoffDay >= day && l.payoffDay <= day + 7);
   const loansNext30 = activeLoans.filter(l => l.payoffDay >= day && l.payoffDay <= day + 30);
+  const loansNext90 = activeLoans.filter(l => l.payoffDay >= day && l.payoffDay <= day + 90);
+  const outflowNext7  = loansNext7.reduce((s, l) => s + l.totalOwed, 0);
   const outflowNext30 = loansNext30.reduce((s, l) => s + l.totalOwed, 0);
+  const outflowNext90 = loansNext90.reduce((s, l) => s + l.totalOwed, 0);
 
   // Contracts expiring
   const contractsNext30 = contracts.filter(c => !c.completed && !c.failed && c.deadlineDay >= day && c.deadlineDay <= day + 30);
 
-  // Average daily revenue
+  // Average daily revenue (use 30-day average, or 7-day if early game)
   const avgDailyRev = day > 7 ? rev30 / 30 : rev7 / Math.max(1, day);
 
-  // Estimated cash in 30 days
-  const projCash = money + avgDailyRev * 30 - outflowNext30;
+  // Projected cash at 7 / 30 / 90 days
+  const projCash7  = money + avgDailyRev * 7  - outflowNext7;
+  const projCash30 = money + avgDailyRev * 30 - outflowNext30;
+  const projCash90 = money + avgDailyRev * 90 - outflowNext90;
+  const projCash = projCash30;
 
   // Per-crop revenue (last 90 days)
   const cropRevMap: Record<string, number> = {};
@@ -136,19 +143,37 @@ export default function FinancialReportSection() {
         <StatRow label="Net liquid"     value={fmt(money + savingsBalance - totalDebt)} bold color={money + savingsBalance > totalDebt ? '#4caf50' : '#ef5350'} />
       </Card>
 
-      <SectionHeader title="📅 30-Day Cashflow Forecast" />
+      <SectionHeader title="📅 Cashflow Forecast" />
       <Card>
-        <StatRow label="Avg monthly revenue" value={fmt(avgDailyRev * 30)} color="#4caf50" />
-        {outflowNext30 > 0
-          ? <StatRow label="Loans due" value={`-${fmt(outflowNext30)}`} color="#ef5350" />
-          : <StatRow label="No loans due" value="✓" color="#4caf50" />
-        }
-        {contractsNext30.length > 0 && (
-          <StatRow label={`${contractsNext30.length} contract deadline${contractsNext30.length > 1 ? 's' : ''}`} value="⚠️ check" color="#f59e0b" />
-        )}
+        <StatRow label="Daily avg (30d basis)" value={fmt(avgDailyRev)} color="#888" />
         <View style={fr.divider} />
-        <StatRow label="Projected cash (30d)" value={fmt(projCash)} bold color={projCash > 0 ? '#4caf50' : '#ef5350'} />
-        {projCash < 0 && <Text style={fr.warningText}>⚠️ Cash flow may go negative — plan ahead</Text>}
+        {/* Horizon rows */}
+        {([
+          { label: '7 days',  proj: projCash7,  outflow: outflowNext7  },
+          { label: '30 days', proj: projCash30, outflow: outflowNext30 },
+          { label: '90 days', proj: projCash90, outflow: outflowNext90 },
+        ] as const).map(h => {
+          const positive = h.proj >= 0;
+          const barPct = Math.min(100, Math.max(0, (h.proj / Math.max(projCash90, money, 1)) * 100));
+          return (
+            <View key={h.label} style={fr.forecastRow}>
+              <Text style={fr.forecastLabel}>{h.label}</Text>
+              <View style={fr.forecastBarWrap}>
+                <View style={[fr.forecastBar, { width: `${barPct}%` as any, backgroundColor: positive ? '#2e7d32' : '#c62828' }]} />
+              </View>
+              <View style={fr.forecastRight}>
+                <Text style={[fr.forecastValue, { color: positive ? '#4caf50' : '#ef5350' }]}>{fmt(h.proj)}</Text>
+                {h.outflow > 0 && <Text style={fr.forecastOutflow}>-{fmt(h.outflow)} loans</Text>}
+              </View>
+            </View>
+          );
+        })}
+        {contractsNext30.length > 0 && (
+          <View style={{ marginTop: S.sm }}>
+            <Text style={fr.warningText}>⚠️ {contractsNext30.length} contract deadline{contractsNext30.length > 1 ? 's' : ''} in 30 days</Text>
+          </View>
+        )}
+        {projCash30 < 0 && <Text style={[fr.warningText, { marginTop: 4 }]}>⚠️ Cash may go negative within 30 days — review expenses</Text>}
       </Card>
 
       {loansNext30.length > 0 && (
@@ -222,4 +247,11 @@ const fr = StyleSheet.create({
   cropBarWrap:  { flex: 1, height: 5, backgroundColor: C.bgDeep, borderRadius: 3, overflow: 'hidden' },
   cropBar:      { height: 5, backgroundColor: '#c8860a', borderRadius: 3 },
   cropRev:      { color: '#4caf50', fontSize: F.size.sm, width: 64, textAlign: 'right', fontWeight: 'bold' },
+  forecastRow:     { flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingVertical: 5 },
+  forecastLabel:   { color: C.textMuted, fontSize: F.size.xs, width: 46 },
+  forecastBarWrap: { flex: 1, height: 8, backgroundColor: C.bgDeep, borderRadius: 4, overflow: 'hidden' },
+  forecastBar:     { height: 8, borderRadius: 4 },
+  forecastRight:   { width: 90, alignItems: 'flex-end' },
+  forecastValue:   { fontSize: F.size.xs, fontWeight: 'bold' },
+  forecastOutflow: { color: '#ef5350', fontSize: 9, marginTop: 1 },
 });

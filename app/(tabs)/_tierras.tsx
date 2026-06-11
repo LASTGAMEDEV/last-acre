@@ -384,6 +384,9 @@ export default function TierrasScreen() {
   const frostInNext3Days = forecast.slice(0, 3).some(w => w.event === 'frost');
   const [batchCropId, setBatchCropId] = useState<string | null>(null);
   const [batchModal, setBatchModal] = useState(false);
+  const [harvestResults, setHarvestResults] = useState<Record<string, {
+    cropName: string; estKg: number; factors: { label: string; mod: number }[];
+  }>>({});
 
   const [plantingParcel, setPlantingParcel] = useState<LandParcel | null>(null);
   const [selectedCropId, setSelectedCropId] = useState<string | null>(null);
@@ -684,6 +687,42 @@ export default function TierrasScreen() {
           <Text style={styles.emptyTag}>Empty</Text>
         )}
 
+        {/* Harvest breakdown: "Why did this happen?" */}
+        {!parcel.plantedCrop && harvestResults[parcel.id] && (() => {
+          const r = harvestResults[parcel.id];
+          const boosters  = r.factors.filter(f => f.mod > 1.04);
+          const penalties = r.factors.filter(f => f.mod < 0.96);
+          return (
+            <View style={localStyles.harvestResultCard}>
+              <View style={localStyles.harvestResultHeader}>
+                <Text style={localStyles.harvestResultTitle}>
+                  ✅ {r.cropName} · ~{r.estKg.toLocaleString()} kg
+                </Text>
+                <TouchableOpacity onPress={() => setHarvestResults(prev => { const n = { ...prev }; delete n[parcel.id]; return n; })}>
+                  <Text style={localStyles.harvestResultDismiss}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              {(boosters.length > 0 || penalties.length > 0) && (
+                <View style={localStyles.harvestFactorsRow}>
+                  {boosters.map(f => (
+                    <Text key={f.label} style={[localStyles.harvestChip, localStyles.harvestChipGood]}>
+                      ↑ {f.label} +{Math.round((f.mod - 1) * 100)}%
+                    </Text>
+                  ))}
+                  {penalties.map(f => (
+                    <Text key={f.label} style={[localStyles.harvestChip, localStyles.harvestChipBad]}>
+                      ↓ {f.label} {Math.round((f.mod - 1) * 100)}%
+                    </Text>
+                  ))}
+                </View>
+              )}
+              {boosters.length === 0 && penalties.length === 0 && (
+                <Text style={localStyles.harvestResultNeutral}>No significant yield modifiers applied.</Text>
+              )}
+            </View>
+          );
+        })()}
+
         {frostInNext3Days && parcel.plantedCrop && !parcel.greenhouse && (
           <View style={styles.frostWarning}>
             <Text style={styles.frostWarningText}>❄️ Frost risk</Text>
@@ -729,10 +768,47 @@ export default function TierrasScreen() {
           }
 
           if (parcel.tilled && !parcel.plantedCrop) {
+            // Smart crop suggestions
+            const soilYieldMod = computeSoilYieldModifier(parcel.soil ?? SOIL_DEFAULTS);
+            const suggestions = CROP_TYPES
+              .filter(ct => !ct.coverCrop && ct.seasons.includes(currentSeason) && ct.seedCost > 0)
+              .map(ct => {
+                const curPrice = prices.find(p => p.cropId === ct.id)?.price ?? ct.basePrice;
+                const rotBonus = parcel.lastCropId && parcel.lastCropId !== ct.id ? 1.15 : 1.0;
+                const estYield = ct.baseYield * parcel.hectares * soilYieldMod * rotBonus;
+                const estProfit = estYield * curPrice - ct.seedCost * parcel.hectares;
+                return { ct, estProfit, estYield, rotBonus, curPrice };
+              })
+              .filter(s => s.estProfit > 0)
+              .sort((a, b) => b.estProfit - a.estProfit)
+              .slice(0, 3);
             return (
-              <TouchableOpacity style={localStyles.opBtn} onPress={() => { setPlantingParcel(parcel); if (parcel.lastCropId) setSelectedCropId(parcel.lastCropId); }}>
-                <Text style={localStyles.opBtnText}>Plant Crop{parcel.lastCropId ? ` (last: ${CROP_TYPES.find(c => c.id === parcel.lastCropId)?.name ?? parcel.lastCropId})` : ''}</Text>
-              </TouchableOpacity>
+              <View>
+                {suggestions.length > 0 && (
+                  <View style={localStyles.suggestBox}>
+                    <Text style={localStyles.suggestTitle}>💡 Best crops this {currentSeason}</Text>
+                    {suggestions.map(({ ct, estProfit, rotBonus }) => (
+                      <TouchableOpacity
+                        key={ct.id}
+                        style={localStyles.suggestRow}
+                        onPress={() => { setPlantingParcel(parcel); setSelectedCropId(ct.id); }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={localStyles.suggestCropName}>{ct.name}</Text>
+                          <Text style={localStyles.suggestCropMeta}>
+                            {ct.growthDays}d · est. ${Math.round(estProfit).toLocaleString()} profit
+                            {rotBonus > 1 ? ' · +15% rotation' : ''}
+                          </Text>
+                        </View>
+                        <Text style={localStyles.suggestArrow}>›</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                <TouchableOpacity style={localStyles.opBtn} onPress={() => { setPlantingParcel(parcel); if (parcel.lastCropId) setSelectedCropId(parcel.lastCropId); }}>
+                  <Text style={localStyles.opBtnText}>Plant Crop{parcel.lastCropId ? ` (last: ${CROP_TYPES.find(c => c.id === parcel.lastCropId)?.name ?? parcel.lastCropId})` : ''}</Text>
+                </TouchableOpacity>
+              </View>
             );
           }
 
@@ -787,6 +863,14 @@ export default function TierrasScreen() {
                 <TouchableOpacity
                   style={[localStyles.opBtn, localStyles.opBtnRed]}
                   onPress={() => {
+                    setHarvestResults(prev => ({
+                      ...prev,
+                      [parcel.id]: {
+                        cropName: cropTypeDef?.name ?? (parcel.plantedCrop?.cropId ?? ''),
+                        estKg,
+                        factors,
+                      },
+                    }));
                     if (ownedCombines.length > 0) {
                       harvestCrop(parcel.id);
                       playSound('harvest');
@@ -1490,6 +1574,7 @@ export default function TierrasScreen() {
                     onPress={() => {
                       if (plantingParcel && cropId) {
                         plantCrop(plantingParcel.id, cropId, plantingParcel.hectares);
+                        setHarvestResults(prev => { const n = { ...prev }; delete n[plantingParcel.id]; return n; });
                         playSound('plant');
                         if (selectedSeedId && plantingParcel) {
                           selectSeedForParcel(plantingParcel.id, selectedSeedId);
@@ -1901,6 +1986,23 @@ const localStyles = StyleSheet.create({
   rotationBadge:  { color: '#81c784', fontSize: 10, fontWeight: 'bold', backgroundColor: '#1a3a1a', borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 2 },
   progressRow:    { backgroundColor: C.bg, borderRadius: R.md, padding: S.sm, marginTop: S.sm },
   progressText:   { color: '#ffb74d', fontSize: F.size.sm, textAlign: 'center' },
+  // Harvest breakdown card
+  harvestResultCard:    { backgroundColor: '#0a2a0f', borderRadius: R.md, padding: S.sm, marginTop: S.xs, borderWidth: 1, borderColor: '#1a4a20' },
+  harvestResultHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  harvestResultTitle:   { color: '#81c784', fontSize: F.size.sm, fontWeight: 'bold', flex: 1 },
+  harvestResultDismiss: { color: '#555', fontSize: 14, paddingLeft: 8 },
+  harvestFactorsRow:    { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: S.xs },
+  harvestChip:          { fontSize: 10, fontWeight: 'bold', borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 2 },
+  harvestChipGood:      { backgroundColor: '#0d2a10', color: '#81c784' },
+  harvestChipBad:       { backgroundColor: '#2a1010', color: '#ef9a9a' },
+  harvestResultNeutral: { color: '#555', fontSize: 10, marginTop: 4 },
+  // Crop suggestions for idle parcels
+  suggestBox:      { backgroundColor: '#0a1a2a', borderRadius: R.md, padding: S.sm, marginTop: S.xs, borderWidth: 1, borderColor: '#1a3a5a', marginBottom: S.xs },
+  suggestTitle:    { color: '#64b5f6', fontSize: F.size.xs, fontWeight: 'bold', marginBottom: 6, letterSpacing: 0.5 },
+  suggestRow:      { flexDirection: 'row', alignItems: 'center', paddingVertical: 5, borderTopWidth: 1, borderTopColor: '#1a2a3a' },
+  suggestCropName: { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+  suggestCropMeta: { color: C.textMuted, fontSize: 10, marginTop: 1 },
+  suggestArrow:    { color: '#64b5f6', fontSize: 20, fontWeight: 'bold', paddingLeft: 8 },
   batchPlantBtn:  { backgroundColor: C.bgCard, borderRadius: R.md, padding: 10, alignItems: 'center', marginHorizontal: S.md, marginTop: 6 },
   batchPlantText: { color: C.green, fontSize: F.size.md, fontWeight: 'bold' },
   batchBox:       { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginHorizontal: S.md, marginTop: 6 },
