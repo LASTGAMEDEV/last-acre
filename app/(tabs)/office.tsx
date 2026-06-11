@@ -18,6 +18,7 @@ import SettingsSection from '../../components/office/SettingsSection';
 import FinancialReportSection from '../../components/office/FinancialReportSection';
 import CropReportSection from '../../components/office/CropReportSection';
 import AnimalReportSection from '../../components/office/AnimalReportSection';
+import AnnualReportSection from '../../components/office/AnnualReportSection';
 import SubTabBar from '../../components/SubTabBar';
 import { C, F, S } from '../../constants/theme';
 
@@ -60,12 +61,13 @@ const TABS: { id: OfficeTab; label: string }[] = [
 
 export default function OfficeScreen() {
   const [tab, setTab] = useState<OfficeTab>('dashboard');
-  const [reportSubTab, setReportSubTab] = useState<'financial' | 'crops' | 'animals'>('financial');
+  const [reportSubTab, setReportSubTab] = useState<'financial' | 'crops' | 'animals' | 'annual'>('financial');
 
   const REPORT_TABS = [
     { id: 'financial', label: '💰 Finance' },
     { id: 'crops',     label: '🌾 Crops' },
     { id: 'animals',   label: '🐾 Animals' },
+    { id: 'annual',    label: '📋 Annual' },
   ];
 
   return (
@@ -82,6 +84,7 @@ export default function OfficeScreen() {
           {reportSubTab === 'financial' && <FinancialReportSection />}
           {reportSubTab === 'crops'     && <CropReportSection />}
           {reportSubTab === 'animals'   && <AnimalReportSection />}
+          {reportSubTab === 'annual'    && <AnnualReportSection />}
         </View>
       )}
       {tab === 'banking'        && <BankingSection />}
