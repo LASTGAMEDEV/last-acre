@@ -377,6 +377,7 @@ export interface GameState {
   takeBankruptcyLoan: () => void;
   clearBankruptcy: () => void;
   takeFamilyLoan: () => void;
+  emergencyLeaseback: (parcelId: string) => void;
   setBreedingPair: (femaleId: string, maleId: string) => void;
   clearBreedingPair: (femaleId: string) => void;
   startHybridization: (cropId: string, parentAId: string, parentBId: string) => void;

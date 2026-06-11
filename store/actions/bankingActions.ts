@@ -22,6 +22,7 @@ export interface BankingActions {
   takeBankruptcyLoan: () => void;
   clearBankruptcy: () => void;
   takeFamilyLoan: () => void;
+  emergencyLeaseback: (parcelId: string) => void;
 }
 
 export const createBankingActions: ActionFactory<BankingActions> = (set, get) => ({
@@ -170,6 +171,23 @@ export const createBankingActions: ActionFactory<BankingActions> = (set, get) =>
       loans: [...state.loans, loan],
       familyLoanUsedDay: state.day,
       bankrupt: false,
+    });
+  },
+
+  emergencyLeaseback: (parcelId) => {
+    const state = get();
+    const parcel = state.parcels.find(p => p.id === parcelId && p.owned);
+    if (!parcel) return;
+    if (parcel.leasedOut && (parcel.leasebackEndDay ?? 0) > state.day) return;
+    const upfrontCash = Math.round(parcel.hectares * parcel.pricePerHa * 0.6);
+    if (upfrontCash <= 0) return;
+    set({
+      money: state.money + upfrontCash,
+      parcels: state.parcels.map(p =>
+        p.id === parcelId
+          ? { ...p, leasedOut: true, leasebackEndDay: state.day + 360, plantedCrop: null, tilled: false }
+          : p
+      ),
     });
   },
 });

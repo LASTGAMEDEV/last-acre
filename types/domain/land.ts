@@ -48,4 +48,6 @@ export interface LandParcel {
     potassium: number;
     daysLeft: number;
   };
+  leasedOut?: boolean;
+  leasebackEndDay?: number;
 }

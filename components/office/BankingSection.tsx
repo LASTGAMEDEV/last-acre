@@ -37,7 +37,7 @@ function BankingSection() {
     money, loans, savings, timeDeposits, salesLog, loanHistory, day,
     requestLoan, repayLoan, depositSavings, withdrawSavings,
     openTimeDeposit, closeTimeDeposit, resetGame, renegotiateLoan,
-    familyLoanUsedDay, takeFamilyLoan,
+    familyLoanUsedDay, takeFamilyLoan, parcels, emergencyLeaseback,
   } = useGameStore();
 
   const [loanAmount, setLoanAmount]   = useState('');
@@ -164,6 +164,58 @@ function BankingSection() {
               <Text style={{ color: '#888', fontSize: F.size.sm }}>
                 Available when cash is below $2,000 or a loan is in default.
               </Text>
+            )}
+          </View>
+        );
+      })()}
+
+      {/* Emergency Land Leaseback */}
+      {(() => {
+        const ownedParcels = (parcels ?? []).filter(p => p.owned);
+        const availableParcels = ownedParcels.filter(p => !p.leasedOut || (p.leasebackEndDay ?? 0) <= day);
+        const leasedOut = ownedParcels.filter(p => p.leasedOut && (p.leasebackEndDay ?? 0) > day);
+        const totalDebt = loans.filter(l => !l.paid && !l.defaulted).reduce((s, l) => s + l.totalOwed, 0);
+        const inDistress = money < totalDebt * 0.3 || (money < 5000 && totalDebt > 0);
+        if (!inDistress && leasedOut.length === 0) return null;
+        return (
+          <View style={[styles.section, { borderColor: '#8b232255', borderWidth: 1 }]}>
+            <Text style={[styles.sectionTitle, { color: '#ef9a9a' }]}>🏚️ Emergency Land Leaseback</Text>
+            <Text style={{ color: C.textMuted, fontSize: F.size.sm, marginBottom: S.sm, lineHeight: 18 }}>
+              Lease your land to a neighbor for immediate cash. You get 60% of land value upfront; the parcel is unavailable for 1 year.
+            </Text>
+            {leasedOut.length > 0 && leasedOut.map(p => (
+              <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.bgDeep, borderRadius: R.sm, padding: S.sm, marginBottom: 4 }}>
+                <Text style={{ flex: 1, color: '#ef9a9a', fontSize: F.size.sm }}>🏷️ {p.name} — leased out</Text>
+                <Text style={{ color: C.textFaint, fontSize: F.size.xs }}>returns day {p.leasebackEndDay}</Text>
+              </View>
+            ))}
+            {availableParcels.length === 0 ? (
+              <Text style={{ color: C.textFaint, fontSize: F.size.sm }}>No parcels available to lease out.</Text>
+            ) : (
+              availableParcels.map(p => {
+                const upfront = Math.round(p.hectares * p.pricePerHa * 0.6);
+                return (
+                  <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm, marginBottom: 6 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: C.text, fontSize: F.size.sm, fontWeight: 'bold' }}>{p.name} · {p.hectares} ha</Text>
+                      <Text style={{ color: '#64b5f6', fontSize: F.size.xs }}>Receive ${upfront.toLocaleString()} · 1 year term</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#3a1515', borderRadius: R.sm, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: '#8b2322' }}
+                      onPress={() => Alert.alert(
+                        '🏚️ Lease Out Land',
+                        `Lease "${p.name}" (${p.hectares} ha) for $${upfront.toLocaleString()} upfront.\n\nThe parcel will be unavailable for 1 game year (360 days). Any planted crops will be lost.`,
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          { text: `Lease · $${upfront.toLocaleString()}`, style: 'destructive', onPress: () => emergencyLeaseback(p.id) },
+                        ]
+                      )}
+                    >
+                      <Text style={{ color: '#ef9a9a', fontSize: 11, fontWeight: 'bold' }}>Lease Out</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })
             )}
           </View>
         );
