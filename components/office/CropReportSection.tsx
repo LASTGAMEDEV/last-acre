@@ -175,12 +175,19 @@ export default function CropReportSection() {
 
       {cropRevEntries.length > 0 && (
         <>
-          <SectionHeader title="💰 Revenue by Crop (90 days)" />
+          <SectionHeader title="💰 Crop Profitability (90 days)" />
           <Card>
             {cropRevEntries.map(([cropId, rev], i) => {
               const ct = CROP_TYPES.find(c => c.id === cropId);
               const pct = totalCropRev > 0 ? Math.round((rev / totalCropRev) * 100) : 0;
               const curPrice = (prices ?? []).find(p => p.cropId === cropId)?.price ?? ct?.basePrice ?? 0;
+              // Estimate profitability: revenue - seed cost (approximated from harvest volume)
+              const estUnits = ct && ct.basePrice > 0 ? rev / ct.basePrice : 0;
+              const estHa = ct && ct.baseYield > 0 ? estUnits / ct.baseYield : 0;
+              const estSeedCost = ct ? estHa * (ct.seedCost ?? 0) : 0;
+              const estProfit = rev - estSeedCost;
+              const estMarginPct = rev > 0 ? Math.round((estProfit / rev) * 100) : 0;
+              const marginColor = estMarginPct >= 70 ? '#4caf50' : estMarginPct >= 40 ? '#f59e0b' : '#ef5350';
               return (
                 <View key={cropId} style={cr.revRow}>
                   <Text style={cr.revRank}>#{i + 1}</Text>
@@ -192,7 +199,16 @@ export default function CropReportSection() {
                     <View style={cr.revBarTrack}>
                       <View style={[cr.revBarFill, { width: `${pct}%` as any }]} />
                     </View>
-                    <Text style={cr.revPriceNote}>Current: ${curPrice.toFixed(2)}/{ct?.unit ?? 'kg'} · {pct}% of crop revenue</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+                      <Text style={cr.revPriceNote}>
+                        ${curPrice.toFixed(2)}/{ct?.unit ?? 'kg'} · {pct}% of revenue
+                      </Text>
+                      {estSeedCost > 0 && (
+                        <Text style={[cr.revPriceNote, { color: marginColor, fontWeight: 'bold' }]}>
+                          ~{estMarginPct}% margin
+                        </Text>
+                      )}
+                    </View>
                   </View>
                 </View>
               );

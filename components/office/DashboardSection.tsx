@@ -6,6 +6,7 @@ import { isReady } from '../../engine/crops';
 import { SEASON_THEME, C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
+import { MACHINE_TYPES } from '../../data/machineTypes';
 import GuideButton from '../GuideButton';
 import FarmLegacyCard from './FarmLegacyCard';
 
@@ -16,7 +17,7 @@ function DashboardSection() {
     money, savings, day, loans, contracts, seasonGoals, seasonHarvestCount,
     seasonStartRevenue, totalRevenue, parcels, animals, npcFarms, salesLog,
     personalRecords, inventory, prices, animalWelfareScores, reputation, farmStyle,
-    animalInventory,
+    animalInventory, machines,
   } = useGameStore();
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
@@ -105,6 +106,26 @@ function DashboardSection() {
       label: `${name} welfare low (${Math.round(score as number)}%) — check feed & housing`,
       severity: (score as number) < 40 ? 'critical' : 'warning',
     });
+  });
+
+  // Machine condition warnings
+  (machines ?? []).forEach(m => {
+    const cond = m.condition ?? 100;
+    if (cond < 20) {
+      const mType = MACHINE_TYPES.find(t => t.id === m.typeId);
+      priorities.push({
+        icon: '🔧',
+        label: `${mType?.name ?? 'Machine'} condition critical (${Math.round(cond)}%) — repair immediately`,
+        severity: 'critical',
+      });
+    } else if (cond < 40) {
+      const mType = MACHINE_TYPES.find(t => t.id === m.typeId);
+      priorities.push({
+        icon: '⚙️',
+        label: `${mType?.name ?? 'Machine'} needs maintenance (${Math.round(cond)}%)`,
+        severity: 'warning',
+      });
+    }
   });
 
   // Sort: critical first, then warning, then action
