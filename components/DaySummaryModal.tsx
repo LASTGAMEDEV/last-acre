@@ -65,7 +65,7 @@ function inferCategory(event: DaySummaryEvent): EventCategory {
 const CATEGORY_ORDER: EventCategory[] = ['Urgent', 'Money', 'Fields', 'Animals', 'Market', 'Weather', 'Farm'];
 
 export default function DaySummaryModal() {
-  const { day, daySummary, clearDaySummary, money, prevDayMoney } = useGameStore();
+  const { day, daySummary, clearDaySummary, money, prevDayMoney, reputation, prevDayReputationScore } = useGameStore();
 
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const cardY = useRef(new Animated.Value(500)).current;
@@ -108,6 +108,18 @@ export default function DaySummaryModal() {
             return (
               <Text style={[styles.moneyDelta, { color: pos ? '#4caf50' : '#ef5350' }]}>
                 {pos ? '+' : ''}${delta.toLocaleString()} cash today
+              </Text>
+            );
+          })()}
+          {prevDayReputationScore !== undefined && reputation?.score !== undefined && (() => {
+            const repDelta = Math.round((reputation.score - prevDayReputationScore) * 10) / 10;
+            if (Math.abs(repDelta) < 0.1) return null;
+            const pos = repDelta > 0;
+            const tier = reputation.tier;
+            return (
+              <Text style={[styles.moneyDelta, { color: pos ? '#ce93d8' : '#ef5350', marginTop: 2 }]}>
+                {pos ? '+' : ''}{repDelta.toFixed(1)} reputation
+                {tier ? ` · ${tier.charAt(0).toUpperCase() + tier.slice(1)}` : ''}
               </Text>
             );
           })()}

@@ -99,6 +99,7 @@ export interface GameState {
   pendingPickup: AuctionPickup[];
   daySummary: DaySummaryEvent[] | null;
   prevDayMoney?: number;
+  prevDayReputationScore?: number;
   insurances: InsurancePolicy[];
   insuranceClaims: InsuranceClaim[];
   processedInventory: ProcessedItem[];
