@@ -85,6 +85,20 @@ function DashboardSection() {
     });
   });
 
+  // Debt pressure alert
+  const activeLoans = loans.filter(l => !l.paid && !l.defaulted);
+  const totalDebtForAlert = activeLoans.reduce((s, l) => s + l.totalOwed, 0);
+  if (totalDebtForAlert > 0) {
+    const rev30d = salesLog.filter(s => s.day >= day - 30).reduce((a, s) => a + s.amount, 0);
+    const monthlyRev = rev30d || 1;
+    const debtRatio = totalDebtForAlert / (monthlyRev * 12);
+    if (debtRatio >= 3) {
+      priorities.push({ icon: '💸', label: `Debt pressure CRITICAL — debt is ${debtRatio.toFixed(1)}× annual revenue`, severity: 'critical' });
+    } else if (debtRatio >= 1.5) {
+      priorities.push({ icon: '💸', label: `Debt pressure HIGH — debt is ${debtRatio.toFixed(1)}× annual revenue`, severity: 'warning' });
+    }
+  }
+
   // Diseased plots
   const diseasedParcels = ownedParcels.filter(p => p.diseased);
   if (diseasedParcels.length > 0) {

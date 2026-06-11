@@ -92,6 +92,23 @@ export default function FinancialReportSection() {
   // Average daily revenue (use 30-day average, or 7-day if early game)
   const avgDailyRev = day > 7 ? rev30 / 30 : rev7 / Math.max(1, day);
 
+  // Debt pressure meter
+  const avgMonthlyRev = avgDailyRev > 0 ? avgDailyRev * 30 : rev30 || 1;
+  const debtToAnnualRev = avgMonthlyRev > 0 ? totalDebt / (avgMonthlyRev * 12) : (totalDebt > 0 ? 99 : 0);
+  const monthlyDebtService = outflowNext30;
+  const debtServiceRatio = avgMonthlyRev > 0 ? monthlyDebtService / avgMonthlyRev : 0;
+  const debtPressure: { level: 'none' | 'low' | 'moderate' | 'high' | 'critical'; color: string; label: string; advice: string } =
+    totalDebt === 0
+      ? { level: 'none',     color: '#4caf50', label: 'No Debt',   advice: 'Debt free. Strong financial position.' }
+      : debtToAnnualRev < 0.5
+      ? { level: 'low',      color: '#4caf50', label: 'Low',       advice: 'Debt is manageable relative to revenue.' }
+      : debtToAnnualRev < 1.5
+      ? { level: 'moderate', color: '#f59e0b', label: 'Moderate',  advice: 'Debt service is significant. Avoid new loans.' }
+      : debtToAnnualRev < 3
+      ? { level: 'high',     color: '#f97316', label: 'High',      advice: 'Debt exceeds annual revenue. Prioritize repayment.' }
+      : { level: 'critical', color: '#ef5350', label: 'Critical',  advice: 'Severe debt load. Risk of default. Seek restructuring.' };
+  const pressurePct = Math.min(100, Math.round(debtToAnnualRev * 33));
+
   // Projected cash at 7 / 30 / 90 days
   const projCash7  = money + avgDailyRev * 7  - outflowNext7;
   const projCash30 = money + avgDailyRev * 30 - outflowNext30;
@@ -141,6 +158,36 @@ export default function FinancialReportSection() {
         <StatRow label="Total debt"     value={totalDebt > 0 ? `-${fmt(totalDebt)}` : 'None'} color={totalDebt > 0 ? '#ef5350' : '#4caf50'} />
         <View style={fr.divider} />
         <StatRow label="Net liquid"     value={fmt(money + savingsBalance - totalDebt)} bold color={money + savingsBalance > totalDebt ? '#4caf50' : '#ef5350'} />
+      </Card>
+
+      <SectionHeader title="🌡️ Debt Pressure" />
+      <Card>
+        <View style={fr.pressureHeader}>
+          <Text style={fr.pressureLabel}>Debt Pressure</Text>
+          <Text style={[fr.pressureLevel, { color: debtPressure.color }]}>{debtPressure.label}</Text>
+        </View>
+        <View style={fr.pressureBarTrack}>
+          <View style={[fr.pressureBarFill, { width: `${pressurePct}%` as any, backgroundColor: debtPressure.color }]} />
+          {/* Zone markers */}
+          <View style={[fr.pressureMarker, { left: '17%' as any }]} />
+          <View style={[fr.pressureMarker, { left: '50%' as any }]} />
+          <View style={[fr.pressureMarker, { left: '83%' as any }]} />
+        </View>
+        <View style={fr.pressureZones}>
+          <Text style={fr.pressureZoneLabel}>Low</Text>
+          <Text style={fr.pressureZoneLabel}>Mod</Text>
+          <Text style={fr.pressureZoneLabel}>High</Text>
+          <Text style={fr.pressureZoneLabel}>Crit</Text>
+        </View>
+        <Text style={[fr.pressureAdvice, { color: debtPressure.color + 'cc' }]}>{debtPressure.advice}</Text>
+        <View style={fr.divider} />
+        <StatRow label="Debt / annual rev"  value={totalDebt > 0 ? `${debtToAnnualRev.toFixed(2)}×` : '—'} color={debtPressure.color} />
+        {monthlyDebtService > 0 && (
+          <StatRow label="Due this month"   value={fmt(monthlyDebtService)} color={debtServiceRatio > 0.4 ? '#ef5350' : '#f59e0b'} />
+        )}
+        {avgMonthlyRev > 0 && monthlyDebtService > 0 && (
+          <StatRow label="Service ratio"    value={`${Math.round(debtServiceRatio * 100)}% of monthly rev`} color={debtServiceRatio > 0.4 ? '#ef5350' : C.textMuted} />
+        )}
       </Card>
 
       <SectionHeader title="📅 Cashflow Forecast" />
@@ -247,6 +294,15 @@ const fr = StyleSheet.create({
   cropBarWrap:  { flex: 1, height: 5, backgroundColor: C.bgDeep, borderRadius: 3, overflow: 'hidden' },
   cropBar:      { height: 5, backgroundColor: '#c8860a', borderRadius: 3 },
   cropRev:      { color: '#4caf50', fontSize: F.size.sm, width: 64, textAlign: 'right', fontWeight: 'bold' },
+  pressureHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: S.sm },
+  pressureLabel:    { color: C.textMuted, fontSize: F.size.sm },
+  pressureLevel:    { fontWeight: 'bold', fontSize: F.size.md },
+  pressureBarTrack: { height: 12, backgroundColor: C.bgDeep, borderRadius: 6, overflow: 'hidden', position: 'relative' },
+  pressureBarFill:  { height: 12, borderRadius: 6 },
+  pressureMarker:   { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: '#333' },
+  pressureZones:    { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2, paddingHorizontal: 2 },
+  pressureZoneLabel:{ color: C.textFaint, fontSize: 8, width: '25%' as any, textAlign: 'center' },
+  pressureAdvice:   { fontSize: F.size.xs, marginTop: S.xs },
   forecastRow:     { flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingVertical: 5 },
   forecastLabel:   { color: C.textMuted, fontSize: F.size.xs, width: 46 },
   forecastBarWrap: { flex: 1, height: 8, backgroundColor: C.bgDeep, borderRadius: 4, overflow: 'hidden' },
