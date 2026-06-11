@@ -230,6 +230,7 @@ import { reputationTick } from '../features/reputation/reputationTick';
 import { neighborTick }   from '../features/neighbors/neighborTick';
 import { advanceAnnualPlanningForDay } from '../engine/annualPlanning';
 import { buildAnnualPlanningInput } from '../store/annualPlanningInput';
+import { CHOICE_EVENT_TEMPLATES } from '../data/choiceEvents';
 
 // ── Machine / building helpers ───────────────────────────────────────────────
 function getDailyMaintenance(machines: OwnedMachine[], buildings: string[]): number {
@@ -4910,6 +4911,27 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
           pendingAnalyses: newPendingAnalyses,
           colmenaNegligenceStartDay,
         });
+
+        // ── Choice events: fire one periodically ─────────────────────────────
+        const afterState = get();
+        if (!afterState.pendingChoiceEvent && newDay >= 14 && Math.random() < 0.055) {
+          const fired = afterState.firedChoiceEventIds ?? [];
+          const eligible = CHOICE_EVENT_TEMPLATES.filter(e =>
+            (!e.minDay || newDay >= e.minDay) &&
+            (!e.maxDay || newDay <= e.maxDay) &&
+            !fired.includes(e.id)
+          );
+          const pool = eligible.length > 0 ? eligible : CHOICE_EVENT_TEMPLATES.filter(e =>
+            (!e.minDay || newDay >= e.minDay) && (!e.maxDay || newDay <= e.maxDay)
+          );
+          if (pool.length > 0) {
+            const totalWeight = pool.reduce((s, e) => s + e.weight, 0);
+            let r = Math.random() * totalWeight;
+            const chosen = pool.find(e => { r -= e.weight; return r <= 0; }) ?? pool[pool.length - 1];
+            set({ pendingChoiceEvent: chosen });
+          }
+        }
+
         const newDayAfterSet = get().day;
         if (newDayAfterSet >= 5 && !get().dayOneChecklist.advanced5) {
           get().markDayOneStep('advanced5');

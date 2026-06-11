@@ -48,6 +48,7 @@ import type { FamilyActions } from '../../features/family/familyActions';
 import type { ReputationState } from '../../features/reputation/reputationTypes';
 import type { NeighborState, NeighborLandOpportunity } from '../../features/neighbors/neighborTypes';
 import type { AdvisorStyle, AnnualPlanningState } from './annualPlanning';
+import type { ChoiceEventTemplate } from '../../data/choiceEvents';
 
 export interface GameState {
   day: number;
@@ -480,4 +481,8 @@ export interface GameState {
   approveAnnualPlan: () => void;
   dismissAnnualPlanRecommendation: (id: string) => void;
   completeAnnualPlanReview: () => void;
+  // Choice events
+  pendingChoiceEvent: ChoiceEventTemplate | null;
+  firedChoiceEventIds: string[];
+  resolveChoiceEvent: (optionIndex: number) => void;
 }

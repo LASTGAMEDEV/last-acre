@@ -83,6 +83,7 @@ export function partializeGameState(state: GameState) {
           applyFrictionChoiceAction, resolveBuyoutAction, completeGameSetup,
           generateAnnualPlan, replaceAnnualPlanGoal, removeAnnualPlanGoal, adjustAnnualPlanGoal,
           approveAnnualPlan, dismissAnnualPlanRecommendation, completeAnnualPlanReview,
+          resolveChoiceEvent,
           ...dataState
         } = state;
         return {
