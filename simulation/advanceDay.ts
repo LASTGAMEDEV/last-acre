@@ -2,7 +2,7 @@ import type { GameGet, GameSet } from '../store/actions/types';
 import { getDifficultyConfig } from '../engine/difficulty';
 import {
   PlantedCrop, SoilType, getSoilModifier, harvestAmount,
-  SoilStats, SOIL_DEFAULTS, advanceSoilStats, SoilTickParams,
+  SoilStats, SOIL_DEFAULTS, advanceSoilStats, SoilTickParams, computeSoilYieldModifier,
 } from '../engine/crops';
 import { OwnedAnimal, AnimalGenes, inheritTrait, randomGenes, isAtOptimalWeight } from '../engine/animals';
 import { MarketPrice, NewsEvent } from '../engine/market';
@@ -3454,14 +3454,25 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
           return cropType && newDay >= p.plantedCrop.plantedDay + cropType.growthDays;
         });
         if (cropsReady.length > 0) {
+          const cropNames = cropsReady.slice(0, 3).map(p => {
+            const c = CROP_TYPES.find(ct => ct.id === p.plantedCrop!.cropId);
+            return c?.name ?? '';
+          }).filter(Boolean).join(', ');
+          const avgSoilMod = cropsReady.reduce((s, p) => s + computeSoilYieldModifier(p.soil ?? SOIL_DEFAULTS), 0) / cropsReady.length;
+          const yieldFacts: string[] = [`Soil ${Math.round(avgSoilMod * 100)}%`];
+          if (cropsReady.some(p => p.lastCropId && p.lastCropId !== p.plantedCrop!.cropId)) yieldFacts.push('Rotation +15%');
+          if (cropsReady.some(p => p.irrigated)) yieldFacts.push('Irrigation +20%');
+          if (cropsReady.some(p => p.organicStatus === 'organic')) yieldFacts.push('Organic +20%');
+          if (cropsReady.some(p => (p.plantedCrop!.appliedN ?? 1.0) > 1.05 || (p.plantedCrop!.appliedP ?? 1.0) > 1.05 || (p.plantedCrop!.appliedK ?? 1.0) > 1.05)) yieldFacts.push('Fertilized');
+          if (cropsReady.some(p => p.hasWeeds)) yieldFacts.push('⚠ Weeds −25%');
+          if (cropsReady.some(p => (p.plantedCrop!.frostDamage ?? 0) > 0.05)) yieldFacts.push('❄ Frost dmg');
+          if (cropsReady.some(p => (p.plantedCrop!.droughtStress ?? 0) > 0.05)) yieldFacts.push('☀ Drought');
+          if (cropsReady.some(p => (p.pestState?.severity ?? 0) > 0)) yieldFacts.push('🐛 Pests');
           summary.push({
             id: 'crops_ready',
             icon: '🌾',
             title: `${cropsReady.length} plot${cropsReady.length > 1 ? 's' : ''} ready to harvest`,
-            detail: cropsReady.slice(0, 3).map(p => {
-              const c = CROP_TYPES.find(ct => ct.id === p.plantedCrop!.cropId);
-              return c?.name ?? '';
-            }).filter(Boolean).join(', '),
+            detail: cropNames + ' · ' + yieldFacts.join(' · '),
             severity: 'good',
           });
         }

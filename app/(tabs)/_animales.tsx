@@ -20,6 +20,13 @@ import { ENCLOSURE_BUILDINGS } from '../../constants/enclosures';
 import HelpSheet from '../../components/HelpSheet';
 import GuideButton from '../../components/GuideButton';
 
+const PRODUCT_CHAINS: Record<string, { steps: string; building: string; finalLabel: string }> = {
+  milk:  { steps: 'Pasteurise → Cheese/Butter', building: 'bld_milk_pasteuriser', finalLabel: 'up to $35/kg' },
+  eggs:  { steps: 'Grade eggs',                 building: 'bld_egg_grader',       finalLabel: '$0.28/ud' },
+  wool:  { steps: 'Scour → Yarn',               building: 'bld_fibre_prep',       finalLabel: 'up to $9.50/kg' },
+  cream: { steps: 'Ice Cream',                  building: 'bld_ice_cream_churner',finalLabel: '$8.50/L' },
+};
+
 function QuarantineBadge({ animal, day }: { animal: OwnedAnimal; day: number }) {
   if (!animal.quarantineUntilDay || animal.quarantineUntilDay <= day) return null;
   const remaining = animal.quarantineUntilDay - day;
@@ -310,6 +317,16 @@ export default function AnimalesScreen() {
                       Sell ${revenue.toLocaleString()}
                     </Text>
                   </TouchableOpacity>
+                  {(() => {
+                    const chain = PRODUCT_CHAINS[product.productType];
+                    if (!chain) return null;
+                    const hasBuilding = buildings.includes(chain.building);
+                    return (
+                      <Text style={[styles.chainHint, { color: hasBuilding ? C.green : C.textFaint }]}>
+                        {hasBuilding ? '→ ' : '🔒 '}{chain.steps} ({chain.finalLabel})
+                      </Text>
+                    );
+                  })()}
                 </View>
               );
             })}
@@ -527,8 +544,18 @@ export default function AnimalesScreen() {
                 {getBreedDisplayName(item, BREED_TYPES)}
               </Text>
               <Text style={styles.detail}>
-                Age: {age}d {mature ? (isOld ? '👴 Old' : '✅') : '🌱'}
+                Age: {age}d {mature ? (isOld ? '👴 Senior' : '✅') : '🌱'}
               </Text>
+              {isOld && type.productionType && (() => {
+                const ageMod = Math.max(0.2, 1.0 - ((age - type.maxPriceAge) / type.maxPriceAge) * 0.8);
+                const declinePct = Math.round((1 - ageMod) * 100);
+                const retireColor = declinePct >= 60 ? C.red : declinePct >= 30 ? C.amber : C.textMuted;
+                return (
+                  <Text style={{ color: retireColor, fontSize: 10, marginTop: 1 }}>
+                    📉 −{declinePct}% production{declinePct >= 50 ? ' · Consider retiring' : ''}
+                  </Text>
+                );
+              })()}
               {(item.traits ?? []).length > 0 && (
                 <View style={styles.traitRow}>
                   {(item.traits ?? []).map(trait => (
@@ -887,6 +914,7 @@ const styles = StyleSheet.create({
   inventoryPrice: { color: C.textMuted, fontSize: 11, marginTop: 2, marginBottom: S.xs },
   sellProductBtn: { backgroundColor: C.greenDark, borderRadius: R.sm, padding: 6, alignItems: 'center' },
   sellProductBtnText: { color: C.white, fontSize: 11, fontWeight: 'bold' },
+  chainHint: { fontSize: 9, marginTop: 4, lineHeight: 13 },
 
   card: { backgroundColor: C.bgCard, borderRadius: 10, padding: S.md, marginRight: 10, width: 140 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
