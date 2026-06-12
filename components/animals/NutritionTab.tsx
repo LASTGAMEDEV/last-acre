@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet } from 
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
-import { analyzeRation, generateDefaultRation } from '../../engine/nutrition';
+import { analyzeRation, generateDefaultRation, getRationProductionModifier } from '../../engine/nutrition';
 import { getSeason } from '../../engine/climate';
 
 const INGREDIENTS = [
@@ -45,10 +45,33 @@ export default function NutritionTab() {
         ownedTypes.map(type => {
           const count = state.animals.filter(a => a.typeId === type.id).length;
           const saved = state.savedRations[type.id];
+          const ration = saved ?? generateDefaultRation(type);
+          const pastureKg = (['corral', 'caballeriza'] as string[]).includes(type.enclosureType ?? '')
+            ? (state.parcels.some((p: any) => p.owned && !p.plantedCrop) ? 1.0 : 0)
+            : 0;
+          const analysis = analyzeRation(ration, type, { ...(state.inventory as Record<string, number>), silage: (state as any).silageLevel ?? 0 }, pastureKg);
+          const prodMod = getRationProductionModifier(analysis.tier);
+          const tierColor = analysis.tier === 'deficient' ? '#ef5350' : analysis.tier === 'adequate' ? '#ff9800' : analysis.tier === 'optimal' ? C.green : '#2196f3';
+          const tierLabel = analysis.tier === 'deficient' ? '⚠ Deficient' : analysis.tier === 'adequate' ? 'Adequate' : analysis.tier === 'optimal' ? '✓ Optimal' : '⭐ Premium';
           return (
-            <TouchableOpacity key={type.id} style={styles.card} onPress={() => setSelectedTypeId(type.id)}>
-              <Text style={styles.cardTitle}>{type.name} ({count})</Text>
-              <Text style={styles.label}>{saved ? 'Custom ration saved' : 'Default ration'}</Text>
+            <TouchableOpacity key={type.id} style={[styles.card, analysis.tier === 'deficient' && { borderColor: '#ef535044', borderWidth: 1 }]} onPress={() => setSelectedTypeId(type.id)}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{type.name} ({count})</Text>
+                  <Text style={styles.label}>{saved ? 'Custom ration' : 'Default ration'}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                  <Text style={[styles.label, { color: tierColor, fontWeight: '700' }]}>{tierLabel}</Text>
+                  <Text style={[styles.label, { color: tierColor }]}>×{prodMod.toFixed(2)} output</Text>
+                </View>
+              </View>
+              {analysis.tier === 'deficient' && analysis.issues.length > 0 && (
+                <View style={{ marginTop: 4, gap: 2 }}>
+                  {analysis.issues.map((issue, i) => (
+                    <Text key={i} style={{ color: '#ef5350', fontSize: 10 }}>• {issue}</Text>
+                  ))}
+                </View>
+              )}
             </TouchableOpacity>
           );
         })
