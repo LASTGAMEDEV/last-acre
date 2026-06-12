@@ -13,7 +13,7 @@ import { getSeason } from '../../engine/climate';
 import { getSoilModifier, SOIL_DEFAULTS, computeSoilYieldModifier } from '../../engine/crops';
 import { wellFlowRate, pipeCost } from '../../engine/water';
 import { PRODUCT_TYPES } from '../../data/productTypes';
-import { PEST_CONFIG } from '../../engine/pests';
+import { PEST_CONFIG, pestYieldModifier } from '../../engine/pests';
 import ContractorModal from '../../components/ContractorModal';
 import { getContractorCost, ContractorOperation } from '../../engine/machinery';
 import HelpSheet from '../../components/HelpSheet';
@@ -692,7 +692,10 @@ export default function TierrasScreen() {
         {parcel.pestState?.detectedDay && (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#2a0a00', borderRadius: 6, padding: 8, marginBottom: 4 }}>
             <Text style={{ color: '#ff8a65', fontSize: 11 }}>
-              {'\ud83d\udc1b'} {PEST_CONFIG[parcel.pestState.type].label} &middot; severity {parcel.pestState.severity.toFixed(1)}/10
+              {'\ud83d\udc1b'} {PEST_CONFIG[parcel.pestState.type].label} \u00b7 sev {parcel.pestState.severity.toFixed(1)}/10
+              {pestYieldModifier(parcel.pestState.severity) < 1
+                ? ` \u00b7 \u2212${Math.round((1 - pestYieldModifier(parcel.pestState.severity)) * 100)}% yield`
+                : ' \u00b7 treat soon'}
             </Text>
             {(() => {
               const treatmentCategory = PEST_CONFIG[parcel.pestState.type].treatment;
@@ -1788,6 +1791,11 @@ export default function TierrasScreen() {
                               </View>
                               <Text style={{ color: C.textMuted, fontSize: 11, marginLeft: 8 }}>{mapSelected.pestState.severity.toFixed(1)}/10</Text>
                             </View>
+                            {pestYieldModifier(mapSelected.pestState.severity) < 1 && (
+                              <Text style={{ color: '#ef9a9a', fontSize: 10, marginBottom: S.xs }}>
+                                ⚠ −{Math.round((1 - pestYieldModifier(mapSelected.pestState.severity)) * 100)}% yield at harvest
+                              </Text>
+                            )}
                             {(() => {
                               const treatmentCategory = PEST_CONFIG[mapSelected.pestState.type].treatment;
                               const available = PRODUCT_TYPES.filter(p => p.category === treatmentCategory && (productInventory[p.id] ?? 0) > 0);
