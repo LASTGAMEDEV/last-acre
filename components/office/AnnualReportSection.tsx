@@ -79,6 +79,17 @@ export default function AnnualReportSection() {
   const totalDebt = activeLoans.reduce((s, l) => s + l.totalOwed, 0);
   const loansRepaidThisYear = loans.filter(l => l.paid && l.startDay >= yearStart).length;
 
+  // Multi-year revenue comparison (up to 5 prior years)
+  const currentGameYear = calYear - 1970; // years of farming (1-based)
+  const multiYearData: Array<{ label: string; revenue: number }> = [];
+  for (let y = Math.max(1, currentGameYear - 3); y <= currentGameYear; y++) {
+    const ys = (y - 1) * DAYS_PER_YEAR + 1;
+    const ye = y * DAYS_PER_YEAR;
+    const rev = salesLog.filter(s => s.day >= ys && s.day <= ye).reduce((a, s) => a + s.amount, 0);
+    multiYearData.push({ label: String(1970 + y - 1), revenue: rev });
+  }
+  const maxMultiYear = Math.max(...multiYearData.map(d => d.revenue), 1);
+
   // Annual goals from plan
   const plan: AnnualPlan | undefined = annualPlanning.active?.year === calYear
     ? annualPlanning.active
@@ -155,6 +166,39 @@ export default function AnnualReportSection() {
           })}
         </View>
       </Card>
+
+      {/* Multi-year comparison */}
+      {multiYearData.length > 1 && (
+        <>
+          <SectionHeader title="📊 Year-over-Year Revenue" />
+          <Card>
+            <View style={ar.multiYearGrid}>
+              {multiYearData.map((d, i) => {
+                const barPct = maxMultiYear > 0 ? (d.revenue / maxMultiYear) * 100 : 0;
+                const isCurrentYear = i === multiYearData.length - 1;
+                const prevRev = i > 0 ? multiYearData[i - 1].revenue : 0;
+                const growth = prevRev > 0 ? ((d.revenue / prevRev) - 1) * 100 : null;
+                return (
+                  <View key={d.label} style={ar.multiYearCol}>
+                    <Text style={[ar.multiYearRev, { color: isCurrentYear ? '#c8860a' : C.textMuted }]}>
+                      {d.revenue >= 1000 ? `$${(d.revenue / 1000).toFixed(0)}k` : `$${d.revenue}`}
+                    </Text>
+                    {growth !== null && (
+                      <Text style={{ color: growth >= 0 ? '#4caf50' : '#ef5350', fontSize: 8, marginBottom: 2 }}>
+                        {growth >= 0 ? '▲' : '▼'}{Math.abs(growth).toFixed(0)}%
+                      </Text>
+                    )}
+                    <View style={ar.multiYearBarTrack}>
+                      <View style={[ar.multiYearBarFill, { height: `${barPct}%` as any, backgroundColor: isCurrentYear ? '#c8860a' : '#4a7c59' }]} />
+                    </View>
+                    <Text style={[ar.multiYearLabel, isCurrentYear && { color: C.text, fontWeight: 'bold' }]}>{d.label}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Card>
+        </>
+      )}
 
       {/* Annual goals */}
       {(plan || review) && (
@@ -305,4 +349,11 @@ const ar = StyleSheet.create({
 
   cropChip:     { backgroundColor: C.bgDeep, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 3 },
   cropChipText: { color: C.textMuted, fontSize: F.size.xs },
+
+  multiYearGrid:     { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 100 },
+  multiYearCol:      { flex: 1, alignItems: 'center', height: '100%' as any, justifyContent: 'flex-end' },
+  multiYearBarTrack: { width: '100%', flex: 1, backgroundColor: '#1a2a3a', borderRadius: 3, overflow: 'hidden', justifyContent: 'flex-end' },
+  multiYearBarFill:  { width: '100%', borderRadius: 3 },
+  multiYearLabel:    { color: C.textFaint, fontSize: 9, marginTop: 4 },
+  multiYearRev:      { fontSize: 9, fontWeight: 'bold', marginBottom: 2 },
 });

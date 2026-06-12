@@ -17,6 +17,16 @@ const CATEGORY_ICONS: Record<string, string> = {
   disease: '🦠', weather: '🌩️', genetics: '🧬', product: '🛒',
 };
 
+const ERA_THEMES: Record<number, { label: string; flavor: string; color: string; bg: string }> = {
+  1970: { label: 'THE SEVENTIES',  flavor: 'Green Revolution · Oil shocks · EPA era',       color: '#8d6e63', bg: '#1a1008' },
+  1980: { label: 'THE EIGHTIES',   flavor: 'Farm crisis · Biotech dawn · Globalization',     color: '#546e7a', bg: '#080e14' },
+  1990: { label: 'THE NINETIES',   flavor: 'NAFTA · GMO introduction · Consolidation',       color: '#5d6b3a', bg: '#0e120a' },
+  2000: { label: 'THE 2000s',      flavor: 'Organic boom · Biofuel surge · Commodity cycle', color: '#4caf50', bg: '#0a160a' },
+  2010: { label: 'THE 2010s',      flavor: 'Digital farming · Local food · Climate pressure',color: '#2196f3', bg: '#080e18' },
+  2020: { label: 'THE 2020s',      flavor: 'Pandemic disruption · Net-zero · AgTech wave',   color: '#9c27b0', bg: '#12081a' },
+  2030: { label: 'THE 2030s',      flavor: 'Precision ag · Lab meat · Carbon markets',       color: '#c8860a', bg: '#180e04' },
+};
+
 export default function CronicaSection() {
   const { timeline, family } = useGameStore(s => ({
     timeline: s.timeline,
@@ -80,9 +90,17 @@ export default function CronicaSection() {
     <ScrollView contentContainerStyle={{ padding: 14, gap: 16 }} showsVerticalScrollIndicator={false}>
       {Object.entries(decades)
         .sort(([a], [b]) => Number(a) - Number(b))
-        .map(([decade, entries]) => (
+        .map(([decade, entries]) => {
+          const era = ERA_THEMES[Number(decade)];
+          const eraColor = era?.color ?? '#2d4060';
+          const eraBg = era?.bg ?? '#080c10';
+          return (
           <View key={decade}>
-            <Text style={cr.decadeLabel}>THE {decade}s</Text>
+            <View style={[cr.decadeHeader, { backgroundColor: eraBg, borderColor: eraColor + '44' }]}>
+              <Text style={[cr.decadeLabel, { color: eraColor }]}>{era?.label ?? `THE ${decade}s`}</Text>
+              {era?.flavor && <Text style={[cr.decadeFlavor, { color: eraColor + 'aa' }]}>{era.flavor}</Text>}
+              <Text style={[cr.decadeCount, { color: eraColor + '88' }]}>{entries.length} event{entries.length !== 1 ? 's' : ''}</Text>
+            </View>
             <View style={cr.decadeGroup}>
               {entries.map((entry, i) => (
                 <View key={`${entry.year}-${entry.kind}-${i}`} style={cr.entry}>
@@ -102,13 +120,16 @@ export default function CronicaSection() {
               ))}
             </View>
           </View>
-        ))}
+        );})}
     </ScrollView>
   );
 }
 
 const cr = StyleSheet.create({
-  decadeLabel:   { color: '#2d4060', fontSize: 9, fontWeight: 'bold', letterSpacing: 3, marginBottom: 8 },
+  decadeHeader:  { borderRadius: R.md, borderWidth: 1, padding: 12, marginBottom: 8 },
+  decadeLabel:   { fontSize: 13, fontWeight: 'bold', letterSpacing: 3 },
+  decadeFlavor:  { fontSize: 10, marginTop: 2, letterSpacing: 0.5 },
+  decadeCount:   { fontSize: 9, marginTop: 4, letterSpacing: 1 },
   decadeGroup:   { backgroundColor: C.bgCard, borderRadius: R.lg, padding: 12 },
   entry:         { flexDirection: 'row', gap: 10, marginBottom: 12 },
   entryLeft:     { alignItems: 'center', width: 36 },
