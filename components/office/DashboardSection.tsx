@@ -8,6 +8,7 @@ import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 import { gameDayToCalendarYear } from '../../engine/calendarUtils';
+import { analyzeRation, generateDefaultRation } from '../../engine/nutrition';
 import GuideButton from '../GuideButton';
 import FarmLegacyCard from './FarmLegacyCard';
 
@@ -58,7 +59,7 @@ function DashboardSection() {
     money, savings, day, loans, contracts, seasonGoals, seasonHarvestCount,
     seasonStartRevenue, totalRevenue, parcels, animals, npcFarms, salesLog,
     personalRecords, inventory, prices, animalWelfareScores, reputation, farmStyle,
-    animalInventory, machines, workers, family,
+    animalInventory, machines, workers, family, savedRations, silageLevel,
   } = useGameStore();
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
@@ -185,6 +186,26 @@ function DashboardSection() {
       });
     }
   });
+
+  // Deficient rations
+  const typeGroups: Record<string, number> = {};
+  for (const a of animals) typeGroups[a.typeId] = (typeGroups[a.typeId] ?? 0) + 1;
+  for (const [typeId, count] of Object.entries(typeGroups)) {
+    const animalType = ANIMAL_TYPES.find(t => t.id === typeId);
+    if (!animalType || !animalType.productionType) continue;
+    const ration = savedRations[typeId] ?? generateDefaultRation(animalType);
+    const pastureKg = (animalType.enclosureType === 'corral' || animalType.enclosureType === 'caballeriza')
+      ? (ownedParcels.some(p => !p.plantedCrop) ? 1.0 : 0) : 0;
+    const analysis = analyzeRation(ration, animalType,
+      { ...inventory, ...animalInventory, silage: silageLevel ?? 0 }, pastureKg);
+    if (analysis.tier === 'deficient') {
+      priorities.push({
+        icon: '🍽️',
+        label: `${animalType.name} (${count}) — deficient ration: −35% production, ×2.5 disease risk`,
+        severity: 'critical',
+      });
+    }
+  }
 
   // Sort: critical first, then warning, then action
   const ORDER: Record<Priority['severity'], number> = { critical: 0, warning: 1, action: 2 };
