@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
-import { CSACommitment } from '../../engine/csa';
+import { CSACommitment, CSA_TIER_PRICES, CSA_WEEKS_PER_SEASON, seasonRevenue, renewalProbability } from '../../engine/csa';
 import GuideButton from '../GuideButton';
 
 export default function CSASection() {
@@ -19,6 +19,13 @@ export default function CSASection() {
     : 0;
 
   const totalBoxes = (csaCommitment?.smallBoxes ?? 0) + (csaCommitment?.mediumBoxes ?? 0) + (csaCommitment?.largeBoxes ?? 0);
+
+  const seasonTotal = seasonRevenue(subscribers, csaCommitment?.priceModifier ?? 1.0);
+  const weeklyRevenue = Math.round(seasonTotal / CSA_WEEKS_PER_SEASON);
+  const smallCount = subscribers.filter(s => s.boxSize === 'small').length;
+  const mediumCount = subscribers.filter(s => s.boxSize === 'medium').length;
+  const largeCount = subscribers.filter(s => s.boxSize === 'large').length;
+  const atRisk = subscribers.filter(s => renewalProbability(s.satisfaction) < 0.75);
 
   const presets: { label: string; commitment: CSACommitment }[] = [
     { label: 'Small', commitment: { smallBoxes: 5, mediumBoxes: 0, largeBoxes: 0, priceModifier: 1.0 } },
@@ -82,6 +89,45 @@ export default function CSASection() {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+      )}
+
+      {/* Season economics */}
+      {subscribers.length > 0 && (
+        <View style={csa.card}>
+          <Text style={csa.cardTitle}>💰 Season Economics</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+            <View style={csa.ecoBox}>
+              <Text style={csa.ecoLabel}>SEASON REVENUE</Text>
+              <Text style={csa.ecoVal}>${seasonTotal.toLocaleString()}</Text>
+            </View>
+            <View style={csa.ecoBox}>
+              <Text style={csa.ecoLabel}>PER WEEK</Text>
+              <Text style={csa.ecoVal}>${weeklyRevenue.toLocaleString()}</Text>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+            {smallCount > 0 && (
+              <View style={csa.boxChip}>
+                <Text style={csa.boxChipText}>{smallCount}× Small ${CSA_TIER_PRICES.small}</Text>
+              </View>
+            )}
+            {mediumCount > 0 && (
+              <View style={csa.boxChip}>
+                <Text style={csa.boxChipText}>{mediumCount}× Medium ${CSA_TIER_PRICES.medium}</Text>
+              </View>
+            )}
+            {largeCount > 0 && (
+              <View style={csa.boxChip}>
+                <Text style={csa.boxChipText}>{largeCount}× Large ${CSA_TIER_PRICES.large}</Text>
+              </View>
+            )}
+          </View>
+          {atRisk.length > 0 && (
+            <Text style={[csa.warn, { marginTop: 8 }]}>
+              ⚠️ {atRisk.length} subscriber{atRisk.length !== 1 ? 's' : ''} at renewal risk (low satisfaction)
+            </Text>
+          )}
         </View>
       )}
 
@@ -151,4 +197,9 @@ const csa = StyleSheet.create({
   subRow: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border, gap: 4 },
   barBg: { height: 6, backgroundColor: '#333', borderRadius: 3, marginTop: 4 },
   barFill: { height: '100%', borderRadius: 3 },
+  ecoBox: { flex: 1, backgroundColor: C.bgDeep, borderRadius: R.sm, padding: S.sm, alignItems: 'center' },
+  ecoLabel: { color: C.textFaint, fontSize: 9, fontWeight: '600', letterSpacing: 0.5 },
+  ecoVal: { color: '#c8860a', fontSize: F.size.lg, fontWeight: 'bold', marginTop: 2 },
+  boxChip: { backgroundColor: C.bgDeep, borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 3 },
+  boxChipText: { color: C.textMuted, fontSize: F.size.xs },
 });
