@@ -47,7 +47,7 @@ function CalendarCell({ status, isCurrentSeason }: { status: SeasonStatus; isCur
 }
 
 export default function ClimaScreen() {
-  const { day, forecast, todayWeather } = useGameStore();
+  const { day, forecast, todayWeather, parcels } = useGameStore();
   const season = getSeason(day);
   const [calendarFilter, setCalendarFilter] = useState<'all' | Season>(season);
 
@@ -118,6 +118,67 @@ export default function ClimaScreen() {
           );
         }}
       />
+
+      {/* ── FIELD RISK ALERTS ── */}
+      {(() => {
+        const ownedParcels = (parcels ?? []).filter(p => p.owned && p.plantedCrop);
+        if (ownedParcels.length === 0) return null;
+
+        type RiskEntry = { icon: string; label: string; plots: string[]; daysOut: number; severity: 'critical' | 'warning' };
+        const risks: RiskEntry[] = [];
+
+        const frostDays = forecast.slice(0, 7).map((f, i) => ({ f, i })).filter(({ f }) => f.event === 'frost' || (f.minTemp != null && f.minTemp < 0));
+        if (frostDays.length > 0) {
+          const frostedPlots = ownedParcels.filter(p => !p.greenhouse).map(p => {
+            const ct = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
+            return ct?.name ?? p.plantedCrop!.cropId;
+          });
+          if (frostedPlots.length > 0) {
+            const nearest = frostDays[0].i + 1;
+            risks.push({ icon: '❄️', label: `Frost in ${nearest}d`, plots: [...new Set(frostedPlots)], daysOut: nearest, severity: nearest <= 2 ? 'critical' : 'warning' });
+          }
+        }
+
+        const droughtDays = forecast.slice(0, 7).map((f, i) => ({ f, i })).filter(({ f }) => f.event === 'drought');
+        if (droughtDays.length > 0) {
+          const dryPlots = ownedParcels.filter(p => !p.irrigated).map(p => {
+            const ct = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
+            return ct?.name ?? p.plantedCrop!.cropId;
+          });
+          if (dryPlots.length > 0) {
+            const nearest = droughtDays[0].i + 1;
+            risks.push({ icon: '🏜️', label: `Drought in ${nearest}d — unirrigated plots`, plots: [...new Set(dryPlots)], daysOut: nearest, severity: 'warning' });
+          }
+        }
+
+        const hailDays = forecast.slice(0, 7).map((f, i) => ({ f, i })).filter(({ f }) => f.event === 'hail');
+        if (hailDays.length > 0) {
+          const nearest = hailDays[0].i + 1;
+          const allPlanted = ownedParcels.map(p => {
+            const ct = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
+            return ct?.name ?? p.plantedCrop!.cropId;
+          });
+          risks.push({ icon: '🌨️', label: `Hail in ${nearest}d`, plots: [...new Set(allPlanted)], daysOut: nearest, severity: 'critical' });
+        }
+
+        if (risks.length === 0) return null;
+        return (
+          <>
+            <Text style={styles.sectionLabel}>⚠️ Field Risk Alerts</Text>
+            <View style={styles.riskCard}>
+              {risks.map((r, i) => (
+                <View key={i} style={[styles.riskRow, i > 0 && { borderTopWidth: 1, borderTopColor: '#1a1f2e', marginTop: 8, paddingTop: 8 }]}>
+                  <Text style={styles.riskIcon}>{r.icon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.riskLabel, { color: r.severity === 'critical' ? '#ef9a9a' : '#fcd34d' }]}>{r.label}</Text>
+                    <Text style={styles.riskPlots}>{r.plots.slice(0, 4).join(', ')}{r.plots.length > 4 ? ` +${r.plots.length - 4} more` : ''} at risk</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        );
+      })()}
 
       {/* ── CALENDAR ── */}
       <Text style={styles.sectionLabel}>Crop Calendar</Text>
@@ -218,6 +279,13 @@ const styles = StyleSheet.create({
   season: { fontSize: F.size.lg, color: C.textDim },
   dayLabel: { color: C.textMuted, fontSize: F.size.md, paddingHorizontal: S.lg, marginBottom: 10 },
   sectionLabel: { color: C.textMuted, fontSize: F.size.md, paddingHorizontal: S.lg, marginBottom: 6, marginTop: 10 },
+
+  // Risk alerts
+  riskCard:   { backgroundColor: C.bgCard, borderRadius: R.lg, marginHorizontal: S.md, padding: S.md },
+  riskRow:    { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  riskIcon:   { fontSize: 20, lineHeight: 24 },
+  riskLabel:  { fontSize: F.size.sm, fontWeight: 'bold', marginBottom: 2 },
+  riskPlots:  { color: C.textMuted, fontSize: F.size.xs, lineHeight: 16 },
 
   // Today
   todayCard: { backgroundColor: C.bgCard, borderRadius: R.lg, marginHorizontal: S.md, padding: S.lg, alignItems: 'center' },
