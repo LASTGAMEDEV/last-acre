@@ -88,19 +88,26 @@ export default function CompostScreen() {
       )}
 
       {/* Active batches */}
-      {state.compostBatches.filter((b: any) => b.status === 'active').map((batch: any) => (
+      {state.compostBatches.filter((b: any) => b.status === 'active').map((batch: any) => {
+        const projQuality = computeCompostQuality(batch);
+        const projGrade = getCompostGrade(projQuality);
+        const projColor = projGrade.grade === 'Premium' ? '#4caf50' : projGrade.grade === 'Standard' ? '#ff9800' : '#ef5350';
+        return (
         <View key={batch.id} style={styles.card}>
-          <Text style={styles.cardTitle}>Batch #{batch.id.slice(-4)}</Text>
+          <View style={styles.row}>
+            <Text style={styles.cardTitle}>Batch #{batch.id.slice(-4)}</Text>
+            <Text style={{ fontSize: F.size.xs, color: projColor }}>→ {projGrade.grade} (proj.)</Text>
+          </View>
           <View style={styles.row}>
             <Text style={styles.label}>C:N Ratio</Text>
             <Text style={[styles.value, batch.cnRatio >= 20 && batch.cnRatio <= 30 ? styles.good : styles.warning]}>
-              {batch.cnRatio.toFixed(1)}:1
+              {batch.cnRatio.toFixed(1)}:1 {batch.cnRatio < 20 || batch.cnRatio > 30 ? '(aim 20–30)' : ''}
             </Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Moisture</Text>
             <Text style={[styles.value, batch.moistureLevel >= 45 && batch.moistureLevel <= 65 ? styles.good : styles.warning]}>
-              {batch.moistureLevel}%
+              {batch.moistureLevel}% {batch.moistureLevel < 45 ? '↓ water needed' : batch.moistureLevel > 65 ? '↑ too wet' : ''}
             </Text>
           </View>
           <View style={styles.row}>
@@ -127,19 +134,44 @@ export default function CompostScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      ))}
+        );
+      })}
 
       {/* Ready batches */}
       {state.compostBatches.filter((b: any) => b.status === 'ready').map((batch: any) => {
         const quality = computeCompostQuality(batch);
         const grade = getCompostGrade(quality);
         const outputKg = Math.round((batch.manureKg + batch.residueKg) * 0.40);
+        const gradeColor = grade.grade === 'Premium' ? '#4caf50' : grade.grade === 'Standard' ? '#ff9800' : '#ef5350';
         return (
           <View key={batch.id} style={[styles.card, styles.readyCard]}>
-            <Text style={styles.cardTitle}>✅ Ready — {grade.grade} Quality</Text>
-            <Text style={styles.value}>{outputKg} kg compost available</Text>
+            <View style={styles.row}>
+              <Text style={styles.cardTitle}>✅ Compost Ready</Text>
+              <Text style={[styles.value, { color: gradeColor, fontWeight: 'bold' }]}>{grade.grade}</Text>
+            </View>
+            <Text style={[styles.value, { marginBottom: 4 }]}>{outputKg.toLocaleString()} kg</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 6 }}>
+              <View style={styles.nutrientPill}>
+                <Text style={styles.nutrientLabel}>N</Text>
+                <Text style={styles.nutrientVal}>{grade.nPer1000kg} kg/t</Text>
+              </View>
+              <View style={styles.nutrientPill}>
+                <Text style={styles.nutrientLabel}>P</Text>
+                <Text style={styles.nutrientVal}>{grade.pPer1000kg} kg/t</Text>
+              </View>
+              <View style={styles.nutrientPill}>
+                <Text style={styles.nutrientLabel}>K</Text>
+                <Text style={styles.nutrientVal}>{grade.kPer1000kg} kg/t</Text>
+              </View>
+              {grade.organicMatter > 0 && (
+                <View style={styles.nutrientPill}>
+                  <Text style={styles.nutrientLabel}>OM</Text>
+                  <Text style={styles.nutrientVal}>+{grade.organicMatter}%</Text>
+                </View>
+              )}
+            </View>
             <TouchableOpacity style={styles.button} onPress={() => state.collectCompostBatch(batch.id)}>
-              <Text style={styles.buttonText}>Collect</Text>
+              <Text style={styles.buttonText}>Collect to Inventory</Text>
             </TouchableOpacity>
           </View>
         );
@@ -173,4 +205,7 @@ const styles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: S.md, marginTop: S.sm },
   smallButton: { flex: 1, backgroundColor: C.green, borderRadius: R.md, padding: S.sm, alignItems: 'center' },
   smallButtonText: { color: C.white, fontWeight: F.weight.bold, fontSize: F.size.sm },
+  nutrientPill: { flex: 1, backgroundColor: C.bgDeep, borderRadius: R.sm, padding: 4, alignItems: 'center' },
+  nutrientLabel: { color: C.textFaint, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
+  nutrientVal: { color: C.text, fontSize: F.size.sm, fontWeight: 'bold', marginTop: 1 },
 });
