@@ -1,26 +1,52 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore, ProductionBuildingState } from '../../store/useGameStore';
 import { BUILDING_TYPES, PRODUCTION_EQUIPMENT } from '../../data/buildingTypes';
-import { C } from '../../constants/theme';
+import { C, S, F, R } from '../../constants/theme';
+
+const CERT_COLOR: Record<string, string> = {
+  basic: '#9e9e9e',
+  certified: '#2196f3',
+  organic: C.green,
+};
+
+const CERT_LABEL: Record<string, string> = {
+  basic: 'Basic',
+  certified: '✅ Certified',
+  organic: '🌿 Organic',
+};
+
+// Requirements to reach each tier
+const CERT_NEXT: Record<string, string> = {
+  basic: '30d at hygiene ≥60 + 1 inspection',
+  certified: '60d at hygiene ≥80 + no synthetic inputs (60d) + 2 inspections',
+};
+
+// Effects unlocked at each tier
+const CERT_EFFECTS: Record<string, string> = {
+  certified: '+10% product quality · premium buyer access',
+  organic: '+25% product quality · organic product designation',
+};
 
 function ProductionBuildingsSection() {
   const {
     productionBuildings,
     workers,
     money,
+    day,
     assignWorkerToBuilding,
     unassignWorkerFromBuilding,
     performDeepClean,
   } = useGameStore();
 
   const farmhands = (workers ?? []).filter((w: any) => w.role === 'field_hand');
+  const workerMap = new Map((workers ?? []).map((w: any) => [w.id, w]));
 
   if (!productionBuildings || productionBuildings.length === 0) {
     return (
-      <View style={{ backgroundColor: C.bgCard, borderRadius: 10, margin: 8, padding: 14 }}>
-        <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 14, marginBottom: 6 }}>Production Buildings</Text>
-        <Text style={{ color: '#aaa', fontSize: 12 }}>
+      <View style={pbs.emptyCard}>
+        <Text style={pbs.emptyTitle}>Production Buildings</Text>
+        <Text style={pbs.emptyText}>
           No production buildings built yet. Buy them in the Shop to stop paying contractor fees.
         </Text>
       </View>
@@ -28,112 +54,187 @@ function ProductionBuildingsSection() {
   }
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 8 }} showsVerticalScrollIndicator={false}>
-      <View style={{ backgroundColor: C.bgCard, borderRadius: 10, margin: 0, padding: 14 }}>
-        <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 14, marginBottom: 10 }}>Production Buildings</Text>
-        {productionBuildings.map((pb: ProductionBuildingState) => {
-          const bt = BUILDING_TYPES.find(b => b.id === pb.buildingTypeId);
-          if (!bt) return null;
-          const certColor = pb.certificationTier === 'organic' ? C.green : pb.certificationTier === 'certified' ? '#2196f3' : '#9e9e9e';
-          const certLabel = pb.certificationTier === 'organic' ? '🌿 Organic' : pb.certificationTier === 'certified' ? '✅ Certified' : 'Basic';
-          const availableWorkers = farmhands.filter((w: any) => !pb.assignedWorkerIds.includes(w.id));
-          const maxSlots = bt.equipmentSlotCount ?? 2;
-          const availableEquipment = PRODUCTION_EQUIPMENT.filter(eq =>
-            eq.applicableBuildingPrefixes.some(prefix => pb.buildingTypeId.startsWith(prefix)) &&
-            !pb.equipmentSlots.includes(eq.id)
-          );
+    <ScrollView contentContainerStyle={pbs.scroll} showsVerticalScrollIndicator={false}>
+      {productionBuildings.map((pb: ProductionBuildingState) => {
+        const bt = BUILDING_TYPES.find(b => b.id === pb.buildingTypeId);
+        if (!bt) return null;
 
-          return (
-            <View key={pb.id} style={{ borderTopWidth: 1, borderTopColor: '#333', paddingTop: 10, marginTop: 10 }}>
-              {/* Header */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ color: C.text, fontWeight: 'bold' }}>{bt.name}</Text>
-                <Text style={{ color: certColor, fontSize: 12 }}>{certLabel}</Text>
+        const certColor = CERT_COLOR[pb.certificationTier] ?? '#9e9e9e';
+        const certLabel = CERT_LABEL[pb.certificationTier] ?? pb.certificationTier;
+        const availableWorkers = farmhands.filter((w: any) => !pb.assignedWorkerIds.includes(w.id));
+        const maxSlots = bt.equipmentSlotCount ?? 2;
+        const availableEquipment = PRODUCTION_EQUIPMENT.filter(eq =>
+          eq.applicableBuildingPrefixes.some(prefix => pb.buildingTypeId.startsWith(prefix)) &&
+          !pb.equipmentSlots.includes(eq.id)
+        );
+        const installedEquipment = pb.equipmentSlots
+          .map(id => PRODUCTION_EQUIPMENT.find(e => e.id === id))
+          .filter(Boolean);
+
+        // Cert progression
+        const nextTierReq = CERT_NEXT[pb.certificationTier];
+        const certEffect = CERT_EFFECTS[pb.certificationTier];
+
+        // Hygiene status
+        const hygieneColor = pb.hygiene >= 80 ? C.green : pb.hygiene >= 60 ? '#ff9800' : pb.hygiene >= 40 ? '#ff5722' : '#ef5350';
+        const hygieneNote = pb.hygiene < 60
+          ? 'Below 60% — cert progress paused, quality penalty active'
+          : pb.hygiene < 80
+          ? 'Below 80% — certified→organic progress paused'
+          : 'Good hygiene';
+
+        return (
+          <View key={pb.id} style={pbs.card}>
+            {/* Header */}
+            <View style={pbs.header}>
+              <View style={{ flex: 1 }}>
+                <Text style={pbs.name}>{bt.name}</Text>
+                <Text style={pbs.sub}>Capacity: {pb.capacity}/day · €{bt.maintenancePerDay}/day maintenance</Text>
               </View>
-
-              {/* Hygiene bar */}
-              <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 3 }}>Hygiene</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <View style={{ flex: 1, height: 8, backgroundColor: '#2a2a4a', borderRadius: 4 }}>
-                  <View style={{
-                    width: `${pb.hygiene}%` as any, height: 8, borderRadius: 4,
-                    backgroundColor: pb.hygiene >= 80 ? C.green : pb.hygiene >= 60 ? '#ff9800' : pb.hygiene >= 40 ? '#ff5722' : '#ef5350',
-                  }} />
-                </View>
-                <Text style={{ color: '#aaa', fontSize: 11, width: 32 }}>{Math.round(pb.hygiene)}%</Text>
-              </View>
-
-              {/* Cert progress hint */}
-              {pb.certificationTier === 'basic' && (
-                <Text style={{ color: '#aaa', fontSize: 10, marginBottom: 6 }}>
-                  To Certified: {Math.max(0, 30 - pb.certDaysAtThreshold)}d at hygiene ≥60 + 1 inspection
-                </Text>
-              )}
-
-              {/* Workers */}
-              <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 4 }}>Workers assigned: {pb.assignedWorkerIds.length}</Text>
-              {pb.assignedWorkerIds.map((wid, idx) => (
-                <View key={wid} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <Text style={{ color: C.green, fontSize: 12 }}>👷 Farmhand #{idx + 1}</Text>
-                  <TouchableOpacity onPress={() => unassignWorkerFromBuilding(pb.id, wid)}>
-                    <Text style={{ color: '#ef5350', fontSize: 12 }}>Unassign</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-              {availableWorkers.length > 0 && (
-                <TouchableOpacity
-                  style={{ backgroundColor: '#1e3a5f', borderRadius: 6, padding: 6, alignItems: 'center', marginBottom: 8 }}
-                  onPress={() => assignWorkerToBuilding(pb.id, availableWorkers[0].id)}
-                >
-                  <Text style={{ color: '#90caf9', fontSize: 12 }}>+ Assign Farmhand</Text>
-                </TouchableOpacity>
-              )}
-
-              {/* Equipment slots */}
-              <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 4 }}>
-                Equipment: {pb.equipmentSlots.length}/{maxSlots} slots used
-              </Text>
-              {pb.equipmentSlots.map(eqId => {
-                const eq = PRODUCTION_EQUIPMENT.find(e => e.id === eqId);
-                return (
-                  <Text key={eqId} style={{ color: C.green, fontSize: 11, marginBottom: 2 }}>
-                    ✓ {eq?.name ?? eqId}
-                  </Text>
-                );
-              })}
-              {pb.equipmentSlots.length < maxSlots && availableEquipment.length > 0 && (
-                <Text style={{ color: '#aaa', fontSize: 10, marginTop: 2 }}>
-                  Buy equipment in the Shop to fill remaining slots
-                </Text>
-              )}
-
-              {/* Deep clean */}
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                <TouchableOpacity
-                  style={{ flex: 1, backgroundColor: pb.hygiene > 80 ? '#2a2a4a' : C.greenDark, borderRadius: 6, padding: 8, alignItems: 'center' }}
-                  onPress={() => performDeepClean(pb.id, false)}
-                  disabled={pb.hygiene > 80}
-                >
-                  <Text style={{ color: pb.hygiene > 80 ? '#555' : C.greenSoft, fontSize: 12 }}>
-                    {pb.hygiene > 80 ? '✓ Clean' : '🧹 Deep Clean (Worker)'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{ flex: 1, backgroundColor: money < 150 ? '#2a2a4a' : '#3e1f00', borderRadius: 6, padding: 8, alignItems: 'center' }}
-                  onPress={() => performDeepClean(pb.id, true)}
-                  disabled={money < 150}
-                >
-                  <Text style={{ color: money < 150 ? '#555' : '#ffcc80', fontSize: 12 }}>
-                    🧹 Contractor ($150–$400)
-                  </Text>
-                </TouchableOpacity>
+              <View style={[pbs.certBadge, { backgroundColor: certColor + '22', borderColor: certColor + '66' }]}>
+                <Text style={[pbs.certText, { color: certColor }]}>{certLabel}</Text>
               </View>
             </View>
-          );
-        })}
-      </View>
+
+            {/* Active cert effect */}
+            {certEffect && (
+              <Text style={[pbs.certEffect, { color: certColor }]}>
+                ✨ {certEffect}
+              </Text>
+            )}
+
+            {/* Hygiene bar */}
+            <View style={{ marginTop: 6 }}>
+              <View style={pbs.labelRow}>
+                <Text style={pbs.sectionLabel}>HYGIENE</Text>
+                <Text style={[pbs.small, { color: hygieneColor }]}>{Math.round(pb.hygiene)}% — {hygieneNote}</Text>
+              </View>
+              <View style={pbs.bar}>
+                <View style={[pbs.barFill, { width: `${pb.hygiene}%` as any, backgroundColor: hygieneColor }]} />
+              </View>
+            </View>
+
+            {/* Cert progression */}
+            {nextTierReq && (
+              <View style={pbs.certProgress}>
+                <Text style={pbs.sectionLabel}>CERT PROGRESS</Text>
+                <Text style={pbs.small}>{pb.certDaysAtThreshold}d / required · {nextTierReq}</Text>
+                <Text style={pbs.small}>{pb.certInspectionsPassed} inspection{pb.certInspectionsPassed !== 1 ? 's' : ''} passed</Text>
+              </View>
+            )}
+
+            {/* Installed equipment */}
+            <View style={{ marginTop: 8 }}>
+              <Text style={pbs.sectionLabel}>EQUIPMENT ({pb.equipmentSlots.length}/{maxSlots} slots)</Text>
+              {installedEquipment.length === 0 && (
+                <Text style={pbs.small}>No equipment installed — buy in the Shop</Text>
+              )}
+              {installedEquipment.map(eq => eq && (
+                <View key={eq.id} style={pbs.equipRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={pbs.equipName}>✓ {eq.name}</Text>
+                    <Text style={pbs.equipEffect}>{eq.effectLabel}</Text>
+                  </View>
+                </View>
+              ))}
+              {pb.equipmentSlots.length < maxSlots && availableEquipment.length > 0 && (
+                <Text style={[pbs.small, { color: '#ffa726', marginTop: 3 }]}>
+                  {maxSlots - pb.equipmentSlots.length} slot{maxSlots - pb.equipmentSlots.length !== 1 ? 's' : ''} free — buy equipment in the Shop
+                </Text>
+              )}
+            </View>
+
+            {/* Workers */}
+            <View style={{ marginTop: 8 }}>
+              <Text style={pbs.sectionLabel}>WORKERS ({pb.assignedWorkerIds.length} assigned)</Text>
+              {pb.assignedWorkerIds.map(wid => {
+                const w = workerMap.get(wid) as any;
+                return (
+                  <View key={wid} style={pbs.workerRow}>
+                    <Text style={pbs.workerName}>👷 {w ? w.name : 'Unknown Worker'}</Text>
+                    <TouchableOpacity onPress={() => unassignWorkerFromBuilding(pb.id, wid)}>
+                      <Text style={pbs.unassign}>Unassign</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+              {availableWorkers.length > 0 && (
+                <TouchableOpacity
+                  style={pbs.assignBtn}
+                  onPress={() => assignWorkerToBuilding(pb.id, availableWorkers[0].id)}
+                >
+                  <Text style={pbs.assignBtnText}>+ Assign {availableWorkers[0].name ?? 'Farmhand'}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Deep clean actions */}
+            <View style={pbs.actionRow}>
+              <TouchableOpacity
+                style={[pbs.cleanBtn, { backgroundColor: pb.hygiene > 80 ? '#222' : C.greenDark, opacity: pb.hygiene > 80 ? 0.5 : 1 }]}
+                onPress={() => performDeepClean(pb.id, false)}
+                disabled={pb.hygiene > 80}
+              >
+                <Text style={[pbs.cleanBtnText, { color: pb.hygiene > 80 ? '#555' : C.greenSoft }]}>
+                  {pb.hygiene > 80 ? '✓ Clean' : '🧹 Worker Deep Clean'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[pbs.cleanBtn, { backgroundColor: money < 150 ? '#222' : '#3e1f00', opacity: money < 150 ? 0.5 : 1 }]}
+                onPress={() => performDeepClean(pb.id, true)}
+                disabled={money < 150}
+              >
+                <Text style={[pbs.cleanBtnText, { color: money < 150 ? '#555' : '#ffcc80' }]}>
+                  🧹 Contractor (€150–400)
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+      })}
     </ScrollView>
   );
 }
 
 export default ProductionBuildingsSection;
+
+const pbs = StyleSheet.create({
+  scroll: { padding: S.sm, gap: S.sm },
+
+  emptyCard: { backgroundColor: C.bgCard, borderRadius: R.md, margin: S.sm, padding: S.md },
+  emptyTitle: { color: C.text, fontWeight: 'bold', fontSize: F.size.md, marginBottom: S.xs },
+  emptyText: { color: C.textMuted, fontSize: F.size.sm },
+
+  card: { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, gap: 0 },
+  header: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
+  name: { color: C.text, fontWeight: 'bold', fontSize: F.size.md },
+  sub: { color: C.textFaint, fontSize: 10, marginTop: 2 },
+
+  certBadge: { borderRadius: R.pill, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, marginLeft: 8 },
+  certText: { fontSize: 10, fontWeight: '700' },
+  certEffect: { fontSize: F.size.xs, fontStyle: 'italic', marginBottom: 4 },
+
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 },
+  sectionLabel: { color: C.textFaint, fontSize: 8, fontWeight: '700', letterSpacing: 1, marginTop: 6, marginBottom: 2 },
+  small: { color: C.textMuted, fontSize: 10 },
+
+  bar: { height: 6, backgroundColor: '#1a1a2a', borderRadius: 3, overflow: 'hidden' },
+  barFill: { height: 6, borderRadius: 3 },
+
+  certProgress: { backgroundColor: C.bgDeep, borderRadius: R.sm, padding: S.xs, marginTop: 6, gap: 2 },
+
+  equipRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 3, borderTopWidth: 1, borderTopColor: '#1a1a1a' },
+  equipName: { color: C.greenSoft, fontSize: F.size.sm, fontWeight: '600' },
+  equipEffect: { color: C.textMuted, fontSize: 10, marginTop: 1 },
+
+  workerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
+  workerName: { color: C.greenSoft, fontSize: F.size.sm },
+  unassign: { color: '#ef5350', fontSize: F.size.sm },
+
+  assignBtn: { backgroundColor: '#1e3a5f', borderRadius: R.sm, padding: S.xs, alignItems: 'center', marginTop: 4 },
+  assignBtnText: { color: '#90caf9', fontSize: F.size.sm },
+
+  actionRow: { flexDirection: 'row', gap: S.xs, marginTop: S.sm },
+  cleanBtn: { flex: 1, borderRadius: R.sm, padding: S.sm, alignItems: 'center' },
+  cleanBtnText: { fontSize: F.size.sm, fontWeight: '600' },
+});
