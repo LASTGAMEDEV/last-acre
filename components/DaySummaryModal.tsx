@@ -42,7 +42,8 @@ function inferCategory(event: DaySummaryEvent): EventCategory {
   const id = event.id;
   if (id.startsWith('loan_') || id.startsWith('default_') || id.startsWith('interest') ||
       id.startsWith('cap_') || id.startsWith('subsidy') || id.startsWith('aes_') ||
-      id.startsWith('disposal_fee') || id.startsWith('auction_won') || id.startsWith('auction_sold'))
+      id.startsWith('disposal_fee') || id.startsWith('auction_won') || id.startsWith('auction_sold') ||
+      id.startsWith('family_expense') || id.startsWith('maintenance'))
     return 'Money';
   if (id.startsWith('crops_ready') || id.startsWith('crop_') || id.startsWith('fire') ||
       id.startsWith('disease') || id.startsWith('field_') || id.startsWith('organic_') ||

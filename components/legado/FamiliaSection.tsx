@@ -120,6 +120,10 @@ export default function FamiliaSection() {
   }));
 
   const allMembers = [family.spouse, ...family.children].filter((m): m is FamilyMember => m !== undefined && m.isAlive);
+  const hasSpouse = !!family.spouse?.isAlive;
+  const childCount = family.children.filter(c => c.isAlive && c.age < 18).length;
+  const adultChildCount = family.children.filter(c => c.isAlive && c.age >= 18 && c.age < 25).length;
+  const dailyFamilyCost = (hasSpouse ? 4 : 0) + childCount * 3 + adultChildCount * 1;
 
   return (
     <ScrollView contentContainerStyle={{ padding: 14, gap: 12 }} showsVerticalScrollIndicator={false}>
@@ -130,6 +134,21 @@ export default function FamiliaSection() {
           <Text style={fc.emptyIcon}>👨‍🌾</Text>
           <Text style={fc.emptyTitle}>No family yet</Text>
           <Text style={fc.emptyDesc}>Life events will introduce family members over time. Keep farming.</Text>
+        </View>
+      )}
+
+      {/* Family economy summary */}
+      {dailyFamilyCost > 0 && (
+        <View style={fc.econCard}>
+          <Text style={fc.econTitle}>🏠 Family Living Costs</Text>
+          <Text style={fc.econAmount}>${dailyFamilyCost}/day · ${dailyFamilyCost * 30}/month</Text>
+          <Text style={fc.econDetail}>
+            {[
+              hasSpouse && 'Spouse $4/day',
+              childCount > 0 && `${childCount} child${childCount !== 1 ? 'ren' : ''} $${childCount * 3}/day`,
+              adultChildCount > 0 && `${adultChildCount} young adult${adultChildCount !== 1 ? 's' : ''} $${adultChildCount}/day`,
+            ].filter(Boolean).join(' · ')}
+          </Text>
         </View>
       )}
 
@@ -184,6 +203,10 @@ const fc = StyleSheet.create({
   barTrack:      { flex: 1, height: 5, backgroundColor: '#1a2a1a', borderRadius: 3, overflow: 'hidden' },
   barFill:       { height: '100%', borderRadius: 3 },
   barNum:        { color: C.textMuted, fontSize: 9, width: 24, textAlign: 'right' },
+  econCard:      { backgroundColor: C.bgCard, borderRadius: R.lg, padding: 12, borderWidth: 1, borderColor: '#1a2a3a' },
+  econTitle:     { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', letterSpacing: 1, marginBottom: 4 },
+  econAmount:    { color: '#ef9a9a', fontSize: F.size.md, fontWeight: 'bold' },
+  econDetail:    { color: C.textFaint, fontSize: 10, marginTop: 2 },
   empty:         { alignItems: 'center', paddingVertical: 40, gap: 8 },
   emptyIcon:     { fontSize: 36 },
   emptyTitle:    { color: C.text, fontSize: F.size.md, fontWeight: 'bold' },

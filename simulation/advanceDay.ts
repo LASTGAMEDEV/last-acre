@@ -1053,7 +1053,13 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
         }, 0);
         // Worker wages
         const workerWages = weeklyPayrollDue ? workerPayrollDeducted : 0;
-        const totalFixed = maintenanceCost + insurancePremium + workerWages;
+        // Family living expenses
+        const familyMembers = state.family;
+        const hasSpouse = !!familyMembers?.spouse?.isAlive;
+        const childCount = (familyMembers?.children ?? []).filter(c => c.isAlive && c.age < 18).length;
+        const adultChildCount = (familyMembers?.children ?? []).filter(c => c.isAlive && c.age >= 18 && c.age < 25).length;
+        const dailyFamilyCost = (hasSpouse ? 4 : 0) + childCount * 3 + adultChildCount * 1;
+        const totalFixed = maintenanceCost + insurancePremium + workerWages + dailyFamilyCost;
         const moneyAfterMaintenance = state.money - totalFixed;
         if (maintenanceCost > 0 || insurancePremium > 0 || workerWages > 0) {
           const detail = [
@@ -1064,8 +1070,23 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
           summary.push({
             id: 'maintenance',
             icon: '🔧',
-            title: `-€${totalFixed.toLocaleString()} fixed costs`,
+            title: `-€${(totalFixed - dailyFamilyCost).toLocaleString()} fixed costs`,
             detail,
+            severity: 'info',
+          });
+        }
+        // Family living expense — weekly notification only
+        if (dailyFamilyCost > 0 && newDay % 7 === 0) {
+          const weeklyFamilyCost = dailyFamilyCost * 7;
+          summary.push({
+            id: `family_expense_${newDay}`,
+            icon: '🏠',
+            title: `-$${weeklyFamilyCost} family living costs`,
+            detail: [
+              hasSpouse && 'spouse',
+              childCount > 0 && `${childCount} child${childCount !== 1 ? 'ren' : ''}`,
+              adultChildCount > 0 && `${adultChildCount} young adult${adultChildCount !== 1 ? 's' : ''}`,
+            ].filter(Boolean).join(' + ') + ` · $${dailyFamilyCost}/day`,
             severity: 'info',
           });
         }
