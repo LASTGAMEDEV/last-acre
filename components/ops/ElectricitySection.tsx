@@ -13,7 +13,7 @@ import {
   nextGridTier,
 } from '../../engine/electricity';
 import { getSeason } from '../../engine/climate';
-import { C, S, F } from '../../constants/theme';
+import { C, S, F, R } from '../../constants/theme';
 import GuideButton from '../GuideButton';
 
 function ElectricitySection() {
@@ -55,37 +55,37 @@ function ElectricitySection() {
       <Text style={[styles.sectionTitle, { marginBottom: 8 }]}>⚡ Overview</Text>
 
       {el.outageActive && (
-        <View style={{ backgroundColor: '#fee2e2', borderRadius: 8, padding: 10, marginBottom: 8 }}>
-          <Text style={{ color: '#dc2626', fontWeight: 'bold' }}>
+        <View style={{ backgroundColor: '#3a1a1a', borderRadius: R.md, padding: 10, marginBottom: 8, borderWidth: 1, borderColor: '#c62828' }}>
+          <Text style={{ color: '#ef5350', fontWeight: 'bold' }}>
             ⚠️ Grid outage active{el.outageEndDay ? ` — restores day ${el.outageEndDay}` : ''}
           </Text>
         </View>
       )}
 
-      <View style={{ backgroundColor: '#f3f4f6', borderRadius: 8, padding: 10, marginBottom: 8 }}>
+      <View style={elStyles.card}>
         <View style={elStyles.cardHeader}>
-          <Text style={{ fontWeight: '600', marginBottom: 4, flex: 1 }}>
+          <Text style={[elStyles.cardTitle, { flex: 1 }]}>
             Generation: {totalGen.toFixed(1)} kW / Demand: {totalDemand.toFixed(1)} kW
           </Text>
           <GuideButton entryId="system_electricity" compact />
         </View>
-        <View style={{ height: 12, backgroundColor: '#e5e7eb', borderRadius: 6, overflow: 'hidden' }}>
-          <View style={{ height: '100%', width: `${Math.min(100, pct)}%` as any, backgroundColor: genBarColor, borderRadius: 6 }} />
+        <View style={{ height: 10, backgroundColor: C.bgDeep, borderRadius: 5, overflow: 'hidden', marginTop: 6 }}>
+          <View style={{ height: '100%', width: `${Math.min(100, pct)}%` as any, backgroundColor: genBarColor, borderRadius: 5 }} />
         </View>
-        <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+        <Text style={[elStyles.cardSub, { marginTop: 4 }]}>
           {pct >= 100 ? '✅ Self-sufficient' : `Grid import: ${(totalDemand - totalGen).toFixed(1)} kW`}
         </Text>
       </View>
 
-      <View style={{ backgroundColor: '#f3f4f6', borderRadius: 8, padding: 10, marginBottom: 12 }}>
-        <Text style={{ fontWeight: '600' }}>Grid: {GRID_TIER_CONFIG[el.gridTier].label} ({GRID_TIER_CONFIG[el.gridTier].maxImportKw} kW max)</Text>
-        <Text style={{ color: '#6b7280', fontSize: 13 }}>Rate: ${el.gridRateBase.toFixed(3)}/kWh</Text>
-        <Text style={{ color: '#6b7280', fontSize: 13 }}>
+      <View style={[elStyles.card, { marginBottom: 12 }]}>
+        <Text style={elStyles.cardTitle}>Grid: {GRID_TIER_CONFIG[el.gridTier].label} ({GRID_TIER_CONFIG[el.gridTier].maxImportKw} kW max)</Text>
+        <Text style={elStyles.cardSub}>Rate: ${el.gridRateBase.toFixed(3)}/kWh</Text>
+        <Text style={elStyles.cardSub}>
           Month bill estimate: ${Math.round(el.currentMonthBillEstimate).toLocaleString()} — due in {billDaysLeft} day{billDaysLeft !== 1 ? 's' : ''}
         </Text>
-        <Text style={{ color: '#6b7280', fontSize: 13 }}>Last month: ${el.lastMonthBill.toLocaleString()}</Text>
+        <Text style={elStyles.cardSub}>Last month: ${el.lastMonthBill.toLocaleString()}</Text>
         {el.batteryBankCount > 0 && (
-          <Text style={{ color: '#6b7280', fontSize: 13 }}>
+          <Text style={elStyles.cardSub}>
             Battery: {el.batteryChargeKwh.toFixed(1)} / {(el.batteryBankCount * BATTERY_KWH_PER_BANK).toFixed(0)} kWh ({el.batteryHealthPercent.toFixed(0)}% health)
           </Text>
         )}
@@ -301,33 +301,34 @@ const styles = StyleSheet.create({
 
 const elStyles = StyleSheet.create({
   card: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
+    backgroundColor: C.bgCard,
+    borderRadius: R.md,
     padding: 10,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: C.border,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  cardTitle: { fontWeight: '600', fontSize: 14, color: '#111827' },
-  cardSub:   { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  cardTitle: { fontWeight: '600', fontSize: F.size.sm, color: C.text },
+  cardSub:   { fontSize: F.size.xs, color: C.textMuted, marginTop: 2 },
   btn: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 6,
+    backgroundColor: C.blue,
+    borderRadius: R.sm,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  btnDisabled: { backgroundColor: '#9ca3af' },
-  btnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  btnDisabled: { backgroundColor: '#444', opacity: 0.6 },
+  btnText: { color: '#fff', fontSize: F.size.xs, fontWeight: '600' },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 6,
+    borderColor: C.border,
+    borderRadius: R.sm,
     paddingHorizontal: 8,
     paddingVertical: 4,
     width: 48,
-    backgroundColor: '#fff',
-    fontSize: 13,
+    backgroundColor: C.bgDeep,
+    color: C.text,
+    fontSize: F.size.sm,
     textAlign: 'center',
   },
 });
