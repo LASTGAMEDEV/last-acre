@@ -4,7 +4,8 @@ import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
-import { isMature } from '../../engine/animals';
+import { isMature, getSeasonMultiplier } from '../../engine/animals';
+import { analyzeRation, generateDefaultRation, getRationProductionModifier } from '../../engine/nutrition';
 
 function SectionHeader({ title }: { title: string }) {
   return <Text style={ar.sectionHeader}>{title}</Text>;
@@ -26,7 +27,7 @@ const PROD_ICON: Record<string, string> = {
 };
 
 export default function AnimalReportSection() {
-  const { day, animals, animalPrices } = useGameStore();
+  const { day, animals, animalPrices, savedRations, inventory, animalInventory, silageLevel, parcels } = useGameStore();
 
   const allAnimals = animals ?? [];
 
@@ -59,8 +60,26 @@ export default function AnimalReportSection() {
     const quarantined = group.filter(a => a.quarantineUntilDay && a.quarantineUntilDay > day).length;
 
     const matureCount = mature.length;
+
+    // Ration modifier (most impactful: ×0.65 deficient → ×1.08 premium)
+    const pastureKg = (animalType.enclosureType === 'corral' || animalType.enclosureType === 'caballeriza')
+      ? (parcels.some(p => p.owned && !p.plantedCrop) ? 1.0 : 0) : 0;
+    const savedRation = savedRations[typeId];
+    const ration = savedRation ?? generateDefaultRation(animalType);
+    const rationAnalysis = analyzeRation(ration, animalType,
+      { ...inventory, ...animalInventory, silage: silageLevel ?? 0 }, pastureKg);
+    const rationMod = getRationProductionModifier(rationAnalysis.tier);
+
+    // Seasonal multiplier
+    const seasonMod = getSeasonMultiplier(typeId, day);
+
+    // Average gene production multiplier across mature animals
+    const avgGeneProd = matureCount > 0
+      ? mature.reduce((s, a) => s + (a.genes?.production ?? 1.0), 0) / matureCount
+      : 1.0;
+
     const prodPerDay = animalType.productionType
-      ? matureCount * animalType.productionRate
+      ? matureCount * animalType.productionRate * rationMod * seasonMod * avgGeneProd
       : 0;
 
     const productInfo = ANIMAL_PRODUCTS.find(p => p.productType === animalType.productionType);
@@ -88,12 +107,16 @@ export default function AnimalReportSection() {
       dailyValue,
       feedCostDay,
       netPerDay: dailyValue - feedCostDay,
+      rationTier: rationAnalysis.tier,
+      rationMod,
+      seasonMod,
     };
   }).filter(Boolean) as {
     typeId: string; animalType: typeof ANIMAL_TYPES[0]; count: number; mature: number;
     sick: number; quarantined: number; prodPerDay: number;
     productInfo: typeof ANIMAL_PRODUCTS[0] | undefined;
     dailyValue: number; feedCostDay: number; netPerDay: number;
+    rationTier: string; rationMod: number; seasonMod: number;
   }[];
 
   const fmt = (n: number) => `$${n.toFixed(2)}`;
@@ -127,9 +150,11 @@ export default function AnimalReportSection() {
         <>
           <SectionHeader title="📋 By Species" />
           {speciesSummaries.map(s => {
-            const { animalType, count, mature, sick, prodPerDay, productInfo, dailyValue, feedCostDay, netPerDay } = s;
+            const { animalType, count, mature, sick, prodPerDay, productInfo, dailyValue, feedCostDay, netPerDay, rationTier, rationMod, seasonMod } = s;
             const hasProduction = animalType.productionType && prodPerDay > 0;
             const netColor = netPerDay > 0 ? '#4caf50' : netPerDay < -1 ? '#ef5350' : '#888';
+            const rationColor = rationTier === 'deficient' ? '#ef5350' : rationTier === 'adequate' ? '#ff9800' : rationTier === 'optimal' ? '#4caf50' : '#2196f3';
+            const rationLabel = rationTier === 'deficient' ? '⚠ Deficient' : rationTier === 'adequate' ? 'Adequate' : rationTier === 'optimal' ? '✓ Optimal' : '⭐ Premium';
             return (
               <Card key={s.typeId}>
                 <View style={ar.speciesHeader}>
@@ -161,6 +186,18 @@ export default function AnimalReportSection() {
                       <Text style={ar.prodLabel}>Feed cost</Text>
                       <Text style={[ar.prodValue, { color: '#ef5350' }]}>-{fmt(feedCostDay)}</Text>
                     </View>
+                    <View style={[ar.prodRow, { marginTop: 3, paddingTop: 3, borderTopWidth: 1, borderTopColor: '#1a1a2a' }]}>
+                      <Text style={ar.prodLabel}>Ration</Text>
+                      <Text style={[ar.prodValue, { color: rationColor }]}>{rationLabel} ×{rationMod.toFixed(2)}</Text>
+                    </View>
+                    {seasonMod !== 1.0 && (
+                      <View style={ar.prodRow}>
+                        <Text style={ar.prodLabel}>Season</Text>
+                        <Text style={[ar.prodValue, { color: seasonMod < 0.5 ? '#ef5350' : seasonMod < 1.0 ? '#ff9800' : '#4caf50' }]}>
+                          ×{seasonMod.toFixed(2)}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 )}
                 {!hasProduction && animalType.feedKgPerDay > 0 && (
