@@ -136,10 +136,32 @@ export default function SeedLabScreen() {
                   growth:  clamp((parentA.genes.growth  + parentB.genes.growth)  / 2),
                   quality: clamp((parentA.genes.quality + parentB.genes.quality) / 2),
                 };
+                const cropType = CROP_TYPES.find(c => c.id === selCrop);
+                const baseDays = cropType?.growthDays ?? 30;
+                const effectiveDays = Math.round(baseDays / pred.growth);
+                const daysSaved = baseDays - effectiveDays;
                 return (
                   <View style={slStyles.prediction}>
                     <Text style={slStyles.predLabel}>Predicted offspring (avg):</Text>
                     <GeneChips genes={pred} />
+                    <View style={{ marginTop: 8, gap: 3 }}>
+                      <Text style={slStyles.effectRow}>
+                        🌾 Yield ×{pred.yield.toFixed(2)}
+                        <Text style={slStyles.effectDetail}>{pred.yield > 1 ? ` (+${Math.round((pred.yield - 1) * 100)}% harvest)` : pred.yield < 1 ? ` (−${Math.round((1 - pred.yield) * 100)}% harvest)` : ' (baseline)'}</Text>
+                      </Text>
+                      <Text style={slStyles.effectRow}>
+                        ⏱ Growth ×{pred.growth.toFixed(2)}
+                        <Text style={slStyles.effectDetail}>{daysSaved > 0 ? ` (matures ${daysSaved}d earlier — ${effectiveDays}d vs ${baseDays}d)` : daysSaved < 0 ? ` (${Math.abs(daysSaved)}d slower)` : ' (baseline)'}</Text>
+                      </Text>
+                      <Text style={slStyles.effectRow}>
+                        🏜 Drought ×{pred.drought.toFixed(2)}
+                        <Text style={slStyles.effectDetail}>{pred.drought > 1 ? ' (drought penalty reduced)' : pred.drought < 1 ? ' (more drought sensitive)' : ' (baseline)'}</Text>
+                      </Text>
+                      <Text style={slStyles.effectRow}>
+                        ✨ Quality ×{pred.quality.toFixed(2)}
+                        <Text style={slStyles.effectDetail}>{pred.quality > 1 ? ` (+${Math.round((pred.quality - 1) * 100)}% quality mod)` : pred.quality < 1 ? ` (−${Math.round((1 - pred.quality) * 100)}% quality)` : ' (baseline)'}</Text>
+                      </Text>
+                    </View>
                     <Text style={slStyles.predSub}>Ready in {durationDays} days · Cost ${cost.toLocaleString()}</Text>
                   </View>
                 );
@@ -249,6 +271,8 @@ const slStyles = StyleSheet.create({
   prediction:         { backgroundColor: '#0a1628', borderRadius: R.md, padding: 10, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: C.green },
   predLabel:          { color: C.green, fontSize: 11, fontWeight: 'bold', marginBottom: 6 },
   predSub:            { color: C.textMuted, fontSize: F.size.xs, marginTop: 6 },
+  effectRow:          { color: C.text, fontSize: F.size.xs, fontWeight: '700' },
+  effectDetail:       { color: C.textMuted, fontWeight: 'normal' },
   hybBtn:             { backgroundColor: C.greenDark, borderRadius: R.md, padding: 10, alignItems: 'center' },
   hybBtnDisabled:     { backgroundColor: '#333' },
   hybBtnText:         { color: C.white, fontWeight: 'bold', fontSize: F.size.sm },
