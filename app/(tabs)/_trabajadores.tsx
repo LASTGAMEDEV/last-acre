@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'rea
 import { useGameStore } from '../../store/useGameStore';
 import type { Worker, WorkerRole, ContractType } from '../../data/workerTypes';
 import { WORKER_ROLE_CONFIG } from '../../data/workerTypes';
+import { getWorkerBonuses } from '../../engine/workers';
 import { C, S, F, R } from '../../constants/theme';
 import SubTabBar from '../../components/SubTabBar';
 import GuideButton from '../../components/GuideButton';
@@ -149,6 +150,78 @@ const wd = StyleSheet.create({
   fireBtnText: { color: C.white, fontWeight: 'bold', fontSize: F.size.md },
 });
 
+// ── Team bonuses card ─────────────────────────────────────────────────────────
+
+function TeamBonusesCard({ workers }: { workers: Worker[] }) {
+  const b = getWorkerBonuses(workers);
+  const hasCrop = b.cropYieldMultiplier > 1.0 || b.cropGrowthReduction > 0;
+  const hasAnimal = b.animalProductionMult > 1.0 || b.sicknessBonusReduction > 0;
+  const hasMachine = b.maintenanceMult < 1.0 || b.machineYieldBonus > 0;
+  const hasProcess = b.processingOutputMult > 1.0;
+  return (
+    <View style={[st.card, { marginTop: S.sm }]}>
+      <Text style={st.cardName}>🏆 Team Bonuses</Text>
+      {!hasCrop && !hasAnimal && !hasMachine && !hasProcess && (
+        <Text style={st.cardSub}>No bonus staff yet. Hire field hands, agronomists, vets, or mechanics to unlock bonuses.</Text>
+      )}
+      {hasCrop && (
+        <>
+          <Text style={tb.head}>🌱 Crops</Text>
+          {b.cropYieldMultiplier > 1.0 && (
+            <View style={tb.row}><Text style={tb.label}>Yield</Text><Text style={tb.val}>×{b.cropYieldMultiplier.toFixed(2)}</Text></View>
+          )}
+          {b.cropGrowthReduction > 0 && (
+            <View style={tb.row}><Text style={tb.label}>Growth speed</Text><Text style={[tb.val, { color: C.green }]}>−{b.cropGrowthReduction} day/cycle</Text></View>
+          )}
+          {b.fertilityDrainMult < 1.0 && (
+            <View style={tb.row}><Text style={tb.label}>Fertility drain</Text><Text style={[tb.val, { color: C.green }]}>×{b.fertilityDrainMult.toFixed(1)}</Text></View>
+          )}
+          {b.fallowRestoreInterval < 30 && (
+            <View style={tb.row}><Text style={tb.label}>Fallow restore</Text><Text style={[tb.val, { color: C.green }]}>every {b.fallowRestoreInterval} days</Text></View>
+          )}
+        </>
+      )}
+      {hasAnimal && (
+        <>
+          <Text style={tb.head}>🐄 Animals</Text>
+          {b.animalProductionMult > 1.0 && (
+            <View style={tb.row}><Text style={tb.label}>Production</Text><Text style={tb.val}>×{b.animalProductionMult.toFixed(2)}</Text></View>
+          )}
+          {b.sicknessBonusReduction > 0 && (
+            <View style={tb.row}><Text style={tb.label}>Sick chance</Text><Text style={[tb.val, { color: C.green }]}>−{Math.round(b.sicknessBonusReduction * 100)}%</Text></View>
+          )}
+        </>
+      )}
+      {hasMachine && (
+        <>
+          <Text style={tb.head}>🔧 Machinery</Text>
+          {b.maintenanceMult < 1.0 && (
+            <View style={tb.row}><Text style={tb.label}>Maintenance cost</Text><Text style={[tb.val, { color: C.green }]}>×{b.maintenanceMult.toFixed(1)}</Text></View>
+          )}
+          {b.machineYieldBonus > 0 && (
+            <View style={tb.row}><Text style={tb.label}>Machine yield</Text><Text style={[tb.val, { color: C.green }]}>+{Math.round(b.machineYieldBonus * 100)}%</Text></View>
+          )}
+        </>
+      )}
+      {hasProcess && (
+        <>
+          <Text style={tb.head}>🏭 Processing</Text>
+          <View style={tb.row}><Text style={tb.label}>Output</Text><Text style={tb.val}>×{b.processingOutputMult.toFixed(2)}</Text></View>
+          {b.autoProcessEnabled && (
+            <View style={tb.row}><Text style={tb.label}>Auto-process</Text><Text style={[tb.val, { color: C.green }]}>enabled</Text></View>
+          )}
+        </>
+      )}
+    </View>
+  );
+}
+const tb = StyleSheet.create({
+  head: { color: C.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginTop: 6 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 1 },
+  label: { color: C.textMuted, fontSize: F.size.sm },
+  val: { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+});
+
 // ── Staff tab ─────────────────────────────────────────────────────────────────
 
 function StaffTab() {
@@ -163,6 +236,8 @@ function StaffTab() {
         <Text style={st.stat}>👥 {list.length} staff · €{totalDaily}/day total</Text>
         <Text style={st.stat}>⭐ Employer reputation: {employerReputation ?? 50}/100</Text>
       </View>
+
+      <TeamBonusesCard workers={list} />
 
       {consultant?.isHired && (
         <View style={st.section}>
