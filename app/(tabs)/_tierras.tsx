@@ -19,7 +19,7 @@ import { getContractorCost, ContractorOperation } from '../../engine/machinery';
 import HelpSheet from '../../components/HelpSheet';
 import GuideButton from '../../components/GuideButton';
 import { HedgerowType, HEDGEROW_COST } from '../../engine/hedgerows';
-import { TILLAGE_FUEL_MULT } from '../../engine/tillage';
+import { TILLAGE_FUEL_MULT, notillYieldTransitionMod, notillWeedMult } from '../../engine/tillage';
 
 const MAP_COLS = 8;
 
@@ -319,6 +319,40 @@ function ManagementTab({ parcel, onClose }: { parcel: LandParcel; onClose: () =>
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* No-till transition progress */}
+      {parcel.tillageSystem === 'notill' && (
+        <View style={{ backgroundColor: C.bgDeep, borderRadius: R.sm, padding: 8, marginBottom: 12 }}>
+          {(() => {
+            const seasons = parcel.notillSeasons ?? 0;
+            const yieldMod = notillYieldTransitionMod(seasons);
+            const weedMod = notillWeedMult(seasons);
+            const fullyEstablished = seasons >= 3;
+            return (
+              <>
+                <Text style={{ color: C.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>
+                  NO-TILL PROGRESS — Season {seasons}
+                </Text>
+                {!fullyEstablished && (
+                  <Text style={{ color: '#ff9800', fontSize: 10, marginTop: 3 }}>
+                    Yield ×{yieldMod.toFixed(2)} · Weed ×{weedMod.toFixed(1)} — transition phase ({3 - seasons} season{3 - seasons !== 1 ? 's' : ''} to full benefit)
+                  </Text>
+                )}
+                {fullyEstablished && seasons < 5 && (
+                  <Text style={{ color: '#66bb6a', fontSize: 10, marginTop: 3 }}>
+                    ✓ Yield full · Weed ×{weedMod.toFixed(1)} — weed bank depleting ({5 - seasons} season{5 - seasons !== 1 ? 's' : ''} to clean)
+                  </Text>
+                )}
+                {seasons >= 5 && (
+                  <Text style={{ color: '#4caf50', fontSize: 10, marginTop: 3 }}>
+                    ✓ Full no-till benefits — weed bank depleted, pest pressure −30%
+                  </Text>
+                )}
+              </>
+            );
+          })()}
+        </View>
+      )}
 
       {/* Hedgerows */}
       <Text style={{ color: C.textMuted, fontSize: 11, fontWeight: '600', marginBottom: 6 }}>Hedgerows</Text>
