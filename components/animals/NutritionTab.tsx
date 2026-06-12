@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet } from 
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
-import { analyzeRation, generateDefaultRation, getRationProductionModifier } from '../../engine/nutrition';
+import { analyzeRation, generateDefaultRation, getRationProductionModifier, getRationSickChanceModifier } from '../../engine/nutrition';
 import { getSeason } from '../../engine/climate';
 
 const INGREDIENTS = [
@@ -159,6 +159,21 @@ function RationDesigner({ animalType, onBack }: { animalType: any; onBack: () =>
           <Text style={styles.label}>Tier</Text>
           <Text style={[styles.value, { color: tierColor, textTransform: 'uppercase' }]}>{analysis.tier}</Text>
         </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Production modifier</Text>
+          <Text style={[styles.value, { color: tierColor }]}>×{getRationProductionModifier(analysis.tier).toFixed(2)} output</Text>
+        </View>
+        {(() => {
+          const sickMod = getRationSickChanceModifier(analysis.tier);
+          const sickColor = sickMod > 1.0 ? '#ef5350' : sickMod < 1.0 ? '#4caf50' : '#888';
+          const sickLabel = sickMod > 1.0 ? `×${sickMod.toFixed(1)} disease risk` : sickMod < 1.0 ? `×${sickMod.toFixed(2)} disease risk` : 'Normal disease risk';
+          return (
+            <View style={styles.row}>
+              <Text style={styles.label}>Disease risk</Text>
+              <Text style={[styles.value, { color: sickColor }]}>{sickLabel}</Text>
+            </View>
+          );
+        })()}
         <View style={styles.row}>
           <Text style={styles.label}>Cost / animal / day</Text>
           <Text style={styles.value}>€{analysis.costPerAnimalPerDay.toFixed(2)}</Text>
