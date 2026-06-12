@@ -4,7 +4,9 @@ import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { computeSoilYieldModifier, SOIL_DEFAULTS } from '../../engine/crops';
+import { GRADE_MULTIPLIERS, type QualityGrade, type StoredBatch } from '../../engine/storageQuality';
 import type { LandParcel } from '../../types/domain/land';
+import type { MarketPrice } from '../../engine/market';
 
 const ORGANIC_LABEL: Record<string, string> = {
   conventional: 'Conv.',
@@ -129,8 +131,129 @@ function ParcelStatusRow({ parcel }: { parcel: LandParcel }) {
   );
 }
 
+const GRADE_LABEL: Record<QualityGrade, string> = {
+  premium: '⭐ Premium',
+  standard: 'Standard',
+  low: '▼ Low',
+  damaged: '⚠ Damaged',
+  condemned: '☠ Condemned',
+};
+const GRADE_COLOR: Record<QualityGrade, string> = {
+  premium: '#ffd54f',
+  standard: C.textMuted,
+  low: '#ff9800',
+  damaged: '#ef5350',
+  condemned: '#7c4dff',
+};
+
+function StorageQualitySection({ inventoryBatches, prices }: {
+  inventoryBatches: StoredBatch[];
+  prices: MarketPrice[];
+}) {
+  if (!inventoryBatches || inventoryBatches.length === 0) return null;
+
+  // Group batches by cropId
+  const byCrop: Record<string, StoredBatch[]> = {};
+  for (const b of inventoryBatches) {
+    if (!byCrop[b.cropId]) byCrop[b.cropId] = [];
+    byCrop[b.cropId].push(b);
+  }
+
+  const condemnedBatches = inventoryBatches.filter(b => b.quality === 'condemned');
+  const infestBatches = inventoryBatches.filter(b => b.infested);
+  const totalValue = inventoryBatches.reduce((sum, b) => {
+    const ct = CROP_TYPES.find(c => c.id === b.cropId);
+    const price = prices.find(p => p.cropId === b.cropId)?.price ?? ct?.basePrice ?? 0;
+    return sum + b.quantity * price * (GRADE_MULTIPLIERS[b.quality] ?? 1);
+  }, 0);
+
+  const gradeCounts: Partial<Record<QualityGrade, number>> = {};
+  for (const b of inventoryBatches) {
+    gradeCounts[b.quality] = (gradeCounts[b.quality] ?? 0) + b.quantity;
+  }
+  const totalQty = inventoryBatches.reduce((s, b) => s + b.quantity, 0);
+
+  return (
+    <>
+      <SectionHeader title="📦 Stored Inventory Quality" />
+      <Card>
+        {/* Alerts */}
+        {condemnedBatches.length > 0 && (
+          <View style={[cr.alertRow, { backgroundColor: '#2a0a1a' }]}>
+            <Text style={[cr.alertText, { color: '#ef5350' }]}>
+              ☠ {condemnedBatches.length} condemned batch{condemnedBatches.length > 1 ? 'es' : ''} — €0 value, disposal cost €30/t
+            </Text>
+          </View>
+        )}
+        {infestBatches.length > 0 && (
+          <View style={[cr.alertRow, { backgroundColor: '#1a1a0a' }]}>
+            <Text style={[cr.alertText, { color: '#ff9800' }]}>
+              🐛 {infestBatches.length} infested batch{infestBatches.length > 1 ? 'es' : ''} — treat or sell urgently
+            </Text>
+          </View>
+        )}
+
+        {/* Grade summary */}
+        <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+          {(Object.entries(gradeCounts) as [QualityGrade, number][]).map(([grade, qty]) => (
+            <View key={grade} style={[cr.gradeChip, { borderColor: (GRADE_COLOR[grade] ?? C.textFaint) + '66' }]}>
+              <Text style={[cr.gradeChipLabel, { color: GRADE_COLOR[grade] ?? C.textFaint }]}>{GRADE_LABEL[grade]}</Text>
+              <Text style={cr.gradeChipQty}>{Math.round(qty).toLocaleString()}t ({totalQty > 0 ? Math.round((qty/totalQty)*100) : 0}%)</Text>
+              <Text style={[cr.gradeChipMult, { color: GRADE_COLOR[grade] ?? C.textFaint }]}>×{GRADE_MULTIPLIERS[grade].toFixed(2)}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={cr.statRow}>
+          <Text style={cr.statLabel}>Total stock value</Text>
+          <Text style={[cr.statValue, { color: C.green, fontWeight: 'bold' }]}>€{Math.round(totalValue).toLocaleString()}</Text>
+        </View>
+      </Card>
+
+      {/* Per-crop batch detail */}
+      {Object.entries(byCrop).map(([cropId, batches]) => {
+        const ct = CROP_TYPES.find(c => c.id === cropId);
+        const price = prices.find(p => p.cropId === cropId)?.price ?? ct?.basePrice ?? 0;
+        const totalQtyCrop = batches.reduce((s, b) => s + b.quantity, 0);
+        const effectiveValue = batches.reduce((s, b) => s + b.quantity * price * (GRADE_MULTIPLIERS[b.quality] ?? 1), 0);
+        const effectivePrice = totalQtyCrop > 0 ? effectiveValue / totalQtyCrop : price;
+        const hasProblem = batches.some(b => b.quality === 'condemned' || b.infested || b.quality === 'damaged');
+
+        return (
+          <View key={cropId} style={[cr.batchCard, hasProblem && { borderColor: '#ef535066', borderWidth: 1 }]}>
+            <View style={cr.batchHeader}>
+              <Text style={cr.batchName}>{ct?.name ?? cropId}</Text>
+              <Text style={cr.batchMeta}>{Math.round(totalQtyCrop).toLocaleString()}t total</Text>
+              <Text style={[cr.batchPrice, { color: effectivePrice > price ? '#ffd54f' : effectivePrice < price ? '#ef5350' : C.textMuted }]}>
+                €{effectivePrice.toFixed(2)}/{ct?.unit ?? 'kg'} eff.
+              </Text>
+            </View>
+            {batches.map((b, i) => (
+              <View key={i} style={cr.batchRow}>
+                <Text style={[cr.batchGrade, { color: GRADE_COLOR[b.quality] ?? C.textFaint }]}>
+                  {GRADE_LABEL[b.quality]}
+                </Text>
+                <Text style={cr.batchQty}>{Math.round(b.quantity).toLocaleString()}t</Text>
+                {b.moisture !== 'dry' && (
+                  <Text style={[cr.batchFlag, { color: '#64b5f6' }]}>💧 {b.moisture}</Text>
+                )}
+                {b.infested && (
+                  <Text style={[cr.batchFlag, { color: '#ff9800' }]}>🐛 infested</Text>
+                )}
+                {b.organic && (
+                  <Text style={[cr.batchFlag, { color: C.green }]}>🌿</Text>
+                )}
+                <Text style={cr.batchMult}>×{GRADE_MULTIPLIERS[b.quality].toFixed(2)}</Text>
+              </View>
+            ))}
+          </View>
+        );
+      })}
+    </>
+  );
+}
+
 export default function CropReportSection() {
-  const { day, parcels, salesLog, prices } = useGameStore();
+  const { day, parcels, salesLog, prices, inventoryBatches } = useGameStore();
 
   const ownedParcels = (parcels ?? []).filter(p => p.owned);
   const activeParcels = ownedParcels.filter(p => p.plantedCrop);
@@ -266,6 +389,8 @@ export default function CropReportSection() {
         </>
       )}
 
+      <StorageQualitySection inventoryBatches={inventoryBatches ?? []} prices={prices ?? []} />
+
     </ScrollView>
   );
 }
@@ -315,4 +440,21 @@ const cr = StyleSheet.create({
   // Idle
   idleNote:       { color: '#f59e0b', fontSize: F.size.sm, marginBottom: 6 },
   idleParcelName: { color: C.textMuted, fontSize: F.size.sm, paddingVertical: 1 },
+  // Storage quality
+  alertRow:       { borderRadius: R.sm, padding: S.xs, marginBottom: 4 },
+  alertText:      { fontSize: F.size.sm },
+  gradeChip:      { backgroundColor: C.bgDeep, borderRadius: R.sm, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, minWidth: 80 },
+  gradeChipLabel: { fontSize: 10, fontWeight: '700' },
+  gradeChipQty:   { color: C.textMuted, fontSize: 9, marginTop: 1 },
+  gradeChipMult:  { fontSize: 9, fontWeight: '600', marginTop: 1 },
+  batchCard:      { backgroundColor: C.bgCard, borderRadius: R.sm, padding: S.sm, marginTop: 4, borderWidth: 0, borderColor: 'transparent' },
+  batchHeader:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  batchName:      { color: C.text, fontSize: F.size.sm, fontWeight: 'bold', flex: 1 },
+  batchMeta:      { color: C.textMuted, fontSize: 10 },
+  batchPrice:     { fontSize: 10, fontWeight: '600' },
+  batchRow:       { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 2, borderTopWidth: 1, borderTopColor: '#1a1a1a' },
+  batchGrade:     { fontSize: 10, fontWeight: '600', width: 90 },
+  batchQty:       { color: C.textMuted, fontSize: 10, flex: 1 },
+  batchFlag:      { fontSize: 10 },
+  batchMult:      { color: C.textFaint, fontSize: 10, width: 32, textAlign: 'right' },
 });
