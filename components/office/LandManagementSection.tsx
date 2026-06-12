@@ -87,6 +87,8 @@ export default function LandManagementSection() {
           if (parcel.diseased) issues.push('🦠 Disease');
           if (parcel.pestState && parcel.pestState.severity > 0) issues.push('🐛 Pests');
           if (parcel.leasedOut) issues.push('🔒 Leased out');
+          if ((parcel.soilSalinity ?? 0) > 40) issues.push('🧂 High salinity');
+          if ((parcel.topsoilErosion ?? 0) > 20) issues.push('💨 Erosion');
 
           return (
             <TouchableOpacity
@@ -166,6 +168,12 @@ export default function LandManagementSection() {
                     <SoilPill label="OM" value={parcel.soil.organicMatter} optimal={[4, 7]} unit="%" decimals={1} />
                     <SoilPill label="Compact" value={parcel.soil.compaction} optimal={[0, 25]} unit="" lowerBetter />
                     <SoilPill label="Microbes" value={parcel.soil.microbialLife} optimal={[60, 100]} unit="" />
+                    {(parcel.soilSalinity ?? 0) > 0 && (
+                      <SoilPill label="Salinity" value={parcel.soilSalinity ?? 0} optimal={[0, 20]} unit="" lowerBetter />
+                    )}
+                    {(parcel.topsoilErosion ?? 0) > 0 && (
+                      <SoilPill label="Erosion" value={parcel.topsoilErosion ?? 0} optimal={[0, 10]} unit="%" lowerBetter />
+                    )}
                   </View>
                   {parcel.soilType && (
                     <Text style={[ls.muted, { marginTop: 4 }]}>Type: {parcel.soilType}</Text>
