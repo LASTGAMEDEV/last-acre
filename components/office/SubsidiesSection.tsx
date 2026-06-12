@@ -6,6 +6,7 @@ import { getEFACount } from '../../engine/hedgerows';
 import {
   AES_SCHEMES,
   calculateAnnualSubsidy,
+  checkAESViolation,
   BASIC_PAYMENT_PER_HA,
   GREENING_BONUS_PCT,
   YOUNG_FARMER_MAX_DAY,
@@ -122,8 +123,14 @@ export default function SubsidiesSection() {
           const myEnrollment = (aesEnrollments ?? []).find(e => e.schemeId === scheme.id);
           const isEnrolled = myEnrollment?.status === 'active';
           const isEnrolling = enrollingScheme === scheme.id;
+          const isViolating = isEnrolled && myEnrollment ? checkAESViolation(myEnrollment, parcels, day) : false;
+          const violationHint = scheme.id === 'aes_cover'
+            ? 'no cover crop on enrolled parcel — scheme may be flagged'
+            : scheme.id === 'aes_lowpest'
+            ? 'synthetic pesticide used on enrolled parcel in last 30d'
+            : '';
           return (
-            <View key={scheme.id} style={[ss.schemeRow, isEnrolled && { borderColor: '#2a4a2a' }]}>
+            <View key={scheme.id} style={[ss.schemeRow, isEnrolled && { borderColor: isViolating ? '#4a2a2a' : '#2a4a2a' }]}>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text style={ss.schemeName}>{scheme.name}</Text>
@@ -137,6 +144,9 @@ export default function SubsidiesSection() {
                 <Text style={{ color: '#4caf50', fontSize: F.size.xs, marginTop: 2 }}>€{scheme.paymentPerHa}/ha/year</Text>
                 {isEnrolled && (
                   <Text style={ss.schemeMuted}>{myEnrollment!.enrolledHa}ha enrolled</Text>
+                )}
+                {isViolating && violationHint !== '' && (
+                  <Text style={{ color: '#ef5350', fontSize: F.size.xs, marginTop: 3 }}>⚠ Violation: {violationHint}</Text>
                 )}
               </View>
               {!isEnrolled && (
