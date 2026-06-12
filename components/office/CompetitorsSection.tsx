@@ -24,10 +24,10 @@ function CompetitorsSection() {
     return '🔴 Dominant';
   }
 
-  function activePressure(farm: { specialization: string[] }): string | null {
+  function activePressureDetail(farm: { specialization: string[] }): { cropId: string; pct: number; daysLeft: number } | null {
     for (const crop of farm.specialization) {
-      const sp = sellPressures.find(s => s.cropId === crop && s.expiresDay >= day);
-      if (sp) return crop;
+      const sp = sellPressures.find(s => s.cropId === crop && s.expiresDay >= day && s.source !== 'player');
+      if (sp) return { cropId: crop, pct: Math.round((1 - sp.modifier) * 100), daysLeft: sp.expiresDay - day };
     }
     return null;
   }
@@ -44,7 +44,7 @@ function CompetitorsSection() {
         Rivals apply sell pressure to the market and bid at auction. Watch them expand.
       </Text>
       {npcFarms.map(farm => {
-        const pressure = activePressure(farm);
+        const pressureDetail = activePressureDetail(farm);
         const fields = landCount(farm.id);
         const isExpanded = expandedFarmId === farm.id;
         const farmNews = rivalNews.filter((n: any) => n.detail?.includes(farm.name) || n.title?.includes(farm.name));
@@ -93,9 +93,9 @@ function CompetitorsSection() {
                   );
                 })}
               </View>
-              {pressure && (
+              {pressureDetail && (
                 <Text style={{ color: '#ef9a9a', fontSize: 11 }}>
-                  ⚠️ Flooding market with {CROP_TYPES.find(c => c.id === pressure)?.name ?? pressure} — price depressed
+                  ⚠️ Flooding {CROP_TYPES.find(c => c.id === pressureDetail.cropId)?.name ?? pressureDetail.cropId} market −{pressureDetail.pct}% · {pressureDetail.daysLeft}d remaining
                 </Text>
               )}
               {farm.wealth < 5000 && (
