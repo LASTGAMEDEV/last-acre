@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore, ProductionBuildingState } from '../../store/useGameStore';
 import { BUILDING_TYPES, PRODUCTION_EQUIPMENT } from '../../data/buildingTypes';
+import { getWorkerBonuses } from '../../engine/workers';
 import { C, S, F, R } from '../../constants/theme';
 
 const CERT_COLOR: Record<string, string> = {
@@ -20,6 +21,12 @@ const CERT_LABEL: Record<string, string> = {
 const CERT_NEXT: Record<string, string> = {
   basic: '30d at hygiene ≥60 + 1 inspection',
   certified: '60d at hygiene ≥80 + no synthetic inputs (60d) + 2 inspections',
+};
+
+// Numeric thresholds (days required, inspections required)
+const CERT_REQS: Record<string, { days: number; inspections: number; hygieneMin: number }> = {
+  basic:     { days: 30,  inspections: 1, hygieneMin: 60 },
+  certified: { days: 60,  inspections: 2, hygieneMin: 80 },
 };
 
 // Effects unlocked at each tier
@@ -41,6 +48,7 @@ function ProductionBuildingsSection() {
 
   const farmhands = (workers ?? []).filter((w: any) => w.role === 'field_hand');
   const workerMap = new Map((workers ?? []).map((w: any) => [w.id, w]));
+  const workerBonuses = getWorkerBonuses(workers ?? []);
 
   if (!productionBuildings || productionBuildings.length === 0) {
     return (
@@ -55,6 +63,19 @@ function ProductionBuildingsSection() {
 
   return (
     <ScrollView contentContainerStyle={pbs.scroll} showsVerticalScrollIndicator={false}>
+      {(workerBonuses.processingOutputMult > 1.0 || workerBonuses.autoProcessEnabled) && (
+        <View style={pbs.bonusBanner}>
+          <Text style={pbs.bonusBannerTitle}>🏭 Processing Worker Bonuses</Text>
+          {workerBonuses.processingOutputMult > 1.0 && (
+            <Text style={pbs.bonusBannerRow}>
+              ×{workerBonuses.processingOutputMult.toFixed(2)} output — from processing technicians / quality controllers
+            </Text>
+          )}
+          {workerBonuses.autoProcessEnabled && (
+            <Text style={pbs.bonusBannerRow}>⚡ Auto-processing enabled — QC controller on staff</Text>
+          )}
+        </View>
+      )}
       {productionBuildings.map((pb: ProductionBuildingState) => {
         const bt = BUILDING_TYPES.find(b => b.id === pb.buildingTypeId);
         if (!bt) return null;
@@ -115,13 +136,37 @@ function ProductionBuildingsSection() {
             </View>
 
             {/* Cert progression */}
-            {nextTierReq && (
-              <View style={pbs.certProgress}>
-                <Text style={pbs.sectionLabel}>CERT PROGRESS</Text>
-                <Text style={pbs.small}>{pb.certDaysAtThreshold}d / required · {nextTierReq}</Text>
-                <Text style={pbs.small}>{pb.certInspectionsPassed} inspection{pb.certInspectionsPassed !== 1 ? 's' : ''} passed</Text>
-              </View>
-            )}
+            {nextTierReq && (() => {
+              const reqs = CERT_REQS[pb.certificationTier];
+              const daysPct = reqs ? Math.min(100, Math.round((pb.certDaysAtThreshold / reqs.days) * 100)) : 0;
+              const daysLeft = reqs ? Math.max(0, reqs.days - pb.certDaysAtThreshold) : 0;
+              const inspsLeft = reqs ? Math.max(0, reqs.inspections - pb.certInspectionsPassed) : 0;
+              const isProgressing = pb.hygiene >= (reqs?.hygieneMin ?? 60);
+              const dayProgColor = isProgressing ? C.green : '#ff9800';
+              return (
+                <View style={pbs.certProgress}>
+                  <Text style={pbs.sectionLabel}>CERT PROGRESS — {pb.certificationTier === 'basic' ? 'BASIC → CERTIFIED' : 'CERTIFIED → ORGANIC'}</Text>
+                  <View style={pbs.certProgRow}>
+                    <View style={pbs.certProgBarWrap}>
+                      <View style={[pbs.certProgBarFill, { width: `${daysPct}%` as any, backgroundColor: dayProgColor }]} />
+                    </View>
+                    <Text style={[pbs.certProgLabel, { color: isProgressing ? dayProgColor : '#ff9800' }]}>
+                      {pb.certDaysAtThreshold}/{reqs?.days ?? '?'}d
+                      {isProgressing ? (daysLeft > 0 ? ` (${daysLeft}d left)` : ' ✓') : ' (hygiene too low)'}
+                    </Text>
+                  </View>
+                  <Text style={[pbs.small, { marginTop: 3 }]}>
+                    Inspections: {pb.certInspectionsPassed}/{reqs?.inspections ?? '?'}
+                    {inspsLeft > 0 ? ` — ${inspsLeft} more needed` : ' ✓'}
+                  </Text>
+                  {!isProgressing && reqs && (
+                    <Text style={[pbs.small, { color: '#ff9800', marginTop: 2 }]}>
+                      ⚠ Hygiene must reach {reqs.hygieneMin}% to earn cert-days
+                    </Text>
+                  )}
+                </View>
+              );
+            })()}
 
             {/* Installed equipment */}
             <View style={{ marginTop: 8 }}>
@@ -222,6 +267,13 @@ const pbs = StyleSheet.create({
   barFill: { height: 6, borderRadius: 3 },
 
   certProgress: { backgroundColor: C.bgDeep, borderRadius: R.sm, padding: S.xs, marginTop: 6, gap: 2 },
+  certProgRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
+  certProgBarWrap: { flex: 1, height: 5, backgroundColor: '#1a1a2a', borderRadius: 3, overflow: 'hidden' },
+  certProgBarFill: { height: 5, borderRadius: 3 },
+  certProgLabel: { fontSize: 10, fontWeight: '700', minWidth: 80, textAlign: 'right' },
+  bonusBanner: { backgroundColor: '#0d2a1a', borderRadius: R.md, padding: S.sm, borderLeftWidth: 3, borderLeftColor: C.green },
+  bonusBannerTitle: { color: C.green, fontSize: F.size.sm, fontWeight: '700', marginBottom: 3 },
+  bonusBannerRow: { color: C.textMuted, fontSize: F.size.xs },
 
   equipRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 3, borderTopWidth: 1, borderTopColor: '#1a1a1a' },
   equipName: { color: C.greenSoft, fontSize: F.size.sm, fontWeight: '600' },
