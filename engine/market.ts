@@ -29,6 +29,7 @@ export interface SellPressure {
   cropId: string;
   modifier: number;   // e.g. 0.88 = -12% price
   expiresDay: number;
+  source?: string;    // 'player' or rival farm name
 }
 
 /** Returns a price modifier (< 1.0) when selling a large quantity. Returns 1.0 for no effect. */

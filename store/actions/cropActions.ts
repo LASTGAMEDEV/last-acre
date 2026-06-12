@@ -289,7 +289,7 @@ export const createCropActions: ActionFactory<CropActions> = (set, get) => ({
     const newPressures = pressureMod < 1.0
       ? [
           ...(state.sellPressures ?? []).filter(sp => sp.cropId !== cropId),
-          { cropId, modifier: pressureMod, expiresDay: state.day + sellPressureDuration(toSell) },
+          { cropId, modifier: pressureMod, expiresDay: state.day + sellPressureDuration(toSell), source: 'player' },
         ]
       : (state.sellPressures ?? []);
     set({

@@ -731,6 +731,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
               cropId,
               modifier: pressureMod,
               expiresDay: newDay + duration,
+              source: farm.name,
             });
             const { CROP_TYPES: CT } = require('../data/cropTypes');
             const cropName = CT.find((c: any) => c.id === cropId)?.name ?? cropId;

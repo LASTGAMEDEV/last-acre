@@ -12,7 +12,7 @@ import type { DynastyState } from '../../engine/dynasty';
 import type { Hedgerow, HedgerowType } from '../../engine/hedgerows';
 import type { LeaseAgreement, AvailableLease, TenantImprovement } from '../../engine/leases';
 import type { ContractorOperation } from '../../engine/machinery';
-import type { MarketPrice, NewsEvent } from '../../engine/market';
+import type { MarketPrice, NewsEvent, SellPressure } from '../../engine/market';
 import type { ActiveShock } from '../../engine/priceEngine';
 import type { ProcessingBuilding } from '../../engine/processing';
 import type { AESEnrollment, SubsidyPayment } from '../../engine/subsidies';
@@ -148,7 +148,7 @@ export interface GameState {
   employerReputation: number;
   bankrupt: boolean;
   familyLoanUsedDay: number | null;
-  sellPressures: { cropId: string; modifier: number; expiresDay: number }[];
+  sellPressures: SellPressure[];
   breedingPairs: Record<string, string>;
   activeEvents: GameEvent[];
   timeline: TimelineState;

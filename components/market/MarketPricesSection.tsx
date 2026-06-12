@@ -333,14 +333,18 @@ export default function MarketPricesSection() {
               });
             }
 
-            // Active sell pressure this crop
-            const pressure = (sellPressures ?? []).find(sp => sp.cropId === selectedCrop);
-            if (pressure) {
+            // Active sell pressure this crop (player or rival)
+            const allPressures = (sellPressures ?? []).filter(sp => sp.cropId === selectedCrop);
+            for (const pressure of allPressures) {
               const pressPct = Math.round((1 - pressure.modifier) * 100);
+              const daysLeft = Math.max(0, pressure.expiresDay - day);
+              const isRival = pressure.source && pressure.source !== 'player';
               drivers.push({
-                icon: '📦',
-                text: `Your sell pressure -${pressPct}% · expires day ${pressure.expiresDay}`,
-                color: '#ffb74d',
+                icon: isRival ? '🏭' : '📦',
+                text: isRival
+                  ? `${pressure.source} flooded the market -${pressPct}% · ${daysLeft}d remaining`
+                  : `Your sell pressure -${pressPct}% · ${daysLeft}d remaining`,
+                color: isRival ? '#ef9a9a' : '#ffb74d',
               });
             }
 
