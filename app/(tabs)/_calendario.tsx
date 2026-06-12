@@ -15,7 +15,7 @@ type CalendarEntry = {
   title: string;
   detail: string;
   daysLeft: number;
-  category: 'contract' | 'loan' | 'futures' | 'season' | 'deposit' | 'recurring';
+  category: 'contract' | 'loan' | 'futures' | 'season' | 'deposit' | 'recurring' | 'harvest';
   urgent: boolean;
 };
 
@@ -32,7 +32,7 @@ function nextSeasonChange(day: number): { season: string; daysLeft: number } {
 }
 
 export default function CalendarioScreen() {
-  const { day, contracts, loans, futures, timeDeposits, recurringContracts, buyers } = useGameStore();
+  const { day, contracts, loans, futures, timeDeposits, recurringContracts, buyers, parcels } = useGameStore();
 
   const entries: CalendarEntry[] = [];
 
@@ -117,6 +117,29 @@ export default function CalendarioScreen() {
     });
   }
 
+  // Crop harvests
+  for (const p of (parcels ?? [])) {
+    if (!p.owned || !p.plantedCrop) continue;
+    const crop = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
+    if (!crop) continue;
+    const harvestDay = p.plantedCrop.plantedDay + crop.growthDays;
+    const daysLeft = harvestDay - day;
+    const killed = (p.plantedCrop.frostDamage ?? 0) >= 1;
+    entries.push({
+      id: `harvest_${p.id}`,
+      icon: killed ? '☠️' : daysLeft <= 0 ? '✅' : daysLeft <= 5 ? '🌾' : '🌱',
+      title: `${crop.name} — ${p.name}`,
+      detail: killed
+        ? 'Crop killed by frost — clear and replant'
+        : daysLeft <= 0
+        ? 'Ready to harvest now'
+        : `${p.hectares}ha · ~${Math.round(crop.baseYield * p.hectares).toLocaleString()} ${crop.unit} est.`,
+      daysLeft,
+      category: 'harvest',
+      urgent: !killed && daysLeft <= 3,
+    });
+  }
+
   // Next season change
   const { season: nextSeason, daysLeft: seasonDays } = nextSeasonChange(day);
   entries.push({
@@ -142,6 +165,7 @@ export default function CalendarioScreen() {
     deposit:   C.green,
     season:    C.orange,
     recurring: C.greenDark,
+    harvest:   '#7cb342',
   };
 
   function EntryCard({ entry }: { entry: CalendarEntry }) {
