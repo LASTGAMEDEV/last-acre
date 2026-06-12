@@ -19,7 +19,7 @@ import { getContractorCost, ContractorOperation } from '../../engine/machinery';
 import HelpSheet from '../../components/HelpSheet';
 import GuideButton from '../../components/GuideButton';
 import { HedgerowType, HEDGEROW_COST } from '../../engine/hedgerows';
-import { TILLAGE_FUEL_MULT, notillYieldTransitionMod, notillWeedMult } from '../../engine/tillage';
+import { TILLAGE_FUEL_MULT, TILLAGE_OM_DELTA, notillYieldTransitionMod, notillWeedMult } from '../../engine/tillage';
 
 const MAP_COLS = 8;
 
@@ -316,6 +316,15 @@ function ManagementTab({ parcel, onClose }: { parcel: LandParcel; onClose: () =>
             <Text style={{ color: parcel.tillageSystem === sys ? '#bbdefb' : '#888', fontSize: 9 }}>
               Fuel {Math.round((TILLAGE_FUEL_MULT[sys] ?? 1) * 100)}%
             </Text>
+            {(() => {
+              const omD = TILLAGE_OM_DELTA[sys] ?? 0;
+              if (omD === 0) return <Text style={{ color: '#888', fontSize: 9 }}>OM →</Text>;
+              return (
+                <Text style={{ color: omD > 0 ? '#81c784' : '#ff8a65', fontSize: 9 }}>
+                  OM {omD > 0 ? '↑' : '↓'}
+                </Text>
+              );
+            })()}
           </TouchableOpacity>
         ))}
       </View>
