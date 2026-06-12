@@ -4,6 +4,10 @@ import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import type { SoilStats } from '../../engine/crops';
+import {
+  pestControlForParcel, isWindProtected, pollinatorStripCount, hasBufferStrip,
+  maturityProgress, HEDGEROW_PEST_CONTROL,
+} from '../../engine/hedgerows';
 
 function soilScore(soil: SoilStats): number {
   const nScore = soil.nitrogen >= 60 && soil.nitrogen <= 80 ? 100
@@ -31,7 +35,7 @@ const ORGANIC_LABELS: Record<string, string> = {
 
 export default function LandManagementSection() {
   const {
-    activeLeases, availableLeases, parcels, day,
+    activeLeases, availableLeases, parcels, day, hedgerows,
     signLease, cancelLease,
   } = useGameStore();
 
@@ -181,6 +185,7 @@ export default function LandManagementSection() {
                   {parcel.tillageSystem && (
                     <Text style={[ls.muted, { marginTop: 2 }]}>Tillage: {parcel.tillageSystem}</Text>
                   )}
+                  <HedgerowPanel parcelId={parcel.id} hedgerows={hedgerows ?? []} day={day} />
                 </View>
               )}
             </TouchableOpacity>
@@ -250,6 +255,65 @@ export default function LandManagementSection() {
         ))}
       </View>
     </ScrollView>
+  );
+}
+
+function HedgerowPanel({ parcelId, hedgerows, day }: {
+  parcelId: string;
+  hedgerows: import('../../engine/hedgerows').Hedgerow[];
+  day: number;
+}) {
+  const parcelHedgerows = hedgerows.filter(h => h.parcelId === parcelId);
+  if (parcelHedgerows.length === 0) return null;
+
+  const pestControl = pestControlForParcel(parcelId, hedgerows, day);
+  const windProtected = isWindProtected(parcelId, hedgerows, day);
+  const pollStrips = pollinatorStripCount(parcelId, hedgerows, day);
+  const bufferPresent = hasBufferStrip(parcelId, hedgerows);
+
+  const HDGROW_NAMES: Record<string, string> = {
+    hdg_mixed: 'Mixed Hedge', hdg_buffer: 'Buffer Strip',
+    hdg_pollinator: 'Pollinator Strip', hdg_woodland: 'Woodland Edge',
+  };
+
+  return (
+    <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: '#1a1a2a', paddingTop: 8 }}>
+      <Text style={ls.soilDetailTitle}>Hedgerows ({parcelHedgerows.length})</Text>
+      {parcelHedgerows.map(h => {
+        const progress = maturityProgress(h, day);
+        const isMat = h.mature || progress >= 1;
+        return (
+          <View key={h.id} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+            <Text style={[ls.muted, { fontSize: 10 }]}>{HDGROW_NAMES[h.type] ?? h.type} ({h.edge})</Text>
+            <Text style={{ fontSize: 10, color: isMat ? '#4caf50' : '#ff9800' }}>
+              {isMat ? '✓ Mature' : `${Math.round(progress * 100)}% grown`}
+            </Text>
+          </View>
+        );
+      })}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 5 }}>
+        {pestControl > 0 && (
+          <View style={[ls.pill, { backgroundColor: '#1a2a1a' }]}>
+            <Text style={[ls.pillText, { color: '#66bb6a' }]}>🐛 -{Math.round(pestControl * 100)}% pest</Text>
+          </View>
+        )}
+        {windProtected && (
+          <View style={[ls.pill, { backgroundColor: '#1a1a2a' }]}>
+            <Text style={[ls.pillText, { color: '#90caf9' }]}>💨 Wind shield</Text>
+          </View>
+        )}
+        {pollStrips > 0 && (
+          <View style={[ls.pill, { backgroundColor: '#2a1a1a' }]}>
+            <Text style={[ls.pillText, { color: '#ffcc80' }]}>🐝 ×{pollStrips} pollinator</Text>
+          </View>
+        )}
+        {bufferPresent && (
+          <View style={[ls.pill, { backgroundColor: '#0a2a1a' }]}>
+            <Text style={[ls.pillText, { color: '#80cbc4' }]}>🌿 Buffer</Text>
+          </View>
+        )}
+      </View>
+    </View>
   );
 }
 
