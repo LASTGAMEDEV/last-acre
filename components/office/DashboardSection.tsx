@@ -58,7 +58,7 @@ function DashboardSection() {
     money, savings, day, loans, contracts, seasonGoals, seasonHarvestCount,
     seasonStartRevenue, totalRevenue, parcels, animals, npcFarms, salesLog,
     personalRecords, inventory, prices, animalWelfareScores, reputation, farmStyle,
-    animalInventory, machines,
+    animalInventory, machines, workers, family,
   } = useGameStore();
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
@@ -284,6 +284,52 @@ function DashboardSection() {
     }
   }
 
+  // ── 30-Day Cashflow Forecast ─────────────────────────────────────────────
+  const FORECAST_DAYS = 30;
+
+  // Income: animal products extrapolated from last 14 days
+  const animalRev14 = salesLog.filter(s => s.day >= day - 14 && s.category === 'animals').reduce((a, s) => a + s.amount, 0);
+  const projAnimalIncome = (animalRev14 / 14) * FORECAST_DAYS;
+
+  // Income: crops due to mature within forecast window (conservative 85% of base yield × price)
+  let projCropIncome = 0;
+  for (const p of ownedParcels) {
+    if (!p.plantedCrop) continue;
+    const ct = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
+    if (!ct) continue;
+    const harvestDay = p.plantedCrop.plantedDay + ct.growthDays;
+    if (harvestDay >= day && harvestDay <= day + FORECAST_DAYS) {
+      const price = prices.find(pr => pr.cropId === ct.id)?.price ?? ct.basePrice;
+      projCropIncome += ct.baseYield * p.hectares * price * 0.85;
+    }
+  }
+
+  // Income: remaining value from contracts due within 30 days
+  const projContractIncome = contracts
+    .filter(c => !c.completed && !c.failed && c.deadlineDay <= day + FORECAST_DAYS)
+    .reduce((sum, c) => sum + (c.amount - c.delivered) * c.pricePerUnit, 0);
+
+  const totalProjIncome = projAnimalIncome + projCropIncome + projContractIncome;
+
+  // Expenses: worker daily wages × 30
+  const dailyWages = (workers ?? []).reduce((s, w) => s + w.wagePerDay, 0);
+  const projWagesCost = dailyWages * FORECAST_DAYS;
+
+  // Expenses: family living costs × 30
+  const _hasSpouse = !!family?.spouse?.isAlive;
+  const _childCount = family?.children?.filter((c: any) => c.isAlive && c.age < 18).length ?? 0;
+  const _youngAdultCount = family?.children?.filter((c: any) => c.isAlive && c.age >= 18 && c.age < 25).length ?? 0;
+  const dailyFamilyLiving = (_hasSpouse ? 4 : 0) + _childCount * 3 + _youngAdultCount * 1;
+  const projFamilyCost = dailyFamilyLiving * FORECAST_DAYS;
+
+  // Expenses: loans coming due within 30 days
+  const projLoansDue = loans
+    .filter(l => !l.paid && !l.defaulted && l.payoffDay <= day + FORECAST_DAYS)
+    .reduce((s, l) => s + l.totalOwed, 0);
+
+  const totalProjExpenses = projWagesCost + projFamilyCost + projLoansDue;
+  const netForecast = totalProjIncome - totalProjExpenses;
+
   // ── Recent sales ─────────────────────────────────────────────────────────
   const recentSales = salesLog
     .filter(s => s.day >= day - 14 && s.amount > 0)
@@ -428,6 +474,36 @@ function DashboardSection() {
         <Card title="📊 30-DAY REV" value={`$${Math.round(rev30).toLocaleString()}`} />
       </View>
 
+      {/* 30-Day Cashflow Forecast */}
+      <View style={dash.forecastCard}>
+        <View style={dash.forecastHeader}>
+          <Text style={dash.forecastTitle}>💹 30-Day Outlook</Text>
+          <Text style={[dash.forecastNet, { color: netForecast >= 0 ? '#4caf50' : '#ef5350' }]}>
+            {netForecast >= 0 ? '+' : ''}${Math.round(netForecast).toLocaleString()}
+          </Text>
+        </View>
+        <View style={dash.forecastRows}>
+          <View style={dash.forecastRow}>
+            <Text style={dash.forecastRowLabel}>📥 Projected Income</Text>
+            <Text style={[dash.forecastRowVal, { color: '#4caf50' }]}>+${Math.round(totalProjIncome).toLocaleString()}</Text>
+          </View>
+          <View style={dash.forecastBreakdown}>
+            {projCropIncome > 0 && <Text style={dash.forecastChip}>🌾 Crops ${Math.round(projCropIncome).toLocaleString()}</Text>}
+            {projAnimalIncome > 0 && <Text style={dash.forecastChip}>🐄 Animals ${Math.round(projAnimalIncome).toLocaleString()}</Text>}
+            {projContractIncome > 0 && <Text style={dash.forecastChip}>📋 Contracts ${Math.round(projContractIncome).toLocaleString()}</Text>}
+          </View>
+          <View style={[dash.forecastRow, { marginTop: 6 }]}>
+            <Text style={dash.forecastRowLabel}>📤 Known Expenses</Text>
+            <Text style={[dash.forecastRowVal, { color: '#ef9a9a' }]}>−${Math.round(totalProjExpenses).toLocaleString()}</Text>
+          </View>
+          <View style={dash.forecastBreakdown}>
+            {projWagesCost > 0 && <Text style={dash.forecastChip}>👷 Wages ${Math.round(projWagesCost).toLocaleString()}</Text>}
+            {projFamilyCost > 0 && <Text style={dash.forecastChip}>🏠 Family ${Math.round(projFamilyCost).toLocaleString()}</Text>}
+            {projLoansDue > 0 && <Text style={[dash.forecastChip, { color: '#ef9a9a' }]}>🏦 Loan ${Math.round(projLoansDue).toLocaleString()}</Text>}
+          </View>
+        </View>
+      </View>
+
       {/* Farm row */}
       <View style={dash.row}>
         <Card title="🌾 OWNED PLOTS" value={`${ownedParcels.length}`} sub={`${ownedParcels.reduce((s, p) => s + p.hectares, 0).toFixed(1)} ha`} />
@@ -564,6 +640,17 @@ const dash = StyleSheet.create({
   stageRange:      { color: C.textMuted, fontSize: F.size.xs, marginTop: 1 },
   stageFocusList:  { gap: 3 },
   stageFocusItem:  { color: C.textDim, fontSize: F.size.xs },
+  // 30-Day Forecast
+  forecastCard:      { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, borderWidth: 1, borderColor: '#1a3a2a' },
+  forecastHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: S.sm },
+  forecastTitle:     { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+  forecastNet:       { fontSize: F.size.xl, fontWeight: 'bold' },
+  forecastRows:      { gap: 0 },
+  forecastRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  forecastRowLabel:  { color: C.textMuted, fontSize: F.size.xs },
+  forecastRowVal:    { fontSize: F.size.sm, fontWeight: 'bold' },
+  forecastBreakdown: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 3, marginBottom: 2 },
+  forecastChip:      { color: C.textFaint, fontSize: 9, backgroundColor: '#0f1a0f', borderRadius: R.sm, paddingHorizontal: 5, paddingVertical: 2 },
   // Farm Health
   healthCard:      { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md },
   healthScore:     { fontSize: F.size.xl, fontWeight: 'bold' },
