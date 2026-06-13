@@ -43,8 +43,8 @@ function FactorBar({ value, color }: { value: number; color: string }) {
 function ReputationSection() {
   const {
     reputation, legacyReputation, prices, futures, prestige,
-    openFuture, awardHistory, productAwardBonuses,
-  } = useGameStore();
+    openFuture, awardHistory, productAwardBonuses, reputationHistory, day,
+  } = useGameStore() as any;
 
   const [selectedCrop, setSelectedCrop] = React.useState('');
   const [futureQty, setFutureQty] = React.useState('');
@@ -105,6 +105,34 @@ function ReputationSection() {
           <EffectChip icon="🏡" label="Land sellers" value={effects.landSellersApproach ? 'approach you' : 'find yourself'} on={effects.landSellersApproach} />
         </View>
       </View>
+
+      {/* ── Recent Reputation Changes ────────────────────────────── */}
+      {(reputationHistory ?? []).length > 0 && (() => {
+        const recent = [...(reputationHistory ?? [])]
+          .sort((a: any, b: any) => b.day - a.day)
+          .slice(0, 12);
+        return (
+          <>
+            <Text style={rs.sectionHeader}>📋 Recent Changes</Text>
+            <View style={rs.card}>
+              {recent.map((entry: any, idx: number) => {
+                const pos = entry.delta >= 0;
+                return (
+                  <View key={idx} style={[rs.historyRow, idx > 0 && { borderTopWidth: 1, borderTopColor: '#1a1a2e' }]}>
+                    <Text style={[rs.historyDelta, { color: pos ? '#81c784' : '#ef5350' }]}>
+                      {pos ? '+' : ''}{entry.delta.toFixed(1)}
+                    </Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={rs.historyReason}>{entry.reason}</Text>
+                    </View>
+                    <Text style={rs.historyDay}>day {entry.day}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        );
+      })()}
 
       {/* ── Factor Breakdown ─────────────────────────────────────── */}
       {factors && (
@@ -298,6 +326,12 @@ const rs = StyleSheet.create({
   effectIcon:     { fontSize: 14 },
   effectLabel:    { color: C.textMuted, fontSize: 10, flex: 1 },
   effectValue:    { color: C.textDim, fontSize: F.size.sm, fontWeight: 'bold' },
+
+  // History
+  historyRow:     { flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingVertical: 6 },
+  historyDelta:   { fontSize: F.size.md, fontWeight: 'bold', width: 38, textAlign: 'right' },
+  historyReason:  { color: C.text, fontSize: F.size.sm },
+  historyDay:     { color: C.textFaint, fontSize: F.size.xs },
 
   // Factor breakdown
   factorRow:      { flexDirection: 'row', gap: S.sm, paddingVertical: S.xs },

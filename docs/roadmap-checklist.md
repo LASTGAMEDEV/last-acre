@@ -245,10 +245,10 @@ These are the highest-impact items not yet done, in order:
 - [x] ReputationSection with Phase 3 reputation system
 - [x] Organic/certifications practice bonuses surfaced
 - [x] Subsidy AES violation warnings (reputation at risk)
-- [ ] Reputation badge in HUD
-- [ ] Reputation breakdown screen (split by sub-factor: community, reliability, sustainability, welfare, business trust)
-- [ ] Show what changed reputation recently
-- [ ] Reputation tiers with clear perks
+- [x] Reputation badge in HUD
+- [x] Reputation breakdown screen (split by sub-factor: community, reliability, sustainability, welfare, business trust)
+- [x] Show what changed reputation recently
+- [x] Reputation tiers with clear perks
 - [ ] Public scandals and community events
 - [ ] Opportunities: sponsor a fair, help a neighbor, host an open day
 - [ ] Bad reputation recovery paths

@@ -53,6 +53,22 @@ function repBadgeColor(tier: string): string {
   }
 }
 
+const TIER_COLOR: Record<string, string> = {
+  legendary: '#ffd700',
+  renowned:  '#ce93d8',
+  respected: '#64b5f6',
+  local:     '#81c784',
+  unknown:   '#555555',
+};
+
+const TIER_TEXT: Record<string, string> = {
+  legendary: '#b8930055',
+  renowned:  '#9c64b055',
+  respected: '#4a90b055',
+  local:     '#4a7c5955',
+  unknown:   '#33333355',
+};
+
 export default function GameHUD() {
   const router = useRouter();
   const {
@@ -136,9 +152,14 @@ export default function GameHUD() {
           <View style={styles.yearBadge}>
             <Text style={styles.yearText}>{calYear}</Text>
           </View>
-          {/* Reputation tier badge */}
+          {/* Reputation badge: score + tier */}
           <View style={[hudStyles.repBadge, { backgroundColor: repBadgeColor(reputation.tier) }]}>
-            <Text style={hudStyles.repText}>{reputation.tier.toUpperCase()}</Text>
+            <Text style={[hudStyles.repScore, { color: TIER_COLOR[reputation.tier] ?? '#4a7c59' }]}>
+              {Math.round(reputation.score ?? 0)}
+            </Text>
+            <Text style={[hudStyles.repText, { color: TIER_TEXT[reputation.tier] ?? '#4a7c59' }]}>
+              {reputation.tier.toUpperCase()}
+            </Text>
           </View>
           <TouchableOpacity style={hudStyles.farmerChip} onPress={() => router.push('/(tabs)/legado')}>
             <Text style={hudStyles.farmerName}>{farmer.firstName} · {age}y</Text>
@@ -318,6 +339,7 @@ const hudStyles = StyleSheet.create({
   farmerName: { color: C.greenSoft, fontSize: 9, fontWeight: 'bold' },
   healthBarTrack: { width: 36, height: 5, backgroundColor: C.bgDeep, borderRadius: 3, overflow: 'hidden' },
   healthBarFill: { height: '100%', borderRadius: 3 },
-  repBadge: { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2, marginLeft: 4 },
-  repText:  { color: '#4a7c59', fontSize: 8, fontWeight: 'bold', letterSpacing: 1 },
+  repBadge:  { borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2, marginLeft: 4, flexDirection: 'row', alignItems: 'center', gap: 3 },
+  repScore:  { fontSize: 10, fontWeight: 'bold' },
+  repText:   { fontSize: 7, fontWeight: 'bold', letterSpacing: 1, opacity: 0.7 },
 });
