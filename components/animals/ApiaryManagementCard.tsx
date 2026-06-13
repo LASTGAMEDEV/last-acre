@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
-import { computeHiveHealth, getLinkedParcelCount, getColmenaCapacity } from '../../engine/pollination';
+import { computeHiveHealth, getLinkedParcelCount, getColmenaCapacity, getPollinationMultiplier, getHoneyMultiplier } from '../../engine/pollination';
 import { CROP_TYPES } from '../../data/cropTypes';
 
 export default function ApiaryManagementCard() {
@@ -51,6 +51,24 @@ export default function ApiaryManagementCard() {
             {linkedParcels.some(p => p.pesticideSprayedDay && state.day - p.pesticideSprayedDay < 14) && (
               <Text style={styles.warning}>⚠️ Pesticide active on linked parcels</Text>
             )}
+            {(() => {
+              const honeyMult = getHoneyMultiplier(state.day, state.todayWeather);
+              const honeyLabel = honeyMult === 0 ? 'No honey (winter)' : `×${honeyMult.toFixed(1)} honey rate`;
+              const honeyColor = honeyMult === 0 ? '#ef5350' : honeyMult >= 1.0 ? C.green : '#ff9800';
+              return <Text style={[styles.label, { color: honeyColor }]}>🍯 {honeyLabel}</Text>;
+            })()}
+            {linkedParcels.filter(p => {
+              const ct = CROP_TYPES.find((c: any) => c.id === p.plantedCrop?.cropId);
+              return ct && ct.pollinationBonus > 0;
+            }).map(p => {
+              const pollMult = getPollinationMultiplier(p, state.parcels, state.day, state.hedgerows ?? []);
+              if (pollMult <= 1.01) return null;
+              return (
+                <Text key={p.id} style={[styles.label, { color: '#aed581' }]}>
+                  🌸 {p.name}: +{Math.round((pollMult - 1) * 100)}% yield from pollination
+                </Text>
+              );
+            })}
             <TouchableOpacity style={styles.smallButton} onPress={() => setManagingId(colmenaId)}>
               <Text style={styles.smallButtonText}>Manage Links</Text>
             </TouchableOpacity>
@@ -98,6 +116,15 @@ function ManageLinksSheet({ colmenaId, onClose }: { colmenaId: string; onClose: 
             <View style={{ flex: 1 }}>
               <Text style={styles.cardTitle}>{parcel.name}</Text>
               <Text style={styles.label}>{parcel.hectares} ha · {cropType?.name ?? 'Fallow'}</Text>
+              {beeBenefit && isLinked && (() => {
+                const pollMult = getPollinationMultiplier(parcel, state.parcels, state.day, state.hedgerows ?? []);
+                return pollMult > 1.01 ? (
+                  <Text style={[styles.label, { color: '#aed581' }]}>+{Math.round((pollMult - 1) * 100)}% yield</Text>
+                ) : null;
+              })()}
+              {beeBenefit && !isLinked && (
+                <Text style={[styles.label, { color: '#888' }]}>pollination crop — link for yield bonus</Text>
+              )}
             </View>
             {beeBenefit && <Text style={styles.good}>🐝</Text>}
             {isLinked && <Text style={styles.good}>✅</Text>}
