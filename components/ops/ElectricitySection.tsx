@@ -10,7 +10,7 @@ import {
 import {
   calcSolarOutput, calcWindOutput, calcBiogasOutput,
   calcBiomassOutput, calcGeneratorOutput, calcTotalDemand,
-  nextGridTier,
+  nextGridTier, calcGridRateForSeason,
 } from '../../engine/electricity';
 import { getSeason } from '../../engine/climate';
 import { C, S, F, R } from '../../constants/theme';
@@ -79,7 +79,16 @@ function ElectricitySection() {
 
       <View style={[elStyles.card, { marginBottom: 12 }]}>
         <Text style={elStyles.cardTitle}>Grid: {GRID_TIER_CONFIG[el.gridTier].label} ({GRID_TIER_CONFIG[el.gridTier].maxImportKw} kW max)</Text>
-        <Text style={elStyles.cardSub}>Rate: ${el.gridRateBase.toFixed(3)}/kWh</Text>
+        {(() => {
+          const effectiveRate = calcGridRateForSeason(el.gridRateBase, season as any);
+          const seasonMult = effectiveRate / el.gridRateBase;
+          const multLabel = seasonMult > 1.0 ? `+${Math.round((seasonMult - 1) * 100)}% ${season}` : seasonMult < 1.0 ? `−${Math.round((1 - seasonMult) * 100)}% ${season}` : null;
+          return (
+            <Text style={elStyles.cardSub}>
+              Rate: ${effectiveRate.toFixed(3)}/kWh{multLabel ? ` (${multLabel})` : ''}
+            </Text>
+          );
+        })()}
         <Text style={elStyles.cardSub}>
           Month bill estimate: ${Math.round(el.currentMonthBillEstimate).toLocaleString()} — due in {billDaysLeft} day{billDaysLeft !== 1 ? 's' : ''}
         </Text>
