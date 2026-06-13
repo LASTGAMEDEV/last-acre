@@ -5,6 +5,7 @@ import { C, S, F, R } from '../../constants/theme';
 import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { analyzeRation, generateDefaultRation, getRationProductionModifier, getRationSickChanceModifier } from '../../engine/nutrition';
 import { getSeason } from '../../engine/climate';
+import { GRAIN_CROP_IDS } from '../../engine/animals';
 
 const INGREDIENTS = [
   { id: 'corn', name: 'Corn' },
@@ -31,6 +32,34 @@ export default function NutritionTab() {
       .filter(Boolean);
   }, [state.animals]);
 
+  // Feed reserve calculations
+  const SEASON_LEN = 90;
+  const yearDay = state.day % (SEASON_LEN * 4);
+  const seasonIdx = Math.floor(yearDay / SEASON_LEN);
+  const daysLeftThisSeason = SEASON_LEN - (yearDay % SEASON_LEN);
+
+  let totalHayKgDay = 0;
+  let totalGrainKgDay = 0;
+  for (const a of state.animals) {
+    const t = ANIMAL_TYPES.find(x => x.id === a.typeId);
+    if (!t) continue;
+    if (t.feedType === 'hay') totalHayKgDay += t.feedKgPerDay;
+    else if (t.feedType === 'grain') totalGrainKgDay += t.feedKgPerDay;
+  }
+
+  const hayStock = (state.animalInventory as Record<string, number>)['hay'] ?? 0;
+  const grainStock = GRAIN_CROP_IDS.reduce(
+    (sum: number, id: string) => sum + ((state.inventory as Record<string, number>)[id] ?? 0), 0
+  );
+  const hayCoverageDays = totalHayKgDay > 0 ? Math.floor(hayStock / totalHayKgDay) : null;
+  const grainCoverageDays = totalGrainKgDay > 0 ? Math.floor(grainStock / totalGrainKgDay) : null;
+
+  const winterDays = seasonIdx === 3 ? daysLeftThisSeason : SEASON_LEN;
+  const daysToWinter = seasonIdx === 3 ? 0 :
+    seasonIdx === 2 ? daysLeftThisSeason :
+    seasonIdx === 1 ? daysLeftThisSeason + SEASON_LEN :
+    daysLeftThisSeason + SEASON_LEN * 2;
+
   if (ownedTypes.length === 0) {
     return (
       <View style={styles.center}>
@@ -41,6 +70,42 @@ export default function NutritionTab() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: S.md, gap: S.lg }}>
+      {(hayCoverageDays !== null || grainCoverageDays !== null) && (
+        <View style={[styles.card, { borderLeftWidth: 2, borderLeftColor: seasonIdx === 3 ? '#90caf9' : '#546e7a' }]}>
+          <Text style={styles.cardTitle}>
+            {seasonIdx === 3 ? '❄️ Winter — Feed Remaining' : '❄️ Winter Feed Reserves'}
+          </Text>
+          <Text style={[styles.label, { marginBottom: 4 }]}>
+            {seasonIdx === 3
+              ? `${daysLeftThisSeason} days of winter remaining`
+              : `Winter arrives in ${daysToWinter} days (${winterDays}-day season)`}
+          </Text>
+          {hayCoverageDays !== null && (() => {
+            const ok = hayCoverageDays >= winterDays;
+            const shortfall = ok ? 0 : Math.ceil((winterDays - hayCoverageDays) * totalHayKgDay);
+            return (
+              <View style={styles.row}>
+                <Text style={styles.label}>🌾 Hay covers</Text>
+                <Text style={[styles.value, { color: ok ? C.green : '#ef5350' }]}>
+                  {hayCoverageDays}d {ok ? '✓' : `— need ${shortfall.toLocaleString()}kg more`}
+                </Text>
+              </View>
+            );
+          })()}
+          {grainCoverageDays !== null && (() => {
+            const ok = grainCoverageDays >= winterDays;
+            const shortfall = ok ? 0 : Math.ceil((winterDays - grainCoverageDays) * totalGrainKgDay);
+            return (
+              <View style={styles.row}>
+                <Text style={styles.label}>🌽 Grain covers</Text>
+                <Text style={[styles.value, { color: ok ? C.green : '#ef5350' }]}>
+                  {grainCoverageDays}d {ok ? '✓' : `— need ${shortfall.toLocaleString()}kg more`}
+                </Text>
+              </View>
+            );
+          })()}
+        </View>
+      )}
       {!selectedTypeId ? (
         ownedTypes.map(type => {
           const count = state.animals.filter(a => a.typeId === type.id).length;
