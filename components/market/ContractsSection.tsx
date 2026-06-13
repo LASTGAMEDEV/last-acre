@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import GuideButton from '../GuideButton';
-import { CONTRACT_TEMPLATES } from '../../engine/contracts';
+import { CONTRACT_TEMPLATES, contractPenalty } from '../../engine/contracts';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { GUIDE_ENTRY_IDS } from '../../data/guideEntries';
 
@@ -43,6 +43,7 @@ function ContractsSection() {
           const overdue = day > c.deadlineDay;
           const inStock = Math.round(inventory[c.cropId] ?? 0);
           const remaining = c.amount - c.delivered;
+          const penalty = Math.round(contractPenalty(c));
           const canDeliver = inStock > 0 && remaining > 0;
           const pinned = pinnedIds.has(c.id);
           const daysLeft = c.deadlineDay - day;
@@ -62,6 +63,11 @@ function ContractsSection() {
                 {c.amount.toLocaleString()} {unit} · ${c.pricePerUnit.toFixed(2)}/{unit}
               </Text>
               <Text style={styles.contractDetail}>Due day {c.deadlineDay}</Text>
+              {!c.completed && !c.failed && penalty > 0 && (
+                <Text style={[styles.contractDetail, { color: overdue ? '#ef5350' : '#888' }]}>
+                  ⚠️ Default penalty: ${penalty.toLocaleString()}
+                </Text>
+              )}
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${Math.min(100, (c.delivered / c.amount) * 100)}%` as any }]} />
               </View>
