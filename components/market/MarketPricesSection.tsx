@@ -382,6 +382,45 @@ export default function MarketPricesSection() {
             <Text style={styles.signalAdvice}>{sellSignal.advice}</Text>
           </View>
 
+          {/* Sell-now vs hold comparison */}
+          {inStock > 0 && (() => {
+            const mom = (priceMomentum ?? {})[selectedCrop] ?? 0;
+            const proj14 = current * Math.pow(1 + mom, 14);
+            const proj30 = current * Math.pow(1 + mom, 30);
+            const rev0 = Math.max(0, Math.round(inStock * current * activeRegion.priceMultiplier - transportTotal));
+            const rev14 = Math.max(0, Math.round(inStock * proj14 * activeRegion.priceMultiplier - transportTotal));
+            const rev30 = Math.max(0, Math.round(inStock * proj30 * activeRegion.priceMultiplier - transportTotal));
+            const d14 = rev14 - rev0;
+            const d30 = rev30 - rev0;
+            return (
+              <View style={styles.holdPanel}>
+                <Text style={styles.holdTitle}>📊 Sell now vs. hold</Text>
+                <View style={styles.holdRow}>
+                  <Text style={styles.holdLabel}>Sell now</Text>
+                  <Text style={[styles.holdPrice, { color: C.textMuted }]}>${current.toFixed(2)}</Text>
+                  <Text style={[styles.holdVal, { color: C.text }]}>${rev0.toLocaleString()}</Text>
+                </View>
+                <View style={styles.holdRow}>
+                  <Text style={styles.holdLabel}>Hold 14 days</Text>
+                  <Text style={[styles.holdPrice, proj14 >= current ? styles.up : styles.down]}>est. ${proj14.toFixed(2)}</Text>
+                  <Text style={[styles.holdVal, d14 >= 0 ? styles.up : styles.down]}>
+                    {d14 >= 0 ? '+' : ''}${d14.toLocaleString()}
+                  </Text>
+                </View>
+                <View style={[styles.holdRow, { borderBottomWidth: 0 }]}>
+                  <Text style={styles.holdLabel}>Hold 30 days</Text>
+                  <Text style={[styles.holdPrice, proj30 >= current ? styles.up : styles.down]}>est. ${proj30.toFixed(2)}</Text>
+                  <Text style={[styles.holdVal, d30 >= 0 ? styles.up : styles.down]}>
+                    {d30 >= 0 ? '+' : ''}${d30.toLocaleString()}
+                  </Text>
+                </View>
+                {Math.abs(mom) < 0.003 && (
+                  <Text style={styles.holdNote}>Trend flat — holding unlikely to change the price much.</Text>
+                )}
+              </View>
+            );
+          })()}
+
           {/* Sell panel */}
           <View style={styles.sellPanel}>
             {/* Regional market selector */}
@@ -724,6 +763,14 @@ const styles = StyleSheet.create({
   alertSummaryChipName: { color: C.text, fontSize: F.size.xs, fontWeight: 'bold' },
   alertSummaryChipPrice: { color: C.green, fontSize: F.size.xs },
   alertSummaryChipRemove: { color: '#ef5350', fontSize: 11, paddingLeft: 2 },
+
+  holdPanel: { marginTop: S.sm, backgroundColor: '#061422', borderRadius: R.md, padding: 10, borderLeftWidth: 2, borderLeftColor: '#1565c0' },
+  holdTitle: { color: '#90caf9', fontWeight: 'bold', fontSize: F.size.sm, marginBottom: 8 },
+  holdRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#1a2a3a' },
+  holdLabel: { color: C.textMuted, fontSize: 11, width: 90 },
+  holdPrice: { flex: 1, fontSize: 11 },
+  holdVal: { fontSize: F.size.sm, fontWeight: 'bold', textAlign: 'right', width: 70 },
+  holdNote: { color: '#555', fontSize: 10, fontStyle: 'italic', marginTop: 6 },
 });
 
 const regionStyles = StyleSheet.create({
