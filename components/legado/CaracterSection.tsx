@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { gameDayToCalendarYear } from '../../engine/calendarUtils';
 import { FarmerSkills, farmerAge } from '../../engine/dynasty';
+import { annualLegacyDelta } from '../../engine/legacyScore';
 import { useGameStore } from '../../store/useGameStore';
 import { C, F, R } from '../../constants/theme';
 
@@ -14,7 +15,7 @@ const SKILL_LABELS: { key: keyof FarmerSkills; label: string }[] = [
 ];
 
 export default function CaracterSection() {
-  const { dynasty, day, farmName, triggerVoluntaryHandoff } = useGameStore();
+  const { dynasty, day, farmName, triggerVoluntaryHandoff, parcels, loans } = useGameStore();
   const calYear = gameDayToCalendarYear(day);
   const farmer = dynasty.currentFarmer;
   const age = farmerAge(farmer, calYear);
@@ -43,6 +44,21 @@ export default function CaracterSection() {
           <Text style={styles.label}>Dynasty Legacy Score</Text>
           <Text style={styles.legacyValue}>{dynasty.legacyScore.toLocaleString()}</Text>
         </View>
+        {(() => {
+          const ownedHa = (parcels ?? []).filter((p: any) => p.owned).reduce((s: number, p: any) => s + p.hectares, 0);
+          const hasDebt = (loans ?? []).some((l: any) => !l.paid && !l.defaulted);
+          const delta = annualLegacyDelta({ ownedHectares: ownedHa, hasDebt, knowledgeBankSize: dynasty.knowledgeBank.length });
+          return (
+            <View style={{ marginTop: 6 }}>
+              <Text style={[styles.label, { color: C.greenSoft, fontWeight: '600' }]}>
+                +{delta} pts/year
+              </Text>
+              <Text style={[styles.label, { fontSize: 10, marginTop: 2 }]}>
+                {Math.floor(ownedHa / 10)} land · {hasDebt ? '0' : '5'} debt-free · {dynasty.knowledgeBank.length * 2} knowledge
+              </Text>
+            </View>
+          );
+        })()}
       </View>
 
       <View style={styles.card}>
