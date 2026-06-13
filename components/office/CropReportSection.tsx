@@ -4,6 +4,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { computeSoilYieldModifier, SOIL_DEFAULTS } from '../../engine/crops';
+import { degradationYieldModifier } from '../../engine/soilDegradation';
 import { GRADE_MULTIPLIERS, type QualityGrade, type StoredBatch } from '../../engine/storageQuality';
 import type { LandParcel } from '../../types/domain/land';
 import type { MarketPrice } from '../../engine/market';
@@ -57,15 +58,20 @@ function ActiveCropCard({ parcel, day }: { parcel: LandParcel; day: number }) {
   const rotationMod = rotation ? 1.15 : 1.0;
   const weedMod = parcel.hasWeeds ? 0.75 : 1.0;
   const organicMod = parcel.organicStatus === 'organic' ? 1.2 : 1.0;
-  const estYield = ct ? Math.round(ct.baseYield * parcel.hectares * soilMod * rotationMod * weedMod * organicMod) : 0;
+  const degradationMod = degradationYieldModifier(parcel);
+  const frostDmg = pc.frostDamage ?? 0;
+  const frostMod = Math.max(0, 1 - frostDmg * 0.7);
+  const estYield = ct ? Math.round(ct.baseYield * parcel.hectares * soilMod * rotationMod * weedMod * organicMod * degradationMod * frostMod) : 0;
   const estRevenue = ct ? Math.round(estYield * ct.basePrice) : 0;
-  const totalMod = Math.round(soilMod * rotationMod * weedMod * organicMod * 100);
+  const totalMod = Math.round(soilMod * rotationMod * weedMod * organicMod * degradationMod * frostMod * 100);
 
   const factors: { label: string; value: string; color: string }[] = [
     { label: 'Soil', value: `${Math.round(soilMod * 100)}%`, color: soilMod >= 0.9 ? '#4caf50' : soilMod >= 0.7 ? '#f59e0b' : '#ef5350' },
     ...(rotation ? [{ label: 'Rotation bonus', value: '+15%', color: '#9ccc65' }] : []),
     ...(parcel.hasWeeds ? [{ label: 'Weeds', value: '−25%', color: '#ef5350' }] : []),
     ...(parcel.organicStatus === 'organic' ? [{ label: 'Organic', value: '+20%', color: '#4caf50' }] : []),
+    ...(degradationMod < 0.99 ? [{ label: 'Degradation', value: `−${Math.round((1 - degradationMod) * 100)}%`, color: '#ef5350' }] : []),
+    ...(frostMod < 1.0 ? [{ label: 'Frost', value: `−${Math.round((1 - frostMod) * 100)}%`, color: '#64b5f6' }] : []),
   ];
 
   return (
