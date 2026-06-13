@@ -8,6 +8,7 @@ import {
   pestControlForParcel, isWindProtected, pollinatorStripCount, hasBufferStrip,
   maturityProgress, HEDGEROW_PEST_CONTROL,
 } from '../../engine/hedgerows';
+import { degradationYieldModifier } from '../../engine/soilDegradation';
 
 function soilScore(soil: SoilStats): number {
   const nScore = soil.nitrogen >= 60 && soil.nitrogen <= 80 ? 100
@@ -179,6 +180,15 @@ export default function LandManagementSection() {
                       <SoilPill label="Erosion" value={parcel.topsoilErosion ?? 0} optimal={[0, 10]} unit="%" lowerBetter />
                     )}
                   </View>
+                  {(() => {
+                    const degMod = degradationYieldModifier(parcel);
+                    if (degMod >= 0.99) return null;
+                    return (
+                      <Text style={{ color: '#ef9a9a', fontSize: F.size.xs, marginTop: 4 }}>
+                        ⚠ Degradation penalty: −{Math.round((1 - degMod) * 100)}% yield at harvest
+                      </Text>
+                    );
+                  })()}
                   {parcel.soilType && (
                     <Text style={[ls.muted, { marginTop: 4 }]}>Type: {parcel.soilType}</Text>
                   )}
