@@ -278,6 +278,22 @@ function AnimalView({ listings, day, money, placeBid, listItem, withdrawListing,
               </View>
               {listing.sellerId === 'player' && <Text style={anStyles.yourTag}>Your listing</Text>}
             </View>
+            {listing.animalGenes && (() => {
+              const genes = listing.animalGenes!;
+              return (
+                <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                  {(['production', 'hardiness', 'growth', 'value'] as const).map((key, i) => {
+                    const gColor = ['#4caf50', '#64b5f6', '#ce93d8', '#ffcc80'][i];
+                    const { grade: g } = geneLabel(genes[key]);
+                    return (
+                      <Text key={key} style={{ color: gColor, fontSize: 10, backgroundColor: gColor + '22', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 }}>
+                        {['Prd', 'Hrd', 'Grw', 'Val'][i]} {g}
+                      </Text>
+                    );
+                  })}
+                </View>
+              );
+            })()}
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={anStyles.currentBid}>${listing.currentBid.toLocaleString()}</Text>
