@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-nati
 import { useGameStore, HenilBatch, OwnedAttachment, IncubationBatch } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import ProductionBuildingsSection from '../ops/ProductionBuildingsSection';
+import { milkGradeMultiplier, shouldInspect, inspectorFine } from '../../engine/productionBuildings';
 
 function HenilAndBuildingsSection() {
   const {
@@ -118,7 +119,7 @@ function AnimalQualitySection({
 }: {
   milkGrades: Record<string, 'A' | 'B' | 'C'>;
   animalWelfareScores: Record<string, number>;
-  productionBuildings: { animalTypeId: string }[];
+  productionBuildings: { animalTypeId: string; hygiene: number }[];
 }) {
   if (productionBuildings.length === 0) return null;
 
@@ -161,8 +162,18 @@ function AnimalQualitySection({
                     {DAIRY_LABELS[typeId] ?? typeId}
                   </Text>
                   <View style={{ backgroundColor: badgeColor, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                    <Text style={{ color: C.white, fontSize: 11, fontWeight: 'bold' }}>Grade {grade}</Text>
+                    <Text style={{ color: C.white, fontSize: 11, fontWeight: 'bold' }}>
+                      Grade {grade} ×{milkGradeMultiplier(grade).toFixed(2)}
+                    </Text>
                   </View>
+                  {(() => {
+                    const pb = productionBuildings.find(b => b.animalTypeId === typeId);
+                    if (!pb || !shouldInspect(pb.hygiene)) return null;
+                    const fine = inspectorFine(pb.hygiene);
+                    return fine > 0 ? (
+                      <Text style={{ color: '#ef5350', fontSize: 10, marginLeft: 4 }}>⚠ Inspection risk ·${fine.toLocaleString()} fine</Text>
+                    ) : null;
+                  })()}
                 </View>
               );
             })}
