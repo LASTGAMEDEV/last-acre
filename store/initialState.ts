@@ -277,6 +277,8 @@ export function makeInitialState() {
     employerReputation: 50,
     bankrupt: false,
     familyLoanUsedDay: null as number | null,
+    paydayLoanUsedDay: null as number | null,
+    coopRescueLoanDay: null as number | null,
     pendingChoiceEvent: null as import('../data/choiceEvents').ChoiceEventTemplate | null,
     firedChoiceEventIds: [] as string[],
     sellPressures: [] as { cropId: string; modifier: number; expiresDay: number }[],

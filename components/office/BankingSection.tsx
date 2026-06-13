@@ -15,6 +15,7 @@ import {
   timeDepositPayout,
   timeDepositMatured,
 } from '../../engine/banking';
+import { MACHINE_TYPES } from '../../data/machineTypes';
 
 const TERM_OPTIONS = [
   { days: 30, label: '30d' },
@@ -38,7 +39,11 @@ function BankingSection() {
     requestLoan, repayLoan, depositSavings, withdrawSavings,
     openTimeDeposit, closeTimeDeposit, resetGame, renegotiateLoan,
     familyLoanUsedDay, takeFamilyLoan, parcels, emergencyLeaseback,
-  } = useGameStore();
+    machines, trailers, attachments,
+    liquidateAllMachinery, consolidateDebt, takePaydayLoan, takeCoopEmergencyRescue,
+    coopMemberships, reputation,
+    paydayLoanUsedDay, coopRescueLoanDay,
+  } = useGameStore() as any;
 
   const [loanAmount, setLoanAmount]   = useState('');
   const [termDays, setTermDays]       = useState(90);
@@ -216,6 +221,194 @@ function BankingSection() {
                   </View>
                 );
               })
+            )}
+          </View>
+        );
+      })()}
+
+      {/* Equipment Liquidation */}
+      {(() => {
+        const allMachines = [...(machines ?? []), ...(trailers ?? []), ...(attachments ?? [])];
+        if (allMachines.length === 0) return null;
+        const totalDebt = loans.filter((l: any) => !l.paid && !l.defaulted).reduce((s: number, l: any) => s + l.totalOwed, 0);
+        const inDistress = money < totalDebt * 0.2 || (money < 3000 && totalDebt > 0) || loans.some((l: any) => l.defaulted && !l.paid);
+        if (!inDistress) return null;
+        let liquidationValue = 0;
+        for (const m of (machines ?? [])) {
+          const type = MACHINE_TYPES.find((t: any) => t.id === m.typeId);
+          if (type) liquidationValue += Math.round(type.cost * 0.40 * ((m.condition ?? 100) / 100));
+        }
+        for (const t of (trailers ?? [])) {
+          const type = MACHINE_TYPES.find((mt: any) => mt.id === t.typeId);
+          if (type) liquidationValue += Math.round(type.cost * 0.40);
+        }
+        for (const a of (attachments ?? [])) {
+          const type = MACHINE_TYPES.find((mt: any) => mt.id === a.typeId);
+          if (type) liquidationValue += Math.round(type.cost * 0.40);
+        }
+        return (
+          <View style={[styles.section, { borderColor: '#c8380a55', borderWidth: 1 }]}>
+            <Text style={[styles.sectionTitle, { color: '#ff7043' }]}>🔧 Emergency Equipment Liquidation</Text>
+            <Text style={{ color: C.textMuted, fontSize: F.size.sm, marginBottom: 10, lineHeight: 18 }}>
+              Sell all machinery, trailers, and attachments immediately at 40% of purchase value. You will lose access to field operations until you re-buy equipment.
+            </Text>
+            <View style={{ backgroundColor: C.bgDeep, borderRadius: R.sm, padding: S.sm, marginBottom: 10 }}>
+              <Text style={{ color: C.textMuted, fontSize: F.size.xs, marginBottom: 2 }}>Machines to liquidate: {allMachines.length}</Text>
+              <Text style={{ color: '#ff7043', fontWeight: 'bold', fontSize: F.size.lg }}>Receive ${liquidationValue.toLocaleString()}</Text>
+            </View>
+            <TouchableOpacity
+              style={{ backgroundColor: '#7f2a0a', borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: '#ff5722' }}
+              onPress={() => Alert.alert(
+                '🔧 Liquidate All Equipment',
+                `Sell all ${allMachines.length} machine(s) for $${liquidationValue.toLocaleString()}?\n\nAll field jobs will be cancelled. Equipment must be re-purchased.`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: `Sell All · $${liquidationValue.toLocaleString()}`, style: 'destructive', onPress: liquidateAllMachinery },
+                ]
+              )}
+            >
+              <Text style={{ color: '#ffccbc', fontWeight: 'bold', fontSize: F.size.md }}>Liquidate All Equipment · ${liquidationValue.toLocaleString()}</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })()}
+
+      {/* Debt Consolidation */}
+      {(() => {
+        const activeLoans = loans.filter((l: any) => !l.paid && !l.defaulted);
+        if (activeLoans.length < 2) return null;
+        const totalPrincipal = activeLoans.reduce((s: number, l: any) => s + l.principal, 0);
+        const avgRate = activeLoans.reduce((s: number, l: any) => s + l.rate, 0) / activeLoans.length;
+        const consolidatedRate = Math.min(avgRate + 0.05, 0.35);
+        const totalOwed = Math.round(totalPrincipal * (1 + consolidatedRate * 270 / 365));
+        return (
+          <View style={[styles.section, { borderColor: '#546e7a55', borderWidth: 1 }]}>
+            <Text style={[styles.sectionTitle, { color: '#90caf9' }]}>🔀 Debt Restructuring</Text>
+            <Text style={{ color: C.textMuted, fontSize: F.size.sm, marginBottom: 10, lineHeight: 18 }}>
+              Merge all {activeLoans.length} active loans into one consolidated loan at a fixed 270-day term. Simplifies repayment but incurs a 5% rate penalty.
+            </Text>
+            <View style={{ backgroundColor: C.bgDeep, borderRadius: R.sm, padding: S.sm, marginBottom: 10 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text style={{ color: C.textMuted, fontSize: F.size.xs }}>Combined principal</Text>
+                <Text style={{ color: C.text, fontSize: F.size.xs, fontWeight: 'bold' }}>${totalPrincipal.toLocaleString()}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text style={{ color: C.textMuted, fontSize: F.size.xs }}>Consolidated rate</Text>
+                <Text style={{ color: '#ef9a9a', fontSize: F.size.xs, fontWeight: 'bold' }}>{(consolidatedRate * 100).toFixed(1)}% APR</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ color: C.textMuted, fontSize: F.size.xs }}>Total to repay</Text>
+                <Text style={{ color: '#ef9a9a', fontWeight: 'bold', fontSize: F.size.sm }}>${totalOwed.toLocaleString()}</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={{ backgroundColor: '#0d2a40', borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: '#546e7a' }}
+              onPress={() => Alert.alert(
+                '🔀 Consolidate Debt',
+                `Merge ${activeLoans.length} loans (total $${totalPrincipal.toLocaleString()}) into one 270-day loan at ${(consolidatedRate * 100).toFixed(1)}%?\n\nTotal to repay: $${totalOwed.toLocaleString()}`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Consolidate', onPress: consolidateDebt },
+                ]
+              )}
+            >
+              <Text style={{ color: '#90caf9', fontWeight: 'bold', fontSize: F.size.md }}>Consolidate {activeLoans.length} Loans · ${totalOwed.toLocaleString()}</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })()}
+
+      {/* Payday Lender */}
+      {(() => {
+        const COOLDOWN = 90;
+        const lastUsed = paydayLoanUsedDay ?? null;
+        const cooldownLeft = lastUsed !== null ? Math.max(0, COOLDOWN - (day - lastUsed)) : 0;
+        const isCrisis = money < 1000 || loans.some((l: any) => l.defaulted && !l.paid);
+        if (!isCrisis && cooldownLeft === 0) return null;
+        const termDays = 21;
+        const rate = 0.40;
+        const principal = 2500;
+        const totalOwed = Math.round(principal * (1 + rate * termDays / 365));
+        return (
+          <View style={[styles.section, { borderColor: '#ff6f0055', borderWidth: 1 }]}>
+            <Text style={[styles.sectionTitle, { color: '#ffa726' }]}>🦈 Short-term Emergency Lender</Text>
+            <Text style={{ color: C.textMuted, fontSize: F.size.sm, marginBottom: 10, lineHeight: 18 }}>
+              A predatory lender offers quick cash with no credit check. Extremely high interest — only use as a last resort.
+            </Text>
+            {cooldownLeft > 0 ? (
+              <Text style={{ color: '#888', fontSize: F.size.sm }}>Available again in {cooldownLeft} days.</Text>
+            ) : isCrisis ? (
+              <>
+                <View style={{ backgroundColor: C.bgDeep, borderRadius: R.sm, padding: S.sm, marginBottom: 10 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ color: C.textMuted, fontSize: F.size.xs }}>Amount received</Text>
+                    <Text style={{ color: C.green, fontSize: F.size.xs, fontWeight: 'bold' }}>${principal.toLocaleString()}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ color: C.textMuted, fontSize: F.size.xs }}>Interest rate</Text>
+                    <Text style={{ color: '#ef9a9a', fontSize: F.size.xs, fontWeight: 'bold' }}>40% APR — {termDays}-day term</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: C.textMuted, fontSize: F.size.xs }}>Total to repay</Text>
+                    <Text style={{ color: '#ef9a9a', fontWeight: 'bold', fontSize: F.size.sm }}>${totalOwed.toLocaleString()}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#7f3300', borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: '#ff6f00' }}
+                  onPress={() => Alert.alert(
+                    '🦈 Predatory Loan',
+                    `Borrow $${principal.toLocaleString()} at 40% APR?\n\nYou must repay $${totalOwed.toLocaleString()} within ${termDays} days or face default.`,
+                    [
+                      { text: 'Walk away', style: 'cancel' },
+                      { text: `Take $${principal.toLocaleString()}`, style: 'destructive', onPress: takePaydayLoan },
+                    ]
+                  )}
+                >
+                  <Text style={{ color: '#ffe0b2', fontWeight: 'bold', fontSize: F.size.md }}>Borrow $2,500 · 40% APR · 21 days</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <Text style={{ color: '#888', fontSize: F.size.sm }}>Available when cash is below $1,000 or a loan is in default.</Text>
+            )}
+          </View>
+        );
+      })()}
+
+      {/* Co-op Emergency Rescue */}
+      {(() => {
+        const isMember = Object.values(coopMemberships ?? {}).some((m: any) => m?.active);
+        if (!isMember) return null;
+        const repScore = reputation?.score ?? 0;
+        if (repScore < 40) return null;
+        const COOLDOWN = 720;
+        const lastUsed = coopRescueLoanDay ?? null;
+        const cooldownLeft = lastUsed !== null ? Math.max(0, COOLDOWN - (day - lastUsed)) : 0;
+        const isCrisis = money < 3000 || loans.some((l: any) => l.defaulted && !l.paid);
+        if (!isCrisis && cooldownLeft === 0) return null;
+        return (
+          <View style={[styles.section, { borderColor: '#1b5e2055', borderWidth: 1 }]}>
+            <Text style={[styles.sectionTitle, { color: '#a5d6a7' }]}>🤝 Co-op Emergency Rescue</Text>
+            <Text style={{ color: C.textMuted, fontSize: F.size.sm, marginBottom: 10, lineHeight: 18 }}>
+              Your co-op values your {repScore}-point reputation. Members have voted to offer an emergency advance on future dividends — interest-free, due in 90 days.
+            </Text>
+            {cooldownLeft > 0 ? (
+              <Text style={{ color: '#888', fontSize: F.size.sm }}>Available again in {cooldownLeft} days (usable once every 2 years).</Text>
+            ) : isCrisis ? (
+              <TouchableOpacity
+                style={{ backgroundColor: '#1b3a1b', borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: '#388e3c' }}
+                onPress={() => Alert.alert(
+                  '🤝 Co-op Emergency Advance',
+                  'Your co-op will advance $5,000 against future dividends.\n\n0% interest · repay within 90 days.\n\nThis is available once every 2 years.',
+                  [
+                    { text: 'Not now', style: 'cancel' },
+                    { text: 'Accept $5,000 · 0%', onPress: takeCoopEmergencyRescue },
+                  ]
+                )}
+              >
+                <Text style={{ color: '#c8e6c9', fontWeight: 'bold', fontSize: F.size.md }}>Accept $5,000 Advance · 0% · 90 days</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={{ color: '#888', fontSize: F.size.sm }}>Available when cash is below $3,000 or a loan is in default.</Text>
             )}
           </View>
         );

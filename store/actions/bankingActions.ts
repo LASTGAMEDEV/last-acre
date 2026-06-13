@@ -9,6 +9,7 @@ import {
   timeDepositMatured,
   timeDepositPayout,
 } from '../../engine/banking';
+import { MACHINE_TYPES } from '../../data/machineTypes';
 import type { ActionFactory } from './types';
 
 export interface BankingActions {
@@ -23,6 +24,10 @@ export interface BankingActions {
   clearBankruptcy: () => void;
   takeFamilyLoan: () => void;
   emergencyLeaseback: (parcelId: string) => void;
+  liquidateAllMachinery: () => void;
+  consolidateDebt: () => void;
+  takePaydayLoan: () => void;
+  takeCoopEmergencyRescue: () => void;
 }
 
 export const createBankingActions: ActionFactory<BankingActions> = (set, get) => ({
@@ -189,5 +194,118 @@ export const createBankingActions: ActionFactory<BankingActions> = (set, get) =>
           : p
       ),
     });
+  },
+
+  liquidateAllMachinery: () => {
+    const state = get();
+    if (state.machines.length === 0 && state.trailers.length === 0 && state.attachments.length === 0) return;
+    let cashGained = 0;
+    for (const m of state.machines) {
+      const type = MACHINE_TYPES.find(t => t.id === m.typeId);
+      if (!type) continue;
+      const condition = m.condition ?? 100;
+      cashGained += Math.round(type.cost * 0.40 * (condition / 100));
+    }
+    for (const t of state.trailers) {
+      const type = MACHINE_TYPES.find(mt => mt.id === t.typeId);
+      if (!type) continue;
+      cashGained += Math.round(type.cost * 0.40);
+    }
+    for (const a of state.attachments) {
+      const type = MACHINE_TYPES.find(mt => mt.id === a.typeId);
+      if (!type) continue;
+      cashGained += Math.round(type.cost * 0.40);
+    }
+    set({
+      money: state.money + cashGained,
+      machines: [],
+      trailers: [],
+      attachments: [],
+      tractorJobs: [],
+      harvestJobs: [],
+    });
+  },
+
+  consolidateDebt: () => {
+    const state = get();
+    const activeLoans = state.loans.filter(l => !l.paid && !l.defaulted);
+    if (activeLoans.length < 2) return;
+    const totalPrincipal = activeLoans.reduce((s, l) => s + l.principal, 0);
+    const avgRate = activeLoans.reduce((s, l) => s + l.rate, 0) / activeLoans.length;
+    const consolidatedRate = Math.min(avgRate + 0.05, 0.35);
+    const termDays = 270;
+    const totalOwed = loanTotalOwed(totalPrincipal, consolidatedRate, termDays);
+    const consolidatedLoan: Loan = {
+      id: `loan_consolidated_${state.day}`,
+      label: '🔀 Consolidated Debt',
+      principal: totalPrincipal,
+      rate: consolidatedRate,
+      startDay: state.day,
+      termDays,
+      payoffDay: state.day + termDays,
+      totalOwed,
+      paid: false,
+      defaulted: false,
+    };
+    const oldLoanHistory = activeLoans.map(l => ({ loanId: l.id, paidOnTime: false }));
+    set({
+      loans: [
+        ...state.loans.map(l => activeLoans.some(al => al.id === l.id) ? { ...l, paid: true } : l),
+        consolidatedLoan,
+      ],
+      loanHistory: [...state.loanHistory, ...oldLoanHistory],
+    });
+  },
+
+  takePaydayLoan: () => {
+    const state = get();
+    const COOLDOWN = 90;
+    const lastUsed = (state as any).paydayLoanUsedDay ?? null;
+    if (lastUsed !== null && state.day - lastUsed < COOLDOWN) return;
+    const isCrisis = state.money < 1000 || state.loans.some(l => l.defaulted && !l.paid);
+    if (!isCrisis) return;
+    const principal = 2500;
+    const rate = 0.40;
+    const termDays = 21;
+    const totalOwed = Math.round(principal * (1 + rate * termDays / 365));
+    const loan: Loan = {
+      id: `loan_payday_${state.day}`,
+      label: '🦈 Payday Lender',
+      principal,
+      rate,
+      startDay: state.day,
+      termDays,
+      payoffDay: state.day + termDays,
+      totalOwed,
+      paid: false,
+      defaulted: false,
+    };
+    set({ money: state.money + principal, loans: [...state.loans, loan], paydayLoanUsedDay: state.day } as any);
+  },
+
+  takeCoopEmergencyRescue: () => {
+    const state = get();
+    const COOLDOWN = 720;
+    const lastUsed = (state as any).coopRescueLoanDay ?? null;
+    if (lastUsed !== null && state.day - lastUsed < COOLDOWN) return;
+    const isMember = Object.values(state.coopMemberships ?? {}).some((m: any) => m?.active);
+    if (!isMember) return;
+    if (state.reputation.score < 40) return;
+    const isCrisis = state.money < 3000 || state.loans.some(l => l.defaulted && !l.paid);
+    if (!isCrisis) return;
+    const principal = 5000;
+    const loan: Loan = {
+      id: `loan_coop_rescue_${state.day}`,
+      label: '🤝 Co-op Emergency Advance',
+      principal,
+      rate: 0,
+      startDay: state.day,
+      termDays: 90,
+      payoffDay: state.day + 90,
+      totalOwed: principal,
+      paid: false,
+      defaulted: false,
+    };
+    set({ money: state.money + principal, loans: [...state.loans, loan], coopRescueLoanDay: state.day } as any);
   },
 });
