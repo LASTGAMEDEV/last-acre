@@ -104,12 +104,36 @@ function ContractsSection() {
           const bonusPrice = (marketPrice * t.priceBonus).toFixed(2);
           const negotiatedPrice = (marketPrice * t.priceBonus * 1.10).toFixed(2);
           const isNegotiating = negotiatingId === t.id;
+          const cannotGrow = (crop?.growthDays ?? 999) > t.termDays;
+          const isTimeTight = !cannotGrow && (crop?.growthDays ?? 0) > t.termDays * 0.75;
+          const currentStock = Math.round((inventory as Record<string, number>)[t.cropId] ?? 0);
+          const stockGap = Math.max(0, t.amountRange[0] - currentStock);
+          const riskFlags: { level: 'danger' | 'warn'; text: string }[] = [];
+          if (t.penaltyRate >= 0.50) {
+            riskFlags.push({ level: 'danger', text: `High penalty (${(t.penaltyRate * 100).toFixed(0)}%) — defaulting wipes all profit` });
+          } else if (t.penaltyRate >= 0.35) {
+            riskFlags.push({ level: 'warn', text: `Penalty ${(t.penaltyRate * 100).toFixed(0)}% — significant loss if you default` });
+          }
+          if (cannotGrow) {
+            riskFlags.push({ level: 'danger', text: `Crop takes ${crop?.growthDays}d to grow — ${stockGap > 0 ? `need ${stockGap.toLocaleString()} ${unit} more in stock` : 'must use existing stock'} for ${t.termDays}d term` });
+          } else if (isTimeTight) {
+            riskFlags.push({ level: 'warn', text: `Tight schedule — ${crop?.growthDays}d crop, only ${t.termDays}d term` });
+          }
           return (
             <View key={t.id} style={styles.offerCard}>
               <View style={styles.offerTitleRow}>
                 <Text style={styles.offerName}>{t.name}</Text>
                 {crop && <GuideButton entryId={GUIDE_ENTRY_IDS.crop(crop.id)} compact />}
               </View>
+              {riskFlags.length > 0 && (
+                <View style={styles.riskPanel}>
+                  {riskFlags.map((flag, i) => (
+                    <Text key={i} style={flag.level === 'danger' ? styles.riskDanger : styles.riskWarn}>
+                      {flag.level === 'danger' ? '⛔' : '⚠️'} {flag.text}
+                    </Text>
+                  ))}
+                </View>
+              )}
               <Text style={styles.offerDetail}>
                 {crop?.name} · {t.amountRange[0].toLocaleString()}–{t.amountRange[1].toLocaleString()} {unit}
               </Text>
@@ -333,6 +357,9 @@ const styles = StyleSheet.create({
   progressLabel: { color: C.textFaint, fontSize: F.size.xs },
   offerCard: { backgroundColor: '#1b3a4b', borderRadius: R.md, padding: S.md, marginBottom: 10 },
   offerTitleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: S.sm, marginBottom: S.xs },
+  riskPanel: { backgroundColor: '#1a0505', borderRadius: R.sm, padding: 7, marginBottom: S.xs, gap: 3 },
+  riskDanger: { color: '#ef5350', fontSize: 10 },
+  riskWarn: { color: '#ffb74d', fontSize: 10 },
   offerName: { flex: 1, color: C.text, fontWeight: 'bold', fontSize: F.size.lg },
   offerDetail: { color: '#aaa', fontSize: F.size.sm, marginBottom: 2 },
   offerBtns: { flexDirection: 'row', gap: 8, marginTop: 10 },
