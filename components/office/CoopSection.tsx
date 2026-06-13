@@ -11,6 +11,13 @@ import {
   getSeason,
   isCoopActive,
   getYear,
+  getSeedDiscount,
+  getFertilizerDiscount,
+  getFeedDiscount,
+  getVetDiscount,
+  calculateRedemptionMultiplier,
+  calculateSharePriceDelta,
+  getHandlingFee,
 } from '../../engine/cooperatives';
 
 function CoopPanel({ coopId }: { coopId: CoopId }) {
@@ -74,6 +81,28 @@ function CoopPanel({ coopId }: { coopId: CoopId }) {
           <Text style={styles.coopDetail}>Floor price: {coopState.terms.floorPct}% of 90-day avg</Text>
           <Text style={styles.coopDetail}>Annual fee: ${coopState.terms.annualFeePerShare}/share/yr</Text>
           <Text style={styles.coopDetail}>Dividend: {coopState.terms.dividendPct}% of net profit</Text>
+
+          {(() => {
+            const seedD = Math.round(getSeedDiscount(coopId) * 100);
+            const fertD = Math.round(getFertilizerDiscount(coopId) * 100);
+            const feedD = coopId === 'livestock' ? Math.round(getFeedDiscount() * 100) : 0;
+            const vetD = coopId === 'livestock' ? Math.round(getVetDiscount() * 100) : 0;
+            const fee = Math.round(getHandlingFee(coopState.health) * 100);
+            const priceDelta = calculateSharePriceDelta(coopState.health);
+            return (
+              <View>
+                <Text style={styles.coopSectionLabel}>Member Benefits</Text>
+                <Text style={styles.coopDetail}>🌱 Seeds: −{seedD}%</Text>
+                {fertD > 0 && <Text style={styles.coopDetail}>🌿 Fertilizer: −{fertD}%</Text>}
+                {feedD > 0 && <Text style={styles.coopDetail}>🥗 Animal feed: −{feedD}%</Text>}
+                {vetD > 0 && <Text style={styles.coopDetail}>💉 Vet costs: −{vetD}%</Text>}
+                <Text style={styles.coopDetail}>💼 Pool handling fee: {fee}% at current health</Text>
+                <Text style={[styles.coopDetail, { color: priceDelta > 0 ? C.green : priceDelta < 0 ? '#ef5350' : '#888' }]}>
+                  📈 Share value: {priceDelta > 0 ? `+${Math.round(priceDelta * 100)}%` : priceDelta < 0 ? `${Math.round(priceDelta * 100)}%` : 'stable'}/yr at current health
+                </Text>
+              </View>
+            );
+          })()}
 
           {membership ? (
             <View>
@@ -182,11 +211,22 @@ function CoopPanel({ coopId }: { coopId: CoopId }) {
                 );
               })}
 
-              {!membership.pendingRedemption && (
-                <TouchableOpacity style={styles.leaveBtn} onPress={() => leaveCoop(coopId)}>
-                  <Text style={styles.leaveBtnText}>Request Exit (1-season delay)</Text>
-                </TouchableOpacity>
-              )}
+              {!membership.pendingRedemption && (() => {
+                const redeemMult = calculateRedemptionMultiplier(coopState.health);
+                const equityValue = Math.round(membership.shares * membership.sharePrice);
+                const redeemValue = Math.round(equityValue * redeemMult);
+                return (
+                  <View>
+                    <Text style={[styles.coopDetail, { color: redeemMult < 1.0 ? '#ef5350' : '#888', marginTop: 6 }]}>
+                      Exit payout: ${redeemValue.toLocaleString()} ({Math.round(redeemMult * 100)}% of ${equityValue.toLocaleString()})
+                      {redeemMult < 1.0 ? ' — raise coop health to recover full value' : ''}
+                    </Text>
+                    <TouchableOpacity style={styles.leaveBtn} onPress={() => leaveCoop(coopId)}>
+                      <Text style={styles.leaveBtnText}>Request Exit (1-season delay)</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })()}
             </View>
           ) : (
             <View>
