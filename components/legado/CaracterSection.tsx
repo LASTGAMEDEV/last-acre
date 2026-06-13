@@ -1,8 +1,8 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { gameDayToCalendarYear } from '../../engine/calendarUtils';
-import { FarmerSkills, farmerAge } from '../../engine/dynasty';
-import { annualLegacyDelta } from '../../engine/legacyScore';
+import { FarmerSkills, farmerAge, annualHealthDelta } from '../../engine/dynasty';
+import { annualLegacyDelta, handoffLegacyContribution } from '../../engine/legacyScore';
 import { useGameStore } from '../../store/useGameStore';
 import { C, F, R } from '../../constants/theme';
 
@@ -38,6 +38,16 @@ export default function CaracterSection() {
           <View style={styles.barTrack}>
             <View style={[styles.barFill, { width: `${healthPct}%`, backgroundColor: healthColor }]} />
           </View>
+          {(() => {
+            const delta = annualHealthDelta(farmer, calYear);
+            if (delta === 0) return null;
+            const yearsLeft = Math.floor(healthPct / Math.abs(delta));
+            return (
+              <Text style={[styles.note, { marginTop: 4, color: delta <= -1.0 ? '#ef5350' : '#ff9800' }]}>
+                {delta}/yr health decline · ~{yearsLeft}yr until handoff
+              </Text>
+            );
+          })()}
         </View>
 
         <View style={[styles.labelRow, styles.legacyRow]}>
@@ -105,6 +115,17 @@ export default function CaracterSection() {
       <View style={[styles.card, styles.handoffCard]}>
         <Text style={[styles.sectionTitle, { color: '#ef5350' }]}>Pass the Farm</Text>
         <Text style={styles.emptyNote}>Ready to hand the reins to the next generation? This cannot be undone.</Text>
+        {(() => {
+          const ownedHa = (parcels ?? []).filter((p: any) => p.owned).reduce((s: number, p: any) => s + p.hectares, 0);
+          const hasDebt = (loans ?? []).some((l: any) => !l.paid && !l.defaulted);
+          const startYear = farmer.birthYear + 20;
+          const contribution = handoffLegacyContribution(farmer, startYear, calYear, { ownedHectares: ownedHa, hasDebt });
+          return (
+            <Text style={[styles.note, { color: '#c8860a', marginBottom: 8 }]}>
+              Handoff now adds ~{contribution} legacy pts · earn more by farming longer
+            </Text>
+          );
+        })()}
         <TouchableOpacity style={styles.handoffBtn} onPress={triggerVoluntaryHandoff}>
           <Text style={styles.handoffBtnText}>Begin Voluntary Handoff</Text>
         </TouchableOpacity>
