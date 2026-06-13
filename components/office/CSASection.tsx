@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
-import { CSACommitment, CSA_TIER_PRICES, CSA_WEEKS_PER_SEASON, seasonRevenue, renewalProbability } from '../../engine/csa';
+import { CSACommitment, CSA_TIER_PRICES, CSA_WEEKS_PER_SEASON, seasonRevenue, renewalProbability, totalKgNeeded } from '../../engine/csa';
 import GuideButton from '../GuideButton';
 
 export default function CSASection() {
@@ -70,6 +70,11 @@ export default function CSASection() {
         <View style={csa.card}>
           <Text style={csa.cardTitle}>Season Commitment</Text>
           <Text style={csa.row}>Current: {totalBoxes} boxes/week</Text>
+          {csaCommitment && totalBoxes > 0 && (
+            <Text style={csa.muted}>
+              ~{Math.round(totalKgNeeded(csaCommitment))} kg produce needed per week
+            </Text>
+          )}
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
             {presets.map(p => (
               <TouchableOpacity
@@ -85,6 +90,9 @@ export default function CSASection() {
                   csaCommitment?.mediumBoxes === p.commitment.mediumBoxes &&
                   csaCommitment?.largeBoxes === p.commitment.largeBoxes && { color: '#fff' }]}>
                   {p.label}
+                </Text>
+                <Text style={[csa.chipText, { fontSize: 10, color: '#888' }]}>
+                  ~{Math.round(totalKgNeeded(p.commitment))} kg/wk
                 </Text>
               </TouchableOpacity>
             ))}
