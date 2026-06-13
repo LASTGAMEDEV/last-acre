@@ -80,6 +80,20 @@ function WorkerDetail({ worker, onClose }: { worker: Worker; onClose: () => void
             </TouchableOpacity>
           ))}
         </View>
+        {(() => {
+          const hints: Record<string, string> = {
+            day:      '☀️ Standard wage · summer heat: −30% productivity',
+            twilight: '🌅 Standard wage · hay/silage harvest quality bonus',
+            night:    '🌙 ×1.5 wage cost · irrigation +25% eff, −40% electricity',
+            any:      '⚡ Game picks optimal window per operation type',
+          };
+          const hint = hints[worker.shiftPreference ?? 'any'];
+          return hint ? (
+            <Text style={{ color: C.textMuted, fontSize: 10, paddingHorizontal: S.md, marginBottom: 4 }}>
+              {hint}
+            </Text>
+          ) : null;
+        })()}
 
         {/* Fatigue */}
         <Text style={st.sectionLabel}>Fatigue</Text>
