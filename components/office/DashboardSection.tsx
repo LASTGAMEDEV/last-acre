@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { getSeason } from '../../engine/climate';
 import { isReady } from '../../engine/crops';
@@ -60,7 +60,9 @@ function DashboardSection() {
     seasonStartRevenue, totalRevenue, parcels, animals, npcFarms, salesLog,
     personalRecords, inventory, prices, animalWelfareScores, reputation, farmStyle,
     animalInventory, machines, workers, family, savedRations, silageLevel,
-  } = useGameStore();
+    dismissedHints, dismissHint, reputationHistory, newsEvents, listings,
+    pendingLandOpportunities,
+  } = useGameStore() as any;
   const season = getSeason(day);
   const theme = SEASON_THEME[season];
   const calYear = gameDayToCalendarYear(day);
@@ -229,30 +231,61 @@ function DashboardSection() {
   const farmIdentity = (isOrganicFarm ? 'Organic ' : '') + farmTypeLabel;
 
   // ── Opportunity & tip cards ───────────────────────────────────────────────
-  type OpCard = { icon: string; title: string; detail: string; kind: 'opportunity' | 'tip' | 'warning' };
-  const opCards: OpCard[] = [];
+  type OpCard = { id: string; icon: string; title: string; detail: string; kind: 'opportunity' | 'tip' | 'warning'; dismissable?: boolean };
+  const allOpCards: OpCard[] = [];
+  const dismissed = dismissedHints ?? [];
+  const weekBucket = Math.floor(day / 7);
 
   CROP_TYPES.forEach(crop => {
     const qty = inventory[crop.id] ?? 0;
     if (qty <= 0) return;
     const currentPrice = prices.find(p => p.cropId === crop.id)?.price ?? crop.basePrice;
     if (currentPrice >= crop.basePrice * 1.25) {
-      opCards.push({
+      allOpCards.push({
+        id: `op_price_${crop.id}_w${weekBucket}`,
         icon: '📈',
         title: `${crop.name} prices are high`,
         detail: `$${currentPrice.toFixed(2)} (+${Math.round((currentPrice / crop.basePrice - 1) * 100)}%) — ${qty.toLocaleString()} units in stock.`,
         kind: 'opportunity',
+        dismissable: true,
       });
     }
   });
 
   const idleParcels = ownedParcels.filter(p => !p.plantedCrop);
   if (idleParcels.length > 0) {
-    opCards.push({
+    allOpCards.push({
+      id: `op_idle_plots_w${weekBucket}`,
       icon: '🌱',
       title: `${idleParcels.length} idle plot${idleParcels.length > 1 ? 's' : ''} ready to plant`,
       detail: `${idleParcels.length > 1 ? 'These' : 'This'} can be planted this ${season}.`,
       kind: 'tip',
+      dismissable: true,
+    });
+  }
+
+  // Neighbor land opportunities
+  if ((pendingLandOpportunities ?? []).length > 0) {
+    allOpCards.push({
+      id: `op_land_opp_w${weekBucket}`,
+      icon: '🏡',
+      title: `${pendingLandOpportunities.length} land opportunit${pendingLandOpportunities.length > 1 ? 'ies' : 'y'} from neighbors`,
+      detail: 'A neighbor has land available for purchase. Check the Neighbors section.',
+      kind: 'opportunity',
+      dismissable: true,
+    });
+  }
+
+  // Auction bargains
+  const goodAuctions = (listings ?? []).filter((l: any) => !l.resolved && l.category === 'land' && l.currentBid < (l.parcel?.pricePerHa ?? 99999) * (l.parcel?.hectares ?? 1) * 0.6);
+  if (goodAuctions.length > 0) {
+    allOpCards.push({
+      id: `op_auction_w${weekBucket}`,
+      icon: '🏷️',
+      title: `${goodAuctions.length} auction bargain${goodAuctions.length > 1 ? 's' : ''} available`,
+      detail: 'Land listed in the auction house at below-market prices. Check the Auction section.',
+      kind: 'opportunity',
+      dismissable: true,
     });
   }
 
@@ -270,11 +303,11 @@ function DashboardSection() {
     }, 0);
     const grainDaysLeft = dailyGrainDemand > 0 ? Math.floor(grainStock / dailyGrainDemand) : 999;
     const hayDaysLeft = dailyHayDemand > 0 ? Math.floor(hayStock / dailyHayDemand) : 999;
-    // Warn if critical (< 7 days) or winter is approaching (season === 'autumn' and < 60 days feed)
     const winterApproaching = season === 'autumn';
     const winterDaysNeeded = 90;
     if (dailyGrainDemand > 0 && (grainDaysLeft < 7 || (winterApproaching && grainDaysLeft < winterDaysNeeded))) {
-      opCards.push({
+      allOpCards.push({
+        id: `op_grain_w${weekBucket}`,
         icon: '🌾',
         title: grainDaysLeft < 7 ? 'Grain reserves critically low' : 'Grain: not enough for winter',
         detail: `${grainDaysLeft}d left at ${dailyGrainDemand.toFixed(1)} kg/day. ${winterApproaching ? `Need ~${Math.round(dailyGrainDemand * winterDaysNeeded)} kg for winter.` : 'Buy or grow grain now.'}`,
@@ -282,7 +315,8 @@ function DashboardSection() {
       });
     }
     if (dailyHayDemand > 0 && (hayDaysLeft < 7 || (winterApproaching && hayDaysLeft < winterDaysNeeded))) {
-      opCards.push({
+      allOpCards.push({
+        id: `op_hay_w${weekBucket}`,
         icon: '🌿',
         title: hayDaysLeft < 7 ? 'Hay reserves critically low' : 'Hay: not enough for winter',
         detail: `${hayDaysLeft}d left at ${dailyHayDemand.toFixed(1)} kg/day. ${winterApproaching ? `Need ~${Math.round(dailyHayDemand * winterDaysNeeded)} kg for winter.` : 'Cut hay or buy bales now.'}`,
@@ -296,14 +330,18 @@ function DashboardSection() {
     const candidates = CROP_TYPES.filter(c => c.seasons.includes(season) && (c.tier === 'D' || c.tier === 'C'));
     const rec = candidates.find(c => c.growthDays <= 90) ?? candidates[0];
     if (rec) {
-      opCards.push({
+      allOpCards.push({
+        id: `op_beginner_${rec.id}_w${weekBucket}`,
         icon: '💡',
         title: `Beginner tip: plant ${rec.name} this ${season}`,
         detail: `${rec.growthDays}-day growth, low input cost ($${rec.seedCost}/ha seed). Great first-harvest crop.`,
         kind: 'tip',
+        dismissable: true,
       });
     }
   }
+
+  const opCards = allOpCards.filter(c => !dismissed.includes(c.id));
 
   // ── 30-Day Cashflow Forecast ─────────────────────────────────────────────
   const FORECAST_DAYS = 30;
@@ -351,11 +389,24 @@ function DashboardSection() {
   const totalProjExpenses = projWagesCost + projFamilyCost + projLoansDue;
   const netForecast = totalProjIncome - totalProjExpenses;
 
-  // ── Recent sales ─────────────────────────────────────────────────────────
-  const recentSales = salesLog
-    .filter(s => s.day >= day - 14 && s.amount > 0)
-    .sort((a, b) => b.day - a.day)
-    .slice(0, 5);
+  // ── Recent Activity timeline ──────────────────────────────────────────────
+  type ActivityItem = { day: number; icon: string; text: string; color: string };
+  const recentActivity: ActivityItem[] = [];
+  // Significant sales (≥$500)
+  for (const s of salesLog.filter((s: any) => s.day >= day - 14 && s.amount >= 500)) {
+    const icon = s.category === 'animals' ? '🐄' : s.category === 'processed' ? '🏭' : s.category === 'contracts' ? '📋' : '🌾';
+    recentActivity.push({ day: s.day, icon, text: `Sold ${s.category ?? 'goods'} for $${Math.round(s.amount).toLocaleString()}`, color: '#4caf50' });
+  }
+  // Significant reputation changes (|delta| ≥ 2)
+  for (const r of (reputationHistory ?? []).filter((r: any) => r.day >= day - 14 && Math.abs(r.delta) >= 2)) {
+    recentActivity.push({ day: r.day, icon: '⭐', text: `Reputation ${r.delta >= 0 ? '+' : ''}${r.delta.toFixed(1)}: ${r.reason}`, color: r.delta >= 0 ? '#ce93d8' : '#ef5350' });
+  }
+  // Recent news
+  for (const n of (newsEvents ?? []).filter((n: any) => n && n.day && n.day >= day - 7).slice(0, 3)) {
+    recentActivity.push({ day: n.day, icon: '📰', text: n.headline ?? n.description ?? 'Market news', color: '#90caf9' });
+  }
+  recentActivity.sort((a, b) => b.day - a.day);
+  const timelineItems = recentActivity.slice(0, 8);
 
   // ── Farm Health score ─────────────────────────────────────────────────────
   const totalDebt = loans.filter(l => !l.paid && !l.defaulted).reduce((s, l) => s + l.totalOwed, 0);
@@ -568,7 +619,7 @@ function DashboardSection() {
         <View style={dash.opCard}>
           <Text style={dash.goalsTitle}>💡 Opportunities & Tips</Text>
           {opCards.map((op, i) => (
-            <View key={i} style={[dash.opRow, i > 0 && { borderTopWidth: 1, borderTopColor: '#1a1f2e' }]}>
+            <View key={op.id} style={[dash.opRow, i > 0 && { borderTopWidth: 1, borderTopColor: '#1a1f2e' }]}>
               <Text style={dash.opIcon}>{op.icon}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={[dash.opTitle, { color: op.kind === 'opportunity' ? '#4caf50' : op.kind === 'warning' ? '#f59e0b' : '#64b5f6' }]}>
@@ -576,21 +627,25 @@ function DashboardSection() {
                 </Text>
                 <Text style={dash.opDetail}>{op.detail}</Text>
               </View>
+              {op.dismissable && (
+                <TouchableOpacity onPress={() => dismissHint(op.id)} style={dash.dismissBtn}>
+                  <Text style={dash.dismissText}>✕</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))}
         </View>
       )}
 
-      {/* Recent Sales Timeline */}
-      {recentSales.length > 0 && (
+      {/* Recent Activity Timeline */}
+      {timelineItems.length > 0 && (
         <View style={dash.goalsCard}>
-          <Text style={dash.goalsTitle}>📅 Recent Sales</Text>
-          {recentSales.map((s, i) => (
-            <View key={i} style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, i > 0 && { marginTop: 5 }]}>
-              <Text style={{ color: C.textMuted, fontSize: 11, textTransform: 'capitalize' }}>
-                {s.category ?? 'sale'} · Day {s.day}
-              </Text>
-              <Text style={{ color: '#4caf50', fontSize: 11, fontWeight: 'bold' }}>+${Math.round(s.amount).toLocaleString()}</Text>
+          <Text style={dash.goalsTitle}>📅 Recent Activity</Text>
+          {timelineItems.map((item, i) => (
+            <View key={i} style={[dash.timelineRow, i > 0 && { borderTopWidth: 1, borderTopColor: '#1a1f2e' }]}>
+              <Text style={dash.timelineIcon}>{item.icon}</Text>
+              <Text style={[dash.timelineText, { color: item.color }]}>{item.text}</Text>
+              <Text style={dash.timelineDay}>d{item.day}</Text>
             </View>
           ))}
         </View>
@@ -653,6 +708,14 @@ const dash = StyleSheet.create({
   opIcon:   { fontSize: 18, lineHeight: 22 },
   opTitle:  { fontSize: F.size.sm, fontWeight: 'bold', marginBottom: 1 },
   opDetail: { color: C.textMuted, fontSize: F.size.xs, lineHeight: 16 },
+  // Dismiss button
+  dismissBtn:  { padding: 6, marginLeft: 4 },
+  dismissText: { color: '#444', fontSize: 13, fontWeight: 'bold' },
+  // Timeline
+  timelineRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
+  timelineIcon: { fontSize: 14, width: 20, textAlign: 'center' },
+  timelineText: { flex: 1, fontSize: F.size.xs, lineHeight: 16 },
+  timelineDay:  { color: '#444', fontSize: 9, minWidth: 22, textAlign: 'right' },
   // Farm Stage
   stageCard:       { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, borderWidth: 1 },
   stageHeader:     { flexDirection: 'row', alignItems: 'center', gap: S.sm, marginBottom: S.sm },

@@ -73,11 +73,11 @@ These are the highest-impact items not yet done, in order:
 - [x] Farm Health score on dashboard
 - [x] Family living cost calculation on dashboard
 - [x] Deficient ration alert on Today priorities
-- [ ] Rank alerts by severity
-- [ ] Add opportunity cards: high prices, good weather, auction bargains, neighbor land sales
-- [ ] Add dismiss and snooze controls for low-priority cards
-- [ ] Add a timeline of recent major events
-- [ ] Add farm identity summary ("Organic grain farm", "Livestock-heavy mixed farm")
+- [x] Rank alerts by severity
+- [x] Add opportunity cards: high prices, good weather, auction bargains, neighbor land sales
+- [x] Add dismiss and snooze controls for low-priority cards
+- [x] Add a timeline of recent major events
+- [x] Add farm identity summary ("Organic grain farm", "Livestock-heavy mixed farm")
 - [ ] Add Today / This Week / This Season / This Year sections
 
 ---
