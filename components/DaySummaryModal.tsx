@@ -25,29 +25,36 @@ const SEVERITY_TEXT: Record<DaySummaryEvent['severity'], string> = {
   danger:  '#ef9a9a',
 };
 
-type EventCategory = 'Urgent' | 'Money' | 'Fields' | 'Animals' | 'Market' | 'Weather' | 'Farm';
+type EventCategory = 'Risks' | 'Money' | 'Fields' | 'Animals' | 'Family' | 'Market' | 'Weather' | 'Farm';
 
 const CATEGORY_ICONS: Record<EventCategory, string> = {
-  Urgent:  '🚨',
+  Risks:   '⚠️',
   Money:   '💰',
   Fields:  '🌾',
   Animals: '🐄',
+  Family:  '👨‍👩‍👧',
   Market:  '📊',
   Weather: '☀️',
   Farm:    '🔧',
 };
 
 function inferCategory(event: DaySummaryEvent): EventCategory {
-  if (event.severity === 'danger') return 'Urgent';
+  if (event.severity === 'danger') return 'Risks';
   const id = event.id;
-  if (id.startsWith('loan_') || id.startsWith('default_') || id.startsWith('interest') ||
+  if (id.startsWith('default_') || (id.startsWith('loan_') && event.severity === 'warning') ||
+      id.startsWith('disease') || id.startsWith('pest_') || id.startsWith('fire') ||
+      (event.severity === 'warning' && (id.startsWith('animal') || id.startsWith('field_'))))
+    return 'Risks';
+  if (id.startsWith('family_expense') || id.startsWith('family_loan') || id.startsWith('family_'))
+    return 'Family';
+  if (id.startsWith('loan_') || id.startsWith('interest') ||
       id.startsWith('cap_') || id.startsWith('subsidy') || id.startsWith('aes_') ||
       id.startsWith('disposal_fee') || id.startsWith('auction_won') || id.startsWith('auction_sold') ||
-      id.startsWith('family_expense') || id.startsWith('maintenance'))
+      id.startsWith('maintenance'))
     return 'Money';
-  if (id.startsWith('crops_ready') || id.startsWith('crop_') || id.startsWith('fire') ||
-      id.startsWith('disease') || id.startsWith('field_') || id.startsWith('organic_') ||
-      id.startsWith('hedgerow') || id.startsWith('pest_') || id.startsWith('season_change') ||
+  if (id.startsWith('crops_ready') || id.startsWith('crop_') ||
+      id.startsWith('field_') || id.startsWith('organic_') ||
+      id.startsWith('hedgerow') || id.startsWith('season_change') ||
       id.startsWith('seasonal_event') || id.startsWith('event_end'))
     return 'Fields';
   if (id.startsWith('animal') || id.startsWith('hatch_') || id.startsWith('bee_') ||
@@ -63,7 +70,7 @@ function inferCategory(event: DaySummaryEvent): EventCategory {
   return 'Farm';
 }
 
-const CATEGORY_ORDER: EventCategory[] = ['Urgent', 'Money', 'Fields', 'Animals', 'Market', 'Weather', 'Farm'];
+const CATEGORY_ORDER: EventCategory[] = ['Risks', 'Money', 'Fields', 'Animals', 'Family', 'Market', 'Weather', 'Farm'];
 
 export default function DaySummaryModal() {
   const { day, daySummary, clearDaySummary, money, prevDayMoney, reputation, prevDayReputationScore } = useGameStore();
@@ -103,25 +110,50 @@ export default function DaySummaryModal() {
         <View style={styles.header}>
           <Text style={styles.dayLabel}>DAY {day}</Text>
           <Text style={styles.headerTitle}>Day Summary</Text>
-          {prevDayMoney !== undefined && (() => {
-            const delta = Math.round(money - prevDayMoney);
-            const pos = delta >= 0;
+
+          {/* What changed since yesterday */}
+          {(() => {
+            const events = daySummary ?? [];
+            const cashDelta = prevDayMoney !== undefined ? Math.round(money - prevDayMoney) : null;
+            const repDelta = (prevDayReputationScore !== undefined && reputation?.score !== undefined)
+              ? Math.round((reputation.score - prevDayReputationScore) * 10) / 10
+              : null;
+            const harvestCount = events.filter(e => e.id.startsWith('crops_ready')).length;
+            const riskCount = events.filter(e => e.severity === 'danger' || e.severity === 'warning').length;
+            const chips = [
+              cashDelta !== null ? {
+                label: (cashDelta >= 0 ? '+' : '') + '$' + Math.abs(cashDelta).toLocaleString(),
+                color: cashDelta >= 0 ? '#4caf50' : '#ef5350',
+                bg: cashDelta >= 0 ? '#1a3a1a' : '#3a1515',
+              } : null,
+              repDelta !== null && Math.abs(repDelta) >= 0.1 ? {
+                label: (repDelta >= 0 ? '+' : '') + repDelta.toFixed(1) + ' rep',
+                color: repDelta >= 0 ? '#ce93d8' : '#ef5350',
+                bg: repDelta >= 0 ? '#2a1a3a' : '#3a1515',
+              } : null,
+              harvestCount > 0 ? {
+                label: `${harvestCount} harvest${harvestCount > 1 ? 's' : ''}`,
+                color: '#ffd54f',
+                bg: '#2a2210',
+              } : null,
+              riskCount > 0 ? {
+                label: `${riskCount} risk${riskCount > 1 ? 's' : ''}`,
+                color: '#ef9a9a',
+                bg: '#2a0a0a',
+              } : null,
+            ].filter(Boolean) as { label: string; color: string; bg: string }[];
+            if (chips.length === 0) return null;
             return (
-              <Text style={[styles.moneyDelta, { color: pos ? '#4caf50' : '#ef5350' }]}>
-                {pos ? '+' : ''}${delta.toLocaleString()} cash today
-              </Text>
-            );
-          })()}
-          {prevDayReputationScore !== undefined && reputation?.score !== undefined && (() => {
-            const repDelta = Math.round((reputation.score - prevDayReputationScore) * 10) / 10;
-            if (Math.abs(repDelta) < 0.1) return null;
-            const pos = repDelta > 0;
-            const tier = reputation.tier;
-            return (
-              <Text style={[styles.moneyDelta, { color: pos ? '#ce93d8' : '#ef5350', marginTop: 2 }]}>
-                {pos ? '+' : ''}{repDelta.toFixed(1)} reputation
-                {tier ? ` · ${tier.charAt(0).toUpperCase() + tier.slice(1)}` : ''}
-              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                <Text style={{ color: '#666', fontSize: 10, width: '100%', letterSpacing: 1, textTransform: 'uppercase' }}>
+                  What changed
+                </Text>
+                {chips.map(chip => (
+                  <View key={chip.label} style={{ backgroundColor: chip.bg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                    <Text style={{ color: chip.color, fontWeight: 'bold', fontSize: 12 }}>{chip.label}</Text>
+                  </View>
+                ))}
+              </View>
             );
           })()}
         </View>

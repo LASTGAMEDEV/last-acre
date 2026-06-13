@@ -27,8 +27,8 @@ These are the highest-impact items not yet done, in order:
 - [x] Add "Why did this happen?" harvest yield explanations
 - [x] Add cashflow forecast panel
 - [ ] Add "Why did this happen?" for sales, animal production, reputation, bankruptcy
-- [ ] Improve Day Summary to group events: Money, Fields, Animals, Market, Family, Risks
-- [ ] Add "What changed since yesterday?" summary
+- [x] Improve Day Summary to group events: Money, Fields, Animals, Market, Family, Risks
+- [x] Add "What changed since yesterday?" summary
 - [ ] Add guide buttons to confusing stats and cards
 - [ ] Add clearer locked/unlocked explanations
 - [ ] Add better empty states that suggest a next action
@@ -293,10 +293,10 @@ These are the highest-impact items not yet done, in order:
 ## 16. Failure And Recovery
 
 - [x] Emergency land leaseback recovery mechanic
-- [ ] Debt restructuring option
-- [ ] Equipment liquidation (sell all machinery for emergency cash)
-- [ ] Family loan or family sacrifice event
-- [ ] Co-op emergency support if reputation is high
+- [x] Debt restructuring option
+- [x] Equipment liquidation (sell all machinery for emergency cash)
+- [x] Family loan or family sacrifice event
+- [x] Co-op emergency support if reputation is high
 - [ ] Neighbor partnership rescue
 - [ ] Short-term high-interest lenders
 - [ ] Survival year planning mode
