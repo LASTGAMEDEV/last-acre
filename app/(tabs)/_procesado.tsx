@@ -10,6 +10,7 @@ import {
   qualityLabel, qualityColor,
   PROCESSING_BUILDING_CONFIGS,
 } from '../../data/processingTypes';
+import { getSellMultiplier } from '../../engine/processing';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
 import { BUILDING_TYPES } from '../../data/buildingTypes';
@@ -82,7 +83,7 @@ export default function ProcesadoScreen() {
     processProduct, sellProcessed, processingBuildings, workers, money,
     buyProcessingBuilding, upgradeProcessingBuilding,
     assignWorkerToProcessingBuilding, unassignWorkerFromProcessingBuilding,
-    installColdStorage, prices, animalPrices,
+    installColdStorage, prices, animalPrices, cropQualityMap,
   } = useGameStore();
 
   const [activeTab, setActiveTab] = useState<TabId>('recipes');
@@ -107,7 +108,8 @@ export default function ProcesadoScreen() {
     const totalQty = items.reduce((s, i) => s + i.quantity, 0);
     const avgQuality = items.reduce((s, i) => s + i.quality * i.quantity, 0) / totalQty;
     const nearestExpiry = Math.min(...items.map(i => i.expiryDay));
-    return { def, items, totalQty, avgQuality, nearestExpiry };
+    const sellRevenue = items.reduce((s: number, item: any) => s + Math.round(item.quantity * def.basePrice * getSellMultiplier(item, day)), 0);
+    return { def, items, totalQty, avgQuality, nearestExpiry, sellRevenue };
   }).filter(Boolean) as NonNullable<ReturnType<typeof PROCESSED_ITEM_DEFS.map>[number]>[];
 
   return (
@@ -265,6 +267,17 @@ export default function ProcesadoScreen() {
                             const profit = outputValue - inputCost;
                             const profitColor = profit > 0 ? '#4caf50' : profit < 0 ? '#ef5350' : '#888';
                             const tierLocked = isOwned && ownedBuilding.tier < recipe.minBuildingTier;
+                            const assignedWorkers = (workers ?? []).filter((w: any) => ownedBuilding?.assignedWorkerIds.includes(w.id));
+                            const workerBonus = assignedWorkers.length > 0
+                              ? Math.min(20, Math.max(...assignedWorkers.map((w: any) => (w.tier ?? 1) * 5)))
+                              : 0;
+                            const qualCeiling = ownedBuilding ? ({ 1: 70, 2: 85, 3: 100 } as Record<number, number>)[ownedBuilding.tier] ?? 70 : 70;
+                            const buildingBonus = ownedBuilding ? ({ 1: 0, 2: 10, 3: 20 } as Record<number, number>)[ownedBuilding.tier] ?? 0 : 0;
+                            const inputQual = recipe.inputs.length > 0
+                              ? recipe.inputs.reduce((s, inp) => s + ((inp.source === 'crop' ? ((cropQualityMap ?? {})[inp.itemId] ?? 50) : 50) * inp.quantity), 0)
+                                / recipe.inputs.reduce((s, inp) => s + inp.quantity, 0)
+                              : 50;
+                            const estQuality = isOwned ? Math.max(0, Math.min(qualCeiling, Math.round(inputQual * 0.6 + buildingBonus + workerBonus))) : 0;
 
                             return (
                               <View key={recipe.id} style={[styles.recipeCard, !isOwned && styles.recipeCardLocked]}>
@@ -273,6 +286,11 @@ export default function ProcesadoScreen() {
                                   <View style={{ flex: 1 }}>
                                     <Text style={styles.recipeName}>{recipe.name}</Text>
                                     <Text style={styles.recipeTime}>⏱ {recipe.processingDays}d · {recipe.electricityKwhPerDay} kWh/day</Text>
+                                  {isOwned && (
+                                    <Text style={[styles.recipeTime, { color: qualityColor(estQuality), marginTop: 1 }]}>
+                                      ★ Est. quality: {estQuality} · ceiling {qualCeiling}
+                                    </Text>
+                                  )}
                                   </View>
                                   {tierLocked && <Text style={styles.tierLock}>🔒 Tier {recipe.minBuildingTier}</Text>}
                                 </View>
@@ -387,11 +405,9 @@ export default function ProcesadoScreen() {
           ) : (
             <>
               <Text style={styles.sectionLabel}>📦 Processed stock — ${Math.round(totalInventoryValue).toLocaleString()} total value</Text>
-              {(groupedInventory as any[]).map(({ def, totalQty, avgQuality, nearestExpiry }: any) => {
+              {(groupedInventory as any[]).map(({ def, totalQty, avgQuality, nearestExpiry, sellRevenue }: any) => {
                 const expiryDaysLeft = nearestExpiry - day;
                 const expiryWarning = expiryDaysLeft <= def.shelfLifeDays * 0.25;
-                const qualityMult = 0.5 + (avgQuality / 100);
-                const sellRevenue = Math.round(totalQty * def.basePrice * qualityMult);
 
                 return (
                   <View key={def.id} style={styles.inventoryCard}>
