@@ -199,4 +199,186 @@ export const CHOICE_EVENT_TEMPLATES: ChoiceEventTemplate[] = [
       },
     ],
   },
+  {
+    id: 'ce_animal_show',
+    icon: '🏆',
+    title: 'Regional Farm Show Invitation',
+    description:
+      "The county agricultural fair is accepting entries. Entering your best livestock costs $250 in preparation fees, but prize winners earn significant community standing.",
+    weight: 7,
+    minDay: 60,
+    options: [
+      {
+        label: 'Enter the show ($250)',
+        effectDesc: '-$250 prep costs, +16 reputation',
+        kind: 'good',
+        effect: { money: -250, reputationDelta: 16 },
+      },
+      {
+        label: 'Skip this year',
+        effectDesc: 'No change',
+        kind: 'neutral',
+        effect: {},
+      },
+    ],
+  },
+  {
+    id: 'ce_disease_scare',
+    icon: '🩺',
+    title: 'Herd Health Scare',
+    description:
+      "Your veterinarian flags unusual symptoms in the herd. A full diagnostic panel costs $350 but catches any disease early. Waiting saves money but risks spreading the scare to market prices.",
+    weight: 8,
+    options: [
+      {
+        label: 'Run full diagnostics ($350)',
+        effectDesc: '-$350, +3 reputation for responsible herd management',
+        kind: 'good',
+        effect: { money: -350, reputationDelta: 3 },
+      },
+      {
+        label: 'Monitor for a few more days',
+        effectDesc: 'Risk: disease rumor suppresses all commodity prices -12% for 14 days',
+        kind: 'risky',
+        effect: { priceShock: { commodityId: null, magnitude: -0.12, durationDays: 14 } },
+      },
+    ],
+  },
+  {
+    id: 'ce_drought_aid',
+    icon: '💧',
+    title: 'Emergency Drought Relief',
+    description:
+      "The regional agriculture board is offering emergency drought relief grants to qualifying farms. Accepting binds you to 12 months of production reporting — but the funds are substantial.",
+    weight: 7,
+    minDay: 90,
+    options: [
+      {
+        label: 'Accept the relief grant',
+        effectDesc: '+$2,000 cash infusion',
+        kind: 'neutral',
+        effect: { money: 2000 },
+      },
+      {
+        label: 'Decline — manage independently',
+        effectDesc: '+6 reputation for resilience and self-reliance',
+        kind: 'good',
+        effect: { reputationDelta: 6 },
+      },
+    ],
+  },
+  {
+    id: 'ce_prize_birth',
+    icon: '🐄',
+    title: 'Outstanding Animal Birth',
+    description:
+      "One of your cows has delivered an exceptionally healthy calf with rare genetic traits. A livestock broker is offering $1,400 immediately — far above normal market value.",
+    weight: 6,
+    minDay: 120,
+    options: [
+      {
+        label: 'Sell to the broker',
+        effectDesc: '+$1,400 cash — premium price now',
+        kind: 'good',
+        effect: { money: 1400 },
+      },
+      {
+        label: 'Keep for your breeding stock',
+        effectDesc: '+8 reputation as a quality breeder',
+        kind: 'good',
+        effect: { reputationDelta: 8 },
+      },
+    ],
+  },
+  {
+    id: 'ce_organic_cooperative',
+    icon: '🌿',
+    title: 'Organic Co-op Invitation',
+    description:
+      "A premium organic farming cooperative is inviting your farm to join their network. Membership costs $600 but opens access to premium markets and shared certification benefits.",
+    weight: 5,
+    minDay: 180,
+    options: [
+      {
+        label: 'Join the co-op ($600)',
+        effectDesc: '-$600, +14 reputation in organic circles',
+        kind: 'good',
+        effect: { money: -600, reputationDelta: 14 },
+      },
+      {
+        label: 'Not the right time',
+        effectDesc: 'No change',
+        kind: 'neutral',
+        effect: {},
+      },
+    ],
+  },
+  {
+    id: 'ce_estate_auction',
+    icon: '🚜',
+    title: 'Estate Auction Bargain',
+    description:
+      "A retiring farmer is auctioning equipment at steep discounts. There's a solid cultivator going for $900 — unknown service history, bought as-is. Could be a great deal or an expensive repair.",
+    weight: 8,
+    options: [
+      {
+        label: 'Buy the cultivator ($900)',
+        effectDesc: '-$900, +10 soil nitrogen from better field prep',
+        kind: 'risky',
+        effect: { money: -900, soilNitrogenAll: 10 },
+      },
+      {
+        label: 'Pass — too risky',
+        effectDesc: 'No change',
+        kind: 'neutral',
+        effect: {},
+      },
+    ],
+  },
+  {
+    id: 'ce_seed_trial',
+    icon: '🌾',
+    title: 'Seed Company Trial Offer',
+    description:
+      "An agricultural seed company wants to trial a new high-yield variety on your farm. They provide seeds free and pay you $500 for your crop yield data over the season.",
+    weight: 7,
+    minDay: 60,
+    options: [
+      {
+        label: 'Accept the trial ($500)',
+        effectDesc: '+$500 payment and improved soil from their premium seed prep',
+        kind: 'good',
+        effect: { money: 500, soilNitrogenAll: 8 },
+      },
+      {
+        label: 'Decline — stick to your varieties',
+        effectDesc: 'No change',
+        kind: 'neutral',
+        effect: {},
+      },
+    ],
+  },
+  {
+    id: 'ce_celebrity_chef',
+    icon: '👨‍🍳',
+    title: 'Celebrity Chef Partnership',
+    description:
+      "A well-known chef is sourcing local farms for their new restaurant. They want to feature your produce and offer a flat $800 fee for exclusive supply rights for one month.",
+    weight: 5,
+    minDay: 150,
+    options: [
+      {
+        label: 'Accept the partnership',
+        effectDesc: '+$800 flat fee, +10 reputation — great publicity',
+        kind: 'good',
+        effect: { money: 800, reputationDelta: 10 },
+      },
+      {
+        label: 'Decline the offer',
+        effectDesc: 'No change',
+        kind: 'neutral',
+        effect: {},
+      },
+    ],
+  },
 ];
