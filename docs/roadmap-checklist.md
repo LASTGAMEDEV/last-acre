@@ -78,7 +78,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Add dismiss and snooze controls for low-priority cards
 - [x] Add a timeline of recent major events
 - [x] Add farm identity summary ("Organic grain farm", "Livestock-heavy mixed farm")
-- [ ] Add Today / This Week / This Season / This Year sections
+- [x] Add Today / This Week / This Season / This Year sections
 
 ---
 

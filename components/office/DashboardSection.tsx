@@ -520,6 +520,16 @@ function DashboardSection() {
     );
   }
 
+  function PeriodHeader({ label }: { label: string }) {
+    return (
+      <View style={dash.periodHeader}>
+        <View style={dash.periodHeaderLine} />
+        <Text style={dash.periodHeaderText}>{label}</Text>
+        <View style={dash.periodHeaderLine} />
+      </View>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={{ padding: 12, gap: 10 }} showsVerticalScrollIndicator={false}>
       {/* Farm Identity */}
@@ -528,6 +538,8 @@ function DashboardSection() {
         {isOrganicFarm && <View style={dash.organicBadge}><Text style={dash.organicBadgeText}>🌿 Organic</Text></View>}
         <Text style={dash.identityDay}>Day {day}</Text>
       </View>
+
+      <PeriodHeader label="TODAY" />
 
       {/* Today's Priorities */}
       <View style={dash.prioritiesCard}>
@@ -551,6 +563,8 @@ function DashboardSection() {
         <Card title="💵 CASH" value={`$${Math.round(money).toLocaleString()}`} color="#4caf50" />
         <Card title="🏦 SAVINGS" value={`$${Math.round(savings.balance).toLocaleString()}`} color="#64b5f6" />
       </View>
+
+      <PeriodHeader label="THIS WEEK" />
 
       {/* Net worth */}
       <View style={dash.netWorthCard}>
@@ -594,6 +608,8 @@ function DashboardSection() {
         </View>
       </View>
 
+      <PeriodHeader label="LEGACY" />
+
       {/* Farm Stage / Progression Arc */}
       <View style={[dash.stageCard, { borderColor: farmStage.color + '55' }]}>
         <View style={dash.stageHeader}>
@@ -621,6 +637,8 @@ function DashboardSection() {
         <Card title="📈 7-DAY REV" value={`$${Math.round(rev7).toLocaleString()}`} />
         <Card title="📊 30-DAY REV" value={`$${Math.round(rev30).toLocaleString()}`} />
       </View>
+
+      <PeriodHeader label="THIS SEASON" />
 
       {/* 30-Day Cashflow Forecast */}
       <View style={dash.forecastCard}>
@@ -657,6 +675,8 @@ function DashboardSection() {
         <Card title="🌾 OWNED PLOTS" value={`${ownedParcels.length}`} sub={`${ownedParcels.reduce((s: number, p: any) => s + p.hectares, 0).toFixed(1)} ha`} />
         <Card title="🐄 ANIMALS" value={`${animals.length}`} />
       </View>
+
+      <PeriodHeader label="THIS YEAR" />
 
       {/* Season goals strip */}
       {activeGoals.length > 0 && (
@@ -830,6 +850,10 @@ const dash = StyleSheet.create({
   forecastRowVal:    { fontSize: F.size.sm, fontWeight: 'bold' },
   forecastBreakdown: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 3, marginBottom: 2 },
   forecastChip:      { color: C.textFaint, fontSize: 9, backgroundColor: '#0f1a0f', borderRadius: R.sm, paddingHorizontal: 5, paddingVertical: 2 },
+  // Period section headers
+  periodHeader:     { flexDirection: 'row', alignItems: 'center', gap: S.sm, marginTop: 2, marginBottom: -4 },
+  periodHeaderLine: { flex: 1, height: 1, backgroundColor: '#1a1f2e' },
+  periodHeaderText: { color: '#2a3040', fontSize: 9, fontWeight: 'bold', letterSpacing: 1.5 },
   // Recommended Next Step
   nextStepCard:   { backgroundColor: '#0d1f30', borderRadius: R.md, padding: S.md, borderWidth: 1, borderColor: '#1e4a6e55', gap: 0 },
   nextStepRow:    { flexDirection: 'row', alignItems: 'flex-start', gap: S.sm, paddingVertical: 7 },
