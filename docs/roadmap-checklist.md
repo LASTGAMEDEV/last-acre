@@ -263,7 +263,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Relationship-building actions
 - [x] Rival sell pressure / market flooding
 - [x] NPC farm definitions data file
-- [ ] Neighbor news feed
+- [x] Neighbor news feed
 - [ ] Land opportunities when neighbors struggle or retire (UI trigger — data exists)
 - [ ] Rivalry events
 - [ ] Auctions against neighbors

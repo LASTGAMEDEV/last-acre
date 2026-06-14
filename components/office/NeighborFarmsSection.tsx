@@ -6,6 +6,59 @@ import { NEIGHBOR_PROFILES, NEIGHBOR_IDS } from '../../data/neighborData';
 import type { NeighborId } from '../../data/neighborData';
 import type { NeighborStatus } from '../../features/neighbors/neighborTypes';
 
+type CountyNewsItem = { icon: string; headline: string; color: string; tag: string };
+
+function buildCountyNews(
+  neighbors: Record<string, any>,
+  npcFarms: any[],
+  day: number
+): CountyNewsItem[] {
+  const items: CountyNewsItem[] = [];
+
+  // Neighbor status events
+  for (const id of NEIGHBOR_IDS) {
+    const farm = neighbors[id];
+    const profile = NEIGHBOR_PROFILES[id];
+    if (!farm || !profile) continue;
+    const status: NeighborStatus = farm.status ?? 'thriving';
+
+    if (status === 'bankrupt') {
+      items.push({ icon: '🔴', headline: `${profile.displayName} has gone bankrupt — watch for auction`, color: '#ef5350', tag: 'CRISIS' });
+    } else if (status === 'struggling' && (farm.strugglingYears ?? 0) >= 2) {
+      items.push({ icon: '🟡', headline: `${profile.displayName} entering 2nd year of struggle — land may go on market`, color: '#ffb74d', tag: 'RISK' });
+    }
+
+    // Recent farm events (last 3)
+    const events: string[] = (farm.events ?? []).slice(-3);
+    for (const ev of events) {
+      items.push({ icon: '📋', headline: `${profile.displayName}: ${ev}`, color: C.textMuted, tag: 'UPDATE' });
+    }
+
+    // Relationship milestones
+    const rel = farm.relationship ?? 50;
+    if (rel >= 80) {
+      items.push({ icon: '🤝', headline: `Strong alliance with ${profile.displayName} — +10% harvest help bonus`, color: '#81c784', tag: 'ALLY' });
+    } else if (rel <= 20) {
+      items.push({ icon: '😠', headline: `Strained relations with ${profile.displayName} — they may undercut your contracts`, color: '#ef9a9a', tag: 'RIVAL' });
+    }
+  }
+
+  // NPC competitor sell pressure news
+  const sellingSoon = (npcFarms ?? []).filter((f: any) => f.nextSellDay - day <= 3 && f.nextSellDay >= day);
+  for (const f of sellingSoon.slice(0, 2)) {
+    const crops = (f.specialization ?? []).join(', ') || 'crops';
+    items.push({ icon: '⚠️', headline: `${f.name} selling ${crops} in ${f.nextSellDay - day}d — prices may dip`, color: '#f59e0b', tag: 'MARKET' });
+  }
+
+  // Wealthy rival
+  const richRival = [...(npcFarms ?? [])].sort((a: any, b: any) => b.wealth - a.wealth)[0];
+  if (richRival && richRival.wealth > 50000) {
+    items.push({ icon: '🏭', headline: `${richRival.name} dominates the region with $${Math.round(richRival.wealth / 1000)}k in reserves`, color: '#ce93d8', tag: 'RIVAL' });
+  }
+
+  return items.slice(0, 8);
+}
+
 const STATUS_ICON: Record<NeighborStatus, string> = {
   thriving:   '🟢',
   struggling: '🟡',
@@ -37,7 +90,7 @@ const GIFT_OPTIONS = [
 
 export default function NeighborFarmsSection() {
   const {
-    neighbors, pendingLandOpportunities = [], day, money,
+    neighbors, pendingLandOpportunities = [], day, money, npcFarms,
     neighborActionCooldowns = {},
     visitNeighbor, sendNeighborGift, helpNeighborHarvest,
   } = useGameStore();
@@ -54,10 +107,29 @@ export default function NeighborFarmsSection() {
   }
 
   const hasOpportunities = pendingLandOpportunities.length > 0;
+  const countyNews = buildCountyNews(neighbors as Record<string, any>, npcFarms ?? [], day);
 
   return (
     <>
     <ScrollView contentContainerStyle={nf.container} showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+
+      {/* County News Feed */}
+      {countyNews.length > 0 && (
+        <>
+          <Text style={nf.sectionHeader}>📰 County News</Text>
+          <View style={nf.newsFeed}>
+            {countyNews.map((item, i) => (
+              <View key={i} style={[nf.newsRow, i > 0 && { borderTopWidth: 1, borderTopColor: '#1a1a2a' }]}>
+                <Text style={nf.newsIcon}>{item.icon}</Text>
+                <Text style={[nf.newsHeadline, { color: item.color }]}>{item.headline}</Text>
+                <View style={[nf.newsTag, { borderColor: item.color + '55' }]}>
+                  <Text style={[nf.newsTagText, { color: item.color }]}>{item.tag}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
 
       {/* Land opportunities banner */}
       {hasOpportunities && (
@@ -250,6 +322,14 @@ export default function NeighborFarmsSection() {
 const nf = StyleSheet.create({
   container:      { padding: S.md, gap: S.sm, paddingBottom: 40 },
   sectionHeader:  { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: S.md, marginBottom: 2 },
+
+  // County news feed
+  newsFeed:       { backgroundColor: C.bgCard, borderRadius: R.md, overflow: 'hidden' },
+  newsRow:        { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: S.md, paddingVertical: 9 },
+  newsIcon:       { fontSize: 15, width: 20, textAlign: 'center' },
+  newsHeadline:   { flex: 1, fontSize: F.size.xs, lineHeight: 16 },
+  newsTag:        { borderRadius: R.pill, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2 },
+  newsTagText:    { fontSize: 8, fontWeight: 'bold', letterSpacing: 0.5 },
 
   // Land opportunities
   opCard:         { backgroundColor: '#0f3460', borderRadius: R.md, padding: S.md, flexDirection: 'row', gap: S.sm, borderWidth: 1, borderColor: '#ffb74d55' },
