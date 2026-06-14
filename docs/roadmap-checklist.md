@@ -400,7 +400,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Annual report (year-in-review: revenue, monthly chart, goals, top crops, snapshot)
 - [x] Multi-year revenue comparison (era chronicle)
 - [x] Market report screen
-- [ ] Soil report screen
+- [x] Soil report screen
 - [ ] Generational legacy report
 - [ ] Historical graphs (beyond current charts)
 - [x] Most profitable enterprise stat
