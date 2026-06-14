@@ -15,6 +15,7 @@ import { useGameStore, DeliveryCargo, COLD_CARGO_IDS, BULK_LIQUID_IDS } from '..
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { MARKET_REGIONS, MarketId } from '../../data/marketRegions';
+import { SEASONAL_AMPLITUDES, SEASONAL_PEAK_SEASONS } from '../../data/prices';
 import { sellRevenue, computeSellPressureModifier, sellPressureDuration } from '../../engine/market';
 import { getSeason } from '../../engine/climate';
 import { gameDayToCalendarYear } from '../../engine/calendarUtils';
@@ -418,6 +419,41 @@ export default function MarketPricesSection() {
             <Text style={styles.signalAdvice}>{sellSignal.advice}</Text>
           </View>
 
+          {/* Seasonal price cycle strip */}
+          {(() => {
+            const amp = SEASONAL_AMPLITUDES[selectedCrop];
+            const peak = SEASONAL_PEAK_SEASONS[selectedCrop];
+            if (!amp || !peak) return null;
+            const ORDER = ['spring', 'summer', 'autumn', 'winter'] as const;
+            const ICONS = { spring: '🌸', summer: '☀️', autumn: '🍂', winter: '❄️' };
+            const LABELS = { spring: 'Spr', summer: 'Sum', autumn: 'Aut', winter: 'Win' };
+            const peakIdx = ORDER.indexOf(peak);
+            return (
+              <View style={styles.seasonStrip}>
+                <Text style={styles.seasonStripLabel}>Seasonal cycle</Text>
+                <View style={styles.seasonBars}>
+                  {ORDER.map((s, i) => {
+                    const dist = Math.min(Math.abs(i - peakIdx), 4 - Math.abs(i - peakIdx));
+                    const mult = 1 + amp * (dist / 2 - 0.5);
+                    const pct = (mult - (1 - amp / 2)) / amp;
+                    const isCurrent = s === currentSeason;
+                    const barColor = mult < 1 ? '#ef5350' : mult > 1.03 ? '#4caf50' : '#ffa726';
+                    return (
+                      <View key={s} style={[styles.seasonBarWrap, isCurrent && styles.seasonBarCurrent]}>
+                        <Text style={styles.seasonBarIcon}>{ICONS[s]}</Text>
+                        <View style={styles.seasonBarTrack}>
+                          <View style={[styles.seasonBarFill, { height: Math.round(pct * 28), backgroundColor: barColor }]} />
+                        </View>
+                        <Text style={[styles.seasonBarMult, { color: barColor }]}>{mult >= 1 ? '+' : ''}{Math.round((mult - 1) * 100)}%</Text>
+                        <Text style={styles.seasonBarName}>{LABELS[s]}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            );
+          })()}
+
           {/* Sell-now vs hold comparison */}
           {inStock > 0 && (() => {
             const mom = (priceMomentum ?? {})[selectedCrop] ?? 0;
@@ -807,6 +843,17 @@ const styles = StyleSheet.create({
   holdPrice: { flex: 1, fontSize: 11 },
   holdVal: { fontSize: F.size.sm, fontWeight: 'bold', textAlign: 'right', width: 70 },
   holdNote: { color: '#555', fontSize: 10, fontStyle: 'italic', marginTop: 6 },
+
+  seasonStrip: { marginTop: S.sm, backgroundColor: C.bgCard, borderRadius: R.md, padding: 10 },
+  seasonStripLabel: { color: '#555', fontSize: 9, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+  seasonBars: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 56 },
+  seasonBarWrap: { alignItems: 'center', gap: 2, opacity: 0.7 },
+  seasonBarCurrent: { opacity: 1 },
+  seasonBarIcon: { fontSize: 10 },
+  seasonBarTrack: { width: 22, height: 28, backgroundColor: '#1a1a2a', borderRadius: 3, justifyContent: 'flex-end', overflow: 'hidden' },
+  seasonBarFill: { width: '100%', borderRadius: 3 },
+  seasonBarMult: { fontSize: 8, fontWeight: 'bold' },
+  seasonBarName: { color: '#555', fontSize: 8 },
 });
 
 const regionStyles = StyleSheet.create({
