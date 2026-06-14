@@ -39,10 +39,10 @@ These are the highest-impact items not yet done, in order:
 ## 2. Onboarding
 
 - [ ] Rebuild first 10 days around a guided farm start
-- [ ] Let players choose a starting style (Crop Farm / Livestock / Market Trader / Balanced)
+- [x] Let players choose a starting style (Crop Farm / Livestock / Market Trader / Balanced)
 - [ ] Add a first-year goal chain instead of isolated tutorial popups
 - [ ] Teach one system at a time: fields → selling → debt → animals/processing
-- [ ] Add safe first-crop recommendations based on season
+- [x] Add safe first-crop recommendations based on season
 - [ ] Add a beginner preset with gentler debt and slower disasters
 - [ ] Add an advanced start for returning players
 - [ ] Let players skip tutorials while keeping contextual guidance
