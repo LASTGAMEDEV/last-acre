@@ -1,6 +1,6 @@
 # Granja Tycoon — Roadmap Progress Checklist
 
-**Updated:** 2026-06-15 (Section 18 +14/15, Section 9 +4, Section 10 +1, Section 2 +4, Section 12 +7 · total 174/313 = 56%)  
+**Updated:** 2026-06-15 (Section 18 +14/15, Section 9 +4, Section 10 +1, Section 2 +4, Section 12 +7, Section 3 +10, Section 8 +4 · total 188/313 = 60%)  
 **Legend:** `[x]` = done · `[ ]` = not done · `[~]` = partially done
 
 ---
@@ -52,16 +52,16 @@ These are the highest-impact items not yet done, in order:
 
 ## 3. Annual Planning
 
-- [~] Annual Planning screen in Office (Codex built initial scaffold — verify completeness)
-- [ ] Let player pick an advisor style each year
-- [ ] Generate a whole-farm plan with 4–7 measurable goals
-- [ ] Add goal categories: planting, soil, livestock, finance, market, processing, reputation, family
-- [ ] Let player approve, replace, adjust, or remove goals
-- [ ] Add yearly risk cards: drought, debt, feed, machinery
-- [ ] Show forecast cards: market, weather, finance, family
-- [ ] Track goal progress throughout the year
-- [ ] Give soft rewards for completed goals
-- [ ] Add year-end review: completed/missed goals, best decision, worst bottleneck
+- [x] Annual Planning screen in Office (Codex built initial scaffold — verify completeness)
+- [x] Let player pick an advisor style each year
+- [x] Generate a whole-farm plan with 4–7 measurable goals
+- [x] Add goal categories: planting, soil, livestock, finance, market, processing, reputation, family
+- [x] Let player approve, replace, adjust, or remove goals
+- [x] Add yearly risk cards: drought, debt, feed, machinery
+- [x] Show forecast cards: market, weather, finance, family
+- [x] Track goal progress throughout the year
+- [x] Give soft rewards for completed goals
+- [x] Add year-end review: completed/missed goals, best decision, worst bottleneck
 
 ---
 
@@ -145,13 +145,13 @@ These are the highest-impact items not yet done, in order:
 - [x] Breakdown risk forecast
 - [x] Repair scheduling / seasonal maintenance reminders
 - [x] Repair all affordable (batch)
-- [ ] Machine comparison before purchase
+- [x] Machine comparison before purchase
 - [ ] Used equipment market
 - [ ] Trade-in value
 - [ ] Leasing and renting equipment
-- [ ] Contractor alternatives when player lacks machinery
-- [ ] Fuel planning and seasonal fuel price pressure
-- [ ] Attachments that change field strategy
+- [x] Contractor alternatives when player lacks machinery
+- [x] Fuel planning and seasonal fuel price pressure
+- [x] Attachments that change field strategy
 - [ ] Cheap used fleet vs modern efficient fleet path
 
 ---
