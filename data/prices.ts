@@ -66,20 +66,32 @@ export function getVolatilityProfile(id: string): VolatilityProfile {
 
 // Fraction of baseline price that swings peak→trough due to season
 export const SEASONAL_AMPLITUDES: Record<string, number> = {
-  wheat: 0.18, corn: 0.20, strawberries: 0.35, grapes: 0.25,
-  potatoes: 0.22, milk: 0.05, saffron: 0.12, eggs: 0.08,
+  // Grains — moderate swing; stored in silos, so tradeoff is real
+  wheat: 0.18, barley: 0.16, oats: 0.16, corn: 0.20, rice: 0.18,
+  sorghum: 0.14, soy: 0.18, spelt: 0.16,
+  // Roots & vegetables — perishable; quick-sell pressure is high
+  potatoes: 0.22, sugarbeet: 0.14,
+  // Fruits — very perishable; low storage benefit unless processed
+  strawberries: 0.35, grapes: 0.25, tomatoes: 0.28,
+  // Oilseeds — can store, meaningful swing
+  sunflower: 0.20, rapeseed: 0.18, canola: 0.18,
+  // Premium specialty — less seasonal but real demand cycles
+  saffron: 0.12, lavender: 0.22, almonds: 0.20, olives: 0.24,
+  cotton: 0.15, hemp: 0.15,
+  // Animal products — small swings but real
+  milk: 0.05, eggs: 0.08, wool: 0.20, honey: 0.15,
 };
 
 // Season when market prices are LOWEST (harvest glut) — mirrors cropTypes.ts peakSeason
 export const SEASONAL_PEAK_SEASONS: Record<string, PlantingSeason> = {
-  wheat: 'summer',
-  corn: 'autumn',
-  strawberries: 'spring',
-  grapes: 'autumn',
-  potatoes: 'autumn',
-  milk: 'summer',
-  saffron: 'autumn',
-  eggs: 'spring',
+  wheat: 'summer', barley: 'summer', oats: 'autumn', corn: 'autumn',
+  rice: 'autumn', sorghum: 'autumn', soy: 'autumn', spelt: 'summer',
+  potatoes: 'autumn', sugarbeet: 'autumn',
+  strawberries: 'spring', grapes: 'autumn', tomatoes: 'summer',
+  sunflower: 'autumn', rapeseed: 'spring', canola: 'spring',
+  saffron: 'autumn', lavender: 'summer', almonds: 'autumn', olives: 'autumn',
+  cotton: 'summer', hemp: 'autumn',
+  milk: 'summer', eggs: 'spring', wool: 'spring', honey: 'summer',
 };
 
 export const MARKET_DEPTHS: CommodityMarketDepth[] = [
