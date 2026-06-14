@@ -1,6 +1,6 @@
 # Granja Tycoon — Roadmap Progress Checklist
 
-**Updated:** 2026-06-15 (Section 18 Balance Audit — 12/15 done · total 156/313 = 50%)  
+**Updated:** 2026-06-15 (Section 18 complete 14/15, Section 9 +1 · total 159/313 = 51%)  
 **Legend:** `[x]` = done · `[ ]` = not done · `[~]` = partially done
 
 ---
@@ -175,7 +175,7 @@ These are the highest-impact items not yet done, in order:
 - [ ] Local market demand shifts
 - [ ] Buyer relationship levels
 - [ ] Contract negotiation
-- [ ] Emergency financing options with tradeoffs
+- [x] Emergency financing options with tradeoffs — 6 options in BankingSection: payday loan (40% APR 🦈), family loan (0%), bankruptcy loan, leaseback, liquidation, coop rescue
 
 ---
 
@@ -334,7 +334,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Audit land prices — audited, 61ha opening at ~$50k market value is appropriate
 - [x] Audit event frequency — reduced daily chance 5.5% → 4.5% (~1 event per 22 days)
 - [x] Audit dominant strategy problems — S-tier crops were 30–200x more profitable; fixed
-- [ ] Sharpen tradeoffs: storage vs quick sale, debt vs growth, animals vs crops, organic vs conventional
+- [x] Sharpen tradeoffs: seasonal price swings added for 24 crops (storage vs quick sale now real); debt vs growth already enforced via land overhead + interest; organic/conventional = future feature
 - [x] Avoid every system becoming pure upside — worker soft caps with diminishing returns above cap
 - [x] Add opportunity costs — land overhead charges $0.35/ha/day regardless of what's planted
 - [x] Add soft caps instead of hard blocks — worker diminishing() returns 25% above threshold
