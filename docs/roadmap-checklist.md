@@ -190,7 +190,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Rival sell pressure details in competitors panel
 - [x] Market rumors via choice event (ce_price_rumor)
 - [x] Historical era-specific economic events (57 events, 1970–2025)
-- [ ] Newspaper headlines that explain market movement
+- [x] Newspaper headlines that explain market movement
 - [ ] Local harvest reports
 - [ ] Export and import shocks (beyond events)
 - [ ] Price seasonality charts

@@ -26,6 +26,42 @@ const PROD_ICON: Record<string, string> = {
   eggs: '🥚', milk: '🥛', wool: '🧶', honey: '🍯', meat: '🥩',
 };
 
+function buildProductionFactors(
+  rationMod: number, rationTier: string,
+  seasonMod: number, avgGeneProd: number,
+  sick: number, mature: number, count: number,
+): { icon: string; text: string; color: string }[] {
+  const factors: { icon: string; text: string; color: string }[] = [];
+  const rationPct = Math.round(Math.abs(rationMod - 1) * 100);
+  if (rationTier === 'deficient')
+    factors.push({ icon: '⚠', text: `Deficient ration − ${rationPct}% output`, color: '#ef5350' });
+  else if (rationTier === 'adequate')
+    factors.push({ icon: '🌾', text: 'Adequate ration', color: '#f59e0b' });
+  else if (rationTier === 'premium')
+    factors.push({ icon: '⭐', text: `Premium ration +${rationPct}% output`, color: '#81c784' });
+
+  const seasonPct = Math.round(Math.abs(seasonMod - 1) * 100);
+  if (seasonMod < 0.7)
+    factors.push({ icon: '❄', text: `Off-season penalty −${seasonPct}%`, color: '#90caf9' });
+  else if (seasonMod < 0.95)
+    factors.push({ icon: '🍂', text: `Seasonal dip −${seasonPct}%`, color: '#f59e0b' });
+  else if (seasonMod > 1.05)
+    factors.push({ icon: '☀', text: `Peak season +${seasonPct}% output`, color: '#4caf50' });
+
+  const genePct = Math.round(Math.abs(avgGeneProd - 1) * 100);
+  if (avgGeneProd > 1.08)
+    factors.push({ icon: '🧬', text: `Strong genetics +${genePct}%`, color: '#ce93d8' });
+  else if (avgGeneProd < 0.92)
+    factors.push({ icon: '🧬', text: `Weak genetics −${genePct}%`, color: '#888' });
+
+  if (sick > 0)
+    factors.push({ icon: '🤒', text: `${sick} sick animal${sick > 1 ? 's' : ''} not producing`, color: '#ef5350' });
+  if (mature < count)
+    factors.push({ icon: '🐣', text: `${count - mature} still growing`, color: '#90caf9' });
+
+  return factors;
+}
+
 export default function AnimalReportSection() {
   const { day, animals, animalPrices, savedRations, inventory, animalInventory, silageLevel, parcels } = useGameStore();
 
@@ -110,13 +146,14 @@ export default function AnimalReportSection() {
       rationTier: rationAnalysis.tier,
       rationMod,
       seasonMod,
+      avgGeneProd,
     };
   }).filter(Boolean) as {
     typeId: string; animalType: typeof ANIMAL_TYPES[0]; count: number; mature: number;
     sick: number; quarantined: number; prodPerDay: number;
     productInfo: typeof ANIMAL_PRODUCTS[0] | undefined;
     dailyValue: number; feedCostDay: number; netPerDay: number;
-    rationTier: string; rationMod: number; seasonMod: number;
+    rationTier: string; rationMod: number; seasonMod: number; avgGeneProd: number;
   }[];
 
   const fmt = (n: number) => `$${n.toFixed(2)}`;
@@ -230,7 +267,8 @@ export default function AnimalReportSection() {
         <>
           <SectionHeader title="📋 By Species" />
           {speciesSummaries.map(s => {
-            const { animalType, count, mature, sick, prodPerDay, productInfo, dailyValue, feedCostDay, netPerDay, rationTier, rationMod, seasonMod } = s;
+            const { animalType, count, mature, sick, prodPerDay, productInfo, dailyValue, feedCostDay, netPerDay, rationTier, rationMod, seasonMod, avgGeneProd } = s;
+            const prodFactors = buildProductionFactors(rationMod, rationTier, seasonMod, avgGeneProd, sick, mature, count);
             const hasProduction = animalType.productionType && prodPerDay > 0;
             const netColor = netPerDay > 0 ? '#4caf50' : netPerDay < -1 ? '#ef5350' : '#888';
             const rationColor = rationTier === 'deficient' ? '#ef5350' : rationTier === 'adequate' ? '#ff9800' : rationTier === 'optimal' ? '#4caf50' : '#2196f3';
@@ -288,6 +326,21 @@ export default function AnimalReportSection() {
                     </View>
                     <Text style={ar.meatNote}>Sell at maturity for best value</Text>
                   </View>
+                )}
+                {/* Production explanation factors */}
+                {hasProduction && prodFactors.length > 0 && (
+                  <View style={ar.factorsBox}>
+                    <Text style={ar.factorsTitle}>WHY THIS OUTPUT</Text>
+                    {prodFactors.map((f, i) => (
+                      <View key={i} style={ar.factorRow}>
+                        <Text style={ar.factorIcon}>{f.icon}</Text>
+                        <Text style={[ar.factorText, { color: f.color }]}>{f.text}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {hasProduction && prodFactors.length === 0 && (
+                  <Text style={ar.allGoodNote}>✓ Running at full capacity — no penalties active</Text>
                 )}
                 {sick > 0 && (
                   <Text style={ar.sickWarning}>⚠ {sick} animal{sick > 1 ? 's' : ''} sick — treat immediately to avoid production losses</Text>
@@ -367,4 +420,11 @@ const ar = StyleSheet.create({
   breakEven: { color: C.textFaint, fontSize: 10, marginTop: 1 },
   rankNet:   { fontSize: F.size.sm, fontWeight: 'bold' },
   rankTotal: { color: C.textFaint, fontSize: 9 },
+  // Production factors explanation
+  factorsBox:   { backgroundColor: '#0f1a0f', borderRadius: R.sm, padding: S.sm, marginTop: 6, gap: 3 },
+  factorsTitle: { color: '#4caf50', fontSize: 8, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
+  factorRow:    { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  factorIcon:   { fontSize: 11, width: 14 },
+  factorText:   { fontSize: F.size.xs, flex: 1 },
+  allGoodNote:  { color: '#4caf50', fontSize: 10, marginTop: 5, fontStyle: 'italic' },
 });
