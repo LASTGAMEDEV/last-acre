@@ -403,13 +403,20 @@ export default function AnimalesScreen() {
 
       {/* Herd group summary */}
       {animals.length > 0 && (() => {
-        const groups: Record<string, { count: number; sick: number; mature: number }> = {};
+        type GroupData = { count: number; sick: number; mature: number; geneSum: number; geneCount: number };
+        const groups: Record<string, GroupData> = {};
         animals.forEach(a => {
-          if (!groups[a.typeId]) groups[a.typeId] = { count: 0, sick: 0, mature: 0 };
-          groups[a.typeId].count++;
-          if (a.sick) groups[a.typeId].sick++;
+          if (!groups[a.typeId]) groups[a.typeId] = { count: 0, sick: 0, mature: 0, geneSum: 0, geneCount: 0 };
+          const g = groups[a.typeId];
+          g.count++;
+          if (a.sick) g.sick++;
           const type = ANIMAL_TYPES.find(t => t.id === a.typeId);
-          if (type && day - a.bornDay >= type.maturityDays) groups[a.typeId].mature++;
+          if (type && day - a.bornDay >= type.maturityDays) g.mature++;
+          if (a.genes) {
+            const avg = (a.genes.production + a.genes.hardiness + a.genes.growth + a.genes.value) / 4;
+            g.geneSum += avg;
+            g.geneCount++;
+          }
         });
         return (
           <View style={{ backgroundColor: C.bgCard, borderRadius: 10, marginHorizontal: 8, marginBottom: 8, padding: 12 }}>
@@ -421,12 +428,38 @@ export default function AnimalesScreen() {
                 const welfare = (animalWelfareScores ?? {})[typeId] as number | undefined;
                 const welfareColor = welfare == null ? C.textMuted : welfare >= 70 ? C.green : welfare >= 40 ? C.amber : C.red;
                 const productEmoji = type.productionType === 'eggs' ? '🥚' : type.productionType === 'milk' ? '🥛' : type.productionType === 'wool' ? '🧶' : type.productionType === 'honey' ? '🍯' : type.productionType === 'meat' ? '🥩' : '🐾';
+                const avgGene = g.geneCount > 0 ? g.geneSum / g.geneCount : null;
+                const grade = avgGene != null ? geneGrade(avgGene) : null;
+                const gradeCol = grade != null ? gradeColor(grade) : C.textMuted;
+                const prod = type.productionType && type.productionType !== 'meat'
+                  ? ANIMAL_PRODUCTS.find(ap => ap.productType === type.productionType)
+                  : null;
+                const dailyYield = prod && g.mature > 0
+                  ? (type.productionRate * getSeasonMultiplier(typeId, day) * g.mature).toFixed(1)
+                  : null;
+                const herdNick = (() => {
+                  if (!grade) return type.name;
+                  if (grade === 'S' || grade === 'A') return `Elite ${type.name}`;
+                  if (grade === 'B') return `Established ${type.name}`;
+                  if (g.count >= 10) return `Large ${type.name} Flock`;
+                  return type.name;
+                })();
                 return (
                   <View key={typeId} style={{ backgroundColor: C.bgElevated, borderRadius: 8, padding: 10, minWidth: 100, flex: 1 }}>
-                    <Text style={{ color: C.text, fontSize: 12, fontWeight: 'bold' }}>{productEmoji} {type.name}</Text>
+                    <Text style={{ color: C.text, fontSize: 12, fontWeight: 'bold' }}>{productEmoji} {herdNick}</Text>
                     <Text style={{ color: C.textMuted, fontSize: 11 }}>{g.count} total · {g.mature} mature</Text>
+                    {grade != null && (
+                      <Text style={{ color: gradeCol, fontSize: 11, fontWeight: 'bold', marginTop: 2 }}>
+                        Avg genes: {grade}
+                      </Text>
+                    )}
+                    {dailyYield != null && (
+                      <Text style={{ color: C.blue, fontSize: 11, marginTop: 1 }}>
+                        ~{dailyYield} {prod!.unit}/day
+                      </Text>
+                    )}
                     {welfare != null && (
-                      <Text style={{ color: welfareColor, fontSize: 11, fontWeight: 'bold', marginTop: 2 }}>
+                      <Text style={{ color: welfareColor, fontSize: 11, marginTop: 1 }}>
                         Welfare {Math.round(welfare)}%
                       </Text>
                     )}
