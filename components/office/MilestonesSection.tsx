@@ -4,6 +4,179 @@ import { useGameStore, SeasonGoal } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { MILESTONES } from '../../data/milestones';
 
+type Year1Step = {
+  id: string;
+  icon: string;
+  label: string;
+  hint: string;
+  system: string;
+  check: (s: any) => boolean;
+};
+
+const YEAR1_CHAIN: Year1Step[] = [
+  {
+    id: 'y1_plant',
+    icon: '🌱',
+    label: 'Plant your first crop',
+    hint: 'Land → tap a plot → Till → Plant Crop',
+    system: 'Teaches: Land Management',
+    check: (s: any) => (s.personalRecords?.totalHarvests ?? 0) >= 1 || (s.firstMissionStep ?? 0) >= 1,
+  },
+  {
+    id: 'y1_harvest',
+    icon: '🌾',
+    label: 'Harvest when it matures',
+    hint: 'Advance days until ready, then tap Harvest on the plot card',
+    system: 'Teaches: Crop Growth Cycle',
+    check: (s: any) => (s.personalRecords?.totalHarvests ?? 0) >= 1,
+  },
+  {
+    id: 'y1_earn1k',
+    icon: '💰',
+    label: 'Earn $1,000 total revenue',
+    hint: 'Sell your harvest in Market → Sell, or set up auto-sell rules',
+    system: 'Teaches: Market Selling',
+    check: (s: any) => (s.totalRevenue ?? 0) >= 1000,
+  },
+  {
+    id: 'y1_contract',
+    icon: '📋',
+    label: 'Complete a delivery contract',
+    hint: 'Market → Contracts → accept an offer and deliver crops by the deadline',
+    system: 'Teaches: Supply Contracts',
+    check: (s: any) => (s.contracts ?? []).some((c: any) => c.completed),
+  },
+  {
+    id: 'y1_worker',
+    icon: '👷',
+    label: 'Hire your first farm worker',
+    hint: 'Office → Management → Workers → hire a Field Worker',
+    system: 'Teaches: Workforce',
+    check: (s: any) => (s.workers ?? []).length >= 1,
+  },
+  {
+    id: 'y1_animal',
+    icon: '🐄',
+    label: 'Buy your first livestock',
+    hint: 'Animals tab → browse breeds → Buy. Animals produce income every day.',
+    system: 'Teaches: Livestock',
+    check: (s: any) => (s.animals ?? []).length >= 1,
+  },
+  {
+    id: 'y1_savings',
+    icon: '🏦',
+    label: 'Build a $500 emergency fund',
+    hint: 'Banking → Savings → deposit cash to protect against bad seasons',
+    system: 'Teaches: Financial Safety',
+    check: (s: any) => (s.savings?.balance ?? 0) >= 500,
+  },
+  {
+    id: 'y1_rep',
+    icon: '⭐',
+    label: 'Reach reputation score 40',
+    hint: 'Deliver contracts on time, care for animals, avoid subsidy violations',
+    system: 'Teaches: Reputation System',
+    check: (s: any) => (s.reputation?.score ?? 0) >= 40,
+  },
+  {
+    id: 'y1_earn15k',
+    icon: '💎',
+    label: 'Earn $15,000 total revenue',
+    hint: 'Diversify: crops + animals + contracts all contribute',
+    system: 'Teaches: Diversification',
+    check: (s: any) => (s.totalRevenue ?? 0) >= 15000,
+  },
+  {
+    id: 'y1_survive',
+    icon: '🎖️',
+    label: 'Survive Year 1 (reach Day 365)',
+    hint: 'Keep cash positive, avoid loan defaults, and build toward Year 2',
+    system: 'Teaches: Long-Term Planning',
+    check: (s: any) => (s.day ?? 0) >= 365,
+  },
+];
+
+function FirstYearChain() {
+  const store = useGameStore() as any;
+  const { day } = store;
+
+  if ((day ?? 0) > 730) return null;
+
+  const steps = YEAR1_CHAIN.map(step => ({ ...step, done: step.check(store) }));
+  const doneCount = steps.filter(s => s.done).length;
+  const nextIdx = steps.findIndex(s => !s.done);
+  const allDone = doneCount === YEAR1_CHAIN.length;
+
+  return (
+    <View style={chain.container}>
+      <View style={chain.headerRow}>
+        <Text style={chain.title}>🗓️ Year 1 Goal Chain</Text>
+        <Text style={chain.progress}>{doneCount}/{YEAR1_CHAIN.length}</Text>
+      </View>
+      <Text style={chain.sub}>Complete these to learn every core system</Text>
+      <View style={chain.trackBar}>
+        <View style={[chain.trackFill, { width: `${Math.round((doneCount / YEAR1_CHAIN.length) * 100)}%` as any }]} />
+      </View>
+      {steps.map((step, i) => {
+        const isCurrent = i === nextIdx;
+        const isDone = step.done;
+        return (
+          <View key={step.id} style={[chain.row, isCurrent && chain.rowActive]}>
+            <View style={[chain.dot, isDone && chain.dotDone, isCurrent && chain.dotCurrent]}>
+              {isDone
+                ? <Text style={chain.dotCheck}>✓</Text>
+                : <Text style={chain.dotNum}>{i + 1}</Text>
+              }
+            </View>
+            <View style={[chain.rowBody, { opacity: isDone ? 0.5 : isCurrent ? 1 : 0.35 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Text style={chain.icon}>{step.icon}</Text>
+                <Text style={[chain.label, isDone && chain.labelDone]}>{step.label}</Text>
+              </View>
+              {isCurrent && (
+                <>
+                  <Text style={chain.hint}>{step.hint}</Text>
+                  <Text style={chain.system}>{step.system}</Text>
+                </>
+              )}
+            </View>
+          </View>
+        );
+      })}
+      {allDone && (
+        <View style={chain.completeBox}>
+          <Text style={chain.completeText}>🎉 Year 1 complete — you've learned every core system. Build on this!</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const chain = StyleSheet.create({
+  container:   { backgroundColor: '#0a1628', borderRadius: R.lg, marginHorizontal: S.md, marginBottom: S.md, padding: S.md, borderWidth: 1, borderColor: '#1e3a6e55' },
+  headerRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+  title:       { color: '#90caf9', fontSize: F.size.sm, fontWeight: 'bold' },
+  progress:    { color: '#64b5f6', fontSize: F.size.xs, fontWeight: 'bold' },
+  sub:         { color: C.textMuted, fontSize: F.size.xs, marginBottom: 8 },
+  trackBar:    { height: 3, backgroundColor: '#1a2a4a', borderRadius: 2, marginBottom: 10, overflow: 'hidden' },
+  trackFill:   { height: 3, backgroundColor: '#1565c0', borderRadius: 2 },
+  row:         { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 4 },
+  rowActive:   { backgroundColor: '#0d2040', borderRadius: R.sm, paddingHorizontal: 6, marginHorizontal: -6 },
+  rowBody:     { flex: 1, paddingBottom: 2 },
+  dot:         { width: 20, height: 20, borderRadius: 10, backgroundColor: '#1a2a3a', alignItems: 'center', justifyContent: 'center', marginTop: 2, flexShrink: 0 },
+  dotDone:     { backgroundColor: '#0f3460' },
+  dotCurrent:  { backgroundColor: '#1565c0' },
+  dotCheck:    { color: '#4caf50', fontSize: 11, fontWeight: 'bold' },
+  dotNum:      { color: '#555', fontSize: 9, fontWeight: 'bold' },
+  icon:        { fontSize: 13 },
+  label:       { color: C.text, fontSize: F.size.xs, fontWeight: '600' as const, flex: 1 },
+  labelDone:   { textDecorationLine: 'line-through' as const, color: '#555' },
+  hint:        { color: '#64b5f6', fontSize: F.size.xs, marginTop: 3, lineHeight: 15 },
+  system:      { color: '#1e4a6e', fontSize: 9, marginTop: 2, fontStyle: 'italic' as const },
+  completeBox: { backgroundColor: '#0f3460', borderRadius: R.md, padding: S.sm, marginTop: S.sm },
+  completeText:{ color: '#90caf9', fontSize: F.size.xs, textAlign: 'center' },
+});
+
 function SeasonGoalsSection() {
   const {
     seasonGoals, seasonGoalSeason, seasonStartRevenue,
@@ -92,7 +265,9 @@ function MilestonesSection() {
 
   return (
     <View style={styles.milestoneContainer}>
-      {/* Seasonal goals at the top */}
+      {/* First-year chain at the very top */}
+      <FirstYearChain />
+      {/* Seasonal goals */}
       <SeasonGoalsSection />
 
       {earned.length > 0 && (

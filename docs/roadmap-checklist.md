@@ -40,7 +40,7 @@ These are the highest-impact items not yet done, in order:
 
 - [ ] Rebuild first 10 days around a guided farm start
 - [x] Let players choose a starting style (Crop Farm / Livestock / Market Trader / Balanced)
-- [ ] Add a first-year goal chain instead of isolated tutorial popups
+- [x] Add a first-year goal chain instead of isolated tutorial popups
 - [ ] Teach one system at a time: fields → selling → debt → animals/processing
 - [x] Add safe first-crop recommendations based on season
 - [ ] Add a beginner preset with gentler debt and slower disasters
