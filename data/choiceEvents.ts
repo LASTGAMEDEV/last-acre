@@ -381,4 +381,120 @@ export const CHOICE_EVENT_TEMPLATES: ChoiceEventTemplate[] = [
       },
     ],
   },
+  // ── Rare events (weight 1–3) ───────────────────────────────────────────────
+  {
+    id: 'ce_heritage_seed_cache',
+    icon: '🌿',
+    title: 'Forgotten Seed Cache',
+    description:
+      "While clearing an old barn corner, you uncover a sealed wooden chest filled with hand-labeled seed packets — heirloom varieties your grandfather saved decades ago. A heritage seed organisation offers $2,500 for the archive, or you could try to grow them and see what happens.",
+    weight: 2,
+    minDay: 120,
+    options: [
+      {
+        label: 'Sell the archive ($2,500)',
+        effectDesc: '+$2,500 cash and the seeds go to the public collection',
+        kind: 'good',
+        effect: { money: 2500 },
+      },
+      {
+        label: 'Keep and trial the seeds',
+        effectDesc: '+18 soil organic matter as you prepare special plots, no cash',
+        kind: 'risky',
+        effect: { soilOrganicAll: 0.8 },
+      },
+    ],
+  },
+  {
+    id: 'ce_govt_climate_grant',
+    icon: '🏛️',
+    title: 'Government Climate Grant',
+    description:
+      "A regional climate-adaptation fund is awarding grants to farms that reduce emissions and improve soil health. The application costs time and a $250 assessment fee, but approved farms receive $4,000 within 30 days.",
+    weight: 2,
+    minDay: 200,
+    options: [
+      {
+        label: 'Apply for the grant (-$250)',
+        effectDesc: '-$250 now, +$4,000 payout and +8 reputation if approved',
+        kind: 'risky',
+        effect: { money: 3750, reputationDelta: 8 },
+      },
+      {
+        label: 'Skip the paperwork',
+        effectDesc: 'No change — grant goes to another farm',
+        kind: 'neutral',
+        effect: {},
+      },
+    ],
+  },
+  {
+    id: 'ce_local_food_crisis',
+    icon: '🍞',
+    title: 'Local Food Shortage',
+    description:
+      "A logistics strike has cut off the town's food supply. Your storerooms are full. You could donate generously to the community food bank — or seize the shortage to sell your entire inventory at a 50% premium.",
+    weight: 2,
+    minDay: 90,
+    options: [
+      {
+        label: 'Donate generously',
+        effectDesc: 'Sell all inventory at 40% of market price, but gain +20 community reputation',
+        kind: 'good',
+        effect: { inventoryLiquidatePct: 0.40, reputationDelta: 20 },
+      },
+      {
+        label: 'Sell at crisis premium',
+        effectDesc: 'Sell all inventory at 140% market price, but −12 community reputation',
+        kind: 'risky',
+        effect: { inventoryLiquidatePct: 1.40, reputationDelta: -12 },
+      },
+    ],
+  },
+  {
+    id: 'ce_soil_scientist',
+    icon: '🔬',
+    title: 'Soil Science Partnership',
+    description:
+      "A university soil science team wants to use your farm as a research site for two seasons. They pay you $600 for access and, as a byproduct of their deep-tillage sampling, your fields benefit from improved nitrogen cycling.",
+    weight: 3,
+    minDay: 150,
+    options: [
+      {
+        label: 'Partner with the university',
+        effectDesc: '+$600 and improved soil nitrogen across all parcels',
+        kind: 'good',
+        effect: { money: 600, soilNitrogenAll: 15 },
+      },
+      {
+        label: 'Decline — too disruptive',
+        effectDesc: 'No change',
+        kind: 'neutral',
+        effect: {},
+      },
+    ],
+  },
+  {
+    id: 'ce_rival_buys_out',
+    icon: '🤝',
+    title: 'Rival Makes an Offer',
+    description:
+      "Your biggest competitor has offered to buy you out entirely — farm, stock, and equipment — for a lump sum of $18,000. They want your land to expand their operation. It's a life-changing amount of money, but you'd be starting over.",
+    weight: 1,
+    minDay: 365,
+    options: [
+      {
+        label: 'Sell the farm ($18,000)',
+        effectDesc: '+$18,000 — the rival takes over your land',
+        kind: 'risky',
+        effect: { money: 18000 },
+      },
+      {
+        label: 'Refuse — this farm is your legacy',
+        effectDesc: '+5 reputation for standing your ground',
+        kind: 'good',
+        effect: { reputationDelta: 5 },
+      },
+    ],
+  },
 ];

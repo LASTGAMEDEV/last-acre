@@ -26,7 +26,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Add a "Farm Health" score — 5-component score on dashboard
 - [x] Add "Why did this happen?" harvest yield explanations
 - [x] Add cashflow forecast panel
-- [ ] Add "Why did this happen?" for sales, animal production, reputation, bankruptcy
+- [x] Add "Why did this happen?" for sales, animal production, reputation, bankruptcy
 - [x] Improve Day Summary to group events: Money, Fields, Animals, Market, Family, Risks
 - [x] Add "What changed since yesterday?" summary
 - [x] Add guide buttons to confusing stats and cards
@@ -131,7 +131,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Production modifier and disease risk in RationDesigner
 - [x] Animal welfare readability (group summaries: health, feed, production, reproduction)
 - [ ] Explanations for production changes
-- [ ] Herd and flock identity
+- [x] Herd and flock identity
 - [ ] Vet visits and preventive care
 - [ ] Disease containment decisions
 - [ ] Winter preparation checklist for livestock
@@ -355,7 +355,7 @@ These are the highest-impact items not yet done, in order:
 - [ ] More buyer personalities
 - [ ] More neighbor personalities
 - [x] More guide entries
-- [ ] More achievements
+- [x] More achievements
 - [ ] Farm-name and family-name flavor text
 - [ ] Rare events that players talk about
 
