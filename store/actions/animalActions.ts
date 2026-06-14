@@ -62,6 +62,8 @@ export interface AnimalActions {
   withdrawAnimalShow: (animalId: string) => void;
   upgradeAnimalGene: (animalId: string, gene: keyof AnimalGenes) => void;
   cureDisease: (parcelId: string) => void;
+  scheduleVetRound: () => void;
+  quarantineAnimal: (animalId: string) => void;
 }
 
 export const createAnimalActions: ActionFactory<AnimalActions> = (set, get) => ({
@@ -623,6 +625,26 @@ export const createAnimalActions: ActionFactory<AnimalActions> = (set, get) => (
     set({
       parcels: state.parcels.map(p => p.id === parcelId ? { ...p, diseased: false, diseasedDay: undefined } : p),
       money: state.money - CURE_COST,
+    });
+  },
+
+  scheduleVetRound: () => {
+    const state = get();
+    const animalCount = (state.animals ?? []).length;
+    if (animalCount === 0) return;
+    const cost = Math.max(80, animalCount * 25);
+    if (state.money < cost) return;
+    set({ money: state.money - cost, vetRoundDay: state.day } as any);
+  },
+
+  quarantineAnimal: (animalId) => {
+    const state = get();
+    const animal = (state.animals ?? []).find((a: OwnedAnimal) => a.id === animalId);
+    if (!animal || !animal.sick) return;
+    set({
+      animals: state.animals.map(a =>
+        a.id === animalId ? { ...a, inIsolation: true, quarantineUntilDay: state.day + 14 } : a
+      ),
     });
   },
 });

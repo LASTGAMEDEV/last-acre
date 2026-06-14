@@ -1603,12 +1603,15 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
         }
 
         // Sickness spread · must run BEFORE death filter
+        const vetRoundDay = (state as any).vetRoundDay as number | undefined;
+        const vetProtected = vetRoundDay !== undefined && newDay - vetRoundDay <= 60;
         animals = animals.map((a: OwnedAnimal) => {
           if (a.inIsolation) return a; // isolated · cannot contract illness from spread
           if (a.sick) return a;
           const baseSickChance = (a.traits ?? []).includes('hardy') ? 0.006 : 0.015;
           const hardinessDiv = a.genes?.hardiness ?? 1.0;
-          const sickChance = baseSickChance * (1 - workerBonuses.sicknessBonusReduction) / hardinessDiv;
+          const vetMult = vetProtected ? 0.3 : 1.0;
+          const sickChance = baseSickChance * (1 - workerBonuses.sicknessBonusReduction) / hardinessDiv * vetMult;
           if (Math.random() < sickChance) {
             newSickIds.push(a.id);
             return { ...a, sick: true, sicknessDay: newDay };

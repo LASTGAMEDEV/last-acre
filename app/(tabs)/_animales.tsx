@@ -27,6 +27,19 @@ const PRODUCT_CHAINS: Record<string, { steps: string; building: string; finalLab
   cream: { steps: 'Ice Cream',                  building: 'bld_ice_cream_churner',finalLabel: '$8.50/L' },
 };
 
+function getAnimalPersonality(genes: { production: number; hardiness: number; growth: number; value: number } | undefined): string | null {
+  if (!genes) return null;
+  const avg = (genes.production + genes.hardiness + genes.growth + genes.value) / 4;
+  if (avg < 1.2) return null; // only A or S grade
+  const dominant = (Object.entries(genes) as [string, number][]).reduce((a, b) => b[1] > a[1] ? b : a)[0];
+  if (avg >= 1.4) {
+    const rare: Record<string, string> = { production: 'The Magnificent', hardiness: 'The Indestructible', growth: 'The Titan', value: 'The Jewel' };
+    return rare[dominant] ?? 'The Legend';
+  }
+  const normal: Record<string, string> = { production: 'Powerhouse', hardiness: 'Iron-Willed', growth: 'Fast Grower', value: 'Prize Quality' };
+  return normal[dominant] ?? null;
+}
+
 function QuarantineBadge({ animal, day }: { animal: OwnedAnimal; day: number }) {
   if (!animal.quarantineUntilDay || animal.quarantineUntilDay <= day) return null;
   const remaining = animal.quarantineUntilDay - day;
@@ -140,7 +153,11 @@ export default function AnimalesScreen() {
     designateAsSire, removeFromSirePen, sirePenAnimalIds,
     animalWelfareScores,
   } = useGameStore();
-  const marketPrices: any[] = (useGameStore() as any).prices ?? [];
+  const storeAny = useGameStore() as any;
+  const marketPrices: any[] = storeAny.prices ?? [];
+  const vetRoundDay: number | undefined = storeAny.vetRoundDay;
+  const scheduleVetRound: () => void = storeAny.scheduleVetRound ?? (() => {});
+  const quarantineAnimal: (id: string) => void = storeAny.quarantineAnimal ?? (() => {});
   const hasAnimalWorker = (workers ?? []).some(
     (w: any) => w.role === 'livestock_hand' || w.role === 'veterinarian'
   );
@@ -479,6 +496,75 @@ export default function AnimalesScreen() {
         );
       })()}
 
+      {/* Vet round / preventive care */}
+      {animals.length > 0 && (() => {
+        const vetCost = Math.max(80, animals.length * 25);
+        const daysSince = vetRoundDay !== undefined ? day - vetRoundDay : null;
+        const protected_ = daysSince !== null && daysSince <= 60;
+        return (
+          <View style={{ backgroundColor: C.bgCard, borderRadius: 10, marginHorizontal: 8, marginBottom: 8, padding: 12 }}>
+            <Text style={{ color: C.text, fontWeight: 'bold', fontSize: 13, marginBottom: 6 }}>🩺 Preventive Care</Text>
+            {protected_ ? (
+              <Text style={{ color: C.green, fontSize: 12 }}>
+                ✓ Vet round done {daysSince}d ago — disease risk reduced 70% for {60 - daysSince!}d more
+              </Text>
+            ) : (
+              <>
+                <Text style={{ color: C.textMuted, fontSize: 11, marginBottom: 8 }}>
+                  Schedule a vet to check all {animals.length} animals. Reduces disease chance by 70% for 60 days.
+                  {daysSince !== null ? ` Last visit: ${daysSince}d ago.` : ' No visits yet.'}
+                </Text>
+                <TouchableOpacity
+                  style={{ backgroundColor: money >= vetCost ? '#1a3a2a' : C.bgElevated, borderRadius: 8, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: money >= vetCost ? C.green : C.border }}
+                  onPress={() => Alert.alert('Schedule Vet Round', `Visit all ${animals.length} animals for $${vetCost}?\n\nReduces disease risk by 70% for 60 days.`, [{ text: 'Cancel', style: 'cancel' }, { text: `Pay $${vetCost}`, onPress: () => scheduleVetRound() }])}
+                  disabled={money < vetCost}
+                >
+                  <Text style={{ color: money >= vetCost ? C.green : C.textMuted, fontWeight: 'bold' }}>
+                    Schedule Vet Round — ${vetCost}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        );
+      })()}
+
+      {/* Winter preparation checklist */}
+      {animals.length > 0 && getSeason(day) === 'autumn' && (() => {
+        const dailyGrain = animals.reduce((s, a) => { const t = ANIMAL_TYPES.find(x => x.id === a.typeId); return s + (t?.feedType === 'grain' ? t.feedKgPerDay : 0); }, 0);
+        const dailyHay   = animals.reduce((s, a) => { const t = ANIMAL_TYPES.find(x => x.id === a.typeId); return s + (t?.feedType === 'hay'   ? t.feedKgPerDay : 0); }, 0);
+        const grainDays  = dailyGrain > 0 ? Math.floor(grainStock / dailyGrain) : 999;
+        const hayDays    = dailyHay   > 0 ? Math.floor(hayStock   / dailyHay)   : 999;
+        const feedOk     = grainDays >= 90 && hayDays >= 90;
+        const healthOk   = animals.filter(a => a.sick).length === 0;
+        const vetOk      = vetRoundDay !== undefined && day - vetRoundDay <= 60;
+        const totalCap   = animals.reduce((s, a) => { const t = ANIMAL_TYPES.find(x => x.id === a.typeId); return s + (t ? getEnclosureCapacity(buildings, t.enclosureType) : 0); }, 0);
+        const shelterOk  = totalCap >= animals.length;
+        const items = [
+          { label: 'Feed reserves ≥ 90 days',    ok: feedOk,    detail: feedOk ? 'Adequate' : `Grain ${grainDays}d · Hay ${hayDays}d` },
+          { label: 'No sick animals',             ok: healthOk,  detail: healthOk ? 'All healthy' : `${animals.filter(a=>a.sick).length} sick — treat before winter` },
+          { label: 'Vet preventive check done',   ok: vetOk,     detail: vetOk ? 'Done' : 'Schedule vet round above' },
+          { label: 'Shelter capacity sufficient', ok: shelterOk, detail: shelterOk ? 'All animals housed' : 'Build more enclosures' },
+        ];
+        const allDone = items.every(i => i.ok);
+        return (
+          <View style={{ backgroundColor: allDone ? '#0a1f0a' : '#1a1000', borderRadius: 10, marginHorizontal: 8, marginBottom: 8, padding: 12, borderWidth: 1, borderColor: allDone ? C.green : C.amber }}>
+            <Text style={{ color: allDone ? C.green : C.amber, fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>
+              ❄️ Winter Preparation Checklist
+            </Text>
+            {items.map(item => (
+              <View key={item.label} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
+                <Text style={{ fontSize: 14, marginRight: 8, marginTop: -1 }}>{item.ok ? '✅' : '⚠️'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: item.ok ? C.text : C.amber, fontSize: 12, fontWeight: '600' }}>{item.label}</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 10 }}>{item.detail}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        );
+      })()}
+
       {/* Herd filter / sort controls */}
       {animals.length > 0 && (() => {
         const speciesInHerd = [...new Set(animals.map(a => a.typeId))];
@@ -601,6 +687,18 @@ export default function AnimalesScreen() {
               <Text style={{ color: C.green, fontSize: 11, marginBottom: 2 }}>
                 {getBreedDisplayName(item, BREED_TYPES)}
               </Text>
+              {(() => {
+                const personality = getAnimalPersonality(item.genes);
+                if (!personality) return null;
+                const g = item.genes!;
+                const avg = (g.production + g.hardiness + g.growth + g.value) / 4;
+                const col = avg >= 1.4 ? C.amber : C.purple;
+                return (
+                  <Text style={{ color: col, fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}>
+                    ✨ {personality}
+                  </Text>
+                );
+              })()}
               <Text style={styles.detail}>
                 Age: {age}d {mature ? (isOld ? '👴 Senior' : '✅') : '🌱'}
               </Text>
@@ -836,24 +934,61 @@ export default function AnimalesScreen() {
                 );
               })()}
               {item.sick && (
-                <View style={styles.sickRow}>
-                  <Text style={styles.sickText}>🤒 Sick</Text>
-                  <TouchableOpacity
-                    style={[styles.treatBtn, money < treatCost && styles.breedBtnDisabled]}
-                    onPress={() => treatAnimal(item.id)}
-                    disabled={money < treatCost}
-                  >
-                    <Text style={styles.btnText}>Treat ${treatCost}</Text>
-                  </TouchableOpacity>
+                <View style={{ marginTop: 6 }}>
+                  <Text style={styles.sickText}>🤒 Sick — choose a response:</Text>
+                  <View style={{ flexDirection: 'row', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                    <TouchableOpacity
+                      style={[styles.treatBtn, money < treatCost && styles.breedBtnDisabled]}
+                      onPress={() => Alert.alert('Treat Animal', `Pay $${treatCost} to treat this ${type.name}?`, [{ text: 'Cancel', style: 'cancel' }, { text: `Pay $${treatCost}`, onPress: () => treatAnimal(item.id) }])}
+                      disabled={money < treatCost}
+                    >
+                      <Text style={styles.btnText}>💊 Treat ${treatCost}</Text>
+                    </TouchableOpacity>
+                    {!item.inIsolation && !item.quarantineUntilDay && (
+                      <TouchableOpacity
+                        style={{ backgroundColor: '#1a2a3a', borderRadius: 6, padding: 6, borderWidth: 1, borderColor: C.blue }}
+                        onPress={() => quarantineAnimal(item.id)}
+                      >
+                        <Text style={{ color: C.blue, fontSize: 11, fontWeight: 'bold' }}>🔒 Quarantine</Text>
+                      </TouchableOpacity>
+                    )}
+                    <View style={{ backgroundColor: C.bgElevated, borderRadius: 6, padding: 6 }}>
+                      <Text style={{ color: C.textMuted, fontSize: 10 }}>👁 Monitor — risk of spread</Text>
+                    </View>
+                  </View>
+                  {item.inIsolation && (
+                    <Text style={{ color: C.blue, fontSize: 10, marginTop: 3 }}>🏥 Isolated — not spreading. Auto-clears in {14 - Math.max(0, day - (item.sicknessDay ?? day))}d if vet present.</Text>
+                  )}
                 </View>
               )}
               <QuarantineBadge animal={item} day={day} />
               <IsolationBadge animal={item} />
               <OptimalWeightBadge animal={item} />
               {!item.sick && type.productionType && (
-                <TouchableOpacity style={styles.collectBtn} onPress={() => collectAnimalProduction(item.id)}>
-                  <Text style={styles.btnText}>Collect</Text>
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity style={styles.collectBtn} onPress={() => collectAnimalProduction(item.id)}>
+                    <Text style={styles.btnText}>Collect</Text>
+                  </TouchableOpacity>
+                  {(() => {
+                    const chain = PRODUCT_CHAINS[type.productionType];
+                    if (!chain) return null;
+                    const hasBuilding = buildings.includes(chain.building);
+                    // Egg incubation path (separate from grading)
+                    const canIncubate = type.productionType === 'eggs' && (animalInventory['eggs'] ?? 0) >= 6;
+                    return (
+                      <View style={{ marginTop: 4 }}>
+                        <Text style={[styles.chainHint, { color: hasBuilding ? C.green : C.textFaint }]}>
+                          {hasBuilding ? '→ ' : '🔒 '}{chain.steps} ({chain.finalLabel})
+                        </Text>
+                        {canIncubate && (
+                          <Text style={{ color: C.purple, fontSize: 9, marginTop: 2 }}>
+                            🥚→🐣 Incubate eggs for new {type.name}
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  })()}
+                </>
               )}
               {(() => {
                 const meatPx = (marketPrices ?? []).find((p: any) => p.cropId === 'meat')?.price ?? 4.50;
