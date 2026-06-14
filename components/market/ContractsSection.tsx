@@ -7,10 +7,14 @@ import { CONTRACT_TEMPLATES, contractPenalty } from '../../engine/contracts';
 import { CROP_TYPES } from '../../data/cropTypes';
 import { GUIDE_ENTRY_IDS } from '../../data/guideEntries';
 
+type ContractSort = 'deadline' | 'value' | 'name';
+
 function ContractsSection() {
   const { contracts, prices, inventory, day, acceptContract, declineContract, deliverCrop, declinedTemplates, counterOfferContract, reputation } = useGameStore();
   const [negotiatingId, setNegotiatingId] = React.useState<string | null>(null);
   const [pinnedIds, setPinnedIds] = React.useState<Set<string>>(new Set());
+  const [activeSort, setActiveSort] = React.useState<ContractSort>('deadline');
+  const [showHistory, setShowHistory] = React.useState(false);
 
   function togglePin(id: string) {
     setPinnedIds(prev => {
@@ -20,11 +24,23 @@ function ContractsSection() {
     });
   }
 
-  const allActive = contracts.filter(c => !c.completed && !c.failed);
-  const activeContracts = [
-    ...allActive.filter(c => pinnedIds.has(c.id)),
-    ...allActive.filter(c => !pinnedIds.has(c.id)),
-  ];
+  const allActive = contracts.filter((c: any) => !c.completed && !c.failed);
+
+  function sortActive(list: any[]): any[] {
+    const pinned = list.filter(c => pinnedIds.has(c.id));
+    const rest = list.filter(c => !pinnedIds.has(c.id)).sort((a: any, b: any) => {
+      if (activeSort === 'deadline') return (a.deadlineDay - day) - (b.deadlineDay - day);
+      if (activeSort === 'value')    return (b.amount - b.delivered) * b.pricePerUnit - (a.amount - a.delivered) * a.pricePerUnit;
+      const cn = (c: any) => CROP_TYPES.find(cr => cr.id === c.cropId)?.name ?? '';
+      return cn(a).localeCompare(cn(b));
+    });
+    return [...pinned, ...rest];
+  }
+
+  const activeContracts = sortActive(allActive);
+  const historyContracts = contracts.filter((c: any) => c.completed || c.failed)
+    .sort((a: any, b: any) => (b.deadlineDay ?? 0) - (a.deadlineDay ?? 0))
+    .slice(0, 12);
   const repScore = (reputation as any)?.score ?? 0;
   const availableTemplates = CONTRACT_TEMPLATES.filter(
     t => !allActive.some(c => c.templateId === t.id) && !declinedTemplates.includes(t.id) && !(t.minReputation && repScore < t.minReputation)
@@ -40,6 +56,17 @@ function ContractsSection() {
           <Text style={styles.sectionTitle}>Active contracts ({activeContracts.length})</Text>
           <GuideButton entryId="system_contracts" compact />
         </View>
+        {allActive.length > 1 && (
+          <View style={cStyles.sortRow}>
+            {(['deadline', 'value', 'name'] as ContractSort[]).map(s => (
+              <TouchableOpacity key={s} style={[cStyles.sortChip, activeSort === s && cStyles.sortChipActive]} onPress={() => setActiveSort(s)}>
+                <Text style={[cStyles.sortChipText, activeSort === s && cStyles.sortChipTextActive]}>
+                  {s === 'deadline' ? '⏰ Deadline' : s === 'value' ? '💰 Value' : '🔤 Name'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
         {activeContracts.length === 0 && (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>No active contracts.</Text>
@@ -226,6 +253,31 @@ function ContractsSection() {
           </View>
         )}
       </View>
+
+      {/* Contract history */}
+      {historyContracts.length > 0 && (
+        <View style={styles.section}>
+          <TouchableOpacity style={styles.sectionTitleRow} onPress={() => setShowHistory(v => !v)}>
+            <Text style={styles.sectionTitle}>History ({historyContracts.length})</Text>
+            <Text style={{ color: '#555', fontSize: 12 }}>{showHistory ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {showHistory && historyContracts.map((c: any) => {
+            const crop = CROP_TYPES.find(cr => cr.id === c.cropId);
+            const value = Math.round(c.delivered * c.pricePerUnit);
+            return (
+              <View key={c.id} style={cStyles.historyRow}>
+                <Text style={cStyles.historyIcon}>{c.completed ? '✅' : '❌'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={cStyles.historyTitle}>{crop?.name ?? c.cropId} · {c.completed ? 'Completed' : 'Failed'}</Text>
+                  <Text style={cStyles.historyDetail}>
+                    {c.delivered.toLocaleString()}/{c.amount.toLocaleString()} {crop?.unit ?? 'kg'} · ${value.toLocaleString()} earned · Day {c.deadlineDay}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -444,6 +496,18 @@ const styles = StyleSheet.create({
     paddingTop: S.sm,
     paddingBottom: S.xs,
   },
+});
+
+const cStyles = StyleSheet.create({
+  sortRow:           { flexDirection: 'row', gap: 6, marginBottom: 10, marginTop: -4 },
+  sortChip:          { backgroundColor: '#0d1117', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: '#2a2a4a' },
+  sortChipActive:    { backgroundColor: '#0f3460', borderColor: '#1565c0' },
+  sortChipText:      { color: '#555', fontSize: F.size.xs, fontWeight: 'bold' },
+  sortChipTextActive:{ color: '#90caf9' },
+  historyRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 5, borderTopWidth: 1, borderTopColor: '#1a1f2e' },
+  historyIcon:       { fontSize: 14, lineHeight: 18, width: 20, textAlign: 'center' },
+  historyTitle:      { color: C.textDim, fontSize: F.size.xs, fontWeight: '600' as const },
+  historyDetail:     { color: '#444', fontSize: 10, marginTop: 1 },
 });
 
 export default ContractsSection;

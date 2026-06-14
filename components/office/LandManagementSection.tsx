@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
 import type { SoilStats } from '../../engine/crops';
+import { isReady } from '../../engine/crops';
 import {
   pestControlForParcel, isWindProtected, pollinatorStripCount, hasBufferStrip,
   maturityProgress, HEDGEROW_PEST_CONTROL,
@@ -41,6 +42,7 @@ export default function LandManagementSection() {
   } = useGameStore();
 
   const [expandedParcelId, setExpandedParcelId] = useState<string | null>(null);
+  const [parcelFilter, setParcelFilter] = useState<'all' | 'ready' | 'planted' | 'idle' | 'issues'>('all');
 
   const active = (activeLeases ?? []).filter(l => l.status === 'active');
   const ownedParcels = parcels.filter(p => p.owned);
@@ -74,13 +76,45 @@ export default function LandManagementSection() {
       {/* Per-parcel cards */}
       <View style={ls.card}>
         <Text style={ls.cardTitle}>Owned Parcels</Text>
+        {/* Filter chips */}
+        {ownedParcels.length > 1 && (() => {
+          const readyCount  = ownedParcels.filter(p => { if (!p.plantedCrop) return false; const ct = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId); return ct ? isReady(p.plantedCrop, ct, day) : false; }).length;
+          const plantedCount= ownedParcels.filter(p => p.plantedCrop && !isReady(p.plantedCrop, CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId)!, day)).length;
+          const idleCount   = ownedParcels.filter(p => !p.plantedCrop).length;
+          const issueCount  = ownedParcels.filter(p => p.hasWeeds || p.diseased || (p.pestState && p.pestState.severity > 0)).length;
+          const chips: { key: 'all' | 'ready' | 'planted' | 'idle' | 'issues'; label: string }[] = [
+            { key: 'all',     label: `All (${ownedParcels.length})` },
+            { key: 'ready',   label: `🌾 Ready (${readyCount})` },
+            { key: 'planted', label: `🌱 Growing (${plantedCount})` },
+            { key: 'idle',    label: `⬜ Idle (${idleCount})` },
+            ...(issueCount > 0 ? [{ key: 'issues' as const, label: `⚠️ Issues (${issueCount})` }] : []),
+          ];
+          return (
+            <View style={ls.filterRow}>
+              {chips.map(chip => (
+                <TouchableOpacity key={chip.key} style={[ls.filterChip, parcelFilter === chip.key && ls.filterChipActive]} onPress={() => setParcelFilter(chip.key)}>
+                  <Text style={[ls.filterChipText, parcelFilter === chip.key && ls.filterChipTextActive]}>{chip.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          );
+        })()}
         {ownedParcels.length === 0 && (
           <View style={ls.emptyCard}>
             <Text style={ls.muted}>No owned parcels yet.</Text>
             <Text style={ls.emptyHint}>Visit the Land tab to buy your first parcel and start planting crops. The Land Market shows parcels available for purchase or auction.</Text>
           </View>
         )}
-        {ownedParcels.map(parcel => {
+        {ownedParcels.filter(parcel => {
+          if (parcelFilter === 'all') return true;
+          const ct = parcel.plantedCrop ? CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId) : null;
+          const ready = ct && parcel.plantedCrop ? isReady(parcel.plantedCrop, ct, day) : false;
+          if (parcelFilter === 'ready')   return !!ready;
+          if (parcelFilter === 'planted') return !!parcel.plantedCrop && !ready;
+          if (parcelFilter === 'idle')    return !parcel.plantedCrop;
+          if (parcelFilter === 'issues')  return parcel.hasWeeds || parcel.diseased || (parcel.pestState && parcel.pestState.severity > 0);
+          return true;
+        }).map(parcel => {
           const crop = parcel.plantedCrop ? CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId) : null;
           const harvestDay = crop && parcel.plantedCrop ? parcel.plantedCrop.plantedDay + crop.growthDays : null;
           const daysLeft = harvestDay != null ? Math.max(0, harvestDay - day) : null;
@@ -378,4 +412,9 @@ const ls = StyleSheet.create({
   leaseRow:        { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border, gap: 4 },
   actionBtn:       { borderRadius: R.sm, padding: S.sm, marginTop: 4, alignItems: 'center' },
   actionBtnText:   { color: '#fff', fontWeight: '600', fontSize: F.size.sm },
+  filterRow:            { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 10 },
+  filterChip:           { backgroundColor: C.bgDeep, borderRadius: R.pill, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, borderColor: '#2a2a4a' },
+  filterChipActive:     { backgroundColor: '#0f3460', borderColor: '#1565c0' },
+  filterChipText:       { color: '#555', fontSize: F.size.xs, fontWeight: 'bold' },
+  filterChipTextActive: { color: '#90caf9' },
 });

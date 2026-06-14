@@ -92,7 +92,7 @@ These are the highest-impact items not yet done, in order:
 - [ ] Use consistent colors for risk, opportunity, complete, locked, neutral
 - [ ] Add clearer tab badges for urgent work
 - [ ] Add compact mode for experienced players
-- [ ] Add filters and sorting for fields, animals, inventory, contracts
+- [x] Add filters and sorting for fields, animals, inventory, contracts
 - [ ] Add confirmation modals only for high-impact actions
 - [ ] Add better disabled button messages
 - [ ] Add sticky action bars on long screens
