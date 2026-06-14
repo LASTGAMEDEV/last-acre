@@ -8,6 +8,7 @@ import { degradationYieldModifier } from '../../engine/soilDegradation';
 import { GRADE_MULTIPLIERS, type QualityGrade, type StoredBatch } from '../../engine/storageQuality';
 import type { LandParcel } from '../../types/domain/land';
 import type { MarketPrice } from '../../engine/market';
+import GuideButton from '../GuideButton';
 
 const ORGANIC_LABEL: Record<string, string> = {
   conventional: 'Conv.',
@@ -26,7 +27,13 @@ const ORGANIC_COLOR: Record<string, string> = {
   decertified: '#ef5350',
 };
 
-function SectionHeader({ title }: { title: string }) {
+function SectionHeader({ title, guideId }: { title: string; guideId?: string }) {
+  if (guideId) return (
+    <View style={cr.sectionHeaderRow}>
+      <Text style={cr.sectionHeaderText}>{title}</Text>
+      <GuideButton entryId={guideId} compact />
+    </View>
+  );
   return <Text style={cr.sectionHeader}>{title}</Text>;
 }
 function Card({ children }: { children: React.ReactNode }) {
@@ -181,7 +188,7 @@ function StorageQualitySection({ inventoryBatches, prices }: {
 
   return (
     <>
-      <SectionHeader title="📦 Stored Inventory Quality" />
+      <SectionHeader title="📦 Stored Inventory Quality" guideId="system_storage_quality" />
       <Card>
         {/* Alerts */}
         {condemnedBatches.length > 0 && (
@@ -309,7 +316,7 @@ export default function CropReportSection() {
 
       {activeParcels.length > 0 && (
         <>
-          <SectionHeader title="🌱 Growing Now" />
+          <SectionHeader title="🌱 Growing Now" guideId="system_crop_seasons" />
           {activeParcels
             .slice()
             .sort((a, b) => {
@@ -330,7 +337,7 @@ export default function CropReportSection() {
 
       {cropRevEntries.length > 0 && (
         <>
-          <SectionHeader title="💰 Crop Profitability (90 days)" />
+          <SectionHeader title="💰 Crop Profitability (90 days)" guideId="problem_bad_yield" />
           <Card>
             {cropRevEntries.map(([cropId, rev], i) => {
               const ct = CROP_TYPES.find(c => c.id === cropId);
@@ -416,7 +423,9 @@ export default function CropReportSection() {
 
 const cr = StyleSheet.create({
   container:      { padding: S.md, gap: S.sm, paddingBottom: 40 },
-  sectionHeader:  { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: S.md, marginBottom: 2 },
+  sectionHeader:     { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: S.md, marginBottom: 2 },
+  sectionHeaderRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: S.md, marginBottom: 2 },
+  sectionHeaderText: { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', flex: 1 },
   card:           { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, gap: 2 },
   statRow:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
   statLabel:      { color: C.textMuted, fontSize: F.size.sm, flex: 1 },

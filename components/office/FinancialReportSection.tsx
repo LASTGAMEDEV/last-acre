@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-nati
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
+import GuideButton from '../GuideButton';
 
 const CATEGORY_LABELS: Record<string, string> = {
   crops:     '🌾 Crops',
@@ -20,7 +21,13 @@ function StatRow({ label, value, color, bold }: { label: string; value: string; 
   );
 }
 
-function SectionHeader({ title }: { title: string }) {
+function SectionHeader({ title, guideId }: { title: string; guideId?: string }) {
+  if (guideId) return (
+    <View style={fr.sectionHeaderRow}>
+      <Text style={fr.sectionHeaderText}>{title}</Text>
+      <GuideButton entryId={guideId} compact />
+    </View>
+  );
   return <Text style={fr.sectionHeader}>{title}</Text>;
 }
 
@@ -162,7 +169,7 @@ export default function FinancialReportSection() {
         <StatRow label="Net liquid"     value={fmt(money + savingsBalance - totalDebt)} bold color={money + savingsBalance > totalDebt ? '#4caf50' : '#ef5350'} />
       </Card>
 
-      <SectionHeader title="🌡️ Debt Pressure" />
+      <SectionHeader title="🌡️ Debt Pressure" guideId="problem_cash_crunch" />
       <Card>
         <View style={fr.pressureHeader}>
           <Text style={fr.pressureLabel}>Debt Pressure</Text>
@@ -192,7 +199,7 @@ export default function FinancialReportSection() {
         )}
       </Card>
 
-      <SectionHeader title="📅 Cashflow Forecast" />
+      <SectionHeader title="📅 Cashflow Forecast" guideId="problem_no_money" />
       <Card>
         <StatRow label="Daily avg (30d basis)" value={fmt(avgDailyRev)} color="#888" />
         <View style={fr.divider} />
@@ -338,7 +345,9 @@ export default function FinancialReportSection() {
 
 const fr = StyleSheet.create({
   container:    { padding: S.md, gap: S.sm, paddingBottom: 40 },
-  sectionHeader:{ color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: S.md, marginBottom: 2 },
+  sectionHeader:     { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: S.md, marginBottom: 2 },
+  sectionHeaderRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: S.md, marginBottom: 2 },
+  sectionHeaderText: { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', flex: 1 },
   card:         { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, gap: 2 },
   statRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
   statLabel:    { color: C.textMuted, fontSize: F.size.sm, flex: 1 },

@@ -29,7 +29,7 @@ These are the highest-impact items not yet done, in order:
 - [ ] Add "Why did this happen?" for sales, animal production, reputation, bankruptcy
 - [x] Improve Day Summary to group events: Money, Fields, Animals, Market, Family, Risks
 - [x] Add "What changed since yesterday?" summary
-- [ ] Add guide buttons to confusing stats and cards
+- [x] Add guide buttons to confusing stats and cards
 - [ ] Add clearer locked/unlocked explanations
 - [ ] Add better empty states that suggest a next action
 - [ ] Add optional "Recommended next step" cards

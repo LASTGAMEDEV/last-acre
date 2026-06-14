@@ -6,8 +6,15 @@ import { ANIMAL_TYPES } from '../../data/animalTypes';
 import { ANIMAL_PRODUCTS } from '../../data/animalProducts';
 import { isMature, getSeasonMultiplier } from '../../engine/animals';
 import { analyzeRation, generateDefaultRation, getRationProductionModifier } from '../../engine/nutrition';
+import GuideButton from '../GuideButton';
 
-function SectionHeader({ title }: { title: string }) {
+function SectionHeader({ title, guideId }: { title: string; guideId?: string }) {
+  if (guideId) return (
+    <View style={ar.sectionHeaderRow}>
+      <Text style={ar.sectionHeaderText}>{title}</Text>
+      <GuideButton entryId={guideId} compact />
+    </View>
+  );
   return <Text style={ar.sectionHeader}>{title}</Text>;
 }
 function Card({ children }: { children: React.ReactNode }) {
@@ -162,7 +169,7 @@ export default function AnimalReportSection() {
   return (
     <ScrollView contentContainerStyle={ar.container} showsVerticalScrollIndicator={false}>
 
-      <SectionHeader title="🐾 Herd Overview" />
+      <SectionHeader title="🐾 Herd Overview" guideId="system_animals_welfare" />
       <Card>
         <StatRow label="Total animals" value={`${totalCount}`} bold />
         <StatRow label="Healthy" value={`${totalCount - totalSick}`} color="#4caf50" />
@@ -223,7 +230,7 @@ export default function AnimalReportSection() {
       {/* Profitability Ranking */}
       {speciesSummaries.filter(s => s.animalType.productionType).length > 0 && (
         <>
-          <SectionHeader title="💰 Profitability Ranking" />
+          <SectionHeader title="💰 Profitability Ranking" guideId="problem_animals_not_producing" />
           <Card>
             {[...speciesSummaries]
               .filter(s => s.animalType.productionType)
@@ -380,7 +387,9 @@ export default function AnimalReportSection() {
 
 const ar = StyleSheet.create({
   container:      { padding: S.md, gap: S.sm, paddingBottom: 40 },
-  sectionHeader:  { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: S.md, marginBottom: 2 },
+  sectionHeader:     { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: S.md, marginBottom: 2 },
+  sectionHeaderRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: S.md, marginBottom: 2 },
+  sectionHeaderText: { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', flex: 1 },
   card:           { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, gap: 2 },
   statRow:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
   statLabel:      { color: C.textMuted, fontSize: F.size.sm, flex: 1 },
