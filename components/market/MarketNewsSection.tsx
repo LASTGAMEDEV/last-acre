@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
+import { gameDayToDisplayDate } from '../../engine/calendarUtils';
 
 type NewsItem = {
   id: string;
@@ -12,6 +13,50 @@ type NewsItem = {
   detail: string;
   kind: 'price_up' | 'price_down' | 'rival' | 'shock' | 'general';
 };
+
+function buildDailyBriefing(
+  prices: { cropId: string; price: number; basePrice: number }[],
+  activeShocks: { commodityId: string | null; magnitude: number; remainingDays: number }[],
+  newsEvents: { cropId: string | null; modifier: number; daysRemaining: number; description: string }[]
+): string {
+  const lines: string[] = [];
+
+  // Biggest movers vs base price
+  const movers = (prices ?? [])
+    .map((p: any) => ({ name: CROP_TYPES.find(c => c.id === p.cropId)?.name ?? p.cropId, pct: Math.round(((p.price - p.basePrice) / p.basePrice) * 100) }))
+    .filter((m: any) => Math.abs(m.pct) >= 5)
+    .sort((a: any, b: any) => Math.abs(b.pct) - Math.abs(a.pct))
+    .slice(0, 3);
+
+  if (movers.length > 0) {
+    const upMovers = movers.filter((m: any) => m.pct > 0);
+    const downMovers = movers.filter((m: any) => m.pct < 0);
+    if (upMovers.length > 0) {
+      lines.push(`${upMovers.map((m: any) => `${m.name} (+${m.pct}%)`).join(', ')} trading above baseline.`);
+    }
+    if (downMovers.length > 0) {
+      lines.push(`${downMovers.map((m: any) => `${m.name} (${m.pct}%)`).join(', ')} trading below baseline.`);
+    }
+  }
+
+  // Active shocks
+  const bigShocks = activeShocks.filter((s: any) => Math.abs(s.magnitude) >= 0.1);
+  for (const s of bigShocks.slice(0, 2)) {
+    const crop = s.commodityId ? CROP_TYPES.find(c => c.id === s.commodityId) : null;
+    const name = crop?.name ?? 'All commodities';
+    const pct = Math.abs(Math.round(s.magnitude * 100));
+    lines.push(`${name} ${s.magnitude > 0 ? 'demand spike' : 'oversupply'} active (${s.magnitude > 0 ? '+' : '−'}${pct}%, ${s.remainingDays}d left).`);
+  }
+
+  // News event summary
+  const activeNews = newsEvents.filter((n: any) => n.daysRemaining > 0);
+  if (activeNews.length > 0 && lines.length < 3) {
+    lines.push(`${activeNews.length} market event${activeNews.length > 1 ? 's' : ''} currently affecting prices.`);
+  }
+
+  if (lines.length === 0) lines.push('Commodity prices stable. No major shocks or events active.');
+  return lines.join(' ');
+}
 
 function shockHeadline(commodityId: string | null, magnitude: number): { headline: string; detail: string } {
   const crop = commodityId ? CROP_TYPES.find(c => c.id === commodityId) : null;
@@ -24,7 +69,7 @@ function shockHeadline(commodityId: string | null, magnitude: number): { headlin
 }
 
 export default function MarketNewsSection() {
-  const { day, newsEvents = [], rivalNews = [], activeShocks = [] } = useGameStore();
+  const { day, newsEvents = [], rivalNews = [], activeShocks = [], prices = [] } = useGameStore() as any;
 
   const items: NewsItem[] = [];
 
@@ -87,7 +132,13 @@ export default function MarketNewsSection() {
       {/* Newspaper masthead */}
       <View style={ns.masthead}>
         <Text style={ns.mastheadTitle}>📰 VALLEY GAZETTE</Text>
-        <Text style={ns.mastheadDate}>Day {day} — Market Edition</Text>
+        <Text style={ns.mastheadDate}>{gameDayToDisplayDate(day)} — Market Edition</Text>
+      </View>
+
+      {/* Daily market briefing */}
+      <View style={ns.briefingCard}>
+        <Text style={ns.briefingLabel}>TODAY'S BRIEFING</Text>
+        <Text style={ns.briefingText}>{buildDailyBriefing(prices, activeShocks, newsEvents)}</Text>
       </View>
 
       {noNews ? (
@@ -117,7 +168,7 @@ export default function MarketNewsSection() {
       {activeShocks.length > 0 && (
         <>
           <Text style={ns.sectionHeader}>⚡ Active Market Shocks</Text>
-          {activeShocks.map((shock, i) => {
+          {activeShocks.map((shock: any, i: number) => {
             const crop = shock.commodityId ? CROP_TYPES.find(c => c.id === shock.commodityId) : null;
             const pct  = Math.abs(Math.round(shock.magnitude * 100));
             const up   = shock.magnitude > 0;
@@ -152,6 +203,10 @@ const ns = StyleSheet.create({
   masthead:        { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, alignItems: 'center', marginBottom: S.sm },
   mastheadTitle:   { color: C.text, fontSize: F.size.xl, fontWeight: 'bold', letterSpacing: 2 },
   mastheadDate:    { color: C.textMuted, fontSize: F.size.sm, marginTop: 2 },
+
+  briefingCard:    { backgroundColor: '#0f1a0f', borderRadius: R.md, padding: S.md, borderWidth: 1, borderColor: '#1e3a1e', marginBottom: S.sm },
+  briefingLabel:   { color: '#4caf50', fontSize: 9, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 5 },
+  briefingText:    { color: '#a5c8a5', fontSize: F.size.sm, lineHeight: 18, fontStyle: 'italic' },
 
   sectionHeader:   { color: C.textMuted, fontSize: F.size.xs, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: S.md, marginBottom: 2 },
 
