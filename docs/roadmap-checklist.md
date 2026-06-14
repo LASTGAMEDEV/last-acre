@@ -1,6 +1,6 @@
 # Granja Tycoon — Roadmap Progress Checklist
 
-**Updated:** 2026-06-15 (Section 18 complete 14/15, Section 9 +1 · total 159/313 = 51%)  
+**Updated:** 2026-06-15 (Section 18 complete 14/15, Section 9 +1, Section 10 +1 · total 160/313 = 51%)  
 **Legend:** `[x]` = done · `[ ]` = not done · `[~]` = partially done
 
 ---
@@ -9,7 +9,7 @@
 
 These are the highest-impact items not yet done, in order:
 
-1. **Section 18** — Balance audit: 12/15 done · still need: livestock profitability, contract rewards/penalties, sharpen tradeoffs
+1. **Section 18** — Balance audit: 14/15 done · still need: contract rewards/penalties audit (well-balanced, no changes needed)
 2. **Section 2** — Remaining onboarding: guided first 10 days, teaching one system at a time, skip-tutorial option
 3. **Section 9** — Emergency financing tradeoffs, local market demand shifts, buyer relationship levels
 4. **Section 12** — Life event modals (marriage, birth, succession), chronicle tab, family roles
@@ -192,7 +192,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Newspaper headlines that explain market movement
 - [x] Local harvest reports
 - [ ] Export and import shocks (beyond events)
-- [ ] Price seasonality charts
+- [x] Price seasonality charts
 - [ ] Recurring buyer relationships
 - [ ] Premium niche markets: organic, local, heritage breed, high-quality processed
 
