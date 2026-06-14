@@ -11,9 +11,9 @@ type Backstory = 'first_gen' | 'inherited' | 'established';
 type FarmStyle = 'crop_focus' | 'livestock' | 'market_trader' | 'balanced';
 
 const BACKSTORY_OPTIONS: { id: Backstory; title: string; desc: string; detail: string }[] = [
-  { id: 'first_gen',   title: 'First Generation', desc: 'Start from scratch',    detail: '$8k · 20 ha · No debt' },
-  { id: 'inherited',   title: 'Inherited Farm',   desc: 'Modest existing setup', detail: '$22k · 50 ha · Some debt' },
-  { id: 'established', title: 'Established',      desc: 'Going concern',         detail: '$45k · 100 ha · Leveraged' },
+  { id: 'first_gen',   title: 'First Generation', desc: 'Start from scratch',    detail: '$8k · Low rep · No debt' },
+  { id: 'inherited',   title: 'Inherited Farm',   desc: 'Modest existing setup', detail: '$22k · Mid rep · $15k loan' },
+  { id: 'established', title: 'Established',      desc: 'Going concern',         detail: '$45k · High rep · $35k mortgage' },
 ];
 
 const STYLE_OPTIONS: { id: FarmStyle; icon: string; title: string; desc: string; bonus: string }[] = [

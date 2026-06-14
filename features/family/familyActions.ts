@@ -9,6 +9,7 @@ import {
   applyFrictionChoice, resolveBuyout,
 } from './familyEngine';
 import { gameDayToCalendarYear } from '../../engine/calendarUtils';
+import type { Loan } from '../../engine/banking';
 
 /** Era-calibrated cost for events that have hasCost: true */
 function computeLifeEventCost(templateId: string, choiceId: string, calendarYear: number): number {
@@ -118,9 +119,31 @@ export const createFamilyActions: ActionFactory<FamilyActions> = (set, get) => (
 
   completeGameSetup: (farmName, farmerFirstName, backstory, farmStyle = 'balanced') => {
     const assets = {
-      first_gen:   { money: 8000,  repScore: 5  + Math.floor(Math.random() * 11) },
-      inherited:   { money: 22000, repScore: 20 + Math.floor(Math.random() * 16) },
-      established: { money: 45000, repScore: 35 + Math.floor(Math.random() * 21) },
+      first_gen:   { money: 8000,  repScore: 5  + Math.floor(Math.random() * 11), loan: null as Loan | null },
+      inherited:   { money: 22000, repScore: 20 + Math.floor(Math.random() * 16), loan: {
+        id: 'loan_backstory_inherited',
+        label: 'Farm Inheritance Loan',
+        principal: 15000,
+        rate: 0.09,
+        startDay: 1,
+        termDays: 360,
+        payoffDay: 361,
+        totalOwed: Math.round(15000 * (1 + 0.09 * (360 / 365))),
+        paid: false,
+        defaulted: false,
+      } as Loan },
+      established: { money: 45000, repScore: 35 + Math.floor(Math.random() * 21), loan: {
+        id: 'loan_backstory_established',
+        label: 'Farm Mortgage',
+        principal: 35000,
+        rate: 0.07,
+        startDay: 1,
+        termDays: 540,
+        payoffDay: 541,
+        totalOwed: Math.round(35000 * (1 + 0.07 * (540 / 365))),
+        paid: false,
+        defaulted: false,
+      } as Loan },
     }[backstory];
 
     // Style bonus: extra cash or starting livestock
@@ -144,10 +167,13 @@ export const createFamilyActions: ActionFactory<FamilyActions> = (set, get) => (
       styleBonus.money = 2500;
     }
 
+    const startingMoney = assets.money + styleBonus.money;
     set(state => ({
       farmName,
       farmStyle,
-      money: assets.money + styleBonus.money,
+      money: startingMoney,
+      seasonStartMoney: startingMoney,
+      loans: assets.loan ? [assets.loan] : state.loans,
       animals: [...state.animals, ...styleBonus.animals],
       reputation: {
         ...state.reputation,
