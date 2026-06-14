@@ -71,8 +71,14 @@ function BankingSection() {
 
   function handleRequestLoan() {
     if (!eligibility.eligible) return;
-    requestLoan(principal, termDays, `Custom loan (${termDays}d)`);
-    setLoanAmount('');
+    Alert.alert(
+      '🏦 Confirm Loan',
+      `Borrow $${principal.toLocaleString()} for ${termDays} days at ${(rate * 100).toFixed(1)}% APR?\n\nTotal to repay: $${totalOwed.toLocaleString()} (interest: $${interest.toLocaleString()})`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Confirm', onPress: () => { requestLoan(principal, termDays, `Custom loan (${termDays}d)`); setLoanAmount(''); } },
+      ]
+    );
   }
 
   return (
