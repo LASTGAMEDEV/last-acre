@@ -249,6 +249,11 @@ export default function FarmLegacyCard() {
         <View style={[card.bonusRow, { backgroundColor: path.color + '15' }]}>
           <Text style={card.bonusIcon}>✨</Text>
           <Text style={[card.bonusText, { color: path.color }]}>{currentTier.bonus}</Text>
+          {currentTierIndex > 0 && (
+            <View style={[card.activeBadge, { backgroundColor: path.color + '30', borderColor: path.color + '66' }]}>
+              <Text style={[card.activeBadgeText, { color: path.color }]}>ACTIVE</Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -363,6 +368,17 @@ const card = StyleSheet.create({
     fontSize: F.size.xs,
     fontWeight: 'bold',
     flex: 1,
+  },
+  activeBadge: {
+    borderRadius: R.pill,
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  activeBadgeText: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   nextHint: {
     color: '#555',

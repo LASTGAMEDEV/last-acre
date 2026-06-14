@@ -191,7 +191,25 @@ export const createAnimalActions: ActionFactory<AnimalActions> = (set, get) => (
     );
     if (units <= 0 || !animalType.productionType) return;
     const graneroBonus = hasGranero(state.buildings) ? 1.2 : 1.0;
-    const totalUnits = Math.round(units * graneroBonus);
+    const legacyAnimalMult = (() => {
+      const style = (state as any).farmStyle ?? 'balanced';
+      const ac = (state as any).animals?.length ?? 0;
+      const log = (state as any).salesLog as { day: number; amount: number; category: string }[] ?? [];
+      const aRev90 = log.filter(s => s.day >= (state as any).day - 90 && s.category === 'animals').reduce((a, s) => a + s.amount, 0);
+      const cRev90 = log.filter(s => s.day >= (state as any).day - 90 && s.category === 'crops').reduce((a, s) => a + s.amount, 0);
+      if (style === 'livestock') {
+        if (ac >= 25 && aRev90 >= 40000) return 1.20;
+        if (ac >= 15 && aRev90 > cRev90) return 1.15;
+        if (ac >= 5) return 1.10;
+      } else if (style === 'balanced') {
+        const pRev90 = log.filter(s => s.day >= (state as any).day - 90 && s.category === 'processed').reduce((a, s) => a + s.amount, 0);
+        if (aRev90 >= 15000 && cRev90 >= 15000 && pRev90 >= 15000) return 1.10;
+        if (aRev90 >= 5000 && cRev90 >= 5000 && pRev90 >= 5000) return 1.08;
+        if (aRev90 > 1000 && cRev90 > 1000 && pRev90 > 1000) return 1.05;
+      }
+      return 1.0;
+    })();
+    const totalUnits = Math.round(units * graneroBonus * legacyAnimalMult);
 
     const hasCreamSeparator = state.buildings.includes('bld_cream_separator');
     const creamUnits = (hasCreamSeparator && animalType.productionType === 'milk')

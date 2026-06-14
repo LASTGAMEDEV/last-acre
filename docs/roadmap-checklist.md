@@ -311,7 +311,7 @@ These are the highest-impact items not yet done, in order:
 
 - [x] Farm stage arc card (early / mid / late game description)
 - [x] Technology unlock tree by decade
-- [ ] Specialization bonuses without locking the player
+- [x] Specialization bonuses without locking the player
 - [ ] Long-term achievements that shape legacy
 - [ ] Reputation-gated opportunities (beyond existing contract min-rep)
 - [ ] Land region expansion

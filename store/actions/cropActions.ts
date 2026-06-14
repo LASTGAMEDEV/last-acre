@@ -174,7 +174,26 @@ export const createCropActions: ActionFactory<CropActions> = (set, get) => ({
     const diseaseMod = parcel.diseased ? 0.80 : 1.0;
     const pollMultM = getPollinationMultiplier(parcel, state.parcels, state.day, state.hedgerows ?? []);
     const precisionModM = parcel.precisionApplied ? 1.05 : 1.0;
-    const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationBonus * soilMod * seedGenes.yield * randomEventMod * workerBonusesManual.cropYieldMultiplier * diseaseMod * pollMultM * precisionModM), siloCapacity - totalInventory);
+    const legacyCropMult = (() => {
+      const style = (state as any).farmStyle ?? 'balanced';
+      const h = state.personalRecords?.totalHarvests ?? 0;
+      const pc = state.parcels.filter(p => p.owned).length;
+      const log = state.salesLog as { day: number; amount: number; category: string }[];
+      const rev90 = log.filter(s => s.day >= state.day - 90 && s.category === 'crops').reduce((a, s) => a + s.amount, 0);
+      if (style === 'crop_focus') {
+        if (h >= 30 && rev90 >= 30000) return 1.20;
+        if (h >= 15 && rev90 >= 10000) return 1.15;
+        if (h >= 5 && pc >= 3) return 1.10;
+      } else if (style === 'balanced') {
+        const aRev90 = log.filter(s => s.day >= state.day - 90 && s.category === 'animals').reduce((a, s) => a + s.amount, 0);
+        const pRev90 = log.filter(s => s.day >= state.day - 90 && s.category === 'processed').reduce((a, s) => a + s.amount, 0);
+        if (rev90 >= 15000 && aRev90 >= 15000 && pRev90 >= 15000) return 1.10;
+        if (rev90 >= 5000 && aRev90 >= 5000 && pRev90 >= 5000) return 1.08;
+        if (rev90 > 1000 && aRev90 > 1000 && pRev90 > 1000) return 1.05;
+      }
+      return 1.0;
+    })();
+    const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationBonus * soilMod * seedGenes.yield * randomEventMod * workerBonusesManual.cropYieldMultiplier * diseaseMod * pollMultM * precisionModM * legacyCropMult), siloCapacity - totalInventory);
     const nextCropQualityMap = { ...state.cropQualityMap };
     if (seedEntry) {
       nextCropQualityMap[crop.cropId] = seedGenes.quality;
@@ -330,7 +349,13 @@ export const createCropActions: ActionFactory<CropActions> = (set, get) => ({
       const soilMod = getSoilModifier(p.soilType, p.plantedCrop.cropId);
       const rawUnits = harvestAmount(p.plantedCrop, cropType, p.soil ?? SOIL_DEFAULTS, climateModifier, p.hasWeeds, yieldBonus, p.plantedCrop.frostDamage ?? 0, p.plantedCrop.droughtStress ?? 0, degradationYieldModifier(p), getYieldTransitionMod(p.tillageSystem ?? 'conventional', p.notillSeasons ?? 0), getParcelOrganicYieldMod(p)) * pestYieldModifier(p.pestState?.severity ?? 0);
       const pollMultC = getPollinationMultiplier(p, state.parcels, state.day, state.hedgerows ?? []);
-      const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationMod * soilMod * pollMultC), siloCapacity - totalInventory);
+      const style = (state as any).farmStyle ?? 'balanced';
+      const log = state.salesLog as { day: number; amount: number; category: string }[];
+      const rev90c = log.filter(s => s.day >= state.day - 90 && s.category === 'crops').reduce((a, s) => a + s.amount, 0);
+      const legacyAllMult = style === 'crop_focus'
+        ? ((state.personalRecords?.totalHarvests ?? 0) >= 30 && rev90c >= 30000 ? 1.20 : (state.personalRecords?.totalHarvests ?? 0) >= 15 && rev90c >= 10000 ? 1.15 : (state.personalRecords?.totalHarvests ?? 0) >= 5 && state.parcels.filter(pp => pp.owned).length >= 3 ? 1.10 : 1.0)
+        : 1.0;
+      const units = Math.min(Math.round(rawUnits * fieldEventMod * waterBonus * rotationMod * irrigationMod * soilMod * pollMultC * legacyAllMult), siloCapacity - totalInventory);
       totalInventory += units;
       newInventory[p.plantedCrop.cropId] = (newInventory[p.plantedCrop.cropId] ?? 0) + units;
       if (!newHarvestedCropIds.includes(p.plantedCrop.cropId)) newHarvestedCropIds.push(p.plantedCrop.cropId);
