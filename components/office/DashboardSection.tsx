@@ -416,6 +416,81 @@ function DashboardSection() {
 
   const nextSteps = nextStepCandidates.filter(n => !dismissed.includes(n.id)).slice(0, 2);
 
+  // ── Cash Crunch Recovery Tips ─────────────────────────────────────────────
+  type RecoveryTip = { id: string; icon: string; action: string; detail: string };
+  const recoveryTips: RecoveryTip[] = [];
+  const isCashCrunch = money < 1000;
+
+  if (isCashCrunch) {
+    const sellableItems = CROP_TYPES.filter(c => (inventory[c.id] ?? 0) > 0);
+    if (sellableItems.length > 0) {
+      const topCrop = [...sellableItems].sort((a, b) => {
+        const pA = prices.find((p: any) => p.cropId === a.id)?.price ?? a.basePrice;
+        const pB = prices.find((p: any) => p.cropId === b.id)?.price ?? b.basePrice;
+        return (inventory[b.id] ?? 0) * pB - (inventory[a.id] ?? 0) * pA;
+      })[0];
+      const qty = inventory[topCrop.id] ?? 0;
+      const price = prices.find((p: any) => p.cropId === topCrop.id)?.price ?? topCrop.basePrice;
+      recoveryTips.push({
+        id: 'rt_sell_inventory',
+        icon: '🌾',
+        action: `Sell ${topCrop.name} stock`,
+        detail: `${qty.toLocaleString()} units → ~$${Math.round(qty * price).toLocaleString()} · Market → Sell tab`,
+      });
+    }
+
+    if (savings.balance >= 200) {
+      recoveryTips.push({
+        id: 'rt_transfer_savings',
+        icon: '🏦',
+        action: 'Withdraw from savings',
+        detail: `$${Math.round(savings.balance).toLocaleString()} available · Banking → Savings tab`,
+      });
+    }
+
+    if ((reputation?.score ?? 0) >= 20) {
+      recoveryTips.push({
+        id: 'rt_family_loan',
+        icon: '👨‍👩‍👧',
+        action: 'Request family loan',
+        detail: 'Ask family for a small emergency loan · Banking → Recovery tab',
+      });
+    }
+
+    const liquidatableValue = (machines ?? []).reduce((sum: number, m: any) => {
+      const mType = MACHINE_TYPES.find((t: any) => t.id === m.typeId);
+      return sum + Math.round((mType?.cost ?? 0) * ((m.condition ?? 50) / 100) * 0.5);
+    }, 0);
+    if (liquidatableValue >= 300) {
+      recoveryTips.push({
+        id: 'rt_liquidate_machinery',
+        icon: '🚜',
+        action: 'Liquidate equipment',
+        detail: `~$${liquidatableValue.toLocaleString()} from machinery · Banking → Recovery tab → Sell All`,
+      });
+    }
+
+    if (activeLoans.length > 0) {
+      recoveryTips.push({
+        id: 'rt_debt_restructure',
+        icon: '📄',
+        action: 'Restructure debt',
+        detail: 'Extend loan terms to cut monthly pressure · Banking → Recovery tab',
+      });
+    }
+
+    const fastCrops = CROP_TYPES.filter(c => c.seasons.includes(season) && c.growthDays <= 30);
+    if (fastCrops.length > 0 && idleParcels.length > 0) {
+      const fastest = [...fastCrops].sort((a, b) => a.growthDays - b.growthDays)[0];
+      recoveryTips.push({
+        id: 'rt_fast_crop',
+        icon: '🌱',
+        action: `Plant ${fastest.name} (${fastest.growthDays}-day crop)`,
+        detail: `Quick income this ${season} · ${idleParcels.length} idle plot${idleParcels.length > 1 ? 's' : ''} · Land tab`,
+      });
+    }
+  }
+
   // ── 30-Day Cashflow Forecast ─────────────────────────────────────────────
   const FORECAST_DAYS = 30;
 
@@ -557,6 +632,23 @@ function DashboardSection() {
           ))
         )}
       </View>
+
+      {/* Cash Crunch Recovery Tips */}
+      {isCashCrunch && recoveryTips.length > 0 && (
+        <View style={dash.recoveryCard}>
+          <Text style={dash.recoveryTitle}>🆘 Cash Crunch — Recovery Options</Text>
+          <Text style={dash.recoverySub}>You have ${Math.round(money).toLocaleString()} — quick actions to get cash flowing:</Text>
+          {recoveryTips.slice(0, 4).map((tip, i) => (
+            <View key={tip.id} style={[dash.recoveryRow, i > 0 && { borderTopWidth: 1, borderTopColor: '#3a1a1a' }]}>
+              <Text style={dash.recoveryTipIcon}>{tip.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={dash.recoveryAction}>{tip.action}</Text>
+                <Text style={dash.recoveryDetail}>{tip.detail}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Finances row */}
       <View style={dash.row}>
@@ -860,6 +952,14 @@ const dash = StyleSheet.create({
   nextStepIcon:   { fontSize: 18, lineHeight: 22 },
   nextStepTitle:  { color: '#90caf9', fontSize: F.size.sm, fontWeight: 'bold', marginBottom: 1 },
   nextStepDetail: { color: C.textMuted, fontSize: F.size.xs, lineHeight: 16 },
+  // Cash Crunch Recovery
+  recoveryCard:    { backgroundColor: '#1a0808', borderRadius: R.md, padding: S.md, borderWidth: 1, borderColor: '#ef535044' },
+  recoveryTitle:   { color: '#ef9a9a', fontSize: F.size.sm, fontWeight: 'bold', marginBottom: 3 },
+  recoverySub:     { color: C.textMuted, fontSize: F.size.xs, marginBottom: S.sm },
+  recoveryRow:     { flexDirection: 'row', alignItems: 'flex-start', gap: S.sm, paddingVertical: 6 },
+  recoveryTipIcon: { fontSize: 16, lineHeight: 20, width: 22, textAlign: 'center' },
+  recoveryAction:  { color: '#ffcdd2', fontSize: F.size.sm, fontWeight: '600' as const, marginBottom: 1 },
+  recoveryDetail:  { color: C.textMuted, fontSize: F.size.xs, lineHeight: 15 },
   // Farm Health
   healthCard:      { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md },
   healthScore:     { fontSize: F.size.xl, fontWeight: 'bold' },

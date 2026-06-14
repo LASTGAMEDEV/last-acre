@@ -46,7 +46,7 @@ These are the highest-impact items not yet done, in order:
 - [ ] Add a beginner preset with gentler debt and slower disasters
 - [ ] Add an advanced start for returning players
 - [ ] Let players skip tutorials while keeping contextual guidance
-- [ ] Add early recovery tips when cash runs low
+- [x] Add early recovery tips when cash runs low
 - [ ] Add a first-year review showing what the player learned
 
 ---
@@ -223,7 +223,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Health decline rate and legacy handoff preview in Carácter tab
 - [x] Annual legacy score gain breakdown
 - [x] Insurance and Family Tree screen improvements
-- [ ] Starting screen with farm name, farmer name, backstory
+- [x] Starting screen with farm name, farmer name, backstory
 - [ ] Life Event modal (marriage, birth, illness, graduation, succession)
 - [ ] Family tab in Legado
 - [ ] Chronicle tab for generational history
