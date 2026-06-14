@@ -8,7 +8,7 @@ import { CROP_TYPES } from '../../data/cropTypes';
 import { GUIDE_ENTRY_IDS } from '../../data/guideEntries';
 
 function ContractsSection() {
-  const { contracts, prices, inventory, day, acceptContract, declineContract, deliverCrop, declinedTemplates, counterOfferContract } = useGameStore();
+  const { contracts, prices, inventory, day, acceptContract, declineContract, deliverCrop, declinedTemplates, counterOfferContract, reputation } = useGameStore();
   const [negotiatingId, setNegotiatingId] = React.useState<string | null>(null);
   const [pinnedIds, setPinnedIds] = React.useState<Set<string>>(new Set());
 
@@ -25,8 +25,12 @@ function ContractsSection() {
     ...allActive.filter(c => pinnedIds.has(c.id)),
     ...allActive.filter(c => !pinnedIds.has(c.id)),
   ];
+  const repScore = (reputation as any)?.score ?? 0;
   const availableTemplates = CONTRACT_TEMPLATES.filter(
-    t => !allActive.some(c => c.templateId === t.id) && !declinedTemplates.includes(t.id)
+    t => !allActive.some(c => c.templateId === t.id) && !declinedTemplates.includes(t.id) && !(t.minReputation && repScore < t.minReputation)
+  );
+  const lockedTemplates = CONTRACT_TEMPLATES.filter(
+    t => !allActive.some(c => c.templateId === t.id) && !declinedTemplates.includes(t.id) && t.minReputation && repScore < t.minReputation
   );
 
   return (
@@ -105,6 +109,12 @@ function ContractsSection() {
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>No offers available right now.</Text>
             <Text style={styles.emptyHint}>New contract offers appear every few days. Advance time to unlock more offers, or grow your reputation to attract better buyers.</Text>
+          </View>
+        )}
+        {lockedTemplates.length > 0 && availableTemplates.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>No offers available yet.</Text>
+            <Text style={styles.emptyHint}>Raise your reputation to unlock export contracts below.</Text>
           </View>
         )}
         {availableTemplates.map(t => {
@@ -189,6 +199,32 @@ function ContractsSection() {
             </View>
           );
         })}
+
+        {/* Locked export contracts */}
+        {lockedTemplates.length > 0 && (
+          <View style={styles.lockedSection}>
+            <Text style={styles.lockedSectionTitle}>🔒 Export contracts — unlock with reputation</Text>
+            {lockedTemplates.map(t => {
+              const crop = CROP_TYPES.find(c => c.id === t.cropId);
+              const needed = t.minReputation!;
+              const progress = Math.min(repScore / needed, 1);
+              const remaining = needed - repScore;
+              return (
+                <View key={t.id} style={styles.lockedCard}>
+                  <View style={styles.lockedCardHeader}>
+                    <Text style={styles.lockedName}>{t.name}</Text>
+                    <Text style={styles.lockedRepBadge}>Rep {needed}+</Text>
+                  </View>
+                  <Text style={styles.lockedDetail}>{crop?.name} · {t.amountRange[0].toLocaleString()}–{t.amountRange[1].toLocaleString()} {crop?.unit ?? 'kg'} · +{Math.round((t.priceBonus - 1) * 100)}% price</Text>
+                  <View style={styles.lockedBar}>
+                    <View style={[styles.lockedBarFill, { width: `${Math.round(progress * 100)}%` as any }]} />
+                  </View>
+                  <Text style={styles.lockedHint}>{Math.round(repScore)}/{needed} reputation — {Math.ceil(remaining)} more needed</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -380,6 +416,17 @@ const styles = StyleSheet.create({
   declineBtn: { flex: 1, backgroundColor: '#4a1515', borderRadius: R.md, padding: 9, alignItems: 'center', borderWidth: 1, borderColor: '#7f2020' },
   declineBtnText: { color: '#ef9a9a', fontWeight: 'bold', fontSize: F.size.md },
 
+  // Locked contracts
+  lockedSection:      { marginTop: S.md, borderTopWidth: 1, borderTopColor: '#1a1f2e', paddingTop: S.sm, gap: S.sm },
+  lockedSectionTitle: { color: '#555', fontSize: F.size.xs, fontWeight: 'bold', marginBottom: 2 },
+  lockedCard:         { backgroundColor: '#0d1117', borderRadius: R.sm, padding: S.sm, opacity: 0.7 },
+  lockedCardHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+  lockedName:         { flex: 1, color: '#666', fontSize: F.size.sm, fontWeight: 'bold' },
+  lockedRepBadge:     { backgroundColor: '#1a1f2e', borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: '#2a2a4a' },
+  lockedDetail:       { color: '#444', fontSize: F.size.xs, marginBottom: S.xs },
+  lockedBar:          { height: 4, backgroundColor: '#1a1a1a', borderRadius: 2, overflow: 'hidden', marginBottom: 3 },
+  lockedBarFill:      { height: 4, backgroundColor: '#2a4a6a', borderRadius: 2 },
+  lockedHint:         { color: '#555', fontSize: 9 },
   // Milestones
   milestoneContainer: { paddingHorizontal: S.md, paddingTop: S.md },
   milestoneRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: S.sm, borderBottomWidth: 1, borderBottomColor: C.divider },

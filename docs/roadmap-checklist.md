@@ -30,7 +30,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Improve Day Summary to group events: Money, Fields, Animals, Market, Family, Risks
 - [x] Add "What changed since yesterday?" summary
 - [x] Add guide buttons to confusing stats and cards
-- [ ] Add clearer locked/unlocked explanations
+- [x] Add clearer locked/unlocked explanations
 - [x] Add better empty states that suggest a next action
 - [x] Add optional "Recommended next step" cards
 
