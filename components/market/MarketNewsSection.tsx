@@ -3,7 +3,9 @@ import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useGameStore } from '../../store/useGameStore';
 import { C, S, F, R } from '../../constants/theme';
 import { CROP_TYPES } from '../../data/cropTypes';
+import { NPC_FARM_DEFINITIONS } from '../../data/npcFarms';
 import { gameDayToDisplayDate } from '../../engine/calendarUtils';
+import { getSeason } from '../../engine/climate';
 
 type NewsItem = {
   id: string;
@@ -56,6 +58,42 @@ function buildDailyBriefing(
 
   if (lines.length === 0) lines.push('Commodity prices stable. No major shocks or events active.');
   return lines.join(' ');
+}
+
+type HarvestEntry = { farmName: string; crops: string[]; supply: 'heavy' | 'moderate' | 'light'; icon: string };
+
+function buildHarvestReport(
+  day: number,
+  prices: { cropId: string; price: number; basePrice: number }[],
+): { entries: HarvestEntry[]; pressureSummary: string } {
+  const season = getSeason(day);
+  const entries: HarvestEntry[] = [];
+
+  for (const farm of NPC_FARM_DEFINITIONS) {
+    // Crops this farm grows that are either in-season OR peaking now
+    const activeCrops = (farm.specialization ?? []).filter(cropId => {
+      const ct = CROP_TYPES.find(c => c.id === cropId);
+      return ct && (ct.seasons.includes(season) || ct.peakSeason === season);
+    });
+    if (activeCrops.length === 0) continue;
+
+    const cropNames = activeCrops.map(id => CROP_TYPES.find(c => c.id === id)?.name ?? id);
+    const supply: 'heavy' | 'moderate' | 'light' = farm.tier === 3 ? 'heavy' : farm.tier === 2 ? 'moderate' : 'light';
+    const icon = supply === 'heavy' ? '🔴' : supply === 'moderate' ? '🟡' : '🟢';
+    entries.push({ farmName: farm.name, crops: cropNames, supply, icon });
+  }
+
+  // Price pressure summary: find crops below baseline
+  const underBaseline = (prices ?? [])
+    .filter(p => p.basePrice > 0 && p.price < p.basePrice * 0.95)
+    .map(p => CROP_TYPES.find(c => c.id === p.cropId)?.name ?? p.cropId)
+    .slice(0, 3);
+
+  const pressureSummary = underBaseline.length > 0
+    ? `Price pressure: ${underBaseline.join(', ')} trading below baseline — local supply driving values down.`
+    : 'No significant local supply pressure at current prices.';
+
+  return { entries, pressureSummary };
 }
 
 function shockHeadline(commodityId: string | null, magnitude: number): { headline: string; detail: string } {
@@ -125,6 +163,7 @@ export default function MarketNewsSection() {
   };
 
   const noNews = items.length === 0;
+  const harvestReport = buildHarvestReport(day, prices);
 
   return (
     <ScrollView contentContainerStyle={ns.container} showsVerticalScrollIndicator={false}>
@@ -140,6 +179,26 @@ export default function MarketNewsSection() {
         <Text style={ns.briefingLabel}>TODAY'S BRIEFING</Text>
         <Text style={ns.briefingText}>{buildDailyBriefing(prices, activeShocks, newsEvents)}</Text>
       </View>
+
+      {/* County harvest report */}
+      {harvestReport.entries.length > 0 && (
+        <View style={ns.harvestCard}>
+          <Text style={ns.harvestLabel}>🌾 COUNTY HARVEST REPORT</Text>
+          {harvestReport.entries.map((e, i) => (
+            <View key={i} style={ns.harvestRow}>
+              <Text style={ns.harvestIcon}>{e.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={ns.harvestFarm}>{e.farmName}</Text>
+                <Text style={ns.harvestCrops}>{e.crops.join(', ')}</Text>
+              </View>
+              <Text style={[ns.harvestSupply, {
+                color: e.supply === 'heavy' ? '#ef5350' : e.supply === 'moderate' ? '#f59e0b' : '#4caf50',
+              }]}>{e.supply} supply</Text>
+            </View>
+          ))}
+          <Text style={ns.harvestPressure}>{harvestReport.pressureSummary}</Text>
+        </View>
+      )}
 
       {noNews ? (
         <View style={ns.emptyCard}>
@@ -228,4 +287,13 @@ const ns = StyleSheet.create({
   emptyIcon:       { fontSize: 40 },
   emptyTitle:      { color: C.text, fontSize: F.size.lg, fontWeight: 'bold' },
   emptyDetail:     { color: C.textMuted, fontSize: F.size.sm, textAlign: 'center' },
+
+  harvestCard:     { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md, gap: 6, marginBottom: S.sm },
+  harvestLabel:    { color: '#f59e0b', fontSize: 9, fontWeight: 'bold', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
+  harvestRow:      { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 3 },
+  harvestIcon:     { fontSize: 14, width: 18 },
+  harvestFarm:     { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+  harvestCrops:    { color: C.textMuted, fontSize: F.size.xs },
+  harvestSupply:   { fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
+  harvestPressure: { color: C.textMuted, fontSize: F.size.xs, fontStyle: 'italic', marginTop: 4, borderTopWidth: 1, borderTopColor: '#1a1a2a', paddingTop: 6 },
 });
