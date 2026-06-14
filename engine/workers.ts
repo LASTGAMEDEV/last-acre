@@ -245,6 +245,13 @@ export interface WorkerBonuses {
   autoProcessEnabled: boolean;
 }
 
+// Soft cap: full rate up to `cap`, then 25% effectiveness above it
+function diminishing(count: number, ratePerWorker: number, cap: number): number {
+  const full = Math.min(count, cap) * ratePerWorker;
+  const extra = Math.max(0, count - cap) * ratePerWorker * 0.25;
+  return full + extra;
+}
+
 export function getWorkerBonuses(workers: Worker[]): WorkerBonuses {
   const active = workers.filter(w => !w.isInjured && !w.isOnLeave);
   const count = (role: WorkerRole) => active.filter(w => w.role === role).length;
@@ -259,15 +266,15 @@ export function getWorkerBonuses(workers: Worker[]): WorkerBonuses {
     w => w.role === 'farm_mechanic' && w.certifications.some(c => c.id === 'electrical_engineer' && c.passed),
   );
   return {
-    cropYieldMultiplier:    1 + fieldHands * 0.05 + agronomists * 0.15,
+    cropYieldMultiplier:    1 + diminishing(fieldHands, 0.05, 5) + diminishing(agronomists, 0.15, 3),
     cropGrowthReduction:    agronomists > 0 ? 1 : 0,
     fertilityDrainMult:     agronomists >= 2 ? 0.5 : 1.0,
     fallowRestoreInterval:  agronomists > 0 ? 15 : 30,
-    animalProductionMult:   1 + livestock * 0.08 + vets * 0.12,
+    animalProductionMult:   1 + diminishing(livestock, 0.08, 4) + diminishing(vets, 0.12, 2),
     sicknessBonusReduction: vets > 0 ? 0.3 : 0,
     maintenanceMult:        mechanics >= 2 ? 0.6 : Math.max(0.6, 1 - mechanics * 0.2),
     machineYieldBonus:      hasElectricalEngineer ? 0.1 : 0,
-    processingOutputMult:   1 + procTechs * 0.10 + qcCount * 0.15,
+    processingOutputMult:   1 + diminishing(procTechs, 0.10, 4) + diminishing(qcCount, 0.15, 2),
     autoProcessEnabled:     qcCount > 0,
   };
 }
