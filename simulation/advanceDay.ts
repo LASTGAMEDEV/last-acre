@@ -888,16 +888,16 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
           return w;
         });
 
-        // Weekly payroll
+        // Weekly payroll (wages scale with difficulty workerWagesMult)
         let workerPayrollDeducted = 0;
         let finalWorkers = afterPoachingWorkers;
         if (weeklyPayrollDue) {
-          workerPayrollDeducted = calcWeeklyPayroll(afterPoachingWorkers, state.consultant ?? null);
+          workerPayrollDeducted = Math.round(calcWeeklyPayroll(afterPoachingWorkers, state.consultant ?? null) * diff.workerWagesMult);
           const nightPremium = Math.round(
             afterPoachingWorkers.reduce((sum, w) => {
               const pref = ((w.shiftPreference === 'any' ? 'day' : w.shiftPreference) ?? 'day') as TimeWindow;
               return sum + (wageMultiplier(pref) - 1.0) * w.wagePerDay * 7;
-            }, 0)
+            }, 0) * diff.workerWagesMult
           );
           workerPayrollDeducted += nightPremium;
           finalWorkers = afterPoachingWorkers.map(w => ({
@@ -1039,8 +1039,8 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
         const allNewRequests = [...poachingRequests, ...reviewRequests, ...personalRequests];
         const newPendingRequests = [...(state.pendingRequests ?? []), ...allNewRequests];
 
-        // Machine + building maintenance
-        const maintenanceCost = Math.round(getDailyMaintenance(state.machines, state.buildings) * workerBonuses.maintenanceMult);
+        // Machine + building maintenance (worker discount × difficulty multiplier)
+        const maintenanceCost = Math.round(getDailyMaintenance(state.machines, state.buildings) * workerBonuses.maintenanceMult * diff.maintenanceCostMult);
         // Insurance premiums
         const activePolicies = state.insurances.filter(p => p.active);
         const ownedHa = state.parcels.filter(p => p.owned).reduce((s, p) => s + ((p as any).hectares ?? 1), 0);
@@ -1060,13 +1060,16 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
         const childCount = (familyMembers?.children ?? []).filter(c => c.isAlive && c.age < 18).length;
         const adultChildCount = (familyMembers?.children ?? []).filter(c => c.isAlive && c.age >= 18 && c.age < 25).length;
         const dailyFamilyCost = (hasSpouse ? 4 : 0) + childCount * 3 + adultChildCount * 1;
-        const totalFixed = maintenanceCost + insurancePremium + workerWages + dailyFamilyCost;
+        // Land overhead: $0.35/ha/day × difficulty — opportunity cost of holding land
+        const landOverhead = Math.round(ownedHa * 0.35 * diff.maintenanceCostMult);
+        const totalFixed = maintenanceCost + insurancePremium + workerWages + dailyFamilyCost + landOverhead;
         const moneyAfterMaintenance = state.money - totalFixed;
-        if (maintenanceCost > 0 || insurancePremium > 0 || workerWages > 0) {
+        if (maintenanceCost > 0 || insurancePremium > 0 || workerWages > 0 || landOverhead > 0) {
           const detail = [
             maintenanceCost > 0 && `${state.machines.length} machine${state.machines.length !== 1 ? 's' : ''} · ${state.buildings.length} building${state.buildings.length !== 1 ? 's' : ''}`,
             insurancePremium > 0 && `${activePolicies.length} active policy${activePolicies.length !== 1 ? 'ies' : ''} (-€${insurancePremium}/day)`,
             workerWages > 0 && `${finalWorkers.length} worker${finalWorkers.length !== 1 ? 's' : ''} -€${workerWages}/week`,
+            landOverhead > 0 && `${Math.round(ownedHa)}ha land overhead -$${landOverhead}/day`,
           ].filter(Boolean).join(' · ');
           summary.push({
             id: 'maintenance',
@@ -4951,7 +4954,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
 
         // ── Choice events: fire one periodically ─────────────────────────────
         const afterState = get();
-        if (!afterState.pendingChoiceEvent && newDay >= 14 && Math.random() < 0.055) {
+        if (!afterState.pendingChoiceEvent && newDay >= 14 && Math.random() < 0.045) {
           const fired = afterState.firedChoiceEventIds ?? [];
           const eligible = CHOICE_EVENT_TEMPLATES.filter(e =>
             (!e.minDay || newDay >= e.minDay) &&
