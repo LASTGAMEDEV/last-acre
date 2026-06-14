@@ -36,7 +36,12 @@ function ContractsSection() {
           <Text style={styles.sectionTitle}>Active contracts ({activeContracts.length})</Text>
           <GuideButton entryId="system_contracts" compact />
         </View>
-        {activeContracts.length === 0 && <Text style={styles.emptyText}>No active contracts.</Text>}
+        {activeContracts.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>No active contracts.</Text>
+            <Text style={styles.emptyHint}>Browse available offers below and accept one to lock in a guaranteed price and steady income.</Text>
+          </View>
+        )}
         {activeContracts.map(c => {
           const crop = CROP_TYPES.find(cr => cr.id === c.cropId);
           const unit = crop?.unit ?? 'kg';
@@ -96,7 +101,12 @@ function ContractsSection() {
           <Text style={styles.sectionTitle}>Available offers</Text>
           <GuideButton entryId="system_contracts" compact />
         </View>
-        {availableTemplates.length === 0 && <Text style={styles.emptyText}>No offers available right now.</Text>}
+        {availableTemplates.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>No offers available right now.</Text>
+            <Text style={styles.emptyHint}>New contract offers appear every few days. Advance time to unlock more offers, or grow your reputation to attract better buyers.</Text>
+          </View>
+        )}
         {availableTemplates.map(t => {
           const crop = CROP_TYPES.find(c => c.id === t.cropId);
           const unit = crop?.unit ?? 'kg';
@@ -279,7 +289,9 @@ const styles = StyleSheet.create({
   section: { backgroundColor: C.bgCard, borderRadius: R.lg, margin: S.md, padding: 14 },
   sectionTitle: { color: C.text, fontWeight: 'bold', fontSize: 15, marginBottom: 10 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: S.sm, marginBottom: 10 },
+  emptyCard: { gap: 4, paddingVertical: 4 },
   emptyText: { color: '#555', fontSize: F.size.sm },
+  emptyHint: { color: C.textFaint, fontSize: F.size.xs, lineHeight: 16, fontStyle: 'italic' },
   apr: { color: C.textMuted, fontSize: F.size.sm, fontWeight: 'normal' },
 
   // Loan form

@@ -64,6 +64,7 @@ export default function NutritionTab() {
     return (
       <View style={styles.center}>
         <Text style={styles.lockedText}>No animals owned yet.</Text>
+        <Text style={styles.emptyHint}>Buy animals from the Market tab to start designing rations. Ration quality directly affects daily production output and animal health.</Text>
       </View>
     );
   }
@@ -315,8 +316,9 @@ function RationDesigner({ animalType, onBack }: { animalType: any; onBack: () =>
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: S.xl },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: S.xl, gap: 8 },
   lockedText: { color: C.textMuted, fontSize: F.size.lg },
+  emptyHint: { color: C.textFaint, fontSize: F.size.sm, textAlign: 'center', lineHeight: 18, fontStyle: 'italic' },
   card: { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.lg, gap: S.sm },
   cardTitle: { color: C.text, fontSize: F.size.lg, fontWeight: F.weight.bold },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

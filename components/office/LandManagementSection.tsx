@@ -74,7 +74,12 @@ export default function LandManagementSection() {
       {/* Per-parcel cards */}
       <View style={ls.card}>
         <Text style={ls.cardTitle}>Owned Parcels</Text>
-        {ownedParcels.length === 0 && <Text style={ls.muted}>No owned parcels yet.</Text>}
+        {ownedParcels.length === 0 && (
+          <View style={ls.emptyCard}>
+            <Text style={ls.muted}>No owned parcels yet.</Text>
+            <Text style={ls.emptyHint}>Visit the Land tab to buy your first parcel and start planting crops. The Land Market shows parcels available for purchase or auction.</Text>
+          </View>
+        )}
         {ownedParcels.map(parcel => {
           const crop = parcel.plantedCrop ? CROP_TYPES.find(c => c.id === parcel.plantedCrop!.cropId) : null;
           const harvestDay = crop && parcel.plantedCrop ? parcel.plantedCrop.plantedDay + crop.growthDays : null;
@@ -349,6 +354,8 @@ const ls = StyleSheet.create({
   cardTitle:       { fontSize: F.size.md, fontWeight: '600', color: C.text, marginBottom: 2 },
   row:             { fontSize: F.size.sm, color: C.text },
   muted:           { fontSize: F.size.sm, color: C.textMuted },
+  emptyCard:       { gap: 4 },
+  emptyHint:       { fontSize: F.size.xs, color: C.textFaint, fontStyle: 'italic', lineHeight: 16 },
   badge:           { fontSize: F.size.sm, fontWeight: '600' },
   statBox:         { flex: 1, backgroundColor: C.bgDeep, borderRadius: R.sm, padding: S.sm, alignItems: 'center' },
   statLabel:       { color: C.textFaint, fontSize: 9, fontWeight: '600', letterSpacing: 0.5 },
