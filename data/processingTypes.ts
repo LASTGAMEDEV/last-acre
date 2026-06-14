@@ -646,7 +646,7 @@ export const PROCESSED_ITEM_DEFS: ProcessedItemDef[] = [
   { id: 'animal_fat',       name: 'Animal Fat',            unit: 'kg',  basePrice: 1.50,  shelfLifeDays: 60,   coldStorageMultiplier: 2 },
   { id: 'bones',            name: 'Bones',                 unit: 'kg',  basePrice: 0.30,  shelfLifeDays: 90,   coldStorageMultiplier: 1 },
   { id: 'graded_eggs',      name: 'Graded Eggs',           unit: 'ud',  basePrice: 0.28,  shelfLifeDays: 21,   coldStorageMultiplier: 2 },
-  { id: 'dried_lavender',   name: 'Dried Lavender',        unit: 'kg',  basePrice: 120,   shelfLifeDays: 365,  coldStorageMultiplier: 1 },
+  { id: 'dried_lavender',   name: 'Dried Lavender',        unit: 'kg',  basePrice: 200,   shelfLifeDays: 365,  coldStorageMultiplier: 1 },
   { id: 'dried_saffron',    name: 'Dried Saffron Threads', unit: 'g',   basePrice: 4.50,  shelfLifeDays: 365,  coldStorageMultiplier: 1 },
   { id: 'cured_vanilla',    name: 'Cured Vanilla Pods',    unit: 'kg',  basePrice: 180,   shelfLifeDays: 365,  coldStorageMultiplier: 1 },
   { id: 'dried_ginseng',    name: 'Dried Ginseng Root',    unit: 'kg',  basePrice: 420,   shelfLifeDays: 365,  coldStorageMultiplier: 1 },
@@ -824,12 +824,12 @@ export const PROCESSING_RECIPES: ProcessingRecipe[] = [
   { id: 'rec_tomato_pickles', name: 'Tomato Pickles', icon: '🍅', buildingTypeId: 'bld_preserving_kitchen', minBuildingTier: 1, inputs: [{ source: 'crop', itemId: 'tomatoes', quantity: 2 }], outputItemId: 'tomato_pickles', baseOutputQuantity: 1, processingDays: 2, electricityKwhPerDay: 0.5 },
   // Tinning Room
   { id: 'rec_tin_saffron',   name: 'Tin Saffron',   icon: '🌺', buildingTypeId: 'bld_tinning_room', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'dried_saffron', quantity: 1 }], outputItemId: 'saffron_tin', baseOutputQuantity: 1, processingDays: 1, electricityKwhPerDay: 0.4 },
-  { id: 'rec_tin_herbs',     name: 'Tin Herbs',     icon: '🌿', buildingTypeId: 'bld_tinning_room', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'dried_lavender', quantity: 1 }], outputItemId: 'herb_tin', baseOutputQuantity: 1, processingDays: 1, electricityKwhPerDay: 0.4 },
-  { id: 'rec_gift_vanilla',  name: 'Gift Vanilla',  icon: '🎁', buildingTypeId: 'bld_tinning_room', minBuildingTier: 2, inputs: [{ source: 'processed', itemId: 'cured_vanilla', quantity: 1 }], outputItemId: 'vanilla_gift_box', baseOutputQuantity: 1, processingDays: 1, electricityKwhPerDay: 0.4 },
-  { id: 'rec_spice_set',     name: 'Spice Set',     icon: '🎁', buildingTypeId: 'bld_tinning_room', minBuildingTier: 3, inputs: [{ source: 'processed', itemId: 'dried_saffron', quantity: 1 }, { source: 'processed', itemId: 'dried_lavender', quantity: 1 }, { source: 'processed', itemId: 'dried_ginseng', quantity: 1 }], outputItemId: 'spice_set', baseOutputQuantity: 1, processingDays: 1, electricityKwhPerDay: 0.4 },
+  { id: 'rec_tin_herbs',     name: 'Tin Herbs',     icon: '🌿', buildingTypeId: 'bld_tinning_room', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'dried_lavender', quantity: 1 }], outputItemId: 'herb_tin', baseOutputQuantity: 80, processingDays: 1, electricityKwhPerDay: 0.4 },
+  { id: 'rec_gift_vanilla',  name: 'Gift Vanilla',  icon: '🎁', buildingTypeId: 'bld_tinning_room', minBuildingTier: 2, inputs: [{ source: 'processed', itemId: 'cured_vanilla', quantity: 1 }], outputItemId: 'vanilla_gift_box', baseOutputQuantity: 10, processingDays: 1, electricityKwhPerDay: 0.4 },
+  { id: 'rec_spice_set',     name: 'Spice Set',     icon: '🎁', buildingTypeId: 'bld_tinning_room', minBuildingTier: 3, inputs: [{ source: 'processed', itemId: 'dried_saffron', quantity: 1 }, { source: 'processed', itemId: 'dried_lavender', quantity: 1 }, { source: 'processed', itemId: 'dried_ginseng', quantity: 1 }], outputItemId: 'spice_set', baseOutputQuantity: 20, processingDays: 1, electricityKwhPerDay: 0.4 },
   // Small Still
-  { id: 'rec_lavender_oil',  name: 'Lavender Oil',  icon: '🧴', buildingTypeId: 'bld_small_still', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'dried_lavender', quantity: 2 }], outputItemId: 'lavender_oil', baseOutputQuantity: 1, processingDays: 2, electricityKwhPerDay: 0.8 },
-  { id: 'rec_herbal_water',  name: 'Herbal Water',  icon: '💧', buildingTypeId: 'bld_small_still', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'dried_ginseng', quantity: 1 }], outputItemId: 'herbal_water', baseOutputQuantity: 1, processingDays: 2, electricityKwhPerDay: 0.8 },
+  { id: 'rec_lavender_oil',  name: 'Lavender Oil',  icon: '🧴', buildingTypeId: 'bld_small_still', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'dried_lavender', quantity: 2 }], outputItemId: 'lavender_oil', baseOutputQuantity: 15, processingDays: 2, electricityKwhPerDay: 0.8 },
+  { id: 'rec_herbal_water',  name: 'Herbal Water',  icon: '💧', buildingTypeId: 'bld_small_still', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'dried_ginseng', quantity: 1 }], outputItemId: 'herbal_water', baseOutputQuantity: 50, processingDays: 2, electricityKwhPerDay: 0.8 },
   // Honey Room
   { id: 'rec_filter_honey',  name: 'Filter Honey',  icon: '🍯', buildingTypeId: 'bld_honey_room', minBuildingTier: 1, inputs: [{ source: 'animal', itemId: 'honey', quantity: 1 }], outputItemId: 'filtered_honey', baseOutputQuantity: 1, processingDays: 1, electricityKwhPerDay: 0.3 },
   { id: 'rec_cream_honey',   name: 'Cream Honey',   icon: '🍯', buildingTypeId: 'bld_honey_room', minBuildingTier: 2, inputs: [{ source: 'animal', itemId: 'honey', quantity: 1 }], outputItemId: 'creamed_honey', baseOutputQuantity: 1, processingDays: 2, electricityKwhPerDay: 0.3 },
@@ -883,9 +883,9 @@ export const PROCESSING_RECIPES: ProcessingRecipe[] = [
   { id: 'rec_wine_vinegar',  name: 'Wine Vinegar',  icon: '🍶', buildingTypeId: 'bld_vinegar_barrel', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'table_wine', quantity: 2 }], outputItemId: 'wine_vinegar', baseOutputQuantity: 1, processingDays: 14, electricityKwhPerDay: 0.2 },
   { id: 'rec_cider_vinegar', name: 'Cider Vinegar', icon: '🍶', buildingTypeId: 'bld_vinegar_barrel', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'still_cider', quantity: 2 }], outputItemId: 'cider_vinegar', baseOutputQuantity: 1, processingDays: 14, electricityKwhPerDay: 0.2 },
   // Extract Kitchen
-  { id: 'rec_vanilla_extract', name: 'Vanilla Extract', icon: '🧴', buildingTypeId: 'bld_extract_kitchen', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'cured_vanilla', quantity: 1 }], outputItemId: 'vanilla_extract', baseOutputQuantity: 1, processingDays: 3, electricityKwhPerDay: 0.4 },
+  { id: 'rec_vanilla_extract', name: 'Vanilla Extract', icon: '🧴', buildingTypeId: 'bld_extract_kitchen', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'cured_vanilla', quantity: 1 }], outputItemId: 'vanilla_extract', baseOutputQuantity: 25, processingDays: 3, electricityKwhPerDay: 0.4 },
   { id: 'rec_saffron_water',   name: 'Saffron Water',   icon: '💧', buildingTypeId: 'bld_extract_kitchen', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'dried_saffron', quantity: 1 }], outputItemId: 'saffron_water', baseOutputQuantity: 1, processingDays: 2, electricityKwhPerDay: 0.4 },
-  { id: 'rec_ginseng_tincture', name: 'Ginseng Tincture', icon: '🧪', buildingTypeId: 'bld_extract_kitchen', minBuildingTier: 2, inputs: [{ source: 'processed', itemId: 'dried_ginseng', quantity: 1 }], outputItemId: 'ginseng_tincture', baseOutputQuantity: 1, processingDays: 3, electricityKwhPerDay: 0.4 },
+  { id: 'rec_ginseng_tincture', name: 'Ginseng Tincture', icon: '🧪', buildingTypeId: 'bld_extract_kitchen', minBuildingTier: 2, inputs: [{ source: 'processed', itemId: 'dried_ginseng', quantity: 1 }], outputItemId: 'ginseng_tincture', baseOutputQuantity: 40, processingDays: 3, electricityKwhPerDay: 0.4 },
 
   // ═══ Stage 4 ═══
   // Cave-Aged Cheese
@@ -903,8 +903,8 @@ export const PROCESSING_RECIPES: ProcessingRecipe[] = [
   { id: 'rec_prosciutto',    name: 'Age Prosciutto',  icon: '🍖', buildingTypeId: 'bld_long_cured_meats', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'smoked_ham', quantity: 2 }], outputItemId: 'prosciutto', baseOutputQuantity: 1, processingDays: 180, electricityKwhPerDay: 0.2 },
   { id: 'rec_dry_cured_ham', name: 'Dry-Cure Ham',    icon: '🍖', buildingTypeId: 'bld_long_cured_meats', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'smoked_ham', quantity: 2 }], outputItemId: 'dry_cured_ham', baseOutputQuantity: 1, processingDays: 120, electricityKwhPerDay: 0.2 },
   // Aged Balsamic
-  { id: 'rec_balsamic_5yr',  name: '5-Year Balsamic', icon: '🍶', buildingTypeId: 'bld_aged_balsamic', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'wine_vinegar', quantity: 3 }], outputItemId: 'aged_balsamic_5yr', baseOutputQuantity: 1, processingDays: 180, electricityKwhPerDay: 0.1 },
-  { id: 'rec_balsamic_10yr', name: '10-Year Balsamic', icon: '🍶', buildingTypeId: 'bld_aged_balsamic', minBuildingTier: 2, inputs: [{ source: 'processed', itemId: 'wine_vinegar', quantity: 3 }], outputItemId: 'aged_balsamic_10yr', baseOutputQuantity: 1, processingDays: 365, electricityKwhPerDay: 0.1 },
+  { id: 'rec_balsamic_5yr',  name: '5-Year Balsamic', icon: '🍶', buildingTypeId: 'bld_aged_balsamic', minBuildingTier: 1, inputs: [{ source: 'processed', itemId: 'wine_vinegar', quantity: 3 }], outputItemId: 'aged_balsamic_5yr', baseOutputQuantity: 100, processingDays: 180, electricityKwhPerDay: 0.1 },
+  { id: 'rec_balsamic_10yr', name: '10-Year Balsamic', icon: '🍶', buildingTypeId: 'bld_aged_balsamic', minBuildingTier: 2, inputs: [{ source: 'processed', itemId: 'wine_vinegar', quantity: 3 }], outputItemId: 'aged_balsamic_10yr', baseOutputQuantity: 100, processingDays: 365, electricityKwhPerDay: 0.1 },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
