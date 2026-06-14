@@ -1,6 +1,6 @@
 # Granja Tycoon — Roadmap Progress Checklist
 
-**Updated:** 2026-06-14 (Section 7 Animals complete — 17/17)  
+**Updated:** 2026-06-15 (Section 18 Balance Audit — 12/15 done · total 156/313 = 50%)  
 **Legend:** `[x]` = done · `[ ]` = not done · `[~]` = partially done
 
 ---
@@ -9,7 +9,7 @@
 
 These are the highest-impact items not yet done, in order:
 
-1. **Section 18** — Balance audit: money pacing, crop/livestock/processing margins, debt difficulty, event frequency (all 15 items untouched)
+1. **Section 18** — Balance audit: 12/15 done · still need: livestock profitability, contract rewards/penalties, sharpen tradeoffs
 2. **Section 2** — Remaining onboarding: guided first 10 days, teaching one system at a time, skip-tutorial option
 3. **Section 9** — Emergency financing tradeoffs, local market demand shifts, buyer relationship levels
 4. **Section 12** — Life event modals (marriage, birth, succession), chronicle tab, family roles
@@ -323,21 +323,21 @@ These are the highest-impact items not yet done, in order:
 
 ## 18. Balance
 
-- [ ] Audit money pacing
-- [ ] Audit crop profitability (are all crops viable?)
+- [x] Audit money pacing — fixed seasonStartMoney + $0.35/ha/day land overhead + real starting money
+- [x] Audit crop profitability (are all crops viable?) — nerfed S-tier (lavender/vanilla/ginseng), buffed oats drought niche
 - [ ] Audit livestock profitability
-- [ ] Audit processing margins
+- [x] Audit processing margins — fixed mL/g-scale recipe outputs (lavender oil, tinctures, balsamic, extracts)
 - [ ] Audit contract rewards and penalties
-- [ ] Audit debt difficulty
-- [ ] Audit maintenance pressure
-- [ ] Audit worker wages
-- [ ] Audit land prices
-- [ ] Audit event frequency
-- [ ] Audit dominant strategy problems
+- [x] Audit debt difficulty — wired workerWagesMult to payroll; real loans for inherited/established backstories
+- [x] Audit maintenance pressure — wired maintenanceCostMult; land overhead now visible in day summary
+- [x] Audit worker wages — workerWagesMult applied; night premium also scaled by difficulty
+- [x] Audit land prices — audited, 61ha opening at ~$50k market value is appropriate
+- [x] Audit event frequency — reduced daily chance 5.5% → 4.5% (~1 event per 22 days)
+- [x] Audit dominant strategy problems — S-tier crops were 30–200x more profitable; fixed
 - [ ] Sharpen tradeoffs: storage vs quick sale, debt vs growth, animals vs crops, organic vs conventional
-- [ ] Avoid every system becoming pure upside
-- [ ] Add opportunity costs
-- [ ] Add soft caps instead of hard blocks
+- [x] Avoid every system becoming pure upside — worker soft caps with diminishing returns above cap
+- [x] Add opportunity costs — land overhead charges $0.35/ha/day regardless of what's planted
+- [x] Add soft caps instead of hard blocks — worker diminishing() returns 25% above threshold
 
 ---
 
