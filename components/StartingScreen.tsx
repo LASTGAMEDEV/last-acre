@@ -7,13 +7,14 @@ import { useGameStore } from '../store/useGameStore';
 import { C, F, S, R } from '../constants/theme';
 import { type Difficulty } from '../engine/difficulty';
 
-type Backstory = 'first_gen' | 'inherited' | 'established';
+type Backstory = 'first_gen' | 'inherited' | 'established' | 'veteran';
 type FarmStyle = 'crop_focus' | 'livestock' | 'market_trader' | 'balanced';
 
 const BACKSTORY_OPTIONS: { id: Backstory; title: string; desc: string; detail: string }[] = [
   { id: 'first_gen',   title: 'First Generation', desc: 'Start from scratch',    detail: '$8k · Low rep · No debt' },
   { id: 'inherited',   title: 'Inherited Farm',   desc: 'Modest existing setup', detail: '$22k · Mid rep · $15k loan' },
   { id: 'established', title: 'Established',      desc: 'Going concern',         detail: '$45k · High rep · $35k mortgage' },
+  { id: 'veteran',     title: 'Veteran Farmer',   desc: 'Advanced / returning',  detail: '$80k · Max rep · No debt' },
 ];
 
 const STYLE_OPTIONS: { id: FarmStyle; icon: string; title: string; desc: string; bonus: string }[] = [
@@ -155,8 +156,8 @@ const ss = StyleSheet.create({
   field:         { gap: 8 },
   fieldLabel:    { color: '#3a6a3a', fontSize: 9, letterSpacing: 2, fontWeight: 'bold' },
   input:         { backgroundColor: '#0f1a0f', borderWidth: 1, borderColor: '#1e3a1e', borderRadius: R.md, padding: 12, color: C.text, fontSize: F.size.md },
-  backstoryRow:  { flexDirection: 'row', gap: 8 },
-  bsChip:        { flex: 1, backgroundColor: '#0f1a0f', borderWidth: 1, borderColor: '#1e3a1e', borderRadius: R.md, padding: 10, alignItems: 'center' },
+  backstoryRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  bsChip:        { flexBasis: '48%', flexGrow: 1, backgroundColor: '#0f1a0f', borderWidth: 1, borderColor: '#1e3a1e', borderRadius: R.md, padding: 10, alignItems: 'center' },
   bsChipActive:  { backgroundColor: '#1a2e1a', borderColor: '#4a7c59' },
   bsTitle:       { color: '#4a6a4a', fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
   bsTitleActive: { color: '#a5d6a7' },

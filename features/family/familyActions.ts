@@ -42,7 +42,7 @@ export interface FamilyActions {
   initiateCoOwnershipAction: (siblingId: string, playerShare: number) => void;
   applyFrictionChoiceAction: (choiceId: string) => void;
   resolveBuyoutAction: (choiceId: 'buy_them_out' | 'sell_to_them' | 'renegotiate') => void;
-  completeGameSetup: (farmName: string, farmerFirstName: string, backstory: 'first_gen' | 'inherited' | 'established', farmStyle?: 'crop_focus' | 'livestock' | 'market_trader' | 'balanced') => void;
+  completeGameSetup: (farmName: string, farmerFirstName: string, backstory: 'first_gen' | 'inherited' | 'established' | 'veteran', farmStyle?: 'crop_focus' | 'livestock' | 'market_trader' | 'balanced') => void;
 }
 
 export const createFamilyActions: ActionFactory<FamilyActions> = (set, get) => ({
@@ -144,6 +144,7 @@ export const createFamilyActions: ActionFactory<FamilyActions> = (set, get) => (
         paid: false,
         defaulted: false,
       } as Loan },
+      veteran:     { money: 80000, repScore: 60 + Math.floor(Math.random() * 16), loan: null as Loan | null },
     }[backstory];
 
     // Style bonus: extra cash or starting livestock
