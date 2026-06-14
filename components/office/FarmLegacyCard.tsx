@@ -159,6 +159,26 @@ const PATH_CONFIG: Record<FarmStyle, {
   },
 };
 
+type AchState = {
+  day: number; harvests: number; parcels: number; animalCount: number;
+  completedContracts: number; netWorth: number; totalDebt: number; hasExport: boolean;
+  processedAny: boolean; cropRev90: number; animalRev90: number;
+};
+type Achievement = { id: string; icon: string; title: string; desc: string; check: (s: AchState) => boolean };
+
+const ACHIEVEMENTS: Achievement[] = [
+  { id: 'first_harvest',   icon: '🌾', title: 'First Harvest',      desc: 'Complete your first crop harvest',        check: s => s.harvests >= 1 },
+  { id: 'land_baron',      icon: '🏡', title: 'Land Baron',          desc: 'Own 5 or more plots',                     check: s => s.parcels >= 5 },
+  { id: 'century',         icon: '📅', title: 'Century Farmer',      desc: 'Survive 100 game days',                   check: s => s.day >= 100 },
+  { id: 'animal_house',    icon: '🐾', title: 'Animal House',        desc: 'Own 20 or more animals at once',          check: s => s.animalCount >= 20 },
+  { id: 'debt_free',       icon: '💚', title: 'Debt Free',           desc: 'Pay off all loans (after day 30)',         check: s => s.totalDebt === 0 && s.day > 30 },
+  { id: 'contract_king',   icon: '📋', title: 'Contract King',       desc: 'Complete 10 or more contracts',           check: s => s.completedContracts >= 10 },
+  { id: 'tycoon',          icon: '💎', title: 'Tycoon',              desc: 'Reach $100,000 net worth',                check: s => s.netWorth >= 100000 },
+  { id: 'processor',       icon: '🏭', title: 'Food Processor',      desc: 'Earn any income from processed goods',    check: s => s.processedAny },
+  { id: 'exporter',        icon: '🌍', title: 'Export Champion',     desc: 'Complete an export contract',             check: s => s.hasExport },
+  { id: 'decade',          icon: '👑', title: 'A Decade of Farming', desc: 'Farm for 10 years (3,650 days)',          check: s => s.day >= 3650 },
+];
+
 export default function FarmLegacyCard() {
   const {
     day, farmStyle, parcels, animals, contracts, salesLog,
@@ -188,6 +208,21 @@ export default function FarmLegacyCard() {
   }, 0);
   const totalDebt = (loans ?? []).filter(l => !l.paid && !l.defaulted).reduce((s, l) => s + l.totalOwed, 0);
   const netWorth = money + (savings?.balance ?? 0) + inventoryValue + animalValue - totalDebt;
+
+  const achState: AchState = {
+    day,
+    harvests: personalRecords?.totalHarvests ?? 0,
+    parcels: ownedParcels.length,
+    animalCount: (animals ?? []).length,
+    completedContracts,
+    netWorth,
+    totalDebt,
+    hasExport: (contracts ?? []).some((c: any) => c.completed && c.export),
+    processedAny: (salesLog ?? []).some((s: any) => s.category === 'processed' && s.amount > 0),
+    cropRev90,
+    animalRev90,
+  };
+  const earnedAchs = ACHIEVEMENTS.filter(a => a.check(achState));
 
   const ms: MilestoneState = {
     day,
@@ -286,6 +321,22 @@ export default function FarmLegacyCard() {
       {!expanded && !nextTier && (
         <Text style={[card.nextHint, { color: path.color }]}>Max tier reached — fully specialized!</Text>
       )}
+
+      {/* Long-term achievements */}
+      <View style={card.achSection}>
+        <Text style={card.achTitle}>🏆 Achievements ({earnedAchs.length}/{ACHIEVEMENTS.length})</Text>
+        <View style={card.achGrid}>
+          {ACHIEVEMENTS.map(a => {
+            const earned = earnedAchs.some(e => e.id === a.id);
+            return (
+              <View key={a.id} style={[card.achBadge, earned ? card.achBadgeEarned : card.achBadgeLocked]}>
+                <Text style={[card.achIcon, !earned && { opacity: 0.25 }]}>{a.icon}</Text>
+                <Text style={[card.achLabel, { color: earned ? C.text : '#333' }]} numberOfLines={1}>{a.title}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -414,4 +465,12 @@ const card = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 2,
   },
+  achSection:     { borderTopWidth: 1, borderTopColor: '#1a1a1a', paddingTop: S.sm },
+  achTitle:       { color: '#555', fontSize: 10, fontWeight: 'bold', marginBottom: S.xs },
+  achGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  achBadge:       { alignItems: 'center', width: 56, gap: 2 },
+  achBadgeEarned: { opacity: 1 },
+  achBadgeLocked: { opacity: 0.5 },
+  achIcon:        { fontSize: 22 },
+  achLabel:       { fontSize: 8, textAlign: 'center', lineHeight: 10 },
 });
