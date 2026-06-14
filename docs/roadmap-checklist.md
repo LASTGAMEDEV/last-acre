@@ -346,7 +346,7 @@ These are the highest-impact items not yet done, in order:
 
 - [x] More random events with choices — 16 choice event templates (8 + 8 added 2026-06-14)
 - [x] More historical events — 57 total (1970–2025)
-- [ ] More crops with distinct roles (no new crops added yet)
+- [x] More crops with distinct roles (chickpeas, lentils, hemp, garlic, spelt added 2026-06-14)
 - [ ] Region-specific crops
 - [ ] More animal breeds
 - [ ] More processed goods
