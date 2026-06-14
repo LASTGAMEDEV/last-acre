@@ -54,7 +54,7 @@ function ReputationSection() {
 
   // Phase 3 reputation
   const score  = reputation?.score ?? 0;
-  const tier   = reputation?.tier  ?? 'unknown';
+  const tier   = (reputation?.tier  ?? 'unknown') as ReputationTier;
   const factors = reputation?.factors;
   const tierColor = TIER_COLOR[tier];
   const tierIcon  = TIER_ICON[tier];

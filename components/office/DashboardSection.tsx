@@ -69,39 +69,39 @@ function DashboardSection() {
   const farmStage = getFarmStage(calYear);
   const farmingYears = calYear - 1970;
 
-  const ownedParcels = parcels.filter(p => p.owned);
+  const ownedParcels = parcels.filter((p: any) => p.owned);
 
   // Net worth
-  const inventoryValue = CROP_TYPES.reduce((sum, crop) => {
+  const inventoryValue = CROP_TYPES.reduce((sum: number, crop) => {
     const qty = inventory[crop.id] ?? 0;
-    const price = prices.find(p => p.cropId === crop.id)?.price ?? crop.basePrice;
+    const price = prices.find((p: any) => p.cropId === crop.id)?.price ?? crop.basePrice;
     return sum + qty * price;
   }, 0);
-  const animalValue = animals.reduce((sum, a) => {
-    const type = ANIMAL_TYPES.find(t => t.id === a.typeId);
+  const animalValue = animals.reduce((sum: number, a: any) => {
+    const type = ANIMAL_TYPES.find((t: any) => t.id === a.typeId);
     return sum + (type?.buyCost ?? 0) * 0.6;
   }, 0);
   const netWorth = money + savings.balance + inventoryValue + animalValue;
 
-  const urgentLoans = loans.filter(l => !l.paid && !l.defaulted && l.payoffDay - day <= 7 && l.payoffDay >= day);
-  const urgentContracts = contracts.filter(c => !c.completed && !c.failed && c.deadlineDay - day <= 7 && c.deadlineDay >= day);
-  const rev7 = salesLog.filter(s => s.day >= day - 7).reduce((a, s) => a + s.amount, 0);
-  const rev30 = salesLog.filter(s => s.day >= day - 30).reduce((a, s) => a + s.amount, 0);
-  const topRival = [...(npcFarms ?? [])].sort((a, b) => b.wealth - a.wealth)[0];
+  const urgentLoans = loans.filter((l: any) => !l.paid && !l.defaulted && l.payoffDay - day <= 7 && l.payoffDay >= day);
+  const urgentContracts = contracts.filter((c: any) => !c.completed && !c.failed && c.deadlineDay - day <= 7 && c.deadlineDay >= day);
+  const rev7 = salesLog.filter((s: any) => s.day >= day - 7).reduce((a: number, s: any) => a + s.amount, 0);
+  const rev30 = salesLog.filter((s: any) => s.day >= day - 30).reduce((a: number, s: any) => a + s.amount, 0);
+  const topRival = [...(npcFarms ?? [])].sort((a: any, b: any) => b.wealth - a.wealth)[0];
   const seasonEarned = Math.max(0, (totalRevenue ?? 0) - (seasonStartRevenue ?? 0));
-  const activeGoals = seasonGoals.filter(g => !g.claimed);
+  const activeGoals = seasonGoals.filter((g: any) => !g.claimed);
 
   // ── Today's Priorities ────────────────────────────────────────────────────
   const priorities: Priority[] = [];
 
   // Crops ready to harvest
-  const readyParcels = ownedParcels.filter(p => {
+  const readyParcels = ownedParcels.filter((p: any) => {
     if (!p.plantedCrop) return false;
     const cropType = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
     return cropType ? isReady(p.plantedCrop, cropType, day) : false;
   });
   if (readyParcels.length > 0) {
-    const names = [...new Set(readyParcels.map(p => {
+    const names = [...new Set(readyParcels.map((p: any) => {
       const ct = CROP_TYPES.find(c => c.id === p.plantedCrop!.cropId);
       return ct?.name ?? p.plantedCrop!.cropId;
     }))];
@@ -113,7 +113,7 @@ function DashboardSection() {
   }
 
   // Loans due
-  urgentLoans.forEach(l => {
+  urgentLoans.forEach((l: any) => {
     const daysLeft = l.payoffDay - day;
     priorities.push({
       icon: '🏦',
@@ -123,7 +123,7 @@ function DashboardSection() {
   });
 
   // Contracts at risk
-  urgentContracts.forEach(c => {
+  urgentContracts.forEach((c: any) => {
     const daysLeft = c.deadlineDay - day;
     priorities.push({
       icon: '📋',
@@ -133,10 +133,10 @@ function DashboardSection() {
   });
 
   // Debt pressure alert
-  const activeLoans = loans.filter(l => !l.paid && !l.defaulted);
-  const totalDebtForAlert = activeLoans.reduce((s, l) => s + l.totalOwed, 0);
+  const activeLoans = loans.filter((l: any) => !l.paid && !l.defaulted);
+  const totalDebtForAlert = activeLoans.reduce((s: number, l: any) => s + l.totalOwed, 0);
   if (totalDebtForAlert > 0) {
-    const rev30d = salesLog.filter(s => s.day >= day - 30).reduce((a, s) => a + s.amount, 0);
+    const rev30d = salesLog.filter((s: any) => s.day >= day - 30).reduce((a: number, s: any) => a + s.amount, 0);
     const monthlyRev = rev30d || 1;
     const debtRatio = totalDebtForAlert / (monthlyRev * 12);
     if (debtRatio >= 3) {
@@ -147,7 +147,7 @@ function DashboardSection() {
   }
 
   // Diseased plots
-  const diseasedParcels = ownedParcels.filter(p => p.diseased);
+  const diseasedParcels = ownedParcels.filter((p: any) => p.diseased);
   if (diseasedParcels.length > 0) {
     priorities.push({
       icon: '🦠',
@@ -170,7 +170,7 @@ function DashboardSection() {
   });
 
   // Machine condition warnings
-  (machines ?? []).forEach(m => {
+  (machines ?? []).forEach((m: any) => {
     const cond = m.condition ?? 100;
     if (cond < 20) {
       const mType = MACHINE_TYPES.find(t => t.id === m.typeId);
@@ -197,7 +197,7 @@ function DashboardSection() {
     if (!animalType || !animalType.productionType) continue;
     const ration = savedRations[typeId] ?? generateDefaultRation(animalType);
     const pastureKg = (animalType.enclosureType === 'corral' || animalType.enclosureType === 'caballeriza')
-      ? (ownedParcels.some(p => !p.plantedCrop) ? 1.0 : 0) : 0;
+      ? (ownedParcels.some((p: any) => !p.plantedCrop) ? 1.0 : 0) : 0;
     const analysis = analyzeRation(ration, animalType,
       { ...inventory, ...animalInventory, silage: silageLevel ?? 0 }, pastureKg);
     if (analysis.tier === 'deficient') {
@@ -214,10 +214,10 @@ function DashboardSection() {
   priorities.sort((a, b) => ORDER[a.severity] - ORDER[b.severity]);
 
   // ── Farm Identity ─────────────────────────────────────────────────────────
-  const organicParcelCount = ownedParcels.filter(p => p.organicStatus === 'organic').length;
-  const animalRev90   = salesLog.filter(s => s.day >= day - 90 && s.category === 'animals').reduce((a, s) => a + s.amount, 0);
-  const cropRev90     = salesLog.filter(s => s.day >= day - 90 && s.category === 'crops').reduce((a, s) => a + s.amount, 0);
-  const processedRev90 = salesLog.filter(s => s.day >= day - 90 && s.category === 'processed').reduce((a, s) => a + s.amount, 0);
+  const organicParcelCount = ownedParcels.filter((p: any) => p.organicStatus === 'organic').length;
+  const animalRev90   = salesLog.filter((s: any) => s.day >= day - 90 && s.category === 'animals').reduce((a: number, s: any) => a + s.amount, 0);
+  const cropRev90     = salesLog.filter((s: any) => s.day >= day - 90 && s.category === 'crops').reduce((a: number, s: any) => a + s.amount, 0);
+  const processedRev90 = salesLog.filter((s: any) => s.day >= day - 90 && s.category === 'processed').reduce((a: number, s: any) => a + s.amount, 0);
   const isOrganicFarm = organicParcelCount > 0 && organicParcelCount >= Math.ceil(ownedParcels.length * 0.5);
   let farmTypeLabel = 'Farm';
   if (farmStyle === 'livestock' && day < 365)          farmTypeLabel = 'Livestock Farm';
@@ -239,7 +239,7 @@ function DashboardSection() {
   CROP_TYPES.forEach(crop => {
     const qty = inventory[crop.id] ?? 0;
     if (qty <= 0) return;
-    const currentPrice = prices.find(p => p.cropId === crop.id)?.price ?? crop.basePrice;
+    const currentPrice = prices.find((p: any) => p.cropId === crop.id)?.price ?? crop.basePrice;
     if (currentPrice >= crop.basePrice * 1.25) {
       allOpCards.push({
         id: `op_price_${crop.id}_w${weekBucket}`,
@@ -252,7 +252,7 @@ function DashboardSection() {
     }
   });
 
-  const idleParcels = ownedParcels.filter(p => !p.plantedCrop);
+  const idleParcels = ownedParcels.filter((p: any) => !p.plantedCrop);
   if (idleParcels.length > 0) {
     allOpCards.push({
       id: `op_idle_plots_w${weekBucket}`,
@@ -293,11 +293,11 @@ function DashboardSection() {
     const GRAIN_IDS = ['corn', 'barley', 'oats', 'sorghum', 'grass', 'alfalfa'];
     const grainStock = GRAIN_IDS.reduce((sum, id) => sum + (inventory[id] ?? 0), 0);
     const hayStock = (animalInventory ?? {})['hay'] ?? 0;
-    const dailyGrainDemand = animals.reduce((sum, a) => {
+    const dailyGrainDemand = animals.reduce((sum: number, a: any) => {
       const type = ANIMAL_TYPES.find(t => t.id === a.typeId);
       return sum + (type?.feedType === 'grain' ? (type.feedKgPerDay ?? 0) : 0);
     }, 0);
-    const dailyHayDemand = animals.reduce((sum, a) => {
+    const dailyHayDemand = animals.reduce((sum: number, a: any) => {
       const type = ANIMAL_TYPES.find(t => t.id === a.typeId);
       return sum + (type?.feedType === 'hay' ? (type.feedKgPerDay ?? 0) : 0);
     }, 0);
@@ -347,7 +347,7 @@ function DashboardSection() {
   const FORECAST_DAYS = 30;
 
   // Income: animal products extrapolated from last 14 days
-  const animalRev14 = salesLog.filter(s => s.day >= day - 14 && s.category === 'animals').reduce((a, s) => a + s.amount, 0);
+  const animalRev14 = salesLog.filter((s: any) => s.day >= day - 14 && s.category === 'animals').reduce((a: number, s: any) => a + s.amount, 0);
   const projAnimalIncome = (animalRev14 / 14) * FORECAST_DAYS;
 
   // Income: crops due to mature within forecast window (conservative 85% of base yield × price)
@@ -358,20 +358,20 @@ function DashboardSection() {
     if (!ct) continue;
     const harvestDay = p.plantedCrop.plantedDay + ct.growthDays;
     if (harvestDay >= day && harvestDay <= day + FORECAST_DAYS) {
-      const price = prices.find(pr => pr.cropId === ct.id)?.price ?? ct.basePrice;
+      const price = prices.find((pr: any) => pr.cropId === ct.id)?.price ?? ct.basePrice;
       projCropIncome += ct.baseYield * p.hectares * price * 0.85;
     }
   }
 
   // Income: remaining value from contracts due within 30 days
   const projContractIncome = contracts
-    .filter(c => !c.completed && !c.failed && c.deadlineDay <= day + FORECAST_DAYS)
-    .reduce((sum, c) => sum + (c.amount - c.delivered) * c.pricePerUnit, 0);
+    .filter((c: any) => !c.completed && !c.failed && c.deadlineDay <= day + FORECAST_DAYS)
+    .reduce((sum: number, c: any) => sum + (c.amount - c.delivered) * c.pricePerUnit, 0);
 
   const totalProjIncome = projAnimalIncome + projCropIncome + projContractIncome;
 
   // Expenses: worker daily wages × 30
-  const dailyWages = (workers ?? []).reduce((s, w) => s + w.wagePerDay, 0);
+  const dailyWages = (workers ?? []).reduce((s: number, w: any) => s + w.wagePerDay, 0);
   const projWagesCost = dailyWages * FORECAST_DAYS;
 
   // Expenses: family living costs × 30
@@ -383,8 +383,8 @@ function DashboardSection() {
 
   // Expenses: loans coming due within 30 days
   const projLoansDue = loans
-    .filter(l => !l.paid && !l.defaulted && l.payoffDay <= day + FORECAST_DAYS)
-    .reduce((s, l) => s + l.totalOwed, 0);
+    .filter((l: any) => !l.paid && !l.defaulted && l.payoffDay <= day + FORECAST_DAYS)
+    .reduce((s: number, l: any) => s + l.totalOwed, 0);
 
   const totalProjExpenses = projWagesCost + projFamilyCost + projLoansDue;
   const netForecast = totalProjIncome - totalProjExpenses;
@@ -409,11 +409,11 @@ function DashboardSection() {
   const timelineItems = recentActivity.slice(0, 8);
 
   // ── Farm Health score ─────────────────────────────────────────────────────
-  const totalDebt = loans.filter(l => !l.paid && !l.defaulted).reduce((s, l) => s + l.totalOwed, 0);
+  const totalDebt = loans.filter((l: any) => !l.paid && !l.defaulted).reduce((s: number, l: any) => s + l.totalOwed, 0);
   const cashScore = Math.min(money / 10000, 1) * 25;
   const debtScore = totalDebt === 0 ? 25 : Math.max(0, 1 - totalDebt / (money + savings.balance + 1)) * 25;
   const avgFertility = ownedParcels.length > 0
-    ? ownedParcels.reduce((s, p) => s + p.fertility, 0) / ownedParcels.length
+    ? ownedParcels.reduce((s: number, p: any) => s + p.fertility, 0) / ownedParcels.length
     : 25;
   const soilScore = (avgFertility / 25) * 25;
   const welfareList = Object.values(welfareScores) as number[];
@@ -578,7 +578,7 @@ function DashboardSection() {
 
       {/* Farm row */}
       <View style={dash.row}>
-        <Card title="🌾 OWNED PLOTS" value={`${ownedParcels.length}`} sub={`${ownedParcels.reduce((s, p) => s + p.hectares, 0).toFixed(1)} ha`} />
+        <Card title="🌾 OWNED PLOTS" value={`${ownedParcels.length}`} sub={`${ownedParcels.reduce((s: number, p: any) => s + p.hectares, 0).toFixed(1)} ha`} />
         <Card title="🐄 ANIMALS" value={`${animals.length}`} />
       </View>
 
@@ -586,11 +586,11 @@ function DashboardSection() {
       {activeGoals.length > 0 && (
         <View style={dash.goalsCard}>
           <Text style={dash.goalsTitle}>{season.charAt(0).toUpperCase() + season.slice(1)} Goals</Text>
-          {activeGoals.map(goal => {
+          {activeGoals.map((goal: any) => {
             let progress = 0;
             if (goal.type === 'earn') progress = Math.min(1, seasonEarned / goal.target);
             if (goal.type === 'harvest_count') progress = Math.min(1, (seasonHarvestCount ?? 0) / goal.target);
-            if (goal.type === 'own_ha') progress = Math.min(1, ownedParcels.reduce((s, p) => s + p.hectares, 0) / goal.target);
+            if (goal.type === 'own_ha') progress = Math.min(1, ownedParcels.reduce((s: number, p: any) => s + p.hectares, 0) / goal.target);
             return (
               <View key={goal.id} style={{ marginTop: 6 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>

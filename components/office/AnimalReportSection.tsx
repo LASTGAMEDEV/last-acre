@@ -139,6 +139,42 @@ export default function AnimalReportSection() {
           color={dailyProductionValue >= dailyFeedCost ? '#4caf50' : '#ef5350'} />
       </Card>
 
+      {/* Profitability Ranking */}
+      {speciesSummaries.filter(s => s.animalType.productionType).length > 0 && (
+        <>
+          <SectionHeader title="💰 Profitability Ranking" />
+          <Card>
+            {[...speciesSummaries]
+              .filter(s => s.animalType.productionType)
+              .sort((a, b) => (b.netPerDay / Math.max(1, b.count)) - (a.netPerDay / Math.max(1, a.count)))
+              .map((s, i) => {
+                const perAnimalNet = s.count > 0 ? s.netPerDay / s.count : 0;
+                const buyCost = s.animalType.buyCost ?? 0;
+                const breakEvenDays = perAnimalNet > 0 && buyCost > 0 ? Math.ceil(buyCost / perAnimalNet) : null;
+                const netColor = perAnimalNet > 0 ? '#4caf50' : perAnimalNet < -0.5 ? '#ef5350' : '#888';
+                return (
+                  <View key={s.typeId} style={[ar.rankRow, i > 0 && { borderTopWidth: 1, borderTopColor: '#1a1a2a' }]}>
+                    <Text style={ar.rankPos}>{i + 1}</Text>
+                    <Text style={ar.rankIcon}>{PROD_ICON[s.animalType.productionType ?? ''] ?? '🐾'}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={ar.rankName}>{s.animalType.name}</Text>
+                      {breakEvenDays !== null && (
+                        <Text style={ar.breakEven}>breaks even in {breakEvenDays}d per animal</Text>
+                      )}
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[ar.rankNet, { color: netColor }]}>
+                        {perAnimalNet >= 0 ? '+' : ''}{fmt(perAnimalNet)}/day
+                      </Text>
+                      <Text style={ar.rankTotal}>total {fmtInt(s.netPerDay)}/day</Text>
+                    </View>
+                  </View>
+                );
+              })}
+          </Card>
+        </>
+      )}
+
       {typeEntries.length === 0 ? (
         <>
           <SectionHeader title="No Animals" />
@@ -272,4 +308,12 @@ const ar = StyleSheet.create({
   healthAlertRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: C.divider },
   healthAlertAnimal: { color: C.text, fontSize: F.size.sm },
   healthAlertStatus: { color: '#ef5350', fontSize: F.size.xs },
+  // Profitability ranking
+  rankRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7 },
+  rankPos:   { color: C.textFaint, fontSize: F.size.sm, width: 16, textAlign: 'center' },
+  rankIcon:  { fontSize: 18, width: 24, textAlign: 'center' },
+  rankName:  { color: C.text, fontSize: F.size.sm, fontWeight: 'bold' },
+  breakEven: { color: C.textFaint, fontSize: 10, marginTop: 1 },
+  rankNet:   { fontSize: F.size.sm, fontWeight: 'bold' },
+  rankTotal: { color: C.textFaint, fontSize: 9 },
 });

@@ -15,6 +15,8 @@ import {
   timeDepositPayout,
   timeDepositMatured,
 } from '../../engine/banking';
+import type { Loan, LoanRecord, TimeDeposit } from '../../engine/banking';
+import type { LandParcel } from '../../types/domain/land';
 import { MACHINE_TYPES } from '../../data/machineTypes';
 
 const TERM_OPTIONS = [
@@ -53,7 +55,7 @@ function BankingSection() {
 
   const income30d = rollingIncome(salesLog, day - 30, day);
   const income90d = rollingIncome(salesLog, day - 90, day);
-  const activeLoans = loans.filter(l => !l.paid && !l.defaulted);
+  const activeLoans = loans.filter((l: Loan) => !l.paid && !l.defaulted);
   const creditScore = computeCreditScore(loanHistory, activeLoans, income30d);
   const rating = creditRating(creditScore);
 
@@ -111,7 +113,7 @@ function BankingSection() {
             <View style={styles.creditStat}>
               <Text style={styles.creditStatLabel}>History</Text>
               <Text style={styles.creditStatValue}>
-                {loanHistory.filter(r => r.paidOnTime).length}✓ {loanHistory.filter(r => !r.paidOnTime).length}✗
+                {loanHistory.filter((r: LoanRecord) => r.paidOnTime).length}✓ {loanHistory.filter((r: LoanRecord) => !r.paidOnTime).length}✗
               </Text>
             </View>
           </View>
@@ -138,7 +140,7 @@ function BankingSection() {
         const lastUsed = familyLoanUsedDay ?? null;
         const cooldownLeft = lastUsed !== null ? Math.max(0, COOLDOWN - (day - lastUsed)) : 0;
         const isCashCrisis = money < 2000;
-        const hasDefaulted = loans.some(l => l.defaulted && !l.paid);
+        const hasDefaulted = loans.some((l: Loan) => l.defaulted && !l.paid);
         const eligible = (isCashCrisis || hasDefaulted) && cooldownLeft === 0;
         if (!eligible && cooldownLeft === 0 && !isCashCrisis && !hasDefaulted) return null;
         return (
@@ -176,10 +178,10 @@ function BankingSection() {
 
       {/* Emergency Land Leaseback */}
       {(() => {
-        const ownedParcels = (parcels ?? []).filter(p => p.owned);
-        const availableParcels = ownedParcels.filter(p => !p.leasedOut || (p.leasebackEndDay ?? 0) <= day);
-        const leasedOut = ownedParcels.filter(p => p.leasedOut && (p.leasebackEndDay ?? 0) > day);
-        const totalDebt = loans.filter(l => !l.paid && !l.defaulted).reduce((s, l) => s + l.totalOwed, 0);
+        const ownedParcels = (parcels ?? []).filter((p: LandParcel) => p.owned);
+        const availableParcels = ownedParcels.filter((p: LandParcel) => !p.leasedOut || (p.leasebackEndDay ?? 0) <= day);
+        const leasedOut = ownedParcels.filter((p: LandParcel) => p.leasedOut && (p.leasebackEndDay ?? 0) > day);
+        const totalDebt = loans.filter((l: Loan) => !l.paid && !l.defaulted).reduce((s: number, l: Loan) => s + l.totalOwed, 0);
         const inDistress = money < totalDebt * 0.3 || (money < 5000 && totalDebt > 0);
         if (!inDistress && leasedOut.length === 0) return null;
         return (
@@ -188,7 +190,7 @@ function BankingSection() {
             <Text style={{ color: C.textMuted, fontSize: F.size.sm, marginBottom: S.sm, lineHeight: 18 }}>
               Lease your land to a neighbor for immediate cash. You get 60% of land value upfront; the parcel is unavailable for 1 year.
             </Text>
-            {leasedOut.length > 0 && leasedOut.map(p => (
+            {leasedOut.length > 0 && leasedOut.map((p: LandParcel) => (
               <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.bgDeep, borderRadius: R.sm, padding: S.sm, marginBottom: 4 }}>
                 <Text style={{ flex: 1, color: '#ef9a9a', fontSize: F.size.sm }}>🏷️ {p.name} — leased out</Text>
                 <Text style={{ color: C.textFaint, fontSize: F.size.xs }}>returns day {p.leasebackEndDay}</Text>
@@ -197,7 +199,7 @@ function BankingSection() {
             {availableParcels.length === 0 ? (
               <Text style={{ color: C.textFaint, fontSize: F.size.sm }}>No parcels available to lease out.</Text>
             ) : (
-              availableParcels.map(p => {
+              availableParcels.map((p: LandParcel) => {
                 const upfront = Math.round(p.hectares * p.pricePerHa * 0.6);
                 return (
                   <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm, marginBottom: 6 }}>
@@ -524,7 +526,7 @@ function BankingSection() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Active loans</Text>
         {activeLoans.length === 0 && <Text style={styles.emptyText}>No active loans.</Text>}
-        {activeLoans.map(loan => {
+        {activeLoans.map((loan: Loan) => {
           const overdue = day > loan.payoffDay;
           const canPay = money >= loan.totalOwed;
           return (
@@ -584,11 +586,11 @@ function BankingSection() {
           );
         })}
         {/* Paid / defaulted history */}
-        {loans.filter(l => l.paid || l.defaulted).length > 0 && (
+        {loans.filter((l: Loan) => l.paid || l.defaulted).length > 0 && (
           <Text style={styles.historyTitle}>History</Text>
         )}
-        {loans.filter(l => l.paid || l.defaulted).map(loan => {
-          const record = loanHistory.find(r => r.loanId === loan.id);
+        {loans.filter((l: Loan) => l.paid || l.defaulted).map((loan: Loan) => {
+          const record = loanHistory.find((r: LoanRecord) => r.loanId === loan.id);
           const onTime = record?.paidOnTime ?? false;
           const statusColor = loan.defaulted ? '#f44336' : onTime ? C.green : '#ff9800';
           const statusLabel = loan.defaulted ? 'Defaulted' : onTime ? 'On time' : 'Late';
@@ -731,7 +733,7 @@ function BankingSection() {
         {timeDeposits.length > 0 && (
           <>
             <Text style={[styles.historyTitle, { marginTop: 14 }]}>Active deposits</Text>
-            {timeDeposits.map(d => {
+            {timeDeposits.map((d: TimeDeposit) => {
               const matured = timeDepositMatured(d, day);
               const payout = Math.round(timeDepositPayout(d));
               const daysLeft = (d.startDay + d.termDays) - day;
