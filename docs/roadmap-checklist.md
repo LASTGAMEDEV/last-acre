@@ -129,7 +129,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Honey rate and pollination yield bonuses shown
 - [x] Ration tier and production modifier on NutritionTab overview
 - [x] Production modifier and disease risk in RationDesigner
-- [ ] Animal welfare readability (group summaries: health, feed, production, reproduction)
+- [x] Animal welfare readability (group summaries: health, feed, production, reproduction)
 - [ ] Explanations for production changes
 - [ ] Herd and flock identity
 - [ ] Vet visits and preventive care
@@ -171,7 +171,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Seasonal grid rate adjustment in ElectricitySection
 - [x] Per-animal profitability report
 - [ ] Full enterprise reports: crops, livestock, processing, contracts, direct sales
-- [ ] Break-even explanations per crop or animal
+- [x] Break-even explanations per crop or animal
 - [ ] Price cause explanations: weather, era, global market, local supply
 - [ ] Local market demand shifts
 - [ ] Buyer relationship levels

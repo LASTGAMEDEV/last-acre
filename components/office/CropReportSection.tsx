@@ -343,6 +343,13 @@ export default function CropReportSection() {
               const estProfit = rev - estSeedCost;
               const estMarginPct = rev > 0 ? Math.round((estProfit / rev) * 100) : 0;
               const marginColor = estMarginPct >= 70 ? '#4caf50' : estMarginPct >= 40 ? '#f59e0b' : '#ef5350';
+              // Break-even: how many kg/ha at current price to cover seed cost
+              const seedCostPerHa = ct?.seedCost ?? 0;
+              const breakEvenKgPerHa = seedCostPerHa > 0 && curPrice > 0 ? Math.ceil(seedCostPerHa / curPrice) : 0;
+              const breakEvenPct = ct && ct.baseYield > 0 && breakEvenKgPerHa > 0
+                ? Math.round((breakEvenKgPerHa / ct.baseYield) * 100)
+                : 0;
+              const breakEvenColor = breakEvenPct <= 30 ? '#4caf50' : breakEvenPct <= 60 ? '#f59e0b' : '#ef5350';
               return (
                 <View key={cropId} style={cr.revRow}>
                   <Text style={cr.revRank}>#{i + 1}</Text>
@@ -364,6 +371,12 @@ export default function CropReportSection() {
                         </Text>
                       )}
                     </View>
+                    {breakEvenKgPerHa > 0 && (
+                      <Text style={[cr.breakEvenNote, { color: breakEvenColor }]}>
+                        Break-even: {breakEvenKgPerHa} {ct?.unit ?? 'kg'}/ha ({breakEvenPct}% of base yield)
+                        {breakEvenPct <= 40 ? ' — low risk' : breakEvenPct <= 70 ? ' — moderate risk' : ' — high risk'}
+                      </Text>
+                    )}
                   </View>
                 </View>
               );
@@ -433,6 +446,7 @@ const cr = StyleSheet.create({
   revBarTrack:    { height: 4, backgroundColor: C.bgDeep, borderRadius: 2, overflow: 'hidden', marginBottom: 2 },
   revBarFill:     { height: 4, backgroundColor: '#c8860a', borderRadius: 2 },
   revPriceNote:   { color: C.textFaint, fontSize: 10 },
+  breakEvenNote:  { fontSize: 10, marginTop: 2, fontStyle: 'italic' },
   // Parcel rows
   parcelRow:      { flexDirection: 'row', alignItems: 'center', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: C.divider },
   parcelName:     { color: C.text, fontSize: F.size.sm, fontWeight: '500' },

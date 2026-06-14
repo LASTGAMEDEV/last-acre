@@ -139,6 +139,50 @@ export default function AnimalReportSection() {
           color={dailyProductionValue >= dailyFeedCost ? '#4caf50' : '#ef5350'} />
       </Card>
 
+      {/* Welfare Summary Grid */}
+      {totalCount > 0 && (() => {
+        const healthPct = totalCount > 0 ? Math.round(((totalCount - totalSick) / totalCount) * 100) : 100;
+        const healthColor = healthPct >= 90 ? '#4caf50' : healthPct >= 70 ? '#f59e0b' : '#ef5350';
+        const healthLabel = healthPct >= 90 ? 'Healthy' : healthPct >= 70 ? 'Some Sick' : 'Outbreak';
+
+        const deficientCount = speciesSummaries.filter(s => s.rationTier === 'deficient').length;
+        const feedColor = deficientCount === 0 ? '#4caf50' : deficientCount <= 1 ? '#f59e0b' : '#ef5350';
+        const feedLabel = deficientCount === 0 ? 'Fed' : `${deficientCount} Deficient`;
+
+        const totalProdAnimals = speciesSummaries.filter(s => s.animalType.productionType).reduce((s, x) => s + x.count, 0);
+        const matureProducers = speciesSummaries.filter(s => s.animalType.productionType).reduce((s, x) => s + x.mature, 0);
+        const prodPct = totalProdAnimals > 0 ? Math.round((matureProducers / totalProdAnimals) * 100) : 0;
+        const prodColor = prodPct >= 80 ? '#4caf50' : prodPct >= 50 ? '#f59e0b' : '#888';
+        const prodLabel = prodPct >= 80 ? 'Producing' : prodPct >= 50 ? 'Mixed' : 'Low';
+
+        const totalMature = speciesSummaries.reduce((s, x) => s + x.mature, 0);
+        const breedReadyPct = totalCount > 0 ? Math.round((totalMature / totalCount) * 100) : 0;
+        const reprColor = breedReadyPct >= 70 ? '#81c784' : breedReadyPct >= 40 ? '#f59e0b' : '#888';
+        const reprLabel = breedReadyPct >= 70 ? 'Mature' : breedReadyPct >= 40 ? 'Growing' : 'Immature';
+
+        const pillars = [
+          { icon: '💊', label: 'Health', value: `${healthPct}%`, sub: healthLabel, color: healthColor },
+          { icon: '🌾', label: 'Feed', value: deficientCount === 0 ? 'All Fed' : `${deficientCount}×⚠`, sub: feedLabel, color: feedColor },
+          { icon: '📦', label: 'Production', value: `${prodPct}%`, sub: prodLabel, color: prodColor },
+          { icon: '🐣', label: 'Maturity', value: `${breedReadyPct}%`, sub: reprLabel, color: reprColor },
+        ];
+        return (
+          <>
+            <SectionHeader title="🩺 Welfare Summary" />
+            <View style={ar.welfareGrid}>
+              {pillars.map(p => (
+                <View key={p.label} style={[ar.welfarePillar, { borderColor: p.color + '44' }]}>
+                  <Text style={ar.welfarePillarIcon}>{p.icon}</Text>
+                  <Text style={[ar.welfarePillarValue, { color: p.color }]}>{p.value}</Text>
+                  <Text style={ar.welfarePillarLabel}>{p.label}</Text>
+                  <Text style={[ar.welfarePillarSub, { color: p.color }]}>{p.sub}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        );
+      })()}
+
       {/* Profitability Ranking */}
       {speciesSummaries.filter(s => s.animalType.productionType).length > 0 && (
         <>
@@ -308,6 +352,13 @@ const ar = StyleSheet.create({
   healthAlertRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: C.divider },
   healthAlertAnimal: { color: C.text, fontSize: F.size.sm },
   healthAlertStatus: { color: '#ef5350', fontSize: F.size.xs },
+  // Welfare summary grid
+  welfareGrid:   { flexDirection: 'row', gap: 8 },
+  welfarePillar: { flex: 1, backgroundColor: C.bgCard, borderRadius: R.md, padding: S.sm, alignItems: 'center', borderWidth: 1, gap: 2 },
+  welfarePillarIcon:  { fontSize: 16 },
+  welfarePillarValue: { fontSize: F.size.md, fontWeight: 'bold', marginTop: 2 },
+  welfarePillarLabel: { color: C.textFaint, fontSize: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  welfarePillarSub:   { fontSize: 9, fontWeight: 'bold' },
   // Profitability ranking
   rankRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7 },
   rankPos:   { color: C.textFaint, fontSize: F.size.sm, width: 16, textAlign: 'center' },
