@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useGameStore } from '../store/useGameStore';
 import { C, F, S, R } from '../constants/theme';
+import { type Difficulty } from '../engine/difficulty';
 
 type Backstory = 'first_gen' | 'inherited' | 'established';
 type FarmStyle = 'crop_focus' | 'livestock' | 'market_trader' | 'balanced';
@@ -22,19 +23,28 @@ const STYLE_OPTIONS: { id: FarmStyle; icon: string; title: string; desc: string;
   { id: 'balanced',       icon: '🏡', title: 'Balanced Farm',    desc: 'A bit of everything', bonus: 'Standard start' },
 ];
 
+const DIFFICULTY_OPTIONS: { id: Difficulty; label: string; desc: string; color: string }[] = [
+  { id: 'relaxed',  label: '🌱 Relaxed',  desc: 'Fewer disasters · lower rates · gentle start', color: '#4caf50' },
+  { id: 'standard', label: '⚖️ Standard', desc: 'Balanced challenge — recommended',              color: '#c8860a' },
+  { id: 'hard',     label: '🔥 Hard',     desc: 'Frequent shocks · volatile markets',             color: '#ef5350' },
+];
+
 export default function StartingScreen() {
   const completeGameSetup = useGameStore(s => s.completeGameSetup);
+  const setDifficulty = (useGameStore() as any).setDifficulty as (d: Difficulty) => void;
 
   const [farmName,     setFarmName]     = useState('');
   const [farmerName,   setFarmerName]   = useState('');
   const [backstory,    setBackstory]    = useState<Backstory>('first_gen');
   const [farmStyle,    setFarmStyle]    = useState<FarmStyle>('balanced');
+  const [difficulty,   setDifficultyLocal] = useState<Difficulty>('standard');
   const [error,        setError]        = useState('');
 
   function handleBegin() {
     if (!farmName.trim())   return setError('Enter a farm name to continue.');
     if (!farmerName.trim()) return setError('Enter your farmer name to continue.');
     setError('');
+    setDifficulty(difficulty);
     completeGameSetup(farmName.trim(), farmerName.trim(), backstory, farmStyle);
   }
 
@@ -95,6 +105,26 @@ export default function StartingScreen() {
         </View>
 
         <View style={ss.field}>
+          <Text style={ss.fieldLabel}>DIFFICULTY</Text>
+          <View style={ss.diffRow}>
+            {DIFFICULTY_OPTIONS.map(opt => {
+              const active = difficulty === opt.id;
+              return (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[ss.diffChip, active && { borderColor: opt.color, backgroundColor: '#0f1a0f' }]}
+                  onPress={() => setDifficultyLocal(opt.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[ss.diffLabel, active && { color: opt.color }]}>{opt.label}</Text>
+                  <Text style={ss.diffDesc}>{opt.desc}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={ss.field}>
           <Text style={ss.fieldLabel}>FARMER NAME</Text>
           <TextInput
             style={ss.input}
@@ -141,6 +171,10 @@ const ss = StyleSheet.create({
   styleDesc:        { color: '#2a4a2a', fontSize: 9, textAlign: 'center' },
   styleBonus:       { color: '#1a3a1a', fontSize: 8, textAlign: 'center', marginTop: 2 },
   styleBonusActive: { color: '#4a7c59' },
+  diffRow:       { gap: 6 },
+  diffChip:      { backgroundColor: '#0f1a0f', borderWidth: 1, borderColor: '#1e3a1e', borderRadius: R.md, paddingVertical: 10, paddingHorizontal: 12 },
+  diffLabel:     { color: '#4a6a4a', fontSize: 11, fontWeight: 'bold' },
+  diffDesc:      { color: '#2a4a2a', fontSize: 9, marginTop: 2 },
   error:         { color: '#ef5350', fontSize: F.size.sm, textAlign: 'center' },
   beginBtn:      { backgroundColor: '#4a7c59', borderRadius: R.md, paddingVertical: 14, alignItems: 'center', marginTop: S.sm },
   beginText:     { color: '#fff', fontSize: F.size.md, fontWeight: 'bold', letterSpacing: 1 },
