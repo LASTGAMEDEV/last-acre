@@ -344,6 +344,78 @@ function DashboardSection() {
 
   const opCards = allOpCards.filter(c => !dismissed.includes(c.id));
 
+  // ── Recommended Next Step ─────────────────────────────────────────────────
+  const activeContracts = contracts.filter((c: any) => !c.completed && !c.failed);
+  type NextStep = { id: string; icon: string; title: string; detail: string };
+  const nextStepCandidates: NextStep[] = [];
+
+  if (ownedParcels.length === 0) {
+    nextStepCandidates.push({
+      id: 'ns_buy_land',
+      icon: '🏡',
+      title: 'Buy your first land parcel',
+      detail: 'Visit the Land tab → Land Market to purchase your first plot and start growing crops.',
+    });
+  } else if (idleParcels.length > 0 && ownedParcels.filter((p: any) => p.plantedCrop).length === 0) {
+    const seasonCrops = CROP_TYPES.filter(c => c.seasons.includes(season));
+    const recCrop = [...seasonCrops].sort((a, b) => b.basePrice * b.baseYield - a.basePrice * a.baseYield)[0];
+    nextStepCandidates.push({
+      id: `ns_plant_${season}`,
+      icon: '🌱',
+      title: `Plant crops this ${season}`,
+      detail: recCrop
+        ? `${idleParcels.length} idle plot${idleParcels.length > 1 ? 's' : ''} available. ${recCrop.name} grows in ${recCrop.growthDays} days.`
+        : `${idleParcels.length} idle plot${idleParcels.length > 1 ? 's' : ''} waiting to be planted.`,
+    });
+  }
+
+  if (money < 500 && readyParcels.length === 0 && activeContracts.length === 0) {
+    nextStepCandidates.push({
+      id: 'ns_emergency_cash',
+      icon: '🆘',
+      title: 'Emergency: cash critically low',
+      detail: 'Sell inventory, take a family loan, or accept any available contract to get cash flowing.',
+    });
+  }
+
+  if (activeContracts.length === 0 && (reputation?.score ?? 0) >= 40 && ownedParcels.length > 0) {
+    nextStepCandidates.push({
+      id: 'ns_take_contract',
+      icon: '📋',
+      title: 'Take on a supply contract',
+      detail: 'No active contracts. Market → Contracts offers guaranteed income at locked-in prices.',
+    });
+  }
+
+  if (animals.length === 0 && money > 5000 && ownedParcels.length >= 2) {
+    nextStepCandidates.push({
+      id: 'ns_buy_animals',
+      icon: '🐄',
+      title: 'Add livestock for steady income',
+      detail: 'Animals produce income daily. Visit the Animals tab to browse breeds that suit your farm.',
+    });
+  }
+
+  if (farmingYears >= 1 && savings.balance < 500 && money > 3000) {
+    nextStepCandidates.push({
+      id: 'ns_build_savings',
+      icon: '🏦',
+      title: 'Build an emergency fund',
+      detail: 'Move some cash to savings — a buffer prevents taking bad loans during slow seasons.',
+    });
+  }
+
+  if (farmingYears >= 2 && (reputation?.score ?? 0) < 30 && ownedParcels.length >= 3) {
+    nextStepCandidates.push({
+      id: 'ns_reputation',
+      icon: '⭐',
+      title: 'Focus on reputation',
+      detail: 'Low reputation limits contract offers. Complete contracts on time and keep animals healthy.',
+    });
+  }
+
+  const nextSteps = nextStepCandidates.filter(n => !dismissed.includes(n.id)).slice(0, 2);
+
   // ── 30-Day Cashflow Forecast ─────────────────────────────────────────────
   const FORECAST_DAYS = 30;
 
@@ -618,6 +690,25 @@ function DashboardSection() {
         </View>
       )}
 
+      {/* Recommended Next Step */}
+      {nextSteps.length > 0 && (
+        <View style={dash.nextStepCard}>
+          <Text style={dash.goalsTitle}>🎯 Recommended Next Step</Text>
+          {nextSteps.map((ns, i) => (
+            <View key={ns.id} style={[dash.nextStepRow, i > 0 && { borderTopWidth: 1, borderTopColor: '#1a2a3a' }]}>
+              <Text style={dash.nextStepIcon}>{ns.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={dash.nextStepTitle}>{ns.title}</Text>
+                <Text style={dash.nextStepDetail}>{ns.detail}</Text>
+              </View>
+              <TouchableOpacity onPress={() => dismissHint(ns.id)} style={dash.dismissBtn}>
+                <Text style={dash.dismissText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* Opportunities & Tips */}
       {opCards.length > 0 && (
         <View style={dash.opCard}>
@@ -739,6 +830,12 @@ const dash = StyleSheet.create({
   forecastRowVal:    { fontSize: F.size.sm, fontWeight: 'bold' },
   forecastBreakdown: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 3, marginBottom: 2 },
   forecastChip:      { color: C.textFaint, fontSize: 9, backgroundColor: '#0f1a0f', borderRadius: R.sm, paddingHorizontal: 5, paddingVertical: 2 },
+  // Recommended Next Step
+  nextStepCard:   { backgroundColor: '#0d1f30', borderRadius: R.md, padding: S.md, borderWidth: 1, borderColor: '#1e4a6e55', gap: 0 },
+  nextStepRow:    { flexDirection: 'row', alignItems: 'flex-start', gap: S.sm, paddingVertical: 7 },
+  nextStepIcon:   { fontSize: 18, lineHeight: 22 },
+  nextStepTitle:  { color: '#90caf9', fontSize: F.size.sm, fontWeight: 'bold', marginBottom: 1 },
+  nextStepDetail: { color: C.textMuted, fontSize: F.size.xs, lineHeight: 16 },
   // Farm Health
   healthCard:      { backgroundColor: C.bgCard, borderRadius: R.md, padding: S.md },
   healthScore:     { fontSize: F.size.xl, fontWeight: 'bold' },
