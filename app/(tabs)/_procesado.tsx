@@ -70,11 +70,41 @@ function inputStock(
     if (input.source === 'crop') stock = inventory[input.itemId] ?? 0;
     else if (input.source === 'animal') stock = animalInventory[input.itemId] ?? 0;
     else if (input.source === 'processed') {
-      stock = processedInventory.filter(i => i.itemId === input.itemId).reduce((s, i) => s + i.quantity, 0);
+      stock = processedInventory.filter(i => i.itemId === input.itemId).reduce((s: number, i) => s + i.quantity, 0);
     }
     max = Math.min(max, Math.floor(stock / input.quantity));
   }
   return max === Infinity ? 0 : max;
+}
+
+type InputShortage = { name: string; have: number; need: number; unit: string };
+
+function getInputShortages(
+  recipe: ProcessingRecipe,
+  batches: number,
+  inventory: Record<string, number>,
+  animalInventory: Record<string, number>,
+  processedInventory: { itemId: string; quantity: number }[]
+): InputShortage[] {
+  const shortages: InputShortage[] = [];
+  for (const input of recipe.inputs) {
+    const need = input.quantity * batches;
+    let have = 0;
+    if (input.source === 'crop') have = inventory[input.itemId] ?? 0;
+    else if (input.source === 'animal') have = animalInventory[input.itemId] ?? 0;
+    else if (input.source === 'processed') {
+      have = processedInventory.filter(i => i.itemId === input.itemId).reduce((s: number, i) => s + i.quantity, 0);
+    }
+    if (have < need) {
+      shortages.push({
+        name: inputDisplayName(input.itemId, input.source),
+        have: Math.round(have * 10) / 10,
+        need,
+        unit: inputUnit(input.itemId, input.source),
+      });
+    }
+  }
+  return shortages;
 }
 
 export default function ProcesadoScreen() {
@@ -318,6 +348,20 @@ export default function ProcesadoScreen() {
                                 {isOwned && max > 0 && max < 3 && (
                                   <Text style={styles.stockWarn}>⚠ Only {max} batch{max !== 1 ? 'es' : ''} of input available</Text>
                                 )}
+                                {isOwned && max === 0 && (() => {
+                                  const shortages = getInputShortages(recipe, 1, inventory, animalInventory, processedInventory ?? []);
+                                  if (shortages.length === 0) return null;
+                                  return (
+                                    <View style={styles.shortageBox}>
+                                      <Text style={styles.shortageTitle}>📦 Missing inputs for 1 batch:</Text>
+                                      {shortages.map(s => (
+                                        <Text key={s.name} style={styles.shortageRow}>
+                                          • {s.name}: have {s.have} {s.unit}, need {s.need} {s.unit} ({s.need - s.have > 0 ? `+${Math.ceil(s.need - s.have)}` : '0'} short)
+                                        </Text>
+                                      ))}
+                                    </View>
+                                  );
+                                })()}
 
                                 <View style={styles.batchRow}>
                                   <TouchableOpacity style={styles.batchBtn} onPress={() => setBatchCounts(p => ({ ...p, [recipe.id]: Math.max(1, b - 1) }))} disabled={!isOwned}>
@@ -503,6 +547,9 @@ const styles = StyleSheet.create({
   profitLabel: { color: C.textFaint, fontSize: 10 },
   profitValue: { fontSize: 10, fontWeight: 'bold' },
   stockWarn:   { color: '#f59e0b', fontSize: 10, marginTop: 3 },
+  shortageBox:  { backgroundColor: '#1a1200', borderRadius: R.sm, borderWidth: 1, borderColor: '#f59e0b44', padding: S.sm, marginTop: 4, gap: 2 },
+  shortageTitle: { color: '#f59e0b', fontSize: 10, fontWeight: 'bold', marginBottom: 2 },
+  shortageRow:  { color: '#c9a227', fontSize: 10, lineHeight: 14 },
 
   batchRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   batchBtn: { backgroundColor: C.divider, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6 },

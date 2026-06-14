@@ -11,6 +11,7 @@ import { gameDayToCalendarYear } from '../../engine/calendarUtils';
 import { analyzeRation, generateDefaultRation } from '../../engine/nutrition';
 import GuideButton from '../GuideButton';
 import FarmLegacyCard from './FarmLegacyCard';
+import EraTimelineCard from './EraTimelineCard';
 
 type FarmStage = {
   name: string;
@@ -539,6 +540,9 @@ function DashboardSection() {
 
       {/* Farm Legacy / Progression */}
       <FarmLegacyCard />
+
+      {/* Era Technology Timeline */}
+      <EraTimelineCard />
 
       {/* Revenue row */}
       <View style={dash.row}>

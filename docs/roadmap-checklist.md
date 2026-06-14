@@ -169,7 +169,7 @@ These are the highest-impact items not yet done, in order:
 - [x] CSA weekly kg requirement on commitment presets
 - [x] Cooperative member benefits, redemption risk, share dynamics
 - [x] Seasonal grid rate adjustment in ElectricitySection
-- [ ] Per-animal profitability report
+- [x] Per-animal profitability report
 - [ ] Full enterprise reports: crops, livestock, processing, contracts, direct sales
 - [ ] Break-even explanations per crop or animal
 - [ ] Price cause explanations: weather, era, global market, local supply
@@ -205,7 +205,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Expected quality display before queuing
 - [x] Certification progression and processing bonuses surfaced
 - [x] Equipment effects in ProductionBuildingsSection
-- [ ] Input availability warnings
+- [x] Input availability warnings
 - [ ] Batch quality explanations
 - [ ] Processing queue view
 - [ ] Worker assignment recommendations
@@ -310,12 +310,12 @@ These are the highest-impact items not yet done, in order:
 ## 17. Progression
 
 - [x] Farm stage arc card (early / mid / late game description)
-- [ ] Technology unlock tree by decade
+- [x] Technology unlock tree by decade
 - [ ] Specialization bonuses without locking the player
 - [ ] Long-term achievements that shape legacy
 - [ ] Reputation-gated opportunities (beyond existing contract min-rep)
 - [ ] Land region expansion
-- [ ] Farm scale milestones
+- [x] Farm scale milestones
 - [ ] Retire-this-generation milestone
 - [ ] Optional challenge modes
 - [ ] Farm identity paths
