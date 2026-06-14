@@ -1,6 +1,6 @@
 # Granja Tycoon — Roadmap Progress Checklist
 
-**Updated:** 2026-06-14  
+**Updated:** 2026-06-14 (full recount after sessions)  
 **Legend:** `[x]` = done · `[ ]` = not done · `[~]` = partially done
 
 ---
@@ -9,13 +9,13 @@
 
 These are the highest-impact items not yet done, in order:
 
-1. **Section 16** — Debt restructuring, equipment liquidation, family loan event, co-op rescue (leaseback done, rest not)
-2. **Section 17** — Technology unlock tree by decade, farm scale milestones, specialization bonuses
-3. **Section 2** — Onboarding: guided first 10 days, first-year goal chain, starting style selector
-4. **Section 18** — Full balance audit: crop profitability, livestock margins, debt difficulty, event frequency
-5. **Section 1** — "Why did this happen?" explanations, Day Summary improvements, "What changed since yesterday?"
-6. **Section 19** — More crops with distinct roles, more contract types, more achievements, rare events
-7. **Section 13** — Reputation HUD badge, sub-factor breakdown, tiers with perks
+1. **Section 18** — Balance audit: money pacing, crop/livestock/processing margins, debt difficulty, event frequency (all 15 items untouched)
+2. **Section 2** — Remaining onboarding: guided first 10 days, teaching one system at a time, skip-tutorial option
+3. **Section 9** — Emergency financing tradeoffs, local market demand shifts, buyer relationship levels
+4. **Section 7** — Production chain previews (milk → cheese, wool → textile), winter prep checklist, animal personality
+5. **Section 12** — Life event modals (marriage, birth, succession), chronicle tab, family roles
+6. **Section 3** — Annual planning system: advisor style, goal generation, risk cards, year-end review
+7. **Section 19** — More processed goods, region-specific crops, farm-name flavor text
 8. **Section 25** — Simulation smoke tests, advanceDay corruption tests, save migration tests
 
 ---
@@ -130,7 +130,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Ration tier and production modifier on NutritionTab overview
 - [x] Production modifier and disease risk in RationDesigner
 - [x] Animal welfare readability (group summaries: health, feed, production, reproduction)
-- [ ] Explanations for production changes
+- [x] Explanations for production changes
 - [x] Herd and flock identity
 - [ ] Vet visits and preventive care
 - [ ] Disease containment decisions
@@ -466,29 +466,29 @@ These are the highest-impact items not yet done, in order:
 
 | Section | Done | Total | % |
 |---------|------|-------|---|
-| 1. Player Clarity | 4 | 10 | 40% |
-| 2. Onboarding | 0 | 10 | 0% |
-| 3. Annual Planning | 1 | 10 | 10% |
-| 4. Dashboard | 5 | 10 | 50% |
-| 5. UI / UX | 3 | 13 | 23% |
-| 6. Farming Depth | 6 | 12 | 50% |
-| 7. Animals | 8 | 15 | 53% |
+| 1. Player Clarity | 11 | 11 | 100% |
+| 2. Onboarding | 6 | 10 | 60% |
+| 3. Annual Planning | 0 | 10 | 0% |
+| 4. Dashboard | 11 | 11 | 100% |
+| 5. UI / UX | 5 | 13 | 38% |
+| 6. Farming Depth | 7 | 13 | 54% |
+| 7. Animals | 12 | 17 | 71% |
 | 8. Machinery | 3 | 11 | 27% |
-| 9. Economy | 10 | 17 | 59% |
-| 10. Market Drama | 8 | 14 | 57% |
-| 11. Processing | 4 | 12 | 33% |
-| 12. Family / Dynasty | 4 | 17 | 24% |
-| 13. Reputation | 3 | 11 | 27% |
-| 14. Neighbors | 4 | 11 | 36% |
+| 9. Economy | 13 | 18 | 72% |
+| 10. Market Drama | 10 | 14 | 71% |
+| 11. Processing | 5 | 13 | 38% |
+| 12. Family / Dynasty | 5 | 17 | 29% |
+| 13. Reputation | 8 | 12 | 67% |
+| 14. Neighbors | 5 | 11 | 45% |
 | 15. History / Era | 2 | 11 | 18% |
-| 16. Failure / Recovery | 1 | 12 | 8% |
-| 17. Progression | 1 | 10 | 10% |
+| 16. Failure / Recovery | 5 | 12 | 42% |
+| 17. Progression | 5 | 10 | 50% |
 | 18. Balance | 0 | 15 | 0% |
-| 19. Content | 2 | 13 | 15% |
+| 19. Content | 9 | 14 | 64% |
 | 20. Audio / Feel | 0 | 10 | 0% |
 | 21. Visual Identity | 0 | 11 | 0% |
-| 22. Data / Reports | 5 | 12 | 42% |
+| 22. Data / Reports | 10 | 13 | 77% |
 | 23. Difficulty / Modes | 1 | 9 | 11% |
-| 24. Quality of Life | 6 | 15 | 40% |
+| 24. Quality of Life | 7 | 16 | 44% |
 | 25. Technical Health | 0 | 11 | 0% |
-| **TOTAL** | **84** | **312** | **27%** |
+| **TOTAL** | **139** | **313** | **44%** |
