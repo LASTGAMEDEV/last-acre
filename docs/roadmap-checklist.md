@@ -132,11 +132,11 @@ These are the highest-impact items not yet done, in order:
 - [x] Animal welfare readability (group summaries: health, feed, production, reproduction)
 - [x] Explanations for production changes
 - [x] Herd and flock identity
-- [ ] Vet visits and preventive care
-- [ ] Disease containment decisions
-- [ ] Winter preparation checklist for livestock
-- [ ] Animal personality/flavor for high-value animals
-- [ ] Production chain previews: milk → cheese, eggs → incubator, wool → textile
+- [x] Vet visits and preventive care
+- [x] Disease containment decisions
+- [x] Winter preparation checklist for livestock
+- [x] Animal personality/flavor for high-value animals
+- [x] Production chain previews: milk → cheese, eggs → incubator, wool → textile
 - [x] Clear sell / cull / breed / keep tradeoff display
 
 ---
@@ -472,7 +472,7 @@ These are the highest-impact items not yet done, in order:
 | 4. Dashboard | 11 | 11 | 100% |
 | 5. UI / UX | 5 | 13 | 38% |
 | 6. Farming Depth | 7 | 13 | 54% |
-| 7. Animals | 12 | 17 | 71% |
+| 7. Animals | 17 | 17 | 100% |
 | 8. Machinery | 3 | 11 | 27% |
 | 9. Economy | 13 | 18 | 72% |
 | 10. Market Drama | 10 | 14 | 71% |
@@ -491,4 +491,4 @@ These are the highest-impact items not yet done, in order:
 | 23. Difficulty / Modes | 1 | 9 | 11% |
 | 24. Quality of Life | 7 | 16 | 44% |
 | 25. Technical Health | 0 | 11 | 0% |
-| **TOTAL** | **139** | **313** | **44%** |
+| **TOTAL** | **144** | **313** | **46%** |
