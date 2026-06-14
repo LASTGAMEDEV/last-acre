@@ -399,7 +399,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Animal report with ration and season production estimates
 - [x] Annual report (year-in-review: revenue, monthly chart, goals, top crops, snapshot)
 - [x] Multi-year revenue comparison (era chronicle)
-- [ ] Market report screen
+- [x] Market report screen
 - [ ] Soil report screen
 - [ ] Generational legacy report
 - [ ] Historical graphs (beyond current charts)
@@ -435,7 +435,7 @@ These are the highest-impact items not yet done, in order:
 - [ ] Search and filtering for inventory / lists
 - [ ] "Sell all above reserve"
 - [ ] Inventory reserve settings
-- [ ] Contract pinning
+- [x] Contract pinning
 - [ ] Favorite crops and animals
 - [ ] Batch apply fertilizer and amendments
 - [ ] Undo for non-destructive setup choices

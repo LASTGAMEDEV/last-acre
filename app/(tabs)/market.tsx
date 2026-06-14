@@ -7,18 +7,20 @@ import EconomyStatsSection from '../../components/market/EconomyStatsSection';
 import SellingChannelsSection from '../../components/market/SellingChannelsSection';
 import ContractsSection from '../../components/market/ContractsSection';
 import MarketNewsSection from '../../components/market/MarketNewsSection';
+import MarketReportSection from '../../components/market/MarketReportSection';
 import SubTabBar from '../../components/SubTabBar';
 import { C, F, S } from '../../constants/theme';
 
-type MarketTab = 'prices' | 'news' | 'economy' | 'auction' | 'shop' | 'contracts' | 'selling';
+type MarketTab = 'prices' | 'news' | 'economy' | 'report' | 'auction' | 'shop' | 'contracts' | 'selling';
 
 const TABS: { id: MarketTab; label: string }[] = [
   { id: 'prices',    label: '📊 Prices' },
+  { id: 'report',    label: '📋 Report' },
   { id: 'news',      label: '📰 News' },
   { id: 'economy',   label: '📈 Economy' },
   { id: 'auction',   label: '🔨 Auction' },
   { id: 'shop',      label: '🛒 Shop' },
-  { id: 'contracts', label: '📋 Contracts' },
+  { id: 'contracts', label: '📝 Contracts' },
   { id: 'selling',   label: '💰 Selling' },
 ];
 
@@ -32,6 +34,7 @@ export default function MarketScreen() {
       </View>
       <SubTabBar tabs={TABS} active={tab} onSelect={id => setTab(id as MarketTab)} />
       {tab === 'prices'    && <MarketPricesSection />}
+      {tab === 'report'    && <MarketReportSection />}
       {tab === 'news'      && <MarketNewsSection />}
       {tab === 'economy'   && <EconomyStatsSection />}
       {tab === 'auction'   && <SubastaScreen />}
