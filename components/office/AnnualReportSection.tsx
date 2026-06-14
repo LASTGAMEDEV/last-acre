@@ -302,6 +302,63 @@ export default function AnnualReportSection() {
         <StatRow label="Days into game"   value={`Day ${day}`} />
       </Card>
 
+      {/* First-Year Review — only shows in year 1 */}
+      {calYear === 1970 && day >= 60 && (() => {
+        const insights: { icon: string; text: string }[] = [];
+        const harvestCount = personalRecords?.totalHarvests ?? 0;
+        const completedContracts = (useGameStore.getState() as any).contracts?.filter((c: any) => c.completed).length ?? 0;
+        const hasAnimals = animals.length > 0;
+        const hasSavings = (savings?.balance ?? 0) >= 500;
+        const revenue = yearRevenue;
+
+        if (harvestCount >= 3)
+          insights.push({ icon: '🌾', text: `You've completed ${harvestCount} harvests — you know how to grow a crop from seed to sale.` });
+        else if (harvestCount >= 1)
+          insights.push({ icon: '🌱', text: 'You planted and harvested your first crop — the hardest part is starting.' });
+        if (completedContracts >= 1)
+          insights.push({ icon: '📋', text: `You fulfilled ${completedContracts} contract${completedContracts > 1 ? 's' : ''} — buyers know your farm delivers.` });
+        if (hasAnimals)
+          insights.push({ icon: '🐄', text: `You started a livestock operation with ${animals.length} animal${animals.length > 1 ? 's' : ''}.` });
+        if (hasSavings)
+          insights.push({ icon: '🏦', text: `You kept $${Math.round(savings.balance).toLocaleString()} in savings — good financial discipline.` });
+        if (revenue >= 5000)
+          insights.push({ icon: '💰', text: `Year 1 revenue: ${fmt(revenue)}. Not bad for a first year.` });
+        if ((reputation?.score ?? 0) >= 30)
+          insights.push({ icon: '⭐', text: `Reputation score ${Math.round(reputation?.score ?? 0)} — the community is noticing you.` });
+
+        const nextStepAdvice = !hasAnimals
+          ? 'Year 2 tip: a small livestock operation adds daily income between harvests.'
+          : revenue < 2000
+          ? 'Year 2 tip: try locking in a contract before planting to guarantee income.'
+          : ownedParcels.length < 3
+          ? 'Year 2 tip: land expansion pays off — more parcels mean bigger harvests.'
+          : 'Year 2 tip: consider diversifying into processing for higher margins.';
+
+        return (
+          <>
+            <SectionHeader title="🌟 Year 1 in Review" />
+            <View style={ar.reviewCard}>
+              <Text style={ar.reviewTitle}>What you learned this year</Text>
+              {insights.length === 0 ? (
+                <Text style={ar.reviewBody}>The year is still early — keep farming and come back to see what you've built.</Text>
+              ) : (
+                insights.map((ins, i) => (
+                  <View key={i} style={ar.reviewInsightRow}>
+                    <Text style={ar.reviewInsightIcon}>{ins.icon}</Text>
+                    <Text style={ar.reviewInsightText}>{ins.text}</Text>
+                  </View>
+                ))
+              )}
+              {day >= 180 && (
+                <View style={ar.reviewNextStep}>
+                  <Text style={ar.reviewNextStepText}>{nextStepAdvice}</Text>
+                </View>
+              )}
+            </View>
+          </>
+        );
+      })()}
+
     </ScrollView>
   );
 }
@@ -355,5 +412,14 @@ const ar = StyleSheet.create({
   multiYearBarTrack: { width: '100%', flex: 1, backgroundColor: '#1a2a3a', borderRadius: 3, overflow: 'hidden', justifyContent: 'flex-end' },
   multiYearBarFill:  { width: '100%', borderRadius: 3 },
   multiYearLabel:    { color: C.textFaint, fontSize: 9, marginTop: 4 },
+  // First-year review
+  reviewCard:           { backgroundColor: '#0d1f2e', borderRadius: R.lg, padding: S.md, borderWidth: 1, borderColor: '#c8860a44' },
+  reviewTitle:          { color: '#c8860a', fontSize: F.size.sm, fontWeight: 'bold', marginBottom: S.sm },
+  reviewBody:           { color: C.textMuted, fontSize: F.size.sm, lineHeight: 18 },
+  reviewInsightRow:     { flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginBottom: 6 },
+  reviewInsightIcon:    { fontSize: 14, width: 20, lineHeight: 18 },
+  reviewInsightText:    { color: C.text, fontSize: F.size.sm, flex: 1, lineHeight: 18 },
+  reviewNextStep:       { marginTop: S.sm, backgroundColor: '#1a2e3a', borderRadius: R.sm, padding: S.sm, borderLeftWidth: 3, borderLeftColor: '#64b5f6' },
+  reviewNextStepText:   { color: '#90caf9', fontSize: F.size.sm, lineHeight: 16 },
   multiYearRev:      { fontSize: 9, fontWeight: 'bold', marginBottom: 2 },
 });

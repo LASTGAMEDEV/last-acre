@@ -357,7 +357,7 @@ These are the highest-impact items not yet done, in order:
 - [x] More guide entries
 - [x] More achievements
 - [ ] Farm-name and family-name flavor text
-- [ ] Rare events that players talk about
+- [x] Rare events that players talk about
 
 ---
 
