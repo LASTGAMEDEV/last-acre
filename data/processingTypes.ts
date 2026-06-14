@@ -653,7 +653,7 @@ export const PROCESSED_ITEM_DEFS: ProcessedItemDef[] = [
   { id: 'dried_tomatoes',   name: 'Sundried Tomatoes',     unit: 'kg',  basePrice: 4.50,  shelfLifeDays: 365,  coldStorageMultiplier: 1 },
   { id: 'dried_strawberries', name: 'Dried Strawberries',  unit: 'kg',  basePrice: 8.00,  shelfLifeDays: 365,  coldStorageMultiplier: 1 },
   { id: 'cleaned_cotton',   name: 'Cleaned Cotton Lint',   unit: 'kg',  basePrice: 2.80,  shelfLifeDays: 730,  coldStorageMultiplier: 1 },
-  { id: 'scoured_wool',     name: 'Scoured Wool',          unit: 'kg',  basePrice: 4.80,  shelfLifeDays: 730,  coldStorageMultiplier: 1 },
+  { id: 'scoured_wool',     name: 'Scoured Wool',          unit: 'kg',  basePrice: 12.00, shelfLifeDays: 730,  coldStorageMultiplier: 1 },
 
   // ── Stage 2 outputs ──
   { id: 'stoneground_flour',    name: 'Stoneground Flour',     unit: 'kg',  basePrice: 0.55,  shelfLifeDays: 180,  coldStorageMultiplier: 1 },
@@ -691,7 +691,7 @@ export const PROCESSED_ITEM_DEFS: ProcessedItemDef[] = [
   { id: 'beeswax_wrap',         name: 'Beeswax Wrap',          unit: 'ud',  basePrice: 4.50,  shelfLifeDays: 730,  coldStorageMultiplier: 1 },
   { id: 'wood_polish',          name: 'Wood Polish',           unit: 'ud',  basePrice: 8.00,  shelfLifeDays: 730,  coldStorageMultiplier: 1 },
   { id: 'basic_soap',           name: 'Basic Soap',            unit: 'ud',  basePrice: 3.50,  shelfLifeDays: 730,  coldStorageMultiplier: 1 },
-  { id: 'yarn_wool',            name: 'Wool Yarn',             unit: 'kg',  basePrice: 9.50,  shelfLifeDays: 1825, coldStorageMultiplier: 1 },
+  { id: 'yarn_wool',            name: 'Wool Yarn',             unit: 'kg',  basePrice: 28.00, shelfLifeDays: 1825, coldStorageMultiplier: 1 },
   { id: 'yarn_cotton',          name: 'Cotton Yarn',           unit: 'kg',  basePrice: 5.50,  shelfLifeDays: 1825, coldStorageMultiplier: 1 },
   { id: 'linen_thread',         name: 'Linen Thread',          unit: 'kg',  basePrice: 7.00,  shelfLifeDays: 1825, coldStorageMultiplier: 1 },
   { id: 'tanned_leather',       name: 'Tanned Leather',        unit: 'm2',  basePrice: 18.00, shelfLifeDays: 1825, coldStorageMultiplier: 1 },
