@@ -251,7 +251,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Reputation tiers with clear perks
 - [ ] Public scandals and community events
 - [ ] Opportunities: sponsor a fair, help a neighbor, host an open day
-- [ ] Bad reputation recovery paths
+- [x] Bad reputation recovery paths
 - [ ] Reputation-based contract offers
 - [ ] Premium market access gated by reputation
 

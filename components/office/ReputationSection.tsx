@@ -93,6 +93,38 @@ function ReputationSection() {
         </View>
       </View>
 
+      {/* ── Recovery Plan (low reputation) ──────────────────────── */}
+      {score < 50 && factors && (() => {
+        type RecoveryStep = { factor: string; icon: string; action: string; impact: string };
+        const steps: RecoveryStep[] = [];
+        const f = factors as Record<string, number>;
+        if ((f.animalWelfare ?? 100) < 40) steps.push({ factor: 'Animal Welfare', icon: '🐄', action: 'Fix deficient rations in the Nutrition tab and ensure animals have adequate shelter', impact: 'Can gain +5–15 rep' });
+        if ((f.productQuality ?? 100) < 40) steps.push({ factor: 'Product Quality', icon: '🏅', action: 'Harvest crops at peak maturity, reduce stored moisture, and avoid selling infested batches', impact: 'Can gain +5–10 rep' });
+        if ((f.financialReliability ?? 100) < 40) steps.push({ factor: 'Financial Reliability', icon: '🏦', action: 'Pay off outstanding loans on time and never default on active contracts', impact: 'Can gain +5–12 rep' });
+        if ((f.communityStanding ?? 100) < 40) steps.push({ factor: 'Community Standing', icon: '🤝', action: 'Help neighbors with harvest requests and participate in co-op activities', impact: 'Can gain +3–8 rep' });
+        if ((f.environmentalPractice ?? 100) < 40) steps.push({ factor: 'Environmental', icon: '🌿', action: 'Plant hedgerows, apply compost, or convert a plot to organic farming', impact: 'Can gain +3–8 rep' });
+        if ((f.historicalConduct ?? 100) < 40) steps.push({ factor: 'Historical Conduct', icon: '📜', action: 'Keep farming without crises — this factor recovers slowly over time as you build a track record', impact: 'Gradual gain' });
+        if (steps.length === 0) return null;
+        return (
+          <>
+            <Text style={rs.sectionHeader}>🔧 Recovery Plan</Text>
+            <View style={[rs.card, { borderColor: '#ef535044', borderWidth: 1 }]}>
+              <Text style={rs.recoveryIntro}>Your reputation is below {score < 20 ? 'Unknown' : 'Local'} tier. Focus on these areas:</Text>
+              {steps.slice(0, 4).map((step, i) => (
+                <View key={step.factor} style={[rs.recoveryStep, i > 0 && { borderTopWidth: 1, borderTopColor: '#1a1a2e' }]}>
+                  <Text style={rs.recoveryIcon}>{step.icon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={rs.recoveryFactor}>{step.factor}</Text>
+                    <Text style={rs.recoveryAction}>{step.action}</Text>
+                    <Text style={rs.recoveryImpact}>{step.impact}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        );
+      })()}
+
       {/* ── Tier Effects ─────────────────────────────────────────── */}
       <Text style={rs.sectionHeader}>🎯 Tier Perks</Text>
       <View style={rs.card}>
@@ -342,6 +374,14 @@ const rs = StyleSheet.create({
   factorTrack:    { height: 5, backgroundColor: C.bgDeep, borderRadius: 3, overflow: 'hidden' },
   factorFill:     { height: 5, borderRadius: 3 },
   factorTip:      { color: C.textFaint, fontSize: 10 },
+
+  // Recovery plan
+  recoveryIntro:  { color: '#ef9a9a', fontSize: F.size.xs, marginBottom: S.sm, fontStyle: 'italic' },
+  recoveryStep:   { flexDirection: 'row', alignItems: 'flex-start', gap: S.sm, paddingVertical: 7 },
+  recoveryIcon:   { fontSize: 18, lineHeight: 22, width: 24, textAlign: 'center' },
+  recoveryFactor: { color: C.text, fontSize: F.size.sm, fontWeight: 'bold', marginBottom: 2 },
+  recoveryAction: { color: C.textMuted, fontSize: F.size.xs, lineHeight: 16, marginBottom: 2 },
+  recoveryImpact: { color: '#81c784', fontSize: 9, fontWeight: 'bold' },
 
   // Awards
   awardRow:       { flexDirection: 'row', alignItems: 'center', backgroundColor: C.bgDeep, borderRadius: R.sm, padding: S.sm, marginBottom: S.xs },
