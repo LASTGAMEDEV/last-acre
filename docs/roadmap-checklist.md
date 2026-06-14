@@ -1,6 +1,6 @@
 # Granja Tycoon — Roadmap Progress Checklist
 
-**Updated:** 2026-06-15 (Section 18 complete 14/15, Section 9 +1, Section 10 +1 · total 160/313 = 51%)  
+**Updated:** 2026-06-15 (Section 18 +14/15, Section 9 +4, Section 10 +1, Section 2 +4, Section 12 +7 · total 174/313 = 56%)  
 **Legend:** `[x]` = done · `[ ]` = not done · `[~]` = partially done
 
 ---
@@ -37,14 +37,14 @@ These are the highest-impact items not yet done, in order:
 
 ## 2. Onboarding
 
-- [ ] Rebuild first 10 days around a guided farm start
+- [x] Rebuild first 10 days around a guided farm start
 - [x] Let players choose a starting style (Crop Farm / Livestock / Market Trader / Balanced)
 - [x] Add a first-year goal chain instead of isolated tutorial popups
-- [ ] Teach one system at a time: fields → selling → debt → animals/processing
+- [x] Teach one system at a time: fields → selling → debt → animals/processing
 - [x] Add safe first-crop recommendations based on season
 - [x] Add a beginner preset with gentler debt and slower disasters
-- [ ] Add an advanced start for returning players
-- [ ] Let players skip tutorials while keeping contextual guidance
+- [x] Add an advanced start for returning players
+- [x] Let players skip tutorials while keeping contextual guidance
 - [x] Add early recovery tips when cash runs low
 - [x] Add a first-year review showing what the player learned
 
@@ -172,9 +172,9 @@ These are the highest-impact items not yet done, in order:
 - [ ] Full enterprise reports: crops, livestock, processing, contracts, direct sales
 - [x] Break-even explanations per crop or animal
 - [x] Price cause explanations: weather, era, global market, local supply
-- [ ] Local market demand shifts
-- [ ] Buyer relationship levels
-- [ ] Contract negotiation
+- [x] Local market demand shifts
+- [x] Buyer relationship levels
+- [x] Contract negotiation
 - [x] Emergency financing options with tradeoffs — 6 options in BankingSection: payday loan (40% APR 🦈), family loan (0%), bankruptcy loan, leaseback, liquidation, coop rescue
 
 ---
@@ -223,14 +223,14 @@ These are the highest-impact items not yet done, in order:
 - [x] Annual legacy score gain breakdown
 - [x] Insurance and Family Tree screen improvements
 - [x] Starting screen with farm name, farmer name, backstory
-- [ ] Life Event modal (marriage, birth, illness, graduation, succession)
-- [ ] Family tab in Legado
-- [ ] Chronicle tab for generational history
-- [ ] Family roles that visibly affect the farm
-- [ ] Spouse and children life events
-- [ ] Child interest in farming
+- [x] Life Event modal (marriage, birth, illness, graduation, succession)
+- [x] Family tab in Legado
+- [x] Chronicle tab for generational history
+- [x] Family roles that visibly affect the farm
+- [x] Spouse and children life events
+- [x] Child interest in farming
 - [ ] Heir preparation
-- [ ] Sibling co-ownership drama
+- [x] Sibling co-ownership drama
 - [ ] Family morale
 - [ ] Old farmer retirement option
 - [ ] Legacy traits passed between generations
