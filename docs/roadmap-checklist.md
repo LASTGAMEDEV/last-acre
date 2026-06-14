@@ -137,7 +137,7 @@ These are the highest-impact items not yet done, in order:
 - [ ] Winter preparation checklist for livestock
 - [ ] Animal personality/flavor for high-value animals
 - [ ] Production chain previews: milk → cheese, eggs → incubator, wool → textile
-- [ ] Clear sell / cull / breed / keep tradeoff display
+- [x] Clear sell / cull / breed / keep tradeoff display
 
 ---
 

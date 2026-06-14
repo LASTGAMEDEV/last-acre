@@ -58,6 +58,24 @@ export const MILESTONES: MilestoneDef[] = [
   { id: 'no_default_10',     icon: '🤝', title: 'Trustworthy',         description: 'Complete 10 contracts in a row without defaulting' },
   { id: 'cash_2m',           icon: '💫', title: 'Agricultural Mogul',  description: 'Accumulate $2,000,000 cash' },
   { id: 'full_workforce',    icon: '👥', title: 'Full Staff',          description: 'Have at least 6 workers employed at once' },
+  // Breeding & genetics
+  { id: 'first_breed',     icon: '🐣', title: 'First Offspring',      description: 'Breed your first animal' },
+  { id: 'gene_dynasty',    icon: '🧬', title: 'Breeding Program',     description: 'Own 5+ animals that were born on your farm' },
+  // Contracts
+  { id: 'ten_contracts',   icon: '📜', title: 'Dependable',           description: 'Complete 10 delivery contracts' },
+  // Reputation
+  { id: 'rep_50',          icon: '🌟', title: 'Well Regarded',        description: 'Reach a reputation score of 50' },
+  { id: 'rep_80',          icon: '🏅', title: 'Community Legend',     description: 'Reach a reputation score of 80' },
+  // Sustainability
+  { id: 'organic_first',  icon: '🌱', title: 'Going Green',           description: 'Achieve organic certification on any parcel' },
+  // Finance
+  { id: 'savings_100k',   icon: '🏦', title: 'Financially Secure',   description: 'Maintain $100,000 in savings' },
+  { id: 'cash_5m',        icon: '💰', title: 'Agricultural Dynasty',  description: 'Accumulate $5,000,000 cash' },
+  // Longevity
+  { id: 'day_1095',       icon: '🗓️', title: 'Three Full Years',      description: 'Farm for 1,095 days' },
+  // Crop diversity
+  { id: 'varieties_10',   icon: '🌿', title: 'Diversified',           description: 'Harvest 10 different crop varieties' },
+  { id: 'varieties_20',   icon: '🌈', title: 'Botanical Mastery',     description: 'Harvest 20 different crop varieties' },
 ];
 
 export const MILESTONE_REWARDS: Record<string, number> = {
@@ -101,14 +119,25 @@ export const MILESTONE_REWARDS: Record<string, number> = {
   no_default_10:    10_000,
   cash_2m:         100_000,
   full_workforce:   12_000,
+  first_breed:       2_000,
+  gene_dynasty:      8_000,
+  ten_contracts:     8_000,
+  rep_50:            5_000,
+  rep_80:           15_000,
+  organic_first:     3_000,
+  savings_100k:     10_000,
+  cash_5m:         200_000,
+  day_1095:         50_000,
+  varieties_10:      5_000,
+  varieties_20:     12_000,
 };
 
 export function checkNewMilestones(
   state: {
     day: number;
     money: number;
-    parcels: { owned: boolean; hectares: number }[];
-    animals: { id: string; genes?: { production: number; hardiness: number; growth: number; value: number } }[];
+    parcels: { owned: boolean; hectares: number; organicStatus?: string }[];
+    animals: { id: string; bornDay?: number; parentIds?: string[]; genes?: { production: number; hardiness: number; growth: number; value: number } }[];
     machines: { id: string }[];
     contracts: { completed?: boolean; failed?: boolean }[];
     insurances: { id: string }[];
@@ -116,6 +145,7 @@ export function checkNewMilestones(
     harvestedCropIds: string[];
     seedVault?: { generation: number }[];
     workers?: { id: string }[];
+    reputation?: { score: number };
   },
   completedMilestones: string[]
 ): string[] {
@@ -175,6 +205,25 @@ export function checkNewMilestones(
   check('no_default_10',    state.contracts.filter(c => c.completed).length >= 10 && !state.contracts.some(c => c.failed));
   check('cash_2m',          state.money >= 2_000_000);
   check('full_workforce',   (state.workers ?? []).length >= 6);
+
+  // Breeding & genetics
+  check('first_breed',   state.animals.some(a => (a.parentIds ?? []).length > 0));
+  check('gene_dynasty',  state.animals.filter(a => (a.parentIds ?? []).length > 0).length >= 5);
+  // Contracts
+  check('ten_contracts', state.contracts.filter(c => c.completed).length >= 10);
+  // Reputation
+  check('rep_50',   (state.reputation?.score ?? 0) >= 50);
+  check('rep_80',   (state.reputation?.score ?? 0) >= 80);
+  // Sustainability
+  check('organic_first', state.parcels.some(p => p.owned && p.organicStatus === 'organic'));
+  // Finance
+  check('savings_100k', state.savings.balance >= 100_000);
+  check('cash_5m',      state.money >= 5_000_000);
+  // Longevity
+  check('day_1095', state.day >= 1095);
+  // Crop diversity
+  check('varieties_10', state.harvestedCropIds.length >= 10);
+  check('varieties_20', state.harvestedCropIds.length >= 20);
 
   return newly;
 }

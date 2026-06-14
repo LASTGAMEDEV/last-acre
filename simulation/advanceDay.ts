@@ -4036,6 +4036,7 @@ export function advanceGameDay(set: GameSet, get: GameGet): void {
             harvestedCropIds: state.harvestedCropIds,
             seedVault: state.seedVault,
             workers: state.workers,
+            reputation: (state as any).reputation,
           },
           state.completedMilestones
         );

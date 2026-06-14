@@ -7,13 +7,16 @@ import { C, S, F, R } from '../../constants/theme';
 import MilestonesSection from './MilestonesSection';
 
 const CATEGORY_DEFS: { id: string; label: string; icon: string; ids: string[] }[] = [
-  { id: 'land',      label: 'Land',       icon: '🗺️', ids: ['five_ha', 'ten_ha', 'twenty_ha'] },
-  { id: 'crops',     label: 'Crops',      icon: '🌾', ids: ['first_harvest', 'tier_c', 'tier_b', 'tier_a', 'tier_s'] },
-  { id: 'money',     label: 'Finance',    icon: '💰', ids: ['cash_10k', 'cash_50k', 'cash_250k', 'savings_5k'] },
-  { id: 'animals',   label: 'Livestock',  icon: '🐄', ids: ['first_animal', 'five_animals'] },
-  { id: 'equipment', label: 'Equipment',  icon: '🚜', ids: ['first_machine', 'three_machines'] },
-  { id: 'business',  label: 'Business',   icon: '📋', ids: ['first_contract', 'first_insurance'] },
-  { id: 'time',      label: 'Survival',   icon: '📅', ids: ['day_100', 'day_365'] },
+  { id: 'land',       label: 'Land',          icon: '🗺️', ids: ['five_ha', 'ten_ha', 'twenty_ha', 'thirty_ha', 'fifty_ha'] },
+  { id: 'crops',      label: 'Crops',         icon: '🌾', ids: ['first_harvest', 'tier_c', 'tier_b', 'tier_a', 'tier_s', 'varieties_10', 'varieties_20'] },
+  { id: 'money',      label: 'Finance',       icon: '💰', ids: ['cash_10k', 'cash_50k', 'cash_250k', 'cash_500k', 'cash_1m', 'cash_2m', 'cash_5m', 'savings_5k', 'savings_50k', 'savings_100k'] },
+  { id: 'animals',    label: 'Livestock',     icon: '🐄', ids: ['first_animal', 'five_animals', 'twenty_animals', 'fifty_animals', 'first_breed', 'gene_dynasty', 'perfect_animal'] },
+  { id: 'equipment',  label: 'Equipment',     icon: '🚜', ids: ['first_machine', 'three_machines', 'five_machines', 'ten_machines'] },
+  { id: 'business',   label: 'Business',      icon: '📋', ids: ['first_contract', 'ten_contracts', 'five_contracts', 'twenty_contracts', 'thirty_contracts', 'no_default_10', 'first_insurance', 'first_processed'] },
+  { id: 'time',       label: 'Survival',      icon: '📅', ids: ['day_100', 'day_365', 'day_730', 'day_1095'] },
+  { id: 'community',  label: 'Community',     icon: '🌟', ids: ['rep_50', 'rep_80', 'full_workforce'] },
+  { id: 'sustain',    label: 'Sustainability',icon: '🌱', ids: ['organic_first', 'gen5_seed'] },
+  { id: 'legacy',     label: 'Legacy',        icon: '👑', ids: ['first_prestige', 'cash_5m'] },
 ];
 
 function getProgress(
@@ -21,28 +24,57 @@ function getProgress(
   state: {
     day: number;
     money: number;
-    parcels: { owned: boolean; hectares: number }[];
-    animals: { id: string }[];
+    parcels: { owned: boolean; hectares: number; organicStatus?: string }[];
+    animals: { id: string; parentIds?: string[] }[];
     machines: { id: string }[];
+    contracts: { completed?: boolean }[];
     savings: { balance: number };
     harvestedCropIds: string[];
+    reputation?: { score: number };
   }
 ): { current: number; target: number } | null {
   const ownedHa = state.parcels.filter(p => p.owned).reduce((s, p) => s + p.hectares, 0);
+  const completedContracts = state.contracts.filter(c => c.completed).length;
+  const breedAnimals = state.animals.filter(a => (a.parentIds ?? []).length > 0).length;
   switch (milestoneId) {
-    case 'five_ha':    return { current: ownedHa, target: 5 };
-    case 'ten_ha':     return { current: ownedHa, target: 10 };
-    case 'twenty_ha':  return { current: ownedHa, target: 20 };
-    case 'cash_10k':   return { current: state.money, target: 10_000 };
-    case 'cash_50k':   return { current: state.money, target: 50_000 };
-    case 'cash_250k':  return { current: state.money, target: 250_000 };
-    case 'savings_5k': return { current: state.savings.balance, target: 5_000 };
+    case 'five_ha':       return { current: ownedHa, target: 5 };
+    case 'ten_ha':        return { current: ownedHa, target: 10 };
+    case 'twenty_ha':     return { current: ownedHa, target: 20 };
+    case 'thirty_ha':     return { current: ownedHa, target: 30 };
+    case 'fifty_ha':      return { current: ownedHa, target: 50 };
+    case 'cash_10k':      return { current: state.money, target: 10_000 };
+    case 'cash_50k':      return { current: state.money, target: 50_000 };
+    case 'cash_250k':     return { current: state.money, target: 250_000 };
+    case 'cash_500k':     return { current: state.money, target: 500_000 };
+    case 'cash_1m':       return { current: state.money, target: 1_000_000 };
+    case 'cash_2m':       return { current: state.money, target: 2_000_000 };
+    case 'cash_5m':       return { current: state.money, target: 5_000_000 };
+    case 'savings_5k':    return { current: state.savings.balance, target: 5_000 };
+    case 'savings_50k':   return { current: state.savings.balance, target: 50_000 };
+    case 'savings_100k':  return { current: state.savings.balance, target: 100_000 };
     case 'first_animal':  return { current: state.animals.length, target: 1 };
     case 'five_animals':  return { current: state.animals.length, target: 5 };
+    case 'twenty_animals':return { current: state.animals.length, target: 20 };
+    case 'fifty_animals': return { current: state.animals.length, target: 50 };
+    case 'first_breed':   return { current: breedAnimals >= 1 ? 1 : 0, target: 1 };
+    case 'gene_dynasty':  return { current: breedAnimals, target: 5 };
     case 'first_machine': return { current: state.machines.length, target: 1 };
     case 'three_machines':return { current: state.machines.length, target: 3 };
-    case 'day_100':    return { current: state.day, target: 100 };
-    case 'day_365':    return { current: state.day, target: 365 };
+    case 'five_machines': return { current: state.machines.length, target: 5 };
+    case 'ten_machines':  return { current: state.machines.length, target: 10 };
+    case 'first_contract':    return { current: completedContracts >= 1 ? 1 : 0, target: 1 };
+    case 'ten_contracts':     return { current: completedContracts, target: 10 };
+    case 'five_contracts':    return { current: completedContracts, target: 5 };
+    case 'twenty_contracts':  return { current: completedContracts, target: 20 };
+    case 'thirty_contracts':  return { current: completedContracts, target: 30 };
+    case 'day_100':   return { current: state.day, target: 100 };
+    case 'day_365':   return { current: state.day, target: 365 };
+    case 'day_730':   return { current: state.day, target: 730 };
+    case 'day_1095':  return { current: state.day, target: 1095 };
+    case 'rep_50':    return { current: state.reputation?.score ?? 0, target: 50 };
+    case 'rep_80':    return { current: state.reputation?.score ?? 0, target: 80 };
+    case 'varieties_10': return { current: state.harvestedCropIds.length, target: 10 };
+    case 'varieties_20': return { current: state.harvestedCropIds.length, target: 20 };
     case 'tier_c':
       return { current: state.harvestedCropIds.some(id => CROP_TYPES.find(c => c.id === id)?.tier === 'C') ? 1 : 0, target: 1 };
     case 'tier_b':
@@ -62,12 +94,13 @@ function fmt(n: number) {
 }
 
 function AchievementsList() {
-  const { completedMilestones, day, money, parcels, animals, machines, savings, harvestedCropIds } = useGameStore();
+  const { completedMilestones, day, money, parcels, animals, machines, contracts, savings, harvestedCropIds } = useGameStore();
+  const reputation = (useGameStore() as any).reputation;
   const done = new Set(completedMilestones);
   const totalDone = completedMilestones.length;
   const total = MILESTONES.length;
   const overallPct = (totalDone / total) * 100;
-  const progressState = { day, money, parcels, animals, machines, savings, harvestedCropIds };
+  const progressState = { day, money, parcels: parcels as any[], animals: animals as any[], machines, contracts: contracts as any[], savings, harvestedCropIds, reputation };
 
   return (
     <View style={{ padding: S.md, gap: S.md }}>
