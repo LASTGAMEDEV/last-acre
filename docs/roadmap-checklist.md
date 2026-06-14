@@ -47,7 +47,7 @@ These are the highest-impact items not yet done, in order:
 - [ ] Add an advanced start for returning players
 - [ ] Let players skip tutorials while keeping contextual guidance
 - [x] Add early recovery tips when cash runs low
-- [ ] Add a first-year review showing what the player learned
+- [x] Add a first-year review showing what the player learned
 
 ---
 
