@@ -403,9 +403,9 @@ These are the highest-impact items not yet done, in order:
 - [ ] Soil report screen
 - [ ] Generational legacy report
 - [ ] Historical graphs (beyond current charts)
-- [ ] Most profitable enterprise stat
-- [ ] Biggest expense stat
-- [ ] Highest risk stat
+- [x] Most profitable enterprise stat
+- [x] Biggest expense stat
+- [x] Highest risk stat
 - [ ] Player decision history
 
 ---

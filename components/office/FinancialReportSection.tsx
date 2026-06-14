@@ -152,6 +152,62 @@ export default function FinancialReportSection() {
         <StatRow label="Avg daily"    value={fmt(avgDailyRev)} color="#888" />
       </Card>
 
+      {/* Business Snapshot — top enterprise, highest risk, biggest expense */}
+      {(() => {
+        const topEnterprise = [...catSegments].sort((a, b) => b.amount - a.amount).find(s => s.amount > 0);
+        const rev90Total = catSegments.reduce((s, c) => s + c.amount, 0);
+        const topPct = topEnterprise && rev90Total > 0 ? Math.round((topEnterprise.amount / rev90Total) * 100) : 0;
+        const concentrationRisk = topPct > 70 && rev90Total > 0;
+
+        const urgentLoan = [...activeLoans].sort((a, b) => a.payoffDay - b.payoffDay).find(l => l.payoffDay >= day);
+        const urgentContract = [...contracts].filter(c => !c.completed && !c.failed && c.deadlineDay >= day).sort((a, b) => a.deadlineDay - b.deadlineDay)[0];
+
+        const highestRisk = urgentLoan && urgentLoan.payoffDay - day <= 14
+          ? `Loan of ${fmt(urgentLoan.totalOwed)} due in ${urgentLoan.payoffDay - day}d`
+          : urgentContract && urgentContract.deadlineDay - day <= 14
+          ? `Contract deadline in ${urgentContract.deadlineDay - day}d`
+          : debtPressure.level === 'critical' || debtPressure.level === 'high'
+          ? `Debt pressure ${debtPressure.label.toLowerCase()}`
+          : projCash30 < 0
+          ? 'Cash may go negative in 30d'
+          : null;
+
+        const biggestExpense = activeLoans.length > 0
+          ? `${fmt(totalDebt)} loan debt (${activeLoans.length} active)`
+          : outflowNext90 > 0
+          ? `${fmt(outflowNext90)} in loan payments next 90d`
+          : null;
+
+        if (!topEnterprise && !highestRisk && !biggestExpense) return null;
+
+        return (
+          <>
+            <SectionHeader title="📌 Business Snapshot" />
+            <Card>
+              {topEnterprise && (
+                <StatRow
+                  label="Top enterprise"
+                  value={`${topEnterprise.label} (${topPct}%)`}
+                  color={concentrationRisk ? '#f59e0b' : '#4caf50'}
+                />
+              )}
+              {concentrationRisk && (
+                <Text style={fr.snapshotHint}>⚠ Over-reliant on one income source — diversify to reduce risk</Text>
+              )}
+              {biggestExpense && (
+                <StatRow label="Biggest liability" value={biggestExpense} color="#ef5350" />
+              )}
+              {highestRisk && (
+                <StatRow label="Highest risk" value={highestRisk} color="#f97316" bold />
+              )}
+              {!highestRisk && totalDebt === 0 && (
+                <StatRow label="Overall risk" value="Low — no debt or urgent deadlines" color="#4caf50" />
+              )}
+            </Card>
+          </>
+        );
+      })()}
+
       <SectionHeader title="📊 Revenue Mix (90 days)" />
       <Card>
         <BarChart segments={catSegments} />
@@ -362,6 +418,7 @@ const fr = StyleSheet.create({
   legendText:   { color: C.textMuted, fontSize: F.size.xs },
   emptyText:    { color: C.textMuted, fontSize: F.size.sm, textAlign: 'center', paddingVertical: S.sm },
   warningText:  { color: '#f59e0b', fontSize: F.size.xs, marginTop: 4 },
+  snapshotHint: { color: '#f59e0b', fontSize: F.size.xs, marginTop: 2, marginBottom: 4, fontStyle: 'italic' },
   cropRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 3 },
   cropRank:     { color: C.textFaint, fontSize: 10, width: 20 },
   cropName:     { color: C.text, fontSize: F.size.sm, width: 80 },
