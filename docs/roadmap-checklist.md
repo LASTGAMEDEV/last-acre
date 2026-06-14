@@ -1,6 +1,6 @@
 # Granja Tycoon — Roadmap Progress Checklist
 
-**Updated:** 2026-06-14 (full recount after sessions)  
+**Updated:** 2026-06-14 (Section 7 Animals complete — 17/17)  
 **Legend:** `[x]` = done · `[ ]` = not done · `[~]` = partially done
 
 ---
@@ -12,11 +12,10 @@ These are the highest-impact items not yet done, in order:
 1. **Section 18** — Balance audit: money pacing, crop/livestock/processing margins, debt difficulty, event frequency (all 15 items untouched)
 2. **Section 2** — Remaining onboarding: guided first 10 days, teaching one system at a time, skip-tutorial option
 3. **Section 9** — Emergency financing tradeoffs, local market demand shifts, buyer relationship levels
-4. **Section 7** — Production chain previews (milk → cheese, wool → textile), winter prep checklist, animal personality
-5. **Section 12** — Life event modals (marriage, birth, succession), chronicle tab, family roles
-6. **Section 3** — Annual planning system: advisor style, goal generation, risk cards, year-end review
-7. **Section 19** — More processed goods, region-specific crops, farm-name flavor text
-8. **Section 25** — Simulation smoke tests, advanceDay corruption tests, save migration tests
+4. **Section 12** — Life event modals (marriage, birth, succession), chronicle tab, family roles
+5. **Section 3** — Annual planning system: advisor style, goal generation, risk cards, year-end review
+6. **Section 19** — More processed goods, region-specific crops, farm-name flavor text
+7. **Section 25** — Simulation smoke tests, advanceDay corruption tests, save migration tests
 
 ---
 
