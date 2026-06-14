@@ -94,6 +94,25 @@ const gbStyles = StyleSheet.create({
   grade:  { fontSize: F.size.xs, width: 52, textAlign: 'right', fontWeight: 'bold' },
 });
 
+const DRESS_YIELDS: Record<string, { weightKg: number; dressPercent: number }> = {
+  vaca:   { weightKg: 280, dressPercent: 0.58 },
+  cerdo:  { weightKg: 110, dressPercent: 0.74 },
+  oveja:  { weightKg: 40,  dressPercent: 0.50 },
+  cabra:  { weightKg: 30,  dressPercent: 0.50 },
+  conejo: { weightKg: 2.5, dressPercent: 0.57 },
+  pavo:   { weightKg: 12,  dressPercent: 0.80 },
+  bufalo: { weightKg: 360, dressPercent: 0.56 },
+};
+
+function computeCullValue(animal: OwnedAnimal, animalType: { id: string; maxPriceAge: number }, mature: boolean, day: number, meatPrice: number): number | null {
+  const spec = DRESS_YIELDS[animalType.id];
+  if (!spec) return null;
+  const age = day - animal.bornDay;
+  const ageFraction = mature ? Math.min(1, age / animalType.maxPriceAge) : 0.4;
+  const meatKg = spec.weightKg * spec.dressPercent * ageFraction * (animal.genes?.value ?? 1.0);
+  return Math.round(meatKg * meatPrice * 0.85);
+}
+
 function getEnclosureCapacity(buildings: string[], enclosureType: string): number {
   const ids = ENCLOSURE_BUILDINGS[enclosureType] ?? [];
   return buildings.reduce((s, bId) => {
@@ -116,6 +135,7 @@ export default function AnimalesScreen() {
     designateAsSire, removeFromSirePen, sirePenAnimalIds,
     animalWelfareScores,
   } = useGameStore();
+  const marketPrices: any[] = (useGameStore() as any).prices ?? [];
   const hasAnimalWorker = (workers ?? []).some(
     (w: any) => w.role === 'livestock_hand' || w.role === 'veterinarian'
   );
@@ -797,6 +817,36 @@ export default function AnimalesScreen() {
                   <Text style={styles.btnText}>Collect</Text>
                 </TouchableOpacity>
               )}
+              {(() => {
+                const meatPx = (marketPrices ?? []).find((p: any) => p.cropId === 'meat')?.price ?? 4.50;
+                const cullEst = computeCullValue(item, type, mature, day, meatPx);
+                const prod = type.productionType && type.productionType !== 'meat'
+                  ? ANIMAL_PRODUCTS.find(ap => ap.productType === type.productionType)
+                  : null;
+                const dailyRev = prod && mature
+                  ? type.productionRate * prod.basePrice * getSeasonMultiplier(item.typeId, day)
+                  : null;
+                const offspringVal = type.breedingDays > 0 ? Math.round(type.maxSellPrice * 0.55) : null;
+                const options: { label: string; value: string; color: string }[] = [
+                  { label: '💰 Sell', value: `$${Math.round(value).toLocaleString()}`, color: C.green },
+                  ...(cullEst != null ? [{ label: '🔪 Cull', value: `$${cullEst.toLocaleString()}`, color: cullEst > value ? C.amber : C.textMuted }] : []),
+                  ...(offspringVal != null && isFemale ? [{ label: '🐣 Breed', value: `~$${offspringVal.toLocaleString()}`, color: C.purple }] : []),
+                  ...(dailyRev != null ? [{ label: '🏠 Keep', value: `~$${dailyRev.toFixed(1)}/d`, color: C.blue }] : []),
+                ];
+                return (
+                  <View style={trStyles.panel}>
+                    <Text style={trStyles.heading}>Options</Text>
+                    <View style={trStyles.row}>
+                      {options.map(o => (
+                        <View key={o.label} style={trStyles.chip}>
+                          <Text style={trStyles.chipLabel}>{o.label}</Text>
+                          <Text style={[trStyles.chipValue, { color: o.color }]}>{o.value}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                );
+              })()}
               {isFemale && type.breedingDays > 0 && (
                 <TouchableOpacity
                   style={[styles.breedBtn, (!breedReady || enclosureFull || !hasMate) && styles.breedBtnDisabled]}
@@ -983,6 +1033,15 @@ const upgradeStyles = StyleSheet.create({
   upgradeBtn:         { backgroundColor: C.bgElevated, borderRadius: R.sm, paddingHorizontal: 7, paddingVertical: S.xs, marginLeft: 6, alignItems: 'center', minWidth: 48 },
   upgradeBtnDisabled: { backgroundColor: C.bgDeep, opacity: 0.5 },
   upgradeBtnText:     { color: C.green, fontSize: 9, fontWeight: 'bold', textAlign: 'center' },
+});
+
+const trStyles = StyleSheet.create({
+  panel:      { backgroundColor: C.bgDeep, borderRadius: R.sm, padding: 8, marginTop: 8, borderWidth: 1, borderColor: '#1a2235' },
+  heading:    { color: C.textFaint, fontSize: 9, fontWeight: 'bold', letterSpacing: 0.5, marginBottom: 5 },
+  row:        { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  chip:       { backgroundColor: C.bgCard, borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 4, alignItems: 'center', minWidth: 54 },
+  chipLabel:  { color: C.textFaint, fontSize: 8, fontWeight: 'bold', marginBottom: 1 },
+  chipValue:  { fontSize: F.size.xs, fontWeight: 'bold' },
 });
 
 const ltStyles = StyleSheet.create({
