@@ -172,7 +172,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Per-animal profitability report
 - [ ] Full enterprise reports: crops, livestock, processing, contracts, direct sales
 - [x] Break-even explanations per crop or animal
-- [ ] Price cause explanations: weather, era, global market, local supply
+- [x] Price cause explanations: weather, era, global market, local supply
 - [ ] Local market demand shifts
 - [ ] Buyer relationship levels
 - [ ] Contract negotiation

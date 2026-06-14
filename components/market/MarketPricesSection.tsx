@@ -17,6 +17,7 @@ import { CROP_TYPES, CropTier } from '../../data/cropTypes';
 import { MARKET_REGIONS, MarketId } from '../../data/marketRegions';
 import { sellRevenue, computeSellPressureModifier, sellPressureDuration } from '../../engine/market';
 import { getSeason } from '../../engine/climate';
+import { gameDayToCalendarYear } from '../../engine/calendarUtils';
 import HelpSheet from '../../components/HelpSheet';
 import DispatchModal from '../../components/DispatchModal';
 import GuideButton from '../../components/GuideButton';
@@ -106,6 +107,7 @@ export default function MarketPricesSection() {
     setInventoryReserve,
     activeShocks,
     priceMomentum,
+    seasonalEvent,
   } = useGameStore();
 
   const [selectedCrop, setSelectedCrop] = useState<string>(CROP_TYPES[0].id);
@@ -356,6 +358,40 @@ export default function MarketPricesSection() {
                 icon: mom > 0 ? '↗' : '↘',
                 text: `${mom > 0 ? 'Rising' : 'Falling'} momentum ${mPct}%/day`,
                 color: mom > 0 ? C.green : '#ef9a9a',
+              });
+            }
+
+            // Weather event — active seasonal disasters affect supply expectations
+            const se = seasonalEvent as { type: 'heat_wave' | 'flood' | 'frost'; startDay: number; endsDay: number; severity: number } | null;
+            if (se && day <= se.endsDay) {
+              const isCropAffected = se.type === 'frost'
+                ? (selected.frostKillTemp ?? -999) > -10
+                : se.type === 'heat_wave'
+                ? (selected.heatStressTemp ?? 999) < 38
+                : true; // flood affects all
+              if (isCropAffected) {
+                const WEATHER_TEXT: Record<string, string> = {
+                  heat_wave: `Heat wave active — yield losses expected, supply may tighten`,
+                  flood:     `Flooding event — field access disrupted, supply risk`,
+                  frost:     `Frost event — crops at risk, cold-sensitive supply may fall`,
+                };
+                drivers.push({
+                  icon: se.type === 'frost' ? '❄' : se.type === 'heat_wave' ? '🔥' : '🌊',
+                  text: WEATHER_TEXT[se.type] ?? `Weather event active`,
+                  color: '#ff9800',
+                });
+              }
+            }
+
+            // Era economic context when price diverges significantly from base
+            const eraDivPct = Math.round(((current - selected.basePrice) / selected.basePrice) * 100);
+            if (Math.abs(eraDivPct) >= 15) {
+              const calYear = gameDayToCalendarYear(day);
+              const eraCtx = calYear < 1980 ? '1970s energy crisis' : calYear < 1990 ? '1980s overproduction' : calYear < 2000 ? '1990s global trade' : calYear < 2010 ? '2000s commodity boom' : calYear < 2020 ? '2010s market integration' : 'modern market';
+              drivers.push({
+                icon: '📅',
+                text: `${eraCtx} (${calYear}) — era conditions shaping baseline`,
+                color: '#9575cd',
               });
             }
 
