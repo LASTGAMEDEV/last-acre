@@ -101,7 +101,12 @@ const DRESS_YIELDS: Record<string, { weightKg: number; dressPercent: number }> =
   cabra:  { weightKg: 30,  dressPercent: 0.50 },
   conejo: { weightKg: 2.5, dressPercent: 0.57 },
   pavo:   { weightKg: 12,  dressPercent: 0.80 },
-  bufalo: { weightKg: 360, dressPercent: 0.56 },
+  bufalo:   { weightKg: 360, dressPercent: 0.56 },
+  novillo:  { weightKg: 280, dressPercent: 0.60 },
+  ganso:    { weightKg: 6,   dressPercent: 0.75 },
+  llama:    { weightKg: 130, dressPercent: 0.52 },
+  avestruz: { weightKg: 100, dressPercent: 0.45 },
+  pintada:  { weightKg: 1.5, dressPercent: 0.72 },
 };
 
 function computeCullValue(animal: OwnedAnimal, animalType: { id: string; maxPriceAge: number }, mature: boolean, day: number, meatPrice: number): number | null {

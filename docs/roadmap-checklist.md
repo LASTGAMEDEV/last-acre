@@ -43,7 +43,7 @@ These are the highest-impact items not yet done, in order:
 - [x] Add a first-year goal chain instead of isolated tutorial popups
 - [ ] Teach one system at a time: fields → selling → debt → animals/processing
 - [x] Add safe first-crop recommendations based on season
-- [ ] Add a beginner preset with gentler debt and slower disasters
+- [x] Add a beginner preset with gentler debt and slower disasters
 - [ ] Add an advanced start for returning players
 - [ ] Let players skip tutorials while keeping contextual guidance
 - [x] Add early recovery tips when cash runs low
@@ -93,7 +93,7 @@ These are the highest-impact items not yet done, in order:
 - [ ] Add clearer tab badges for urgent work
 - [ ] Add compact mode for experienced players
 - [x] Add filters and sorting for fields, animals, inventory, contracts
-- [ ] Add confirmation modals only for high-impact actions
+- [x] Add confirmation modals only for high-impact actions
 - [ ] Add better disabled button messages
 - [ ] Add sticky action bars on long screens
 - [ ] Add compare panels before buying machinery, buildings, or animals
@@ -348,10 +348,10 @@ These are the highest-impact items not yet done, in order:
 - [x] More historical events — 57 total (1970–2025)
 - [x] More crops with distinct roles (chickpeas, lentils, hemp, garlic, spelt added 2026-06-14)
 - [ ] Region-specific crops
-- [ ] More animal breeds
+- [x] More animal breeds
 - [ ] More processed goods
 - [ ] More building upgrades
-- [ ] More contract types
+- [x] More contract types
 - [ ] More buyer personalities
 - [ ] More neighbor personalities
 - [x] More guide entries
