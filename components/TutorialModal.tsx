@@ -335,11 +335,10 @@ export default function TutorialModal() {
               <TouchableOpacity style={styles.backBtn} onPress={goBack}>
                 <Text style={styles.backText}>← Back</Text>
               </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.skipBtn} onPress={markTutorialSeen}>
-                <Text style={styles.skipText}>Skip</Text>
-              </TouchableOpacity>
-            )}
+            ) : null}
+            <TouchableOpacity style={styles.skipBtn} onPress={markTutorialSeen}>
+              <Text style={styles.skipText}>Skip</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.nextBtn} onPress={goNext}>
               <Text style={styles.nextText}>{isLast ? '🌾 Start farming!' : 'Next →'}</Text>
             </TouchableOpacity>

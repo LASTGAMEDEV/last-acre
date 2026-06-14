@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useGameStore } from '../store/useGameStore';
 import { C } from '../constants/theme';
 
@@ -12,10 +12,11 @@ const STEPS = [
 ];
 
 export default function FirstMission() {
+  const [dismissed, setDismissed] = useState(false);
   const { firstMissionStep, tutorialSeen } = useGameStore();
   const step = firstMissionStep ?? 0;
 
-  if (!tutorialSeen || step >= STEPS.length) return null;
+  if (!tutorialSeen || step >= STEPS.length || dismissed) return null;
 
   const current = STEPS[step];
   const pct = Math.round((step / STEPS.length) * 100);
@@ -27,6 +28,9 @@ export default function FirstMission() {
         <View style={styles.track}>
           <View style={[styles.fill, { width: `${pct}%` as any }]} />
         </View>
+        <TouchableOpacity onPress={() => setDismissed(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.dismiss}>Skip missions ×</Text>
+        </TouchableOpacity>
       </View>
       <View style={styles.bar}>
         <Text style={styles.task}>{current.label}</Text>
@@ -45,4 +49,5 @@ const styles = StyleSheet.create({
   bar:     { flexDirection: 'row', alignItems: 'center' },
   task:    { color: '#e8d5a3', fontSize: 11, fontWeight: 'bold' },
   hint:    { color: '#666', fontSize: 10, marginTop: 2 },
+  dismiss: { color: '#555', fontSize: 9 },
 });
